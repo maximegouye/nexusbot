@@ -22,7 +22,7 @@ db.exec(`
   -- Config par serveur
   CREATE TABLE IF NOT EXISTS guild_config (
     guild_id            TEXT PRIMARY KEY,
-    prefix              TEXT DEFAULT '!',
+    prefix              TEXT DEFAULT '&',
     lang                TEXT DEFAULT 'fr',
     color               TEXT DEFAULT '#7B2FBE',
     xp_enabled          INTEGER DEFAULT 1,

@@ -12,6 +12,22 @@ const {
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
+    try {
+      await _handleInteraction(interaction, client);
+    } catch (err) {
+      console.error('[INTERACTION] Erreur non gérée:', err);
+      try {
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: '❌ Une erreur est survenue. Réessaie ou contacte un admin.', ephemeral: true });
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          await interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie ou contacte un admin.' });
+        }
+      } catch {}
+    }
+  }
+};
+
+async function _handleInteraction(interaction, client) {
 
     // ── SLASH COMMANDS ───────────────────────────────────
     if (interaction.isChatInputCommand()) {
@@ -1300,5 +1316,10 @@ module.exports = {
         });
       }
     }
-  }
-};
+
+    // ── FALLBACK — Interaction non gérée ─────────────────
+    // Empêche "L'application ne répond plus" pour tout bouton/menu inconnu
+    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: '❌ Cette interaction n\'est plus disponible.', ephemeral: true }).catch(() => {});
+    }
+}

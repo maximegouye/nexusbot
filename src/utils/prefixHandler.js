@@ -1,15 +1,8 @@
 /**
  * NexusBot — Gestionnaire de commandes PRÉFIXÉES
  *
- * ⚡ SECRET DES BOTS À MILLIERS DE COMMANDES :
- * Les slash commands Discord sont limitées à 100 global + 100 guild.
- * Les COMMANDES PRÉFIXÉES (!, ?, $, n!) n'ont AUCUNE limite Discord.
- * Elles sont gérées dans messageCreate sans aucune registration.
- * C'est comme ça que MEE6, Carl-bot, Dyno ont des milliers de commandes.
- *
- * NexusBot supporte DEUX préfixes en parallèle :
- *  - n! (préfixe principal)  → n!ban, n!help, n!balance...
- *  - !  (préfixe court)      → !ban, !help, !balance...
+ * Préfixe unique : &
+ * Exemple : &ban, &aide, &solde
  */
 
 const fs   = require('fs');
@@ -71,9 +64,9 @@ async function handlePrefixMessage(message, client) {
   const db = require('../database/db');
   const cfg = db.getConfig(message.guild.id);
 
-  // Préfixes supportés : configurable par guild, défaut n! et !
-  const guildPrefix = cfg.prefix || 'n!';
-  const PREFIXES = [guildPrefix, 'n!', '!', '&'].filter((p, i, a) => a.indexOf(p) === i);
+  // Préfixe unique : & (configurable par guild, mais & par défaut)
+  const guildPrefix = cfg.prefix || '&';
+  const PREFIXES = [guildPrefix].filter((p, i, a) => a.indexOf(p) === i);
 
   let usedPrefix = null;
   let content = message.content;
