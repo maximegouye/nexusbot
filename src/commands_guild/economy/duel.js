@@ -9,7 +9,7 @@ const WEAPONS = [
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('duel')
+    .setName('duel-argent')
     .setDescription('⚔️ Défie un membre en duel pour voler ses coins !')
     .addUserOption(o => o.setName('adversaire').setDescription('Ton adversaire').setRequired(true))
     .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setRequired(true).setMinValue(50)),

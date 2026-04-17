@@ -43,7 +43,7 @@ try {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('admin')
+    .setName('admin-eco')
     .setDescription('🛡️ Panneau d\'administration complet de NexusBot')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 
