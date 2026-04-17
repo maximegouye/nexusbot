@@ -738,6 +738,11 @@ const migrations = [
   { table: 'users', column: 'last_run',            sql: "ALTER TABLE users ADD COLUMN last_run INTEGER DEFAULT 0" },
   { table: 'users', column: 'last_visit_reward',   sql: "ALTER TABLE users ADD COLUMN last_visit_reward INTEGER DEFAULT 0" },
   { table: 'users', column: 'last_bump',           sql: "ALTER TABLE users ADD COLUMN last_bump INTEGER DEFAULT 0" },
+  // Paramètres jeux
+  { table: 'guild_config', column: 'game_enabled',  sql: "ALTER TABLE guild_config ADD COLUMN game_enabled INTEGER DEFAULT 1" },
+  { table: 'guild_config', column: 'game_min_bet',  sql: "ALTER TABLE guild_config ADD COLUMN game_min_bet INTEGER DEFAULT 10" },
+  { table: 'guild_config', column: 'game_max_bet',  sql: "ALTER TABLE guild_config ADD COLUMN game_max_bet INTEGER DEFAULT 50000" },
+  { table: 'guild_config', column: 'boost_channel', sql: "ALTER TABLE guild_config ADD COLUMN boost_channel TEXT" },
 ];
 
 for (const m of migrations) {

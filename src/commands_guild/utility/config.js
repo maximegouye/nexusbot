@@ -275,6 +275,54 @@ module.exports = {
     )
 
     // ╔══════════════════════════════╗
+    // ║  GROUPE : JEUX               ║
+    // ╚══════════════════════════════╝
+    .addSubcommandGroup(g => g
+      .setName('jeux')
+      .setDescription('🎮 Paramètres des jeux et paris')
+      .addSubcommand(s => s
+        .setName('activer')
+        .setDescription('✅ Activer les jeux (casino, duel, pari...)'))
+      .addSubcommand(s => s
+        .setName('desactiver')
+        .setDescription('❌ Désactiver tous les jeux sur ce serveur'))
+      .addSubcommand(s => s
+        .setName('mise_min')
+        .setDescription('⬇️ Mise minimum pour les paris et jeux de casino')
+        .addIntegerOption(o => o.setName('montant').setDescription('Mise minimum (défaut: 10)').setRequired(true).setMinValue(1).setMaxValue(1_000_000)))
+      .addSubcommand(s => s
+        .setName('mise_max')
+        .setDescription('⬆️ Mise maximum pour les paris et jeux de casino')
+        .addIntegerOption(o => o.setName('montant').setDescription('Mise maximum (défaut: 50000)').setRequired(true).setMinValue(100).setMaxValue(10_000_000)))
+      .addSubcommand(s => s
+        .setName('voir')
+        .setDescription('📋 Voir les paramètres actuels des jeux'))
+    )
+
+    // ╔══════════════════════════════╗
+    // ║  GROUPE : RÉPONSES AUTO      ║
+    // ╚══════════════════════════════╝
+    .addSubcommandGroup(g => g
+      .setName('reponses')
+      .setDescription('💬 Commandes personnalisées & réponses automatiques')
+      .addSubcommand(s => s
+        .setName('ajouter')
+        .setDescription('➕ Créer une commande personnalisée (ex: &bonjour → Salut {user} !)')
+        .addStringOption(o => o.setName('declencheur').setDescription('Mot déclencheur (sans &, ex: bonjour)').setRequired(true).setMaxLength(30))
+        .addStringOption(o => o.setName('reponse').setDescription('Réponse du bot (variables: {user} {username} {server} {args})').setRequired(true).setMaxLength(500)))
+      .addSubcommand(s => s
+        .setName('supprimer')
+        .setDescription('➖ Supprimer une commande personnalisée')
+        .addStringOption(o => o.setName('declencheur').setDescription('Mot déclencheur à supprimer (ex: bonjour)').setRequired(true).setMaxLength(30)))
+      .addSubcommand(s => s
+        .setName('voir')
+        .setDescription('📋 Voir toutes les commandes personnalisées'))
+      .addSubcommand(s => s
+        .setName('vider')
+        .setDescription('🗑️ Supprimer TOUTES les commandes personnalisées'))
+    )
+
+    // ╔══════════════════════════════╗
     // ║  GROUPE : ANNIVERSAIRES      ║
     // ╚══════════════════════════════╝
     .addSubcommandGroup(g => g
@@ -372,6 +420,11 @@ module.exports = {
             { name: '🎂 Anniversaires', value:
               `Canal : ${chanMention(cfg.birthday_channel)}\n` +
               `Rôle : ${roleMention(cfg.birthday_role)}`, inline: true },
+            // Jeux
+            { name: '🎮 Jeux', value:
+              `Statut : ${onOff(cfg.game_enabled ?? 1)}\n` +
+              `Mise min : **${cfg.game_min_bet || 10}** ${coin}\n` +
+              `Mise max : **${cfg.game_max_bet || 50000}** ${coin}`, inline: true },
           )
       ], ephemeral: true });
     }
@@ -713,6 +766,92 @@ module.exports = {
             { name: '👮 Staff',      value: roleMention(cfg.ticket_staff_role), inline: true },
             { name: '📋 Logs',       value: chanMention(cfg.ticket_log),        inline: true },
           )], ephemeral: true });
+      }
+    }
+
+    // ════════════════════════════════════════
+    // JEUX
+    // ════════════════════════════════════════
+    if (group === 'jeux') {
+      if (sub === 'activer') {
+        db.setConfig(guildId, 'game_enabled', 1);
+        return interaction.reply({ embeds: [confirmEmbed('Jeux activés', 'Les jeux (casino, duel, pari...) sont maintenant **actifs** sur ce serveur.')] });
+      }
+      if (sub === 'desactiver') {
+        db.setConfig(guildId, 'game_enabled', 0);
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+          .setTitle('❌ Jeux désactivés')
+          .setDescription('Tous les jeux ont été désactivés sur ce serveur. Les joueurs ne pourront plus jouer.')
+          .setFooter({ text: `Configuré par ${interaction.user.username}` })] });
+      }
+      if (sub === 'mise_min') {
+        const montant = interaction.options.getInteger('montant');
+        const maxBet = cfg.game_max_bet || 50000;
+        if (montant >= maxBet) return interaction.reply({ content: `❌ La mise minimum doit être inférieure à la mise maximum (${maxBet} ${coin}).`, ephemeral: true });
+        db.setConfig(guildId, 'game_min_bet', montant);
+        return interaction.reply({ embeds: [confirmEmbed('Mise minimum mise à jour', `Les joueurs doivent miser au minimum **${montant} ${coin}** pour jouer.`)] });
+      }
+      if (sub === 'mise_max') {
+        const montant = interaction.options.getInteger('montant');
+        const minBet = cfg.game_min_bet || 10;
+        if (montant <= minBet) return interaction.reply({ content: `❌ La mise maximum doit être supérieure à la mise minimum (${minBet} ${coin}).`, ephemeral: true });
+        db.setConfig(guildId, 'game_max_bet', montant);
+        return interaction.reply({ embeds: [confirmEmbed('Mise maximum mise à jour', `Les joueurs peuvent miser jusqu\'à **${montant} ${coin}** par partie.`)] });
+      }
+      if (sub === 'voir') {
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+          .setTitle('🎮 Paramètres des jeux')
+          .addFields(
+            { name: '⚡ Statut',       value: onOff(cfg.game_enabled ?? 1),           inline: true },
+            { name: '⬇️ Mise min',     value: `**${cfg.game_min_bet || 10}** ${coin}`, inline: true },
+            { name: '⬆️ Mise max',     value: `**${cfg.game_max_bet || 50000}** ${coin}`, inline: true },
+          )
+          .setFooter({ text: 'Modifiez avec /config jeux mise_min / mise_max' })], ephemeral: true });
+      }
+    }
+
+    // ════════════════════════════════════════
+    // RÉPONSES PERSONNALISÉES
+    // ════════════════════════════════════════
+    if (group === 'reponses') {
+      if (sub === 'ajouter') {
+        const declencheur = interaction.options.getString('declencheur').toLowerCase().trim().replace(/\s+/g, '_');
+        const reponse     = interaction.options.getString('reponse');
+        const trigger     = `&${declencheur}`;
+        try {
+          db.db.prepare('INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, created_by) VALUES (?,?,?,?)')
+            .run(guildId, trigger, reponse, interaction.user.id);
+        } catch (e) {
+          return interaction.reply({ content: `❌ Erreur lors de l'ajout : ${e.message}`, ephemeral: true });
+        }
+        return interaction.reply({ embeds: [confirmEmbed('Commande personnalisée créée',
+          `Déclencheur : \`${trigger}\`\nRéponse : > ${reponse}\n\nVariables disponibles : \`{user}\` \`{username}\` \`{server}\` \`{args}\``)] });
+      }
+      if (sub === 'supprimer') {
+        const declencheur = interaction.options.getString('declencheur').toLowerCase().trim().replace(/\s+/g, '_');
+        const trigger     = `&${declencheur}`;
+        const existing    = db.getCustomCommand(guildId, trigger);
+        if (!existing) return interaction.reply({ content: `❌ Aucune commande \`${trigger}\` trouvée.`, ephemeral: true });
+        db.db.prepare('DELETE FROM custom_commands WHERE guild_id=? AND LOWER(trigger)=LOWER(?)').run(guildId, trigger);
+        return interaction.reply({ embeds: [confirmEmbed('Commande supprimée', `La commande \`${trigger}\` a été supprimée.`)] });
+      }
+      if (sub === 'voir') {
+        const cmds = db.getCustomCommands(guildId);
+        if (!cmds.length) return interaction.reply({ content: '📭 Aucune commande personnalisée configurée. Ajoutez-en avec `/config reponses ajouter`.', ephemeral: true });
+        const desc = cmds.slice(0, 20).map(c => `\`${c.trigger}\` → ${c.response.slice(0, 60)}${c.response.length > 60 ? '...' : ''}`).join('\n');
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+          .setTitle(`💬 Commandes personnalisées (${cmds.length})`)
+          .setDescription(desc)
+          .setFooter({ text: cmds.length > 20 ? `+ ${cmds.length - 20} autres commandes non affichées` : `${cmds.length} commande(s) active(s)` })], ephemeral: true });
+      }
+      if (sub === 'vider') {
+        const count = db.getCustomCommands(guildId).length;
+        if (!count) return interaction.reply({ content: '📭 Aucune commande personnalisée à supprimer.', ephemeral: true });
+        db.db.prepare('DELETE FROM custom_commands WHERE guild_id=?').run(guildId);
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+          .setTitle('🗑️ Commandes personnalisées supprimées')
+          .setDescription(`**${count}** commande(s) personnalisée(s) supprimée(s).`)
+          .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
     }
 
