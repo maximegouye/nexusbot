@@ -1,0 +1,255 @@
+/**
+ * NexusBot — Trivia Duel 1v1
+ * /trivia — Défiez quelqu'un en quiz 1v1 sur des questions variées !
+ */
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const db = require('../../database/db');
+
+const QUESTIONS_POOL = [
+  { q: 'Quelle est la capitale de l\'Espagne ?',           a: 'Madrid',        choices: ['Barcelona', 'Madrid', 'Séville', 'Valence'] },
+  { q: 'Quel est le plus grand océan du monde ?',          a: 'Pacifique',     choices: ['Atlantique', 'Indien', 'Pacifique', 'Arctique'] },
+  { q: 'Combien font 15 × 15 ?',                           a: '225',           choices: ['225', '200', '250', '175'] },
+  { q: 'Quel animal est le plus rapide sur terre ?',       a: 'Guépard',       choices: ['Lion', 'Faucon', 'Guépard', 'Cheval'] },
+  { q: 'En quelle année l\'homme a-t-il marché sur la Lune ?', a: '1969',     choices: ['1959', '1969', '1975', '1963'] },
+  { q: 'Quel pays a la plus grande superficie ?',          a: 'Russie',        choices: ['Canada', 'USA', 'Chine', 'Russie'] },
+  { q: 'Combien de couleurs y a-t-il dans un arc-en-ciel ?', a: '7',          choices: ['5', '6', '7', '8'] },
+  { q: 'Quel est le symbole chimique de l\'or ?',          a: 'Au',            choices: ['Or', 'Go', 'Au', 'Ag'] },
+  { q: 'Qui a peint la Joconde ?',                         a: 'Léonard de Vinci', choices: ['Michel-Ange', 'Léonard de Vinci', 'Raphael', 'Donatello'] },
+  { q: 'Quel est le plus long fleuve du monde ?',          a: 'Nil',           choices: ['Amazone', 'Nil', 'Mississippi', 'Yangtsé'] },
+  { q: 'Combien de côtés a un hexagone ?',                 a: '6',             choices: ['5', '6', '7', '8'] },
+  { q: 'Quelle planète est la plus proche du Soleil ?',    a: 'Mercure',       choices: ['Vénus', 'Terre', 'Mercure', 'Mars'] },
+  { q: 'Quel est le plus petit pays du monde ?',           a: 'Vatican',       choices: ['Monaco', 'Vatican', 'Saint-Marin', 'Liechtenstein'] },
+  { q: 'Combien y a-t-il de secondes dans une heure ?',    a: '3600',          choices: ['1800', '3000', '3600', '4200'] },
+  { q: 'Quelle est la monnaie du Japon ?',                 a: 'Yen',           choices: ['Won', 'Yuan', 'Yen', 'Baht'] },
+  { q: 'Quel gaz les plantes absorbent-elles ?',           a: 'CO2',           choices: ['O2', 'N2', 'CO2', 'H2'] },
+  { q: 'Quel est l\'animal national de l\'Australie ?',    a: 'Kangourou',     choices: ['Koala', 'Kangourou', 'Dingo', 'Wallaby'] },
+  { q: 'Combien de joueurs dans une équipe de basket-ball ?', a: '5',          choices: ['4', '5', '6', '7'] },
+  { q: 'Quelle ville accueille le Colisée ?',              a: 'Rome',          choices: ['Athènes', 'Rome', 'Paris', 'Madrid'] },
+  { q: 'Quel instrument utilisait Mozart ?',               a: 'Piano',         choices: ['Violon', 'Piano', 'Flûte', 'Harpe'] },
+];
+
+const activeduels = new Map();
+
+function pickQuestions(n = 5) {
+  const pool = [...QUESTIONS_POOL];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, n);
+}
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('trivia')
+    .setDescription('🧠 Duel Trivia 1v1 !')
+    .addSubcommand(s => s.setName('defier')
+      .setDescription('⚔️ Défier quelqu\'un en trivia')
+      .addUserOption(o => o.setName('adversaire').setDescription('Votre adversaire').setRequired(true))
+      .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setMinValue(0).setMaxValue(2000)))
+    .addSubcommand(s => s.setName('solo')
+      .setDescription('🎯 Jouer seul contre la montre')
+      .addIntegerOption(o => o.setName('questions').setDescription('Nombre de questions (3-10)').setMinValue(3).setMaxValue(10))),
+
+  cooldown: 5,
+
+  async execute(interaction) {
+    const sub     = interaction.options.getSubcommand();
+    const userId  = interaction.user.id;
+    const guildId = interaction.guildId;
+    const channel = interaction.channel;
+
+    if (sub === 'defier') {
+      const opponent = interaction.options.getUser('adversaire');
+      const mise     = interaction.options.getInteger('mise') || 0;
+
+      if (opponent.id === userId) return interaction.reply({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });
+      if (opponent.bot) return interaction.reply({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
+
+      if (mise > 0) {
+        const user = db.getUser(userId, guildId);
+        if (user.coins < mise) return interaction.reply({ content: `❌ Pas assez de coins ! Tu as **${user.coins}** 🪙`, ephemeral: true });
+      }
+
+      const accept = new ButtonBuilder().setCustomId(`trivia_accept_${userId}_${opponent.id}`).setLabel('✅ Accepter').setStyle(ButtonStyle.Success);
+      const refuse = new ButtonBuilder().setCustomId(`trivia_refuse_${userId}_${opponent.id}`).setLabel('❌ Refuser').setStyle(ButtonStyle.Danger);
+      const row    = new ActionRowBuilder().addComponents(accept, refuse);
+
+      const embed = new EmbedBuilder()
+        .setColor('#7B2FBE')
+        .setTitle('🧠 Défi Trivia !')
+        .setDescription(`<@${opponent.id}>, **${interaction.user.username}** vous défie en Trivia !\n\n⏱️ 5 questions, 15 secondes chacune${mise > 0 ? `\n💰 Mise : **${mise}** coins` : ''}`)
+        .setFooter({ text: 'Vous avez 30 secondes pour accepter !' });
+
+      await interaction.reply({ embeds: [embed], components: [row] });
+
+      const collector = interaction.channel.createMessageComponentCollector({
+        filter: i => i.customId.endsWith(`_${userId}_${opponent.id}`) && i.user.id === opponent.id,
+        time: 30000,
+        max: 1,
+      });
+
+      collector.on('collect', async (btn) => {
+        await btn.deferUpdate();
+
+        if (btn.customId.startsWith('trivia_refuse')) {
+          return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`❌ **${opponent.username}** a refusé le défi.`)], components: [] });
+        }
+
+        // Prendre les mises
+        if (mise > 0) {
+          const opp = db.getUser(opponent.id, guildId);
+          if (opp.coins < mise) {
+            return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`❌ **${opponent.username}** n'a pas assez de coins !`)], components: [] });
+          }
+          db.removeCoins(userId, guildId, mise);
+          db.removeCoins(opponent.id, guildId, mise);
+        }
+
+        await interaction.editReply({ components: [] });
+        const questions = pickQuestions(5);
+        const scores    = { [userId]: 0, [opponent.id]: 0 };
+
+        await channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('🧠 Duel Trivia — C\'est parti !').setDescription(`**${interaction.user.username}** vs **${opponent.username}** — 5 questions !`)] });
+
+        for (let qi = 0; qi < questions.length; qi++) {
+          const q = questions[qi];
+          const letters = ['🇦','🇧','🇨','🇩'];
+
+          // Shuffle choices
+          const shuffled = [...q.choices].sort(() => Math.random() - 0.5);
+          const correctIdx = shuffled.indexOf(q.a);
+
+          const qEmbed = new EmbedBuilder()
+            .setColor('#9b59b6')
+            .setTitle(`❓ Question ${qi+1}/5`)
+            .setDescription(`**${q.q}**\n\n${shuffled.map((c,i) => `${letters[i]} ${c}`).join('\n')}`)
+            .setFooter({ text: '⏱️ 15 secondes !' });
+
+          await channel.send({ embeds: [qEmbed] });
+
+          const answeredThisQ = new Set();
+          const collector2 = channel.createMessageCollector({
+            filter: m => [userId, opponent.id].includes(m.author.id) && !answeredThisQ.has(m.author.id),
+            time: 15000,
+          });
+
+          await new Promise(resolve => {
+            collector2.on('collect', async (msg) => {
+              answeredThisQ.add(msg.author.id);
+              const ans = msg.content.trim().toUpperCase();
+              const idx = ['A','B','C','D'].indexOf(ans);
+              if (idx === correctIdx) {
+                scores[msg.author.id]++;
+                await msg.react('✅').catch(() => {});
+              } else {
+                await msg.react('❌').catch(() => {});
+              }
+              if (answeredThisQ.size >= 2) collector2.stop('both');
+            });
+            collector2.on('end', async (_, reason) => {
+              await channel.send({ embeds: [new EmbedBuilder().setColor('#3498db').setDescription(`✅ Bonne réponse : **${letters[correctIdx]} ${q.a}**\n📊 Scores — ${interaction.user.username}: ${scores[userId]} | ${opponent.username}: ${scores[opponent.id]}`)] });
+              await new Promise(r => setTimeout(r, 2000));
+              resolve();
+            });
+          });
+        }
+
+        // Résultat final
+        const p1Score = scores[userId];
+        const p2Score = scores[opponent.id];
+        let resultDesc;
+
+        if (p1Score > p2Score) {
+          if (mise > 0) db.addCoins(userId, guildId, mise * 2);
+          resultDesc = `🏆 **${interaction.user.username}** remporte le duel !${mise > 0 ? ` +${mise*2} coins !` : ''}`;
+        } else if (p2Score > p1Score) {
+          if (mise > 0) db.addCoins(opponent.id, guildId, mise * 2);
+          resultDesc = `🏆 **${opponent.username}** remporte le duel !${mise > 0 ? ` +${mise*2} coins !` : ''}`;
+        } else {
+          if (mise > 0) { db.addCoins(userId, guildId, mise); db.addCoins(opponent.id, guildId, mise); }
+          resultDesc = `🤝 Égalité !${mise > 0 ? ' Les mises sont remboursées.' : ''}`;
+        }
+
+        await channel.send({ embeds: [new EmbedBuilder()
+          .setColor('#f39c12')
+          .setTitle('🏆 Duel Trivia — Résultats !')
+          .setDescription(resultDesc)
+          .addFields(
+            { name: `👤 ${interaction.user.username}`, value: `${p1Score}/5`,  inline: true },
+            { name: `👤 ${opponent.username}`,         value: `${p2Score}/5`,  inline: true },
+          )
+        ]}).catch(() => {});
+      });
+
+      collector.on('end', (_, reason) => {
+        if (reason === 'time') {
+          interaction.editReply({ components: [] }).catch(() => {});
+        }
+      });
+      return;
+    }
+
+    if (sub === 'solo') {
+      const nbQ    = interaction.options.getInteger('questions') || 5;
+      const qs     = pickQuestions(nbQ);
+      let score    = 0;
+
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498db').setTitle('🧠 Trivia Solo !').setDescription(`**${nbQ} questions** — 15 secondes chacune.\nRépondez avec la lettre (A, B, C, D) !`)] });
+
+      for (let qi = 0; qi < qs.length; qi++) {
+        const q = qs[qi];
+        const letters = ['🇦','🇧','🇨','🇩'];
+        const shuffled = [...q.choices].sort(() => Math.random() - 0.5);
+        const correctIdx = shuffled.indexOf(q.a);
+
+        const qEmbed = new EmbedBuilder()
+          .setColor('#7B2FBE')
+          .setTitle(`❓ Question ${qi+1}/${nbQ}`)
+          .setDescription(`**${q.q}**\n\n${shuffled.map((c,i) => `${letters[i]} ${c}`).join('\n')}`)
+          .setFooter({ text: `Score actuel : ${score}/${qi} — 15 secondes !` });
+
+        await channel.send({ embeds: [qEmbed] });
+
+        let answered = false;
+        const c2 = channel.createMessageCollector({
+          filter: m => m.author.id === userId,
+          time: 15000,
+          max: 3,
+        });
+
+        await new Promise(resolve => {
+          c2.on('collect', async (msg) => {
+            const ans = msg.content.trim().toUpperCase();
+            const idx = ['A','B','C','D'].indexOf(ans);
+            if (idx === correctIdx) {
+              answered = true;
+              score++;
+              c2.stop('correct');
+              await msg.react('✅').catch(() => {});
+            } else if (idx >= 0) {
+              await msg.react('❌').catch(() => {});
+            }
+          });
+          c2.on('end', async () => {
+            if (!answered) {
+              await channel.send({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`⏱️ Bonne réponse : **${letters[correctIdx]} ${q.a}**`)] }).catch(() => {});
+            }
+            await new Promise(r => setTimeout(r, 1500));
+            resolve();
+          });
+        });
+      }
+
+      const coins = score * 30;
+      if (coins > 0) db.addCoins(userId, guildId, coins);
+
+      await channel.send({ embeds: [new EmbedBuilder()
+        .setColor('#f39c12')
+        .setTitle('🎯 Trivia Solo — Résultat !')
+        .setDescription(`**${interaction.user.username}** a obtenu **${score}/${nbQ}** !`)
+        .addFields({ name: '🪙 Récompense', value: `+**${coins}** coins (${score} × 30)`, inline: true })
+      ]}).catch(() => {});
+    }
+  }
+};

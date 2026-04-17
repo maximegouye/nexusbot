@@ -1,0 +1,153 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { createPremiumCode } = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('genpremium')
+    .setDescription('Génère des codes premium (Bot owner uniquement)')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('create')
+        .setDescription('Crée un ou plusieurs codes premium')
+        .addIntegerOption(option =>
+          option.setName('count')
+            .setDescription('Nombre de codes à générer (1-100)')
+            .setMinValue(1)
+            .setMaxValue(100)
+            .setRequired(true)
+        )
+        .addIntegerOption(option =>
+          option.setName('duration_days')
+            .setDescription('Durée en jours (par défaut 30)')
+            .setMinValue(1)
+            .setMaxValue(3650)
+            .setRequired(false)
+        )
+        .addStringOption(option =>
+          option.setName('plan')
+            .setDescription('Plan premium (par défaut "Standard")')
+            .addChoices(
+              { name: 'Standard', value: 'standard' },
+              { name: 'Pro', value: 'pro' },
+              { name: 'Elite', value: 'elite' }
+            )
+            .setRequired(false)
+        )
+    ),
+
+  async execute(interaction) {
+    try {
+      // Vérifier que l'utilisateur est le propriétaire du bot
+      const botOwnerId = process.env.BOT_OWNER_ID;
+      if (!botOwnerId || interaction.user.id !== botOwnerId) {
+        const errorEmbed = new EmbedBuilder()
+          .setColor('#FF0000')
+          .setDescription('❌ Seul le propriétaire du bot peut utiliser cette commande.');
+
+        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      }
+
+      const subcommand = interaction.options.getSubcommand();
+
+      if (subcommand === 'create') {
+        return handleCreate(interaction);
+      }
+    } catch (error) {
+      console.error('Erreur dans la commande genpremium:', error);
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('❌ Une erreur est survenue lors de la génération des codes.');
+
+      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    }
+  }
+};
+
+async function handleCreate(interaction) {
+  try {
+    const count = interaction.options.getInteger('count');
+    const duration_days = interaction.options.getInteger('duration_days') || 30;
+    const plan = interaction.options.getString('plan') || 'standard';
+
+    // Afficher un message d'attente
+    await interaction.deferReply({ ephemeral: true });
+
+    const codes = [];
+
+    // Générer les codes
+    for (let i = 0; i < count; i++) {
+      const code = createPremiumCode(plan, duration_days);
+      codes.push(code.code);
+    }
+
+    // Créer un message avec les codes (en pages si trop nombreux)
+    const codesPerEmbed = 10;
+    const totalPages = Math.ceil(codes.length / codesPerEmbed);
+
+    for (let page = 0; page < totalPages; page++) {
+      const startIndex = page * codesPerEmbed;
+      const endIndex = startIndex + codesPerEmbed;
+      const pageCodes = codes.slice(startIndex, endIndex);
+
+      let codeList = pageCodes.map((code, index) => `\`${code}\``).join('\n');
+
+      const embed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle(`✅ Codes générés (Page ${page + 1}/${totalPages})`)
+        .setDescription(codeList)
+        .addFields(
+          {
+            name: 'Plan',
+            value: plan.charAt(0).toUpperCase() + plan.slice(1)
+          },
+          {
+            name: 'Durée',
+            value: `${duration_days} jours`
+          },
+          {
+            name: 'Total généré',
+            value: `${codes.length} code(s)`
+          }
+        );
+
+      if (page === 0) {
+        await interaction.editReply({ embeds: [embed] });
+      } else {
+        await interaction.followUp({ embeds: [embed], ephemeral: true });
+      }
+    }
+
+    // Envoyer aussi en DM pour sécurité
+    try {
+      const dmEmbed = new EmbedBuilder()
+        .setColor('#7B2FBE')
+        .setTitle('📋 Codes Premium Générés')
+        .setDescription(`${count} code(s) premium ont été générés.`)
+        .addFields(
+          {
+            name: 'Codes',
+            value: codes.slice(0, 20).map(c => `\`${c}\``).join('\n') + (codes.length > 20 ? `\n... et ${codes.length - 20} autres` : '')
+          },
+          {
+            name: 'Plan',
+            value: plan.charAt(0).toUpperCase() + plan.slice(1)
+          },
+          {
+            name: 'Durée',
+            value: `${duration_days} jours`
+          }
+        );
+
+      await interaction.user.send({ embeds: [dmEmbed] });
+    } catch (error) {
+      console.log('Impossible d\'envoyer un DM au bot owner');
+    }
+  } catch (error) {
+    console.error('Erreur dans handleCreate:', error);
+    const errorEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setDescription('❌ Une erreur est survenue lors de la génération des codes.');
+
+    return interaction.editReply({ embeds: [errorEmbed] });
+  }
+}

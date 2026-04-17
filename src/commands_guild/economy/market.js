@@ -1,0 +1,155 @@
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const db = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('market')
+    .setDescription('🏪 Marché joueur-à-joueur — achetez et vendez entre membres !')
+    .addSubcommand(s => s.setName('voir').setDescription('📋 Voir les annonces du marché'))
+    .addSubcommand(s => s
+      .setName('vendre')
+      .setDescription('📤 Mettre un article en vente')
+      .addIntegerOption(o => o.setName('item_id').setDescription('ID de l\'article (voir /inventory)').setRequired(true).setMinValue(1))
+      .addIntegerOption(o => o.setName('prix').setDescription('Prix de vente').setRequired(true).setMinValue(1))
+      .addIntegerOption(o => o.setName('quantite').setDescription('Quantité (défaut: 1)').setRequired(false).setMinValue(1)))
+    .addSubcommand(s => s
+      .setName('acheter')
+      .setDescription('📥 Acheter une annonce du marché')
+      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce').setRequired(true).setMinValue(1)))
+    .addSubcommand(s => s
+      .setName('retirer')
+      .setDescription('❌ Retirer ta propre annonce')
+      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce').setRequired(true).setMinValue(1))),
+  cooldown: 5,
+
+  async execute(interaction) {
+    const sub   = interaction.options.getSubcommand();
+    const cfg   = db.getConfig(interaction.guildId);
+    const emoji = cfg.currency_emoji || '€';
+    const name  = cfg.currency_name  || 'Euros';
+
+    // ── VOIR ──
+    if (sub === 'voir') {
+      const listings = db.db.prepare(`
+        SELECT ml.*, s.name as item_name, s.emoji as item_emoji
+        FROM market_listings ml
+        JOIN shop s ON ml.item_id = s.id
+        WHERE ml.guild_id = ? AND ml.status = 'active'
+        ORDER BY ml.created_at DESC
+        LIMIT 20
+      `).all(interaction.guildId);
+
+      const embed = new EmbedBuilder()
+        .setColor(cfg.color || '#7B2FBE')
+        .setTitle('🏪 Marché du serveur')
+        .setDescription(listings.length ? 'Utilise `/market acheter <id>` pour acheter une annonce.' : '🛒 Aucune annonce active. Vends avec `/market vendre` !');
+
+      for (const l of listings) {
+        const seller = await interaction.client.users.fetch(l.seller_id).catch(() => ({ username: 'Inconnu' }));
+        embed.addFields({
+          name: `#${l.id} ${l.item_emoji || '📦'} ${l.item_name} ×${l.quantity}`,
+          value: `💰 **${l.price.toLocaleString('fr')} ${name}** — Vendeur: **${seller.username}**`,
+          inline: false,
+        });
+      }
+
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    // ── VENDRE ──
+    if (sub === 'vendre') {
+      const itemId = interaction.options.getInteger('item_id');
+      const price  = interaction.options.getInteger('prix');
+      const qty    = interaction.options.getInteger('quantite') || 1;
+
+      const invItem = db.db.prepare(`
+        SELECT i.*, s.name, s.emoji FROM inventory i
+        JOIN shop s ON i.item_id = s.id
+        WHERE i.user_id = ? AND i.guild_id = ? AND i.item_id = ? AND i.quantity >= ?
+      `).get(interaction.user.id, interaction.guildId, itemId, qty);
+
+      if (!invItem) return interaction.reply({ content: `❌ Tu n'as pas ${qty}x de l'article #${itemId} dans ton inventaire.`, ephemeral: true });
+
+      // Limite: max 5 annonces actives
+      const count = db.db.prepare('SELECT COUNT(*) as c FROM market_listings WHERE seller_id = ? AND guild_id = ? AND status = "active"')
+        .get(interaction.user.id, interaction.guildId).c;
+      if (count >= 5) return interaction.reply({ content: '❌ Tu as atteint la limite de 5 annonces actives.', ephemeral: true });
+
+      db.removeItem(interaction.user.id, interaction.guildId, itemId, qty);
+      db.db.prepare('INSERT INTO market_listings (guild_id, seller_id, item_id, quantity, price, status, created_at) VALUES (?, ?, ?, ?, ?, "active", ?)')
+        .run(interaction.guildId, interaction.user.id, itemId, qty, price, Math.floor(Date.now() / 1000));
+
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#2ECC71')
+          .setTitle('📤 Annonce publiée !')
+          .setDescription(`**${qty}x ${invItem.emoji || '📦'} ${invItem.name}** mis en vente pour **${price.toLocaleString('fr')} ${name}** ${emoji}`)
+          .setFooter({ text: 'Les acheteurs voient ton annonce avec /market voir' })
+        ]
+      });
+    }
+
+    // ── ACHETER ──
+    if (sub === 'acheter') {
+      const listingId = interaction.options.getInteger('annonce_id');
+      const listing   = db.db.prepare(`
+        SELECT ml.*, s.name as item_name, s.emoji as item_emoji
+        FROM market_listings ml JOIN shop s ON ml.item_id = s.id
+        WHERE ml.id = ? AND ml.guild_id = ? AND ml.status = "active"
+      `).get(listingId, interaction.guildId);
+
+      if (!listing) return interaction.reply({ content: `❌ Annonce **#${listingId}** introuvable.`, ephemeral: true });
+      if (listing.seller_id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas acheter ta propre annonce.', ephemeral: true });
+
+      const buyer = db.getUser(interaction.user.id, interaction.guildId);
+      if (buyer.balance < listing.price) {
+        return interaction.reply({ content: `❌ Solde insuffisant. Il te faut **${listing.price.toLocaleString('fr')} ${name}**.`, ephemeral: true });
+      }
+
+      const fee        = Math.ceil(listing.price * 0.05); // 5% de frais de marché
+      const sellerGain = listing.price - fee;
+
+      db.removeCoins(interaction.user.id, interaction.guildId, listing.price);
+      db.addCoins(listing.seller_id, interaction.guildId, sellerGain);
+      db.addItem(interaction.user.id, interaction.guildId, listing.item_id, listing.quantity, null);
+      db.db.prepare('UPDATE market_listings SET status = "sold", buyer_id = ? WHERE id = ?').run(interaction.user.id, listing.id);
+
+      // DM au vendeur
+      const seller = await interaction.client.users.fetch(listing.seller_id).catch(() => null);
+      if (seller) {
+        seller.send(`🏪 Ton annonce **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** a été vendue pour **${sellerGain.toLocaleString('fr')} ${name}** sur le marché de **${interaction.guild.name}** !`).catch(() => {});
+      }
+
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#2ECC71')
+          .setTitle('📥 Achat réussi !')
+          .setDescription(`Tu as acheté **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** pour **${listing.price.toLocaleString('fr')} ${name}** ${emoji}`)
+          .setFooter({ text: `Frais de marché (5%) : ${fee.toLocaleString('fr')} ${name}` })
+        ]
+      });
+    }
+
+    // ── RETIRER ──
+    if (sub === 'retirer') {
+      const listingId = interaction.options.getInteger('annonce_id');
+      const listing   = db.db.prepare(`
+        SELECT ml.*, s.name as item_name, s.emoji as item_emoji
+        FROM market_listings ml JOIN shop s ON ml.item_id = s.id
+        WHERE ml.id = ? AND ml.guild_id = ? AND ml.seller_id = ? AND ml.status = "active"
+      `).get(listingId, interaction.guildId, interaction.user.id);
+
+      if (!listing) return interaction.reply({ content: `❌ Annonce **#${listingId}** introuvable ou ce n'est pas la tienne.`, ephemeral: true });
+
+      db.addItem(interaction.user.id, interaction.guildId, listing.item_id, listing.quantity, null);
+      db.db.prepare('UPDATE market_listings SET status = "cancelled" WHERE id = ?').run(listingId);
+
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#FFA500')
+          .setDescription(`✅ Annonce #${listingId} retirée. **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** remis dans ton inventaire.`)
+        ]
+      });
+    }
+  }
+};

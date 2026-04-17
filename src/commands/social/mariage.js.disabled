@@ -1,0 +1,117 @@
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const db = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('mariage')
+    .setDescription('💍 Système de mariage Discord')
+    .addSubcommand(s => s.setName('demander').setDescription('💍 Faire une demande en mariage')
+      .addUserOption(o => o.setName('membre').setDescription('Qui tu veux épouser ?').setRequired(true)))
+    .addSubcommand(s => s.setName('divorcer').setDescription('💔 Divorcer de ton/ta partenaire'))
+    .addSubcommand(s => s.setName('voir').setDescription('👫 Voir qui est marié avec qui')),
+  cooldown: 10,
+
+  async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
+    const cfg = db.getConfig(interaction.guildId);
+
+    if (sub === 'demander') {
+      const target = interaction.options.getUser('membre');
+      if (target.bot) return interaction.reply({ content: '❌ Tu ne peux pas épouser un bot.', ephemeral: true });
+      if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas t\'épouser toi-même.', ephemeral: true });
+
+      // Vérifier si déjà marié
+      const myMarriage = db.db.prepare('SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND guild_id = ?')
+        .get(interaction.user.id, interaction.user.id, interaction.guildId);
+      if (myMarriage) return interaction.reply({ content: '❌ Tu es déjà marié(e) ! Divorce d\'abord avec `/mariage divorcer`.', ephemeral: true });
+
+      const theirMarriage = db.db.prepare('SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND guild_id = ?')
+        .get(target.id, target.id, interaction.guildId);
+      if (theirMarriage) return interaction.reply({ content: `❌ **${target.username}** est déjà marié(e) !`, ephemeral: true });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('marry_accept').setLabel('💍 Accepter !').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('marry_refuse').setLabel('💔 Refuser').setStyle(ButtonStyle.Danger),
+      );
+
+      const msg = await interaction.reply({
+        content: `${target}, tu as une demande en mariage ! 💍`,
+        embeds: [new EmbedBuilder()
+          .setColor('#FF73FA')
+          .setTitle('💍 Demande en Mariage !')
+          .setDescription(`**${interaction.user.username}** te demande en mariage, **${target.username}** ! 🌹\n\nAcceptes-tu de l'épouser ?`)
+          .setThumbnail(interaction.user.displayAvatarURL())
+        ],
+        components: [row],
+        fetchReply: true
+      });
+
+      const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === target.id, time: 60000, max: 1 });
+
+      collector.on('collect', async i => {
+        if (i.customId === 'marry_refuse') {
+          return i.update({
+            embeds: [new EmbedBuilder().setColor('#888888').setDescription(`💔 **${target.username}** a refusé la demande... C'est douloureux.`)],
+            components: []
+          });
+        }
+
+        db.db.prepare('INSERT INTO marriages (guild_id, user1_id, user2_id, married_at) VALUES (?, ?, ?, ?)')
+          .run(interaction.guildId, interaction.user.id, target.id, Math.floor(Date.now() / 1000));
+
+        await i.update({
+          embeds: [new EmbedBuilder()
+            .setColor('#FF73FA')
+            .setTitle('💍 Félicitations aux mariés ! 🎊')
+            .setDescription(`**${interaction.user.username}** 💍 **${target.username}**\n\nVous êtes maintenant officiellement mariés sur ce serveur ! 🌹`)
+            .setImage('https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif')
+          ],
+          components: []
+        });
+      });
+
+      collector.on('end', (_, reason) => {
+        if (reason === 'time') msg.edit({ content: '💔 La demande a expiré.', components: [] }).catch(() => {});
+      });
+    }
+
+    if (sub === 'divorcer') {
+      const marriage = db.db.prepare('SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND guild_id = ?')
+        .get(interaction.user.id, interaction.user.id, interaction.guildId);
+      if (!marriage) return interaction.reply({ content: '❌ Tu n\'es pas marié(e) sur ce serveur.', ephemeral: true });
+
+      const partnerId = marriage.user1_id === interaction.user.id ? marriage.user2_id : marriage.user1_id;
+      db.db.prepare('DELETE FROM marriages WHERE id = ?').run(marriage.id);
+
+      // Frais de divorce (coût symbolique)
+      const fee = 500;
+      db.removeCoins(interaction.user.id, interaction.guildId, fee);
+
+      await interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#888888')
+          .setTitle('💔 Divorce prononcé')
+          .setDescription(`Tu as divorcé de <@${partnerId}>.\n*Frais de divorce : ${fee} coins. C'est le prix à payer.*`)
+        ]
+      });
+    }
+
+    if (sub === 'voir') {
+      const marriages = db.db.prepare('SELECT * FROM marriages WHERE guild_id = ? ORDER BY married_at DESC LIMIT 20').all(interaction.guildId);
+
+      if (!marriages.length) {
+        return interaction.reply({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setDescription('💍 Aucun mariage sur ce serveur. Fais ta demande avec `/mariage demander` !')],
+          ephemeral: true
+        });
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor('#FF73FA')
+        .setTitle('💍 Mariages du serveur')
+        .setDescription(marriages.map(m => `<@${m.user1_id}> 💍 <@${m.user2_id}> — depuis <t:${m.married_at}:D>`).join('\n'));
+
+      await interaction.reply({ embeds: [embed] });
+    }
+  }
+};

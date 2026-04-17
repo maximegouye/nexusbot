@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+*.log
+.DS_Store
+*.command
+data_seed/
+*.zip
+*.tar.gz

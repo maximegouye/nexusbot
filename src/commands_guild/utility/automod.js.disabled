@@ -1,0 +1,117 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const db = require('../../database/db');
+
+try {
+  const cols = db.db.prepare('PRAGMA table_info(guild_config)').all().map(c => c.name);
+  if (!cols.includes('automod_spam'))     db.db.prepare("ALTER TABLE guild_config ADD COLUMN automod_spam INTEGER DEFAULT 0").run();
+  if (!cols.includes('automod_caps'))     db.db.prepare("ALTER TABLE guild_config ADD COLUMN automod_caps INTEGER DEFAULT 0").run();
+  if (!cols.includes('automod_invites'))  db.db.prepare("ALTER TABLE guild_config ADD COLUMN automod_invites INTEGER DEFAULT 0").run();
+  if (!cols.includes('automod_links'))    db.db.prepare("ALTER TABLE guild_config ADD COLUMN automod_links INTEGER DEFAULT 0").run();
+  if (!cols.includes('automod_words'))    db.db.prepare("ALTER TABLE guild_config ADD COLUMN automod_words TEXT").run();
+  if (!cols.includes('automod_log'))      db.db.prepare("ALTER TABLE guild_config ADD COLUMN automod_log TEXT").run();
+  if (!cols.includes('automod_spam_threshold')) db.db.prepare("ALTER TABLE guild_config ADD COLUMN automod_spam_threshold INTEGER DEFAULT 5").run();
+} catch {}
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('automod')
+    .setDescription('🤖 Configurez la modération automatique du serveur')
+    .addSubcommand(s => s.setName('voir').setDescription('📋 Voir la configuration actuelle'))
+    .addSubcommand(s => s.setName('spam').setDescription('🚫 Anti-spam')
+      .addBooleanOption(o => o.setName('actif').setDescription('Activer/Désactiver').setRequired(true))
+      .addIntegerOption(o => o.setName('seuil').setDescription('Nb messages en 5s avant action (défaut: 5)').setMinValue(2).setMaxValue(20)))
+    .addSubcommand(s => s.setName('caps').setDescription('🔠 Anti-MAJUSCULES excessives')
+      .addBooleanOption(o => o.setName('actif').setDescription('Activer/Désactiver').setRequired(true)))
+    .addSubcommand(s => s.setName('invites').setDescription('🔗 Bloquer les invitations Discord')
+      .addBooleanOption(o => o.setName('actif').setDescription('Activer/Désactiver').setRequired(true)))
+    .addSubcommand(s => s.setName('liens').setDescription('🔗 Bloquer les liens externes')
+      .addBooleanOption(o => o.setName('actif').setDescription('Activer/Désactiver').setRequired(true)))
+    .addSubcommand(s => s.setName('mots').setDescription('🤬 Gérer les mots interdits')
+      .addStringOption(o => o.setName('action').setDescription('Action').setRequired(true)
+        .addChoices({ name: 'Voir', value: 'voir' }, { name: 'Ajouter', value: 'ajouter' }, { name: 'Effacer', value: 'effacer' }))
+      .addStringOption(o => o.setName('mot').setDescription('Mot à ajouter (si action = ajouter)')))
+    .addSubcommand(s => s.setName('logs').setDescription('📋 Configurer le salon de logs automod')
+      .addChannelOption(o => o.setName('salon').setDescription('Salon de logs'))),
+
+  async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
+    const guildId = interaction.guildId;
+
+    if (!interaction.member.permissions.has(0x20n)) return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+
+    const cfg = db.getConfig(guildId);
+
+    if (sub === 'voir') {
+      const words = cfg.automod_words ? JSON.parse(cfg.automod_words) : [];
+      return interaction.reply({ embeds: [
+        new EmbedBuilder().setColor('#E74C3C').setTitle('🤖 Configuration AutoMod')
+          .addFields(
+            { name: '🚫 Anti-Spam', value: cfg.automod_spam ? `✅ Actif (seuil: ${cfg.automod_spam_threshold})` : '❌ Inactif', inline: true },
+            { name: '🔠 Anti-Caps', value: cfg.automod_caps ? '✅ Actif' : '❌ Inactif', inline: true },
+            { name: '🔗 Anti-Invites', value: cfg.automod_invites ? '✅ Actif' : '❌ Inactif', inline: true },
+            { name: '🔗 Anti-Liens', value: cfg.automod_links ? '✅ Actif' : '❌ Inactif', inline: true },
+            { name: '🤬 Mots interdits', value: words.length ? `**${words.length}** mot(s)` : 'Aucun', inline: true },
+            { name: '📋 Logs', value: cfg.automod_log ? `<#${cfg.automod_log}>` : 'Non configuré', inline: true },
+          )
+      ], ephemeral: true });
+    }
+
+    if (sub === 'spam') {
+      const actif = interaction.options.getBoolean('actif');
+      const seuil = interaction.options.getInteger('seuil') || cfg.automod_spam_threshold || 5;
+      db.setConfig(guildId, 'automod_spam', actif ? 1 : 0);
+      db.setConfig(guildId, 'automod_spam_threshold', seuil);
+      return interaction.reply({ content: `✅ Anti-spam **${actif ? 'activé' : 'désactivé'}** (seuil: ${seuil} msg/5s).`, ephemeral: true });
+    }
+
+    if (sub === 'caps') {
+      const actif = interaction.options.getBoolean('actif');
+      db.setConfig(guildId, 'automod_caps', actif ? 1 : 0);
+      return interaction.reply({ content: `✅ Anti-CAPS **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
+    }
+
+    if (sub === 'invites') {
+      const actif = interaction.options.getBoolean('actif');
+      db.setConfig(guildId, 'automod_invites', actif ? 1 : 0);
+      return interaction.reply({ content: `✅ Anti-invitations **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
+    }
+
+    if (sub === 'liens') {
+      const actif = interaction.options.getBoolean('actif');
+      db.setConfig(guildId, 'automod_links', actif ? 1 : 0);
+      return interaction.reply({ content: `✅ Blocage des liens **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
+    }
+
+    if (sub === 'mots') {
+      const action = interaction.options.getString('action');
+      let words = cfg.automod_words ? JSON.parse(cfg.automod_words) : [];
+
+      if (action === 'voir') {
+        return interaction.reply({ embeds: [
+          new EmbedBuilder().setColor('#E74C3C').setTitle('🤬 Mots Interdits')
+            .setDescription(words.length ? words.map(w => `\`${w}\``).join(', ') : 'Aucun mot interdit configuré.')
+        ], ephemeral: true });
+      }
+
+      if (action === 'ajouter') {
+        const mot = interaction.options.getString('mot');
+        if (!mot) return interaction.reply({ content: '❌ Précisez un mot à ajouter.', ephemeral: true });
+        if (words.includes(mot.toLowerCase())) return interaction.reply({ content: '❌ Ce mot est déjà dans la liste.', ephemeral: true });
+        words.push(mot.toLowerCase());
+        db.setConfig(guildId, 'automod_words', JSON.stringify(words));
+        return interaction.reply({ content: `✅ Mot \`${mot}\` ajouté à la liste noire. (${words.length} mots)`, ephemeral: true });
+      }
+
+      if (action === 'effacer') {
+        db.setConfig(guildId, 'automod_words', JSON.stringify([]));
+        return interaction.reply({ content: '✅ Liste des mots interdits effacée.', ephemeral: true });
+      }
+    }
+
+    if (sub === 'logs') {
+      const channel = interaction.options.getChannel('salon');
+      db.setConfig(guildId, 'automod_log', channel?.id || null);
+      return interaction.reply({ content: channel ? `✅ Logs AutoMod → ${channel}` : '✅ Logs AutoMod désactivés.', ephemeral: true });
+    }
+  }
+};

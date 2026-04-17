@@ -1,0 +1,182 @@
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const db = require('../../database/db');
+
+const SUITS = ['♠️', '♥️', '♦️', '♣️'];
+const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+function createDeck() {
+  const deck = [];
+  for (const s of SUITS) for (const v of VALUES) deck.push({ s, v });
+  return deck.sort(() => Math.random() - 0.5);
+}
+
+function cardValue(card) {
+  if (['J', 'Q', 'K'].includes(card.v)) return 10;
+  if (card.v === 'A') return 11;
+  return parseInt(card.v);
+}
+
+function handTotal(hand) {
+  let total = 0;
+  let aces = 0;
+  for (const c of hand) {
+    total += cardValue(c);
+    if (c.v === 'A') aces++;
+  }
+  while (total > 21 && aces > 0) { total -= 10; aces--; }
+  return total;
+}
+
+function displayHand(hand, hideSecond = false) {
+  if (hideSecond) return `${hand[0].v}${hand[0].s} 🃏`;
+  return hand.map(c => `${c.v}${c.s}`).join(' ');
+}
+
+const games = new Map();
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('blackjack')
+    .setDescription('🃏 Jouez au Blackjack contre le croupier !')
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant de votre mise').setRequired(true).setMinValue(10).setMaxValue(10000)),
+
+  async execute(interaction) {
+    const guildId = interaction.guildId;
+    const userId = interaction.user.id;
+    const mise = interaction.options.getInteger('mise');
+    const cfg = db.getConfig(guildId);
+    const coin = cfg.currency_emoji || '🪙';
+    const u = db.getUser(userId, guildId);
+
+    if (games.has(`${guildId}_${userId}`)) return interaction.reply({ content: '❌ Vous avez déjà une partie en cours !', ephemeral: true });
+    if (u.balance < mise) return interaction.reply({ content: `❌ Solde insuffisant ! Vous avez **${u.balance} ${coin}**.`, ephemeral: true });
+
+    db.addCoins(userId, guildId, -mise);
+
+    const deck = createDeck();
+    const playerHand = [deck.pop(), deck.pop()];
+    const dealerHand = [deck.pop(), deck.pop()];
+
+    const game = { deck, playerHand, dealerHand, mise, guildId, userId, coin };
+    games.set(`${guildId}_${userId}`, game);
+
+    const playerTotal = handTotal(playerHand);
+
+    // Blackjack naturel ?
+    if (playerTotal === 21) {
+      const dealerTotal = handTotal(dealerHand);
+      games.delete(`${guildId}_${userId}`);
+      if (dealerTotal === 21) {
+        db.addCoins(userId, guildId, mise);
+        return interaction.reply({ embeds: [
+          new EmbedBuilder().setColor('#F1C40F').setTitle('🃏 Blackjack — Égalité !')
+            .addFields(
+              { name: '🫵 Votre main', value: `${displayHand(playerHand)} = **21**`, inline: true },
+              { name: '🎩 Croupier', value: `${displayHand(dealerHand)} = **${dealerTotal}**`, inline: true },
+            ).setDescription('Double Blackjack ! Mise remboursée.')
+        ]});
+      }
+      const gain = Math.floor(mise * 2.5);
+      db.addCoins(userId, guildId, gain);
+      return interaction.reply({ embeds: [
+        new EmbedBuilder().setColor('#F1C40F').setTitle('🃏 BLACKJACK ! 🎉')
+          .setDescription(`Vous avez gagné **+${gain} ${coin}** (x2.5) !`)
+          .addFields({ name: '🫵 Votre main', value: `${displayHand(playerHand)} = **21**`, inline: true })
+      ]});
+    }
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`bj_hit_${userId}`).setLabel('Tirer (Hit)').setEmoji('➕').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`bj_stand_${userId}`).setLabel('Rester (Stand)').setEmoji('✋').setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`bj_double_${userId}`).setLabel('Doubler').setEmoji('💰').setStyle(ButtonStyle.Secondary)
+        .setDisabled(u.balance < mise),
+    );
+
+    const embed = new EmbedBuilder().setColor('#7B2FBE').setTitle('🃏 Blackjack')
+      .addFields(
+        { name: '🫵 Votre main', value: `${displayHand(playerHand)} = **${playerTotal}**`, inline: true },
+        { name: '🎩 Croupier', value: `${displayHand(dealerHand, true)} = **?**`, inline: true },
+        { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
+      ).setFooter({ text: 'Tirer : prendre une carte | Rester : passer au croupier' });
+
+    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+
+    const collector = msg.createMessageComponentCollector({ time: 60000 });
+    collector.on('collect', async i => {
+      if (i.user.id !== userId) return i.reply({ content: '❌ Ce n\'est pas votre partie.', ephemeral: true });
+
+      const g = games.get(`${guildId}_${userId}`);
+      if (!g) return i.update({ components: [] });
+
+      if (i.customId === `bj_hit_${userId}`) {
+        g.playerHand.push(g.deck.pop());
+        const total = handTotal(g.playerHand);
+
+        if (total > 21) {
+          games.delete(`${guildId}_${userId}`);
+          collector.stop();
+          return i.update({ embeds: [
+            new EmbedBuilder().setColor('#E74C3C').setTitle('🃏 Blackjack — Bust !')
+              .setDescription(`Vous avez dépassé 21 ! Perdu **${g.mise} ${coin}** 😢`)
+              .addFields(
+                { name: '🫵 Votre main', value: `${displayHand(g.playerHand)} = **${total}**`, inline: true },
+                { name: '🎩 Croupier', value: `${displayHand(g.dealerHand)} = **${handTotal(g.dealerHand)}**`, inline: true },
+              )
+          ], components: [] });
+        }
+
+        return i.update({ embeds: [
+          new EmbedBuilder().setColor('#7B2FBE').setTitle('🃏 Blackjack')
+            .addFields(
+              { name: '🫵 Votre main', value: `${displayHand(g.playerHand)} = **${total}**`, inline: true },
+              { name: '🎩 Croupier', value: `${displayHand(g.dealerHand, true)} = **?**`, inline: true },
+              { name: '💰 Mise', value: `${g.mise} ${coin}`, inline: true },
+            )
+        ], components: [row] });
+      }
+
+      if (i.customId === `bj_double_${userId}`) {
+        const currentUser = db.getUser(userId, guildId);
+        if (currentUser.balance < g.mise) return i.reply({ content: '❌ Solde insuffisant pour doubler.', ephemeral: true });
+        db.addCoins(userId, guildId, -g.mise);
+        g.mise *= 2;
+        g.playerHand.push(g.deck.pop());
+      }
+
+      // STAND ou DOUBLE → jeu du croupier
+      games.delete(`${guildId}_${userId}`);
+      collector.stop();
+
+      while (handTotal(g.dealerHand) < 17) g.dealerHand.push(g.deck.pop());
+
+      const playerTotal2 = handTotal(g.playerHand);
+      const dealerTotal2 = handTotal(g.dealerHand);
+
+      let resultColor = '#F1C40F', resultTitle = '', gain = 0;
+      if (playerTotal2 > 21) {
+        resultColor = '#E74C3C'; resultTitle = '💀 Bust — Perdu !';
+      } else if (dealerTotal2 > 21 || playerTotal2 > dealerTotal2) {
+        gain = g.mise * 2; db.addCoins(userId, guildId, gain);
+        resultColor = '#2ECC71'; resultTitle = `🏆 Victoire ! +${gain} ${coin}`;
+      } else if (playerTotal2 === dealerTotal2) {
+        db.addCoins(userId, guildId, g.mise);
+        resultColor = '#F1C40F'; resultTitle = '🤝 Égalité — Mise remboursée';
+      } else {
+        resultColor = '#E74C3C'; resultTitle = `💔 Défaite — Perdu ${g.mise} ${coin}`;
+      }
+
+      return i.update({ embeds: [
+        new EmbedBuilder().setColor(resultColor).setTitle(`🃏 Blackjack — ${resultTitle}`)
+          .addFields(
+            { name: '🫵 Votre main', value: `${displayHand(g.playerHand)} = **${playerTotal2}**`, inline: true },
+            { name: '🎩 Croupier', value: `${displayHand(g.dealerHand)} = **${dealerTotal2}**`, inline: true },
+          )
+      ], components: [] });
+    });
+
+    collector.on('end', () => {
+      const g = games.get(`${guildId}_${userId}`);
+      if (g) { db.addCoins(userId, guildId, g.mise); games.delete(`${guildId}_${userId}`); }
+    });
+  }
+};

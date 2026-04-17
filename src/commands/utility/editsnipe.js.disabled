@@ -1,0 +1,34 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const snipe = require('./snipe');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('editsnipe')
+    .setDescription('✏️ Voir le dernier message modifié dans ce salon'),
+  cooldown: 5,
+
+  async execute(interaction) {
+    const cache = snipe.getEditCache();
+    const cached = cache.get(interaction.channelId);
+
+    if (!cached) {
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor('#888888').setDescription('✏️ Aucun message modifié récemment dans ce salon.')],
+        ephemeral: true
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor('#F39C12')
+      .setTitle('✏️ Dernier Message Modifié')
+      .setAuthor({ name: cached.authorTag, iconURL: cached.avatarURL })
+      .addFields(
+        { name: '📝 Avant', value: cached.oldContent?.slice(0, 1024) || '*[Vide]*', inline: false },
+        { name: '✅ Après', value: cached.newContent?.slice(0, 1024) || '*[Vide]*', inline: false },
+      )
+      .setFooter({ text: 'Modifié' })
+      .setTimestamp(cached.timestamp);
+
+    await interaction.reply({ embeds: [embed] });
+  }
+};

@@ -1,0 +1,68 @@
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const db = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('note')
+    .setDescription('📝 Gestion des notes de modération (silencieuses)')
+    .addSubcommand(s => s.setName('ajouter').setDescription('📝 Ajouter une note à un membre')
+      .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
+      .addStringOption(o => o.setName('texte').setDescription('Note').setRequired(true).setMaxLength(500)))
+    .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir les notes d\'un membre')
+      .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true)))
+    .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer une note')
+      .addIntegerOption(o => o.setName('id').setDescription('ID de la note').setRequired(true)))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+  cooldown: 3,
+
+  async execute(interaction) {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers))
+      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+
+    const sub = interaction.options.getSubcommand();
+
+    if (sub === 'ajouter') {
+      const target = interaction.options.getUser('membre');
+      const texte  = interaction.options.getString('texte');
+      db.db.prepare('INSERT INTO mod_notes (guild_id, user_id, mod_id, note) VALUES (?, ?, ?, ?)')
+        .run(interaction.guildId, target.id, interaction.user.id, texte);
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#F39C12')
+          .setDescription(`📝 Note ajoutée pour **${target.tag}** : *"${texte}"*`)
+        ], ephemeral: true
+      });
+    }
+
+    if (sub === 'voir') {
+      const target = interaction.options.getUser('membre');
+      const notes  = db.db.prepare('SELECT * FROM mod_notes WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC').all(interaction.guildId, target.id);
+      if (!notes.length)
+        return interaction.reply({ content: `ℹ️ Aucune note pour **${target.tag}**.`, ephemeral: true });
+
+      const list = notes.map(n => {
+        const date = new Date(n.created_at * 1000).toLocaleDateString('fr-FR');
+        return `\`#${n.id}\` [${date}] <@${n.mod_id}> : ${n.note}`;
+      }).join('\n');
+
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#3498DB')
+          .setTitle(`📝 Notes de modération — ${target.tag}`)
+          .setDescription(list.slice(0, 4096))
+          .setThumbnail(target.displayAvatarURL())
+        ], ephemeral: true
+      });
+    }
+
+    if (sub === 'supprimer') {
+      const id   = interaction.options.getInteger('id');
+      const note = db.db.prepare('SELECT * FROM mod_notes WHERE id = ? AND guild_id = ?').get(id, interaction.guildId);
+      if (!note) return interaction.reply({ content: `❌ Note \`#${id}\` introuvable.`, ephemeral: true });
+      db.db.prepare('DELETE FROM mod_notes WHERE id = ?').run(id);
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`🗑️ Note \`#${id}\` supprimée.`)], ephemeral: true
+      });
+    }
+  }
+};
