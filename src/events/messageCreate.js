@@ -127,6 +127,24 @@ module.exports = {
       }
     }
 
+    // ── Tracking première réponse staff (tickets v2) ────────────────────────
+    try {
+      const openTicket = db.db.prepare(
+        "SELECT * FROM tickets WHERE guild_id=? AND channel_id=? AND status='open' AND first_response_at IS NULL"
+      ).get(guild.id, channel.id);
+
+      if (openTicket && author.id !== openTicket.user_id) {
+        const isStaffSender =
+          message.member?.permissions.has(0x10n) || // ManageChannels
+          (cfg.ticket_staff_role && message.member?.roles.cache.has(cfg.ticket_staff_role));
+
+        if (isStaffSender) {
+          db.db.prepare('UPDATE tickets SET first_response_at=? WHERE id=?')
+            .run(Math.floor(Date.now() / 1000), openTicket.id);
+        }
+      }
+    } catch {}
+
     // ── Commandes personnalisées (nouvelle table custom_commands) ────────────
     const content = message.content.trim();
     if (content.length > 0) {

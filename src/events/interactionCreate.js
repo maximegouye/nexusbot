@@ -698,17 +698,50 @@ module.exports = {
       if (interaction.customId === 'ticket_select_cat') {
         const category = interaction.values[0];
         const { getCatInfo, PRIORITIES } = require('../commands/unique/ticket');
+        const { detectAutoPriority, detectSpam, calcTrustScore, getTrustLabel } = require('../utils/ticketIntelligence');
         const cat = getCatInfo(category);
+
+        // Vérification spam
+        const spamCheck = detectSpam(db.db, interaction.guildId, interaction.user.id);
+        if (spamCheck.spam) {
+          return interaction.update({
+            embeds: [new EmbedBuilder()
+              .setColor('#E74C3C')
+              .setTitle('🚫 Action refusée — Limite atteinte')
+              .setDescription(
+                `Tu ne peux pas ouvrir de nouveau ticket pour le moment.\n\n` +
+                `**Raison :** ${spamCheck.reason}\n\n` +
+                `> ⚠️ Si tu penses que c'est une erreur, contacte un administrateur.`
+              )
+            ],
+            components: [],
+          });
+        }
 
         const existing = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='open'")
           .get(interaction.guildId, interaction.user.id);
         if (existing)
           return interaction.update({ content: `❌ Tu as déjà un ticket ouvert : <#${existing.channel_id}>`, embeds: [], components: [] });
 
+        // Calcul trust score pour affichage
+        const trustScore = calcTrustScore(db.db, interaction.guildId, interaction.user.id);
+        const trustInfo  = getTrustLabel(trustScore);
+
+        // Suggestion automatique de priorité
+        const PRIORITIES_ALL = PRIORITIES.map(p => {
+          const suggested = category === 'bug' && p.value === 'elevee'
+                         || category === 'signalement' && p.value === 'elevee';
+          return {
+            label: p.label + (suggested ? ' ✨ Suggéré' : ''),
+            description: p.description,
+            value: p.value,
+          };
+        });
+
         const priorityMenu = new StringSelectMenuBuilder()
           .setCustomId(`ticket_pri_${category}`)
           .setPlaceholder('⚡ Sélectionne le niveau d\'urgence...')
-          .addOptions(PRIORITIES.map(p => ({ label: p.label, description: p.description, value: p.value })));
+          .addOptions(PRIORITIES_ALL);
 
         return interaction.update({
           embeds: [new EmbedBuilder()
@@ -720,9 +753,10 @@ module.exports = {
               '🟡 **Normale** — Demande standard\n' +
               '🟠 **Élevée** — Assez urgent, j\'ai besoin d\'aide\n' +
               '🔴 **Urgente** — Besoin d\'aide immédiatement !\n\n' +
-              '> ⚠️ N\'abuse pas de la priorité urgente — cela aide le staff à aider les vrais cas critiques.'
+              `> ${trustInfo.emoji} Ton score de confiance : **${trustScore}/100** (${trustInfo.label})\n` +
+              `> ⚠️ N'abuse pas de la priorité urgente — cela aide le staff à traiter les vrais cas critiques.`
             )
-            .setFooter({ text: `Catégorie : ${cat.label} • Choisis l\'urgence pour créer le ticket` })
+            .setFooter({ text: `Catégorie : ${cat.label} • Étape 2/2` })
           ],
           components: [new ActionRowBuilder().addComponents(priorityMenu)],
         });
@@ -758,14 +792,39 @@ module.exports = {
         const cfg   = db.getConfig(interaction.guildId);
         const guild = interaction.guild;
         const { getCatInfo, getPriInfo } = require('../commands/unique/ticket');
+        const {
+          calcTrustScore, getTrustLabel,
+          detectSpam, isSensitiveContent,
+          getAutoAssignStaff, estimateResponseTime,
+        } = require('../utils/ticketIntelligence');
         const cat = getCatInfo(category);
         const pri = getPriInfo(priority);
+
+        // ── Double-vérification spam ──────────────────────────────────────────
+        const spamCheck2 = detectSpam(db.db, interaction.guildId, interaction.user.id);
+        if (spamCheck2.spam) {
+          return interaction.followUp({
+            embeds: [new EmbedBuilder()
+              .setColor('#E74C3C')
+              .setTitle('🚫 Action refusée — Limite atteinte')
+              .setDescription(
+                `Tu ne peux pas ouvrir de nouveau ticket pour le moment.\n\n` +
+                `**Raison :** ${spamCheck2.reason}\n\n` +
+                `> ⚠️ Si tu penses que c'est une erreur, contacte un administrateur.`
+              )
+            ],
+            ephemeral: true,
+          }).catch(() => {});
+        }
 
         try {
           const ticketNumber = (db.db.prepare('SELECT COUNT(*) as c FROM tickets WHERE guild_id=?').get(interaction.guildId)?.c ?? 0) + 1;
           // Nom de canal sécurisé : lettres/chiffres/tirets uniquement, max 100 chars
           const safeUser = interaction.user.username.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 12) || 'user';
           const channelName = `${category}-${safeUser}-${ticketNumber}`.slice(0, 100);
+
+          // ── Mode privé pour contenus sensibles (signalement) ─────────────────
+          const isPrivate = isSensitiveContent(category, '');
 
           // Permissions : @everyone bloqué, user + staff + bot autorisés
           const permissionOverwrites = [
@@ -793,7 +852,10 @@ module.exports = {
               ],
             },
           ];
-          if (cfg.ticket_staff_role) {
+
+          // En mode privé, le rôle staff n'est PAS ajouté automatiquement
+          // Seul un admin peut y accéder (via permission ManageChannels)
+          if (cfg.ticket_staff_role && !isPrivate) {
             permissionOverwrites.push({
               id: cfg.ticket_staff_role,
               allow: [
@@ -820,16 +882,48 @@ module.exports = {
             type: ChannelType.GuildText,
             parent: parent?.id ?? undefined,
             permissionOverwrites,
-            topic: `${cat.emoji} ${cat.label} | ${pri.emoji} ${pri.label} | Ouvert par : ${interaction.user.tag}`,
+            topic: `${cat.emoji} ${cat.label} | ${pri.emoji} ${pri.label} | Ouvert par : ${interaction.user.tag}${isPrivate ? ' | 🔒 PRIVÉ' : ''}`,
           });
 
-          // Insérer en DB
+          // ── Intelligence : trust score + auto-assign + ETA ────────────────────
+          const trustScore  = calcTrustScore(db.db, interaction.guildId, interaction.user.id);
+          const trustInfo   = getTrustLabel(trustScore);
+          const etaMins     = estimateResponseTime(db.db, interaction.guildId);
+          const etaText     = etaMins < 60
+            ? `~${etaMins} minute${etaMins > 1 ? 's' : ''}`
+            : `~${Math.round(etaMins / 60)}h`;
+
+          // Auto-assign au staff le moins chargé
+          let autoAssignedMember = null;
+          try {
+            autoAssignedMember = await getAutoAssignStaff(guild, cfg, db.db);
+          } catch {}
+
+          // Insérer en DB avec trust_score, is_private, auto_assigned, claimed_by
+          const nowTs = Math.floor(Date.now() / 1000);
           const result = db.db.prepare(
-            "INSERT INTO tickets (guild_id,channel_id,user_id,status,category,priority,created_at) VALUES (?,?,?,'open',?,?,?)"
-          ).run(interaction.guildId, ticketChannel.id, interaction.user.id, category, priority, Math.floor(Date.now() / 1000));
+            `INSERT INTO tickets
+              (guild_id, channel_id, user_id, status, category, priority, created_at,
+               trust_score, is_private, auto_assigned, claimed_by)
+             VALUES (?,?,?,'open',?,?,?, ?,?,?,?)`
+          ).run(
+            interaction.guildId, ticketChannel.id, interaction.user.id,
+            category, priority, nowTs,
+            trustScore,
+            isPrivate ? 1 : 0,
+            autoAssignedMember ? 1 : 0,
+            autoAssignedMember?.id ?? null,
+          );
           const ticketId = result.lastInsertRowid;
 
-          const welcomeText = cfg.ticket_welcome_msg || 'Décris ton problème en détail et un membre du staff te répondra dès que possible.';
+          // ── Texte d'accueil personnalisé par catégorie ────────────────────────
+          const catMsgKey = `ticket_msg_${category}`;
+          const welcomeText = cfg[catMsgKey]
+            || cfg.ticket_welcome_msg
+            || (isPrivate
+              ? '🔒 Ce ticket est **confidentiel**. Seul le staff autorisé pourra y accéder. Décris ton signalement en détail.'
+              : 'Décris ton problème en détail et un membre du staff te répondra dès que possible.');
+
           const controlRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId(`ticket_claim_${ticketId}`).setLabel('Prendre en charge').setEmoji('✋').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId(`ticket_close_${ticketId}`).setLabel('Fermer le ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger),
@@ -844,27 +938,41 @@ module.exports = {
             ? '\n\n> 🚨 **PRIORITÉ URGENTE** — Le staff va traiter cette demande immédiatement.'
             : priority === 'elevee' ? '\n\n> 🟠 **Priorité élevée** — Traitement accéléré.' : '';
 
+          const privateBanner = isPrivate
+            ? '\n\n> 🔒 **Ticket confidentiel** — Seul le staff habilité peut accéder à ce salon.'
+            : '';
+
+          const assignedLine = autoAssignedMember
+            ? `✋ Assigné automatiquement à <@${autoAssignedMember.id}>`
+            : '✋ En attente d\'un membre du staff';
+
+          // Notifier le staff assigné seulement si pas mode privé (ou si admin)
+          const notifyContent = isPrivate
+            ? `<@${interaction.user.id}>`
+            : `<@${interaction.user.id}>${autoAssignedMember ? ` <@${autoAssignedMember.id}>` : (cfg.ticket_staff_role ? ` <@&${cfg.ticket_staff_role}>` : '')}`;
+
           // Envoyer le message d'accueil dans le ticket
           await ticketChannel.send({
-            content: `<@${interaction.user.id}>${cfg.ticket_staff_role ? ` <@&${cfg.ticket_staff_role}>` : ''}`,
+            content: notifyContent,
             embeds: [new EmbedBuilder()
               .setColor(embedColor)
               .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
               .setTitle(`${cat.emoji} Ticket #${ticketNumber} — ${cat.label.replace(/^[^\s]+ /, '')}`)
               .setDescription(
-                `Bienvenue <@${interaction.user.id}> ! 👋\n\n**${welcomeText}**${urgentBanner}\n\n` +
+                `Bienvenue <@${interaction.user.id}> ! 👋\n\n**${welcomeText}**${urgentBanner}${privateBanner}\n\n` +
                 `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
                 `📝 Décris ton problème en détail\n` +
                 `📸 Joins des captures si nécessaire\n` +
-                `⏳ Le staff arrive dès que possible !`
+                `⏱️ Temps de réponse estimé : **${etaText}**`
               )
               .addFields(
                 { name: `${cat.emoji} Catégorie`,  value: `\`${cat.label}\``,        inline: true },
                 { name: `${pri.emoji} Priorité`,   value: `\`${pri.label}\``,        inline: true },
                 { name: '🎟️ N°',                  value: `\`#${ticketNumber}\``,     inline: true },
-                { name: '📅 Ouvert',               value: `<t:${Math.floor(Date.now()/1000)}:R>`, inline: true },
+                { name: '📅 Ouvert',               value: `<t:${nowTs}:R>`,          inline: true },
                 { name: '👤 Membre',               value: `<@${interaction.user.id}>`, inline: true },
-                { name: '📊 Statut',               value: '`🟢 Ouvert`',             inline: true },
+                { name: '📊 Statut',               value: isPrivate ? '`🔒 Privé`' : '`🟢 Ouvert`', inline: true },
+                { name: '🤖 Assigné',              value: assignedLine,              inline: false },
               )
               .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }))
               .setFooter({ text: `${interaction.guild.name} • Support`, iconURL: interaction.guild.iconURL() })
@@ -872,6 +980,29 @@ module.exports = {
             ],
             components: [controlRow],
           });
+
+          // ── DM au staff auto-assigné ──────────────────────────────────────────
+          if (autoAssignedMember) {
+            autoAssignedMember.send({
+              embeds: [new EmbedBuilder()
+                .setColor(embedColor)
+                .setTitle(`📋 Nouveau ticket assigné — #${ticketNumber}`)
+                .setDescription(
+                  `Tu as été **automatiquement assigné** à un nouveau ticket.\n\n` +
+                  `> Rends-toi dans ${ticketChannel} pour traiter la demande.`
+                )
+                .addFields(
+                  { name: '👤 Utilisateur',    value: `<@${interaction.user.id}> (\`${interaction.user.tag}\`)`, inline: false },
+                  { name: `${cat.emoji} Catégorie`, value: cat.label,  inline: true },
+                  { name: `${pri.emoji} Priorité`,  value: pri.label,  inline: true },
+                  { name: '🎟️ Ticket',          value: `\`#${ticketNumber}\``, inline: true },
+                  { name: `${trustInfo.emoji} Confiance`, value: `${trustScore}/100 (${trustInfo.label})`, inline: true },
+                )
+                .setFooter({ text: `${interaction.guild.name} • Auto-assigné par NexusBot` })
+                .setTimestamp()
+              ],
+            }).catch(() => {});
+          }
 
           // ── Profil utilisateur automatique (visible staff dans le ticket) ──
           try {
@@ -915,6 +1046,7 @@ module.exports = {
                   { name: '📆 Sur le serveur', value: joinAgeDays !== null ? `<t:${Math.floor(interaction.member.joinedTimestamp/1000)}:R> (${joinAgeDays}j)` : 'Inconnu', inline: true },
                   { name: '⚠️ Warns',          value: `**${warnings}**`, inline: true },
                   { name: '📝 Notes mod',      value: `**${notes}**`,    inline: true },
+                  { name: `${trustInfo.emoji} Score confiance`, value: `**${trustScore}/100** — ${trustInfo.label}`, inline: true },
                   { name: '🛡️ Profil',         value: riskStr,          inline: false },
                   { name: `🎫 Tickets précédents (${prevTickets.length})`, value: prevLines, inline: false },
                 )
@@ -929,12 +1061,14 @@ module.exports = {
             if (logCh) {
               logCh.send({ embeds: [new EmbedBuilder()
                 .setColor(embedColor)
-                .setTitle(`📂 Nouveau ticket #${ticketNumber}`)
+                .setTitle(`📂 Nouveau ticket #${ticketNumber}${isPrivate ? ' 🔒' : ''}`)
                 .addFields(
                   { name: '👤 Membre', value: `<@${interaction.user.id}>`, inline: true },
                   { name: `${cat.emoji} Catégorie`, value: cat.label, inline: true },
                   { name: `${pri.emoji} Priorité`, value: pri.label, inline: true },
                   { name: '🔗 Salon', value: `${ticketChannel}`, inline: true },
+                  { name: `${trustInfo.emoji} Confiance`, value: `${trustScore}/100`, inline: true },
+                  { name: '✋ Assigné', value: autoAssignedMember ? `<@${autoAssignedMember.id}>` : 'Non assigné', inline: true },
                 )
                 .setTimestamp()
               ] }).catch(() => {});
@@ -949,7 +1083,7 @@ module.exports = {
             embeds: [new EmbedBuilder()
               .setColor('#2ECC71')
               .setTitle('✅ Ticket ouvert !')
-              .setDescription(`Ton ticket est prêt : ${ticketChannel}\n\nLe staff sera notifié et te répondra rapidement.`)
+              .setDescription(`Ton ticket est prêt : ${ticketChannel}\n\nLe staff sera notifié et te répondra rapidement.\n\n> ⏱️ Temps de réponse estimé : **${etaText}**`)
               .addFields({ name: '🎟️ Référence', value: `\`Ticket #${ticketNumber}\``, inline: true })
               .setFooter({ text: `${cat.label} • ${pri.label}` })
             ],

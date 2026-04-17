@@ -216,6 +216,11 @@ client.once('ready', async () => {
     safeRun(() => require('./utils/bumpReminderCheck').checkBumpReminders(client));
   });
 
+  // Relances tickets intelligentes (toutes les 30 minutes)
+  cron.schedule('*/30 * * * *', () => {
+    safeRun(() => require('./utils/ticketFollowUp').runTicketFollowUp(client));
+  });
+
   // Rotation du statut
   const statuses = [
     { name: '/help pour commencer', type: 0 },
