@@ -327,7 +327,7 @@ module.exports = {
           .addFields(
             // Général
             { name: '🔧 Général', value:
-              `Préfixe : \`${cfg.prefix || 'n!'}\`\n` +
+              `Préfixe : \`&\` (fixe)\n` +
               `Couleur : \`${cfg.color || '#7B2FBE'}\``, inline: true },
             // Monnaie
             { name: '💰 Monnaie', value:
@@ -380,9 +380,7 @@ module.exports = {
     // GÉNÉRAL
     // ════════════════════════════════════════
     if (sub === 'prefix') {
-      const val = interaction.options.getString('valeur');
-      db.setConfig(guildId, 'prefix', val);
-      return interaction.reply({ embeds: [confirmEmbed('Préfixe mis à jour', `Nouveau préfixe : \`${val}\`\nExemple : \`${val}aide\`, \`${val}coins\``)] });
+      return interaction.reply({ embeds: [confirmEmbed('Préfixe fixe', `Le préfixe est \`&\` et ne peut pas être modifié.\nExemples : \`&aide\`, \`&solde\`, \`&work\``)], ephemeral: true });
     }
 
     if (sub === 'couleur') {

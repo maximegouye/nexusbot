@@ -64,9 +64,8 @@ async function handlePrefixMessage(message, client) {
   const db = require('../database/db');
   const cfg = db.getConfig(message.guild.id);
 
-  // Préfixe unique : & (configurable par guild, mais & par défaut)
-  const guildPrefix = cfg.prefix || '&';
-  const PREFIXES = [guildPrefix].filter((p, i, a) => a.indexOf(p) === i);
+  // Préfixe unique et fixe : & — aucun autre préfixe n'est accepté
+  const PREFIXES = ['&'];
 
   let usedPrefix = null;
   let content = message.content;

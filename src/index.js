@@ -93,7 +93,7 @@ for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
 }
 
 // ── Ready ───────────────────────────────────────────────
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   console.log(`\n╔══════════════════════════════════════╗`);
   console.log(`║  🚀 NexusBot v2.0 — ONLINE           ║`);
   console.log(`║  👤 ${client.user.tag.padEnd(32)}║`);
