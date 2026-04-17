@@ -8,13 +8,16 @@ const db = require('../../database/db');
 // ── Migrations inline ────────────────────────────────────
 try {
   const tc = db.db.prepare('PRAGMA table_info(tickets)').all().map(c => c.name);
-  if (!tc.includes('category'))    db.db.prepare("ALTER TABLE tickets ADD COLUMN category TEXT DEFAULT 'support'").run();
-  if (!tc.includes('claimed_by'))  db.db.prepare("ALTER TABLE tickets ADD COLUMN claimed_by TEXT").run();
-  if (!tc.includes('close_reason'))db.db.prepare("ALTER TABLE tickets ADD COLUMN close_reason TEXT").run();
-  if (!tc.includes('rating'))      db.db.prepare("ALTER TABLE tickets ADD COLUMN rating INTEGER").run();
-  if (!tc.includes('priority'))    db.db.prepare("ALTER TABLE tickets ADD COLUMN priority TEXT DEFAULT 'normale'").run();
-  if (!tc.includes('warn_sent'))   db.db.prepare('ALTER TABLE tickets ADD COLUMN warn_sent INTEGER DEFAULT 0').run();
-  if (!tc.includes('closed_at'))   db.db.prepare('ALTER TABLE tickets ADD COLUMN closed_at INTEGER').run();
+  if (!tc.includes('category'))          db.db.prepare("ALTER TABLE tickets ADD COLUMN category TEXT DEFAULT 'support'").run();
+  if (!tc.includes('claimed_by'))        db.db.prepare("ALTER TABLE tickets ADD COLUMN claimed_by TEXT").run();
+  if (!tc.includes('close_reason'))      db.db.prepare("ALTER TABLE tickets ADD COLUMN close_reason TEXT").run();
+  if (!tc.includes('rating'))            db.db.prepare("ALTER TABLE tickets ADD COLUMN rating INTEGER").run();
+  if (!tc.includes('priority'))          db.db.prepare("ALTER TABLE tickets ADD COLUMN priority TEXT DEFAULT 'normale'").run();
+  if (!tc.includes('warn_sent'))         db.db.prepare('ALTER TABLE tickets ADD COLUMN warn_sent INTEGER DEFAULT 0').run();
+  if (!tc.includes('closed_at'))         db.db.prepare('ALTER TABLE tickets ADD COLUMN closed_at INTEGER').run();
+  // v2 — colonnes supplémentaires
+  if (!tc.includes('tags'))              db.db.prepare("ALTER TABLE tickets ADD COLUMN tags TEXT DEFAULT '[]'").run();
+  if (!tc.includes('first_response_at')) db.db.prepare('ALTER TABLE tickets ADD COLUMN first_response_at INTEGER').run();
 } catch {}
 try {
   const gc = db.db.prepare('PRAGMA table_info(guild_config)').all().map(c => c.name);
@@ -31,6 +34,18 @@ try {
     banned_by TEXT,
     created_at INTEGER DEFAULT (strftime('%s','now')),
     UNIQUE(guild_id, user_id)
+  )`).run();
+} catch {}
+// Réponses rapides personnalisées (v2)
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS ticket_quick_replies (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id   TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    content    TEXT NOT NULL,
+    created_by TEXT,
+    created_at INTEGER DEFAULT (strftime('%s','now')),
+    UNIQUE(guild_id, title)
   )`).run();
 } catch {}
 
@@ -193,7 +208,32 @@ module.exports = {
       .setDescription('✅ Retirer un membre de la blacklist tickets (Admin)')
       .addUserOption(o => o.setName('membre').setDescription('Membre à retirer').setRequired(true))
     )
-    .addSubcommand(s => s.setName('dashboard').setDescription('📊 Publier un tableau de bord dans les logs (Admin)')),
+    .addSubcommand(s => s.setName('dashboard').setDescription('📊 Publier un tableau de bord dans les logs (Admin)'))
+    .addSubcommand(s => s
+      .setName('tag')
+      .setDescription('🏷️ Ajouter ou retirer un tag à ce ticket (Staff)')
+      .addStringOption(o => o
+        .setName('action')
+        .setDescription('Ajouter ou retirer le tag')
+        .setRequired(true)
+        .addChoices({ name: '➕ Ajouter', value: 'add' }, { name: '➖ Retirer', value: 'remove' })
+      )
+      .addStringOption(o => o.setName('tag').setDescription('Nom du tag (ex: bug-critique, attente-user)').setRequired(true).setMaxLength(30))
+    )
+    .addSubcommand(s => s
+      .setName('quickreply')
+      .setDescription('💬 Envoyer une réponse rapide prédéfinie dans ce ticket (Staff)')
+    )
+    .addSubcommand(s => s
+      .setName('addreply')
+      .setDescription('➕ Ajouter une réponse rapide personnalisée (Staff)')
+      .addStringOption(o => o.setName('titre').setDescription('Titre court de la réponse').setRequired(true).setMaxLength(50))
+      .addStringOption(o => o.setName('contenu').setDescription('Contenu de la réponse (supporte {user} pour la mention)').setRequired(true).setMaxLength(1000))
+    )
+    .addSubcommand(s => s
+      .setName('profile')
+      .setDescription('👤 Afficher le profil complet de l\'auteur du ticket (Staff)')
+    ),
   cooldown: 5,
 
   async execute(interaction) {
@@ -941,6 +981,212 @@ module.exports = {
           )
           .setTimestamp()
         ], ephemeral: true
+      });
+    }
+
+    // ══════════════════════════════ TAG ══════
+    if (sub === 'tag') {
+      if (!isStaff()) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
+        .get(interaction.guildId, interaction.channelId);
+      if (!ticket) return interaction.reply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+
+      const action  = interaction.options.getString('action');
+      const tagRaw  = interaction.options.getString('tag')
+        .toLowerCase()
+        .replace(/[^a-z0-9\-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 30);
+
+      let tags = [];
+      try { tags = JSON.parse(ticket.tags || '[]'); } catch {}
+
+      if (action === 'add') {
+        if (tags.includes(tagRaw))
+          return interaction.reply({ content: `⚠️ Le tag \`${tagRaw}\` est déjà présent sur ce ticket.`, ephemeral: true });
+        if (tags.length >= 5)
+          return interaction.reply({ content: '❌ Maximum **5 tags** par ticket.', ephemeral: true });
+        tags.push(tagRaw);
+      } else {
+        const idx = tags.indexOf(tagRaw);
+        if (idx === -1)
+          return interaction.reply({ content: `❌ Tag \`${tagRaw}\` introuvable sur ce ticket.`, ephemeral: true });
+        tags.splice(idx, 1);
+      }
+
+      db.db.prepare('UPDATE tickets SET tags=? WHERE id=?').run(JSON.stringify(tags), ticket.id);
+
+      const tagDisplay = tags.length > 0 ? tags.map(t => `\`${t}\``).join(' ') : '*Aucun tag*';
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor(action === 'add' ? '#7B2FBE' : '#95A5A6')
+          .setDescription(
+            `${action === 'add' ? '🏷️ Tag **ajouté**' : '🗑️ Tag **retiré**'} : \`${tagRaw}\`\n\n` +
+            `**Tags actuels :** ${tagDisplay}`
+          )
+        ]
+      });
+    }
+
+    // ══════════════════════════════ QUICKREPLY ══════
+    if (sub === 'quickreply') {
+      if (!isStaff()) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
+        .get(interaction.guildId, interaction.channelId);
+      if (!ticket) return interaction.reply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+
+      const { StringSelectMenuBuilder } = require('discord.js');
+
+      // Réponses rapides par défaut
+      const DEFAULT_OPTS = [
+        { label: '👋 Message d\'accueil',   value: 'qr_welcome',    description: 'Accueillir le membre et se présenter' },
+        { label: '⏳ Merci de patienter',   value: 'qr_wait',       description: 'Demander de la patience pendant l\'analyse' },
+        { label: '📷 Captures demandées',   value: 'qr_screenshot', description: 'Demander des preuves visuelles' },
+        { label: '🔄 Plus d\'informations', value: 'qr_info',       description: 'Demander des détails supplémentaires' },
+        { label: '✅ Problème résolu',       value: 'qr_resolved',   description: 'Confirmer la résolution du problème' },
+        { label: '🔒 Fermeture imminente',  value: 'qr_closing',    description: 'Prévenir de la fermeture du ticket' },
+      ];
+
+      // Réponses personnalisées du serveur
+      const customReplies = db.db.prepare('SELECT * FROM ticket_quick_replies WHERE guild_id=? ORDER BY title LIMIT 15')
+        .all(interaction.guildId);
+      const customOpts = customReplies.map(r => ({
+        label: `✏️ ${r.title}`.slice(0, 100),
+        value: `qr_custom_${r.id}`,
+        description: r.content.slice(0, 100),
+      }));
+
+      const allOpts = [...DEFAULT_OPTS, ...customOpts].slice(0, 25);
+
+      const select = new StringSelectMenuBuilder()
+        .setCustomId(`ticket_qr_select_${ticket.id}`)
+        .setPlaceholder('💬 Choisir une réponse rapide à envoyer...')
+        .addOptions(allOpts);
+
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#7B2FBE')
+          .setTitle('💬 Réponses rapides')
+          .setDescription(
+            `Sélectionne une réponse prédéfinie à envoyer dans <#${ticket.channel_id}>.\n\n` +
+            `> ✏️ Pour ajouter tes propres réponses : \`/ticket addreply\``
+          )
+        ],
+        components: [new ActionRowBuilder().addComponents(select)],
+        ephemeral: true,
+      });
+    }
+
+    // ══════════════════════════════ ADDREPLY ══════
+    if (sub === 'addreply') {
+      if (!isStaff()) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+
+      const titre   = interaction.options.getString('titre');
+      const contenu = interaction.options.getString('contenu');
+
+      try {
+        db.db.prepare(
+          'INSERT INTO ticket_quick_replies (guild_id, title, content, created_by) VALUES (?, ?, ?, ?)'
+        ).run(interaction.guildId, titre, contenu, interaction.user.id);
+      } catch {
+        return interaction.reply({ content: `❌ Une réponse rapide avec ce titre existe déjà.`, ephemeral: true });
+      }
+
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#2ECC71')
+          .setTitle('✅ Réponse rapide ajoutée !')
+          .addFields(
+            { name: '📌 Titre',   value: titre,   inline: true },
+            { name: '💬 Contenu', value: contenu, inline: false },
+          )
+          .setDescription('> Disponible dans `/ticket quickreply` depuis n\'importe quel ticket.')
+          .setFooter({ text: `Créé par ${interaction.user.tag}` })
+        ], ephemeral: true
+      });
+    }
+
+    // ══════════════════════════════ PROFILE ══════
+    if (sub === 'profile') {
+      if (!isStaff()) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
+        .get(interaction.guildId, interaction.channelId);
+      if (!ticket) return interaction.reply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const targetMember = await interaction.guild.members.fetch(ticket.user_id).catch(() => null);
+      const targetUser   = targetMember?.user || await interaction.client.users.fetch(ticket.user_id).catch(() => null);
+
+      if (!targetUser) return interaction.editReply({ content: '❌ Utilisateur introuvable.' });
+
+      const prevTickets  = db.db.prepare(
+        "SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND id!=? ORDER BY created_at DESC LIMIT 5"
+      ).all(interaction.guildId, ticket.user_id, ticket.id);
+
+      const warnings  = db.db.prepare("SELECT COUNT(*) as c FROM warnings WHERE guild_id=? AND user_id=?")
+        .get(interaction.guildId, ticket.user_id)?.c || 0;
+      const notes     = db.db.prepare("SELECT COUNT(*) as c FROM mod_notes WHERE guild_id=? AND user_id=?")
+        .get(interaction.guildId, ticket.user_id)?.c || 0;
+      const closedTicketsCount = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND user_id=? AND status='closed'")
+        .get(interaction.guildId, ticket.user_id)?.c || 0;
+      const avgRating = db.db.prepare("SELECT AVG(rating) as avg FROM tickets WHERE guild_id=? AND user_id=? AND rating IS NOT NULL")
+        .get(interaction.guildId, ticket.user_id)?.avg;
+
+      const acctAgeDays = Math.floor((Date.now() - targetUser.createdTimestamp) / 86400000);
+      const joinAgeDays = targetMember?.joinedTimestamp
+        ? Math.floor((Date.now() - targetMember.joinedTimestamp) / 86400000)
+        : null;
+
+      // Score de risque
+      let riskLevel = '🟢 Aucun risque détecté';
+      if (warnings >= 5) riskLevel = '🔴 Risque élevé (5+ avertissements)';
+      else if (warnings >= 3) riskLevel = '🟠 Risque modéré (3+ avertissements)';
+      else if (warnings >= 1) riskLevel = '🟡 À surveiller (1-2 avertissements)';
+      if (acctAgeDays < 7) riskLevel += '\n⚠️ Compte récent (< 7 jours)';
+
+      const prevLines = prevTickets.length
+        ? prevTickets.map(t => {
+            const tc = getCatInfo(t.category);
+            const tp = getPriInfo(t.priority || 'normale');
+            const status = t.status === 'open' ? '🟢' : '🔴';
+            const tags   = (() => { try { return JSON.parse(t.tags || '[]'); } catch { return []; } })();
+            const tagStr = tags.length ? ` [${tags.join(', ')}]` : '';
+            return `${status} ${tc.emoji} \`#${t.id}\` ${tp.emoji} <t:${t.created_at}:d>${tagStr}`;
+          }).join('\n')
+        : '*Aucun ticket précédent*';
+
+      const latestNotes = db.db.prepare(
+        "SELECT note, mod_id, created_at FROM mod_notes WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 3"
+      ).all(interaction.guildId, ticket.user_id);
+      const noteLines = latestNotes.length
+        ? latestNotes.map(n => `> <@${n.mod_id}> : ${n.note.slice(0, 80)}`).join('\n')
+        : '*Aucune note*';
+
+      return interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor(warnings >= 3 ? '#E74C3C' : warnings >= 1 ? '#E67E22' : '#7B2FBE')
+          .setTitle(`👤 Profil — ${targetUser.username}`)
+          .setThumbnail(targetUser.displayAvatarURL({ size: 256 }))
+          .addFields(
+            { name: '🆔 Identifiant',       value: `\`${targetUser.id}\``,                     inline: true },
+            { name: '📅 Compte créé',        value: `<t:${Math.floor(targetUser.createdTimestamp/1000)}:R> (${acctAgeDays}j)`, inline: true },
+            { name: '📆 Membre depuis',      value: joinAgeDays !== null ? `<t:${Math.floor(targetMember.joinedTimestamp/1000)}:R> (${joinAgeDays}j)` : 'Inconnu', inline: true },
+            { name: '⚠️ Avertissements',     value: `**${warnings}**`,                          inline: true },
+            { name: '📝 Notes modération',   value: `**${notes}**`,                             inline: true },
+            { name: '🎫 Tickets fermés',     value: `**${closedTicketsCount}**`,                 inline: true },
+            { name: '⭐ Note moy. donnée',   value: avgRating ? `**${parseFloat(avgRating).toFixed(1)}/5**` : '*Jamais noté*', inline: true },
+            { name: '🛡️ Profil risque',      value: riskLevel,                                  inline: false },
+            { name: `🗂️ Tickets précédents (${prevTickets.length})`, value: prevLines,          inline: false },
+            { name: '📋 Dernières notes staff', value: noteLines,                               inline: false },
+          )
+          .setFooter({ text: `Vue staff interne • Ticket #${ticket.id}` })
+          .setTimestamp()
+        ]
       });
     }
   },

@@ -4,9 +4,77 @@ const db = require('../database/db');
 // Anti-spam : stocke les messages récents par user/guild
 const spamCache = new Map();
 
+// ID du bot DISBOARD officiel
+const DISBOARD_ID = '302050872383242240';
+
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
+
+    // ── Détection DISBOARD bump ──────────────────────────────────────
+    // Doit tourner AVANT le guard bot pour capturer les messages du bot DISBOARD
+    if (message.author.id === DISBOARD_ID && message.guild) {
+      try {
+        const embed = message.embeds?.[0];
+        const descLower  = (embed?.description || '').toLowerCase();
+        const titleLower = (embed?.title       || '').toLowerCase();
+
+        // DISBOARD envoie "Bump done!" ou variantes dans la description/titre
+        const isBumpConfirmation =
+          descLower.includes('bump done')   ||
+          descLower.includes('bump!')        ||
+          descLower.includes('bumped')       ||
+          titleLower.includes('bump done')   ||
+          // format alternatif : ":thumbsup: Bump done!"
+          descLower.includes(':thumbsup:');
+
+        if (isBumpConfirmation) {
+          // Récupérer l'utilisateur qui a lancé /bump (slash command)
+          let bumperId = message.interaction?.user?.id
+                      || message.interactionMetadata?.user?.id;
+
+          // Fallback legacy !d bump : DISBOARD répond parfois en reply
+          if (!bumperId && message.reference?.messageId) {
+            const ref = await message.channel.messages
+              .fetch(message.reference.messageId)
+              .catch(() => null);
+            if (ref && !ref.author.bot) bumperId = ref.author.id;
+          }
+
+          if (bumperId) {
+            // S'assurer que la table existe (migration safe)
+            db.db.prepare(`
+              CREATE TABLE IF NOT EXISTS bump_reminders (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id   TEXT NOT NULL,
+                channel_id TEXT NOT NULL,
+                user_id    TEXT NOT NULL,
+                bumped_at  INTEGER NOT NULL,
+                reminded   INTEGER DEFAULT 0
+              )
+            `).run();
+
+            db.db.prepare(
+              'INSERT INTO bump_reminders (guild_id, channel_id, user_id, bumped_at, reminded) VALUES (?, ?, ?, ?, 0)'
+            ).run(message.guild.id, message.channel.id, bumperId, Math.floor(Date.now() / 1000));
+
+            // Récompense économie : +50 coins pour le bumpeur
+            try {
+              db.addCoins(bumperId, message.guild.id, 50);
+              db.db.prepare('UPDATE users SET last_bump = ? WHERE user_id = ? AND guild_id = ?')
+                .run(Math.floor(Date.now() / 1000), bumperId, message.guild.id);
+            } catch {}
+
+            console.log(`[DISBOARD] ✅ Bump enregistré : ${bumperId} dans "${message.guild.name}" — rappel dans 2h`);
+          }
+        }
+      } catch (e) {
+        console.error('[DISBOARD] Erreur détection bump:', e.message);
+      }
+      return; // Ne pas traiter davantage les messages du bot DISBOARD
+    }
+    // ────────────────────────────────────────────────────────────────
+
     if (message.author.bot || !message.guild) return;
 
     // ── Commandes PRÉFIXÉES (illimitées — pas de restriction Discord) ──

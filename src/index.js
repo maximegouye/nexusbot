@@ -211,6 +211,11 @@ client.once('ready', async () => {
     safeRun(() => require('./utils/ticketAutoClose').autoCloseInactiveTickets(client));
   });
 
+  // Rappels DISBOARD bump (toutes les minutes — délai 2h)
+  cron.schedule('* * * * *', () => {
+    safeRun(() => require('./utils/bumpReminderCheck').checkBumpReminders(client));
+  });
+
   // Rotation du statut
   const statuses = [
     { name: '/help pour commencer', type: 0 },

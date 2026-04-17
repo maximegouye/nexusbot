@@ -341,6 +341,51 @@ module.exports = {
         });
       }
 
+      // ── Réponses rapides (bouton staff) ──
+      if (customId.startsWith('ticket_quickreply_')) {
+        const ticketId = parseInt(customId.replace('ticket_quickreply_', ''));
+        const ticket   = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
+        if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true });
+
+        const cfgQR = db.getConfig(interaction.guildId);
+        const isStaffQR = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
+          || (cfgQR.ticket_staff_role && interaction.member.roles.cache.has(cfgQR.ticket_staff_role));
+        if (!isStaffQR) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+
+        const DEFAULT_QR = [
+          { label: '👋 Message d\'accueil',   value: 'qr_welcome',    description: 'Accueillir le membre et se présenter' },
+          { label: '⏳ Merci de patienter',   value: 'qr_wait',       description: 'Demander de la patience' },
+          { label: '📷 Captures demandées',   value: 'qr_screenshot', description: 'Demander des preuves visuelles' },
+          { label: '🔄 Plus d\'informations', value: 'qr_info',       description: 'Demander des détails supplémentaires' },
+          { label: '✅ Problème résolu',       value: 'qr_resolved',   description: 'Confirmer la résolution' },
+          { label: '🔒 Fermeture imminente',  value: 'qr_closing',    description: 'Prévenir de la fermeture' },
+        ];
+
+        const customReplies = db.db.prepare('SELECT * FROM ticket_quick_replies WHERE guild_id=? ORDER BY title LIMIT 15')
+          .all(interaction.guildId);
+        const customOpts = customReplies.map(r => ({
+          label: `✏️ ${r.title}`.slice(0, 100),
+          value: `qr_custom_${r.id}`,
+          description: r.content.slice(0, 100),
+        }));
+
+        const allOpts = [...DEFAULT_QR, ...customOpts].slice(0, 25);
+        const qrSelect = new StringSelectMenuBuilder()
+          .setCustomId(`ticket_qr_select_${ticketId}`)
+          .setPlaceholder('💬 Choisir une réponse rapide...')
+          .addOptions(allOpts);
+
+        return interaction.reply({
+          embeds: [new EmbedBuilder()
+            .setColor('#7B2FBE')
+            .setTitle('💬 Réponses rapides')
+            .setDescription(`Sélectionne une réponse à envoyer dans ce ticket.\n\n> ✏️ Ajoute tes propres réponses avec \`/ticket addreply\``)
+          ],
+          components: [new ActionRowBuilder().addComponents(qrSelect)],
+          ephemeral: true,
+        });
+      }
+
       // ── Giveaway — participer ──
       if (customId === 'giveaway_enter') {
         const gw = db.db.prepare('SELECT * FROM giveaways WHERE channel_id = ? AND message_id = ? AND status = "active"')
@@ -788,6 +833,7 @@ module.exports = {
           const controlRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId(`ticket_claim_${ticketId}`).setLabel('Prendre en charge').setEmoji('✋').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId(`ticket_close_${ticketId}`).setLabel('Fermer le ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId(`ticket_quickreply_${ticketId}`).setLabel('Réponses rapides').setEmoji('💬').setStyle(ButtonStyle.Secondary),
           );
 
           const embedColor = {
@@ -826,6 +872,56 @@ module.exports = {
             ],
             components: [controlRow],
           });
+
+          // ── Profil utilisateur automatique (visible staff dans le ticket) ──
+          try {
+            const prevTickets   = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND id!=? ORDER BY created_at DESC LIMIT 5")
+              .all(interaction.guildId, interaction.user.id, ticketId);
+            const warnings      = db.db.prepare("SELECT COUNT(*) as c FROM warnings WHERE guild_id=? AND user_id=?")
+              .get(interaction.guildId, interaction.user.id)?.c || 0;
+            const notes         = db.db.prepare("SELECT COUNT(*) as c FROM mod_notes WHERE guild_id=? AND user_id=?")
+              .get(interaction.guildId, interaction.user.id)?.c || 0;
+            const acctAgeDays   = Math.floor((Date.now() - interaction.user.createdTimestamp) / 86400000);
+            const joinAgeDays   = interaction.member?.joinedTimestamp
+              ? Math.floor((Date.now() - interaction.member.joinedTimestamp) / 86400000)
+              : null;
+
+            const prevLines = prevTickets.length
+              ? prevTickets.map(t => {
+                  const tc = getCatInfo(t.category);
+                  const tp = getPriInfo(t.priority || 'normale');
+                  const st = t.status === 'open' ? '🟢' : '🔴';
+                  return `${st} ${tc.emoji} \`#${t.id}\` ${tp.emoji} <t:${t.created_at}:d>`;
+                }).join('\n')
+              : '`Aucun ticket précédent`';
+
+            // Niveau de risque
+            let riskStr = warnings >= 5 ? '🔴 Risque élevé (5+ warns)'
+              : warnings >= 3 ? '🟠 Modéré (3+ warns)'
+              : warnings >= 1 ? '🟡 À surveiller (1-2 warns)'
+              : '🟢 Aucun avertissement';
+            if (acctAgeDays < 7) riskStr += '\n⚠️ Compte récent (< 7 jours)';
+
+            const profileColor = warnings >= 3 ? '#E74C3C' : warnings >= 1 ? '#E67E22' : '#2C2F33';
+
+            await ticketChannel.send({
+              embeds: [new EmbedBuilder()
+                .setColor(profileColor)
+                .setAuthor({ name: '👤 Profil Utilisateur — Vue Staff', iconURL: interaction.user.displayAvatarURL() })
+                .setDescription(`> ⚠️ Ces informations sont **visibles uniquement par le staff**.`)
+                .addFields(
+                  { name: '👤 Utilisateur',    value: `${interaction.user} (\`${interaction.user.id}\`)`, inline: false },
+                  { name: '📅 Compte créé',    value: `<t:${Math.floor(interaction.user.createdTimestamp/1000)}:R> (${acctAgeDays}j)`, inline: true },
+                  { name: '📆 Sur le serveur', value: joinAgeDays !== null ? `<t:${Math.floor(interaction.member.joinedTimestamp/1000)}:R> (${joinAgeDays}j)` : 'Inconnu', inline: true },
+                  { name: '⚠️ Warns',          value: `**${warnings}**`, inline: true },
+                  { name: '📝 Notes mod',      value: `**${notes}**`,    inline: true },
+                  { name: '🛡️ Profil',         value: riskStr,          inline: false },
+                  { name: `🎫 Tickets précédents (${prevTickets.length})`, value: prevLines, inline: false },
+                )
+                .setFooter({ text: '📋 Vue interne automatique — /ticket profile pour le détail complet' })
+              ]
+            }).catch(() => {});
+          } catch {}
 
           // Logguer l'ouverture si un salon logs est configuré
           if (cfg.ticket_log_channel) {
@@ -883,9 +979,57 @@ module.exports = {
       // Le menu /help est géré dans le collecteur interne à help.js
     }
 
-    // ── STRING SELECT MENUS (suite) — Notation via select menu ──
+    // ── STRING SELECT MENUS (suite) — Réponses rapides ticket + Notation ──
     if (interaction.isStringSelectMenu()) {
       const db2 = require('../database/db');
+
+      // ── Quick Reply envoi ──
+      if (interaction.customId.startsWith('ticket_qr_select_')) {
+        const ticketId = parseInt(interaction.customId.replace('ticket_qr_select_', ''));
+        const ticket   = db2.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
+        if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true });
+
+        const channel = interaction.guild.channels.cache.get(ticket.channel_id);
+        if (!channel) return interaction.reply({ content: '❌ Salon introuvable.', ephemeral: true });
+
+        const value = interaction.values[0];
+
+        // Map des réponses rapides par défaut
+        const QR_MESSAGES = {
+          qr_welcome:    `👋 Bonjour <@${ticket.user_id}> ! Je suis **${interaction.member.displayName}** et je vais m'occuper de ta demande. Décris-moi ton problème en détail, je t'aide dès que possible !`,
+          qr_wait:       `⏳ Merci pour ta patience <@${ticket.user_id}> ! Nous examinons ta demande et te revenons dès que possible.`,
+          qr_screenshot: `📷 Pourrais-tu nous fournir des **captures d'écran** ou tout autre élément visuel pour mieux comprendre ton problème ? Merci !`,
+          qr_info:       `🔄 Pourriez-vous nous fournir plus de détails ?\n\n• Version concernée / contexte\n• Étapes pour reproduire le problème\n• Ce que vous avez déjà essayé\n• Messages d'erreur éventuels`,
+          qr_resolved:   `✅ Il semble que le problème soit résolu ! Si tu as d'autres questions, n'hésite pas à demander. Sinon, nous allons fermer ce ticket prochainement. Merci d'avoir contacté le support !`,
+          qr_closing:    `🔒 <@${ticket.user_id}> — Ce ticket va être **fermé prochainement** faute d'activité. Si tu as encore besoin d'aide, envoie un message maintenant !`,
+        };
+
+        let msgContent;
+
+        if (value.startsWith('qr_custom_')) {
+          // Réponse personnalisée du serveur
+          const customId = parseInt(value.replace('qr_custom_', ''));
+          const customReply = db2.db.prepare('SELECT * FROM ticket_quick_replies WHERE id=? AND guild_id=?')
+            .get(customId, interaction.guildId);
+          if (!customReply) return interaction.reply({ content: '❌ Réponse introuvable.', ephemeral: true });
+          // Remplacer {user} par la mention
+          msgContent = customReply.content.replace(/\{user\}/g, `<@${ticket.user_id}>`);
+        } else {
+          msgContent = QR_MESSAGES[value];
+        }
+
+        if (!msgContent) return interaction.reply({ content: '❌ Réponse inconnue.', ephemeral: true });
+
+        await channel.send({ content: msgContent }).catch(() => {});
+
+        return interaction.update({
+          embeds: [new EmbedBuilder()
+            .setColor('#2ECC71')
+            .setDescription(`✅ Réponse rapide envoyée dans <#${ticket.channel_id}>.`)
+          ],
+          components: [],
+        });
+      }
 
       if (interaction.customId.startsWith('ticket_rate_select_')) {
         const ticketId = parseInt(interaction.customId.replace('ticket_rate_select_', ''));
