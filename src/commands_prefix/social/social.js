@@ -19,13 +19,9 @@ const commands = [
       const rank = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=? AND (level > ? OR (level = ? AND xp >= ?))').get(message.guild.id, level, level, xp);
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle(`⭐ Niveau de ${target.username}`).setThumbnail(target.displayAvatarURL()).addFields(
         { name: '⭐ Niveau', value: `**${level}**`, inline: true },
-    category: 'Social',
         { name: '✨ XP', value: `**${xp}** / ${xpNeeded}`, inline: true },
-    category: 'Social',
         { name: '🏆 Rang', value: `**#${(rank?.c||0)+1}**`, inline: true },
-    category: 'Social',
         { name: '📊 Progression', value: `\`[${bar}]\` **${pct}%**`, inline: false },
-    category: 'Social',
       )] });
     }
   },
@@ -94,7 +90,6 @@ const commands = [
       const isActive = now - lastDaily < 172800;
       const fire = '🔥'.repeat(Math.min(streak, 7));
       message.channel.send({ embeds: [new EmbedBuilder().setColor(isActive ? '#E67E22' : '#95A5A6').setTitle('🔥 Streak Quotidien').addFields({ name: '🔥 Streak', value: `**${streak}** jours ${fire}`, inline: true }, { name: '📅 Statut', value: isActive ? '✅ Actif' : '❌ Perdu si pas réclamé', inline: true })] });
-    category: 'Social',
     }
   },
   {
@@ -165,20 +160,13 @@ const commands = [
       const prestigeEmojis = ['','🥉','🥈','🥇','💜','💎','🔴','🌟','👑'];
       const fields = [
         { name: '⭐ Niveau', value: `**${u.level||1}** (${u.xp||0} XP)`, inline: true },
-    category: 'Social',
         { name: '💰 Solde', value: `**${(u.balance||0).toLocaleString()} ${coin}**`, inline: true },
-    category: 'Social',
         { name: '💼 Banque', value: `**${(u.bank||0).toLocaleString()} ${coin}**`, inline: true },
-    category: 'Social',
         { name: '⭐ Réputation', value: `**${u.reputation||0}** ⭐`, inline: true },
-    category: 'Social',
         { name: '🔥 Streak', value: `**${u.streak||0}** jours`, inline: true },
-    category: 'Social',
       ];
       if (prestige > 0) fields.push({ name: '🌟 Prestige', value: `${prestigeEmojis[prestige]} Prestige **${prestige}**`, inline: true });
-    category: 'Social',
       if (statut?.bio) fields.push({ name: '📝 Bio', value: statut.bio, inline: false });
-    category: 'Social',
       const embed = new EmbedBuilder().setColor(statut?.color || '#7B2FBE').setTitle(`👤 ${target.username}`).setThumbnail(target.displayAvatarURL({ size: 256 })).addFields(...fields).setTimestamp();
       if (statut?.status_text) embed.setDescription(`*"${statut.status_text}"*`);
       message.channel.send({ embeds: [embed] });

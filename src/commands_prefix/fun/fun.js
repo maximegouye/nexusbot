@@ -15,7 +15,6 @@ const commands = [
       const a = answers[Math.floor(Math.random() * answers.length)];
       const color = a.startsWith('✅') ? '#2ECC71' : a.startsWith('🟡') ? '#F1C40F' : '#E74C3C';
       message.channel.send({ embeds: [new EmbedBuilder().setColor(color).setTitle('🎱 Boule Magique').addFields({ name: '❓ Question', value: q }, { name: '🔮 Réponse', value: `**${a}**` })] });
-    category: 'Amusement',
     }
   },
   {
@@ -102,7 +101,6 @@ const commands = [
       else if ((userPick === 'pierre' && botPick === 'ciseaux') || (userPick === 'feuille' && botPick === 'pierre') || (userPick === 'ciseaux' && botPick === 'feuille')) result = '✅ Vous gagnez !';
       else result = '❌ Vous perdez !';
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle('✂️ Pierre Feuille Ciseaux').addFields({ name: '👤 Vous', value: `${choices[userPick]} ${userPick}`, inline: true }, { name: '🤖 Bot', value: `${choices[botPick]} ${botPick}`, inline: true }, { name: '🏆 Résultat', value: result, inline: false })] });
-    category: 'Amusement',
     }
   },
   {
@@ -123,7 +121,6 @@ const commands = [
       ];
       const q = questions[Math.floor(Math.random() * questions.length)];
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#E91E63').setTitle('🤔 Tu préfères...').addFields({ name: '🅰️ Option A', value: q[0], inline: true }, { name: '🅱️ Option B', value: q[1], inline: true })] });
-    category: 'Amusement',
     }
   },
   {

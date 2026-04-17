@@ -814,6 +814,13 @@ const helpers = {
 
   getXPForLevel: (level) => Math.floor(100 * Math.pow(1.35, level - 1)),
 
+  // Calcule le niveau à partir d'une quantité d'XP
+  getLevel(xp) {
+    let level = 1;
+    while (helpers.getXPForLevel(level + 1) <= xp) level++;
+    return level;
+  },
+
   checkLevelUp(userId, guildId) {
     const user     = helpers.getUser(userId, guildId);
     const needed   = helpers.getXPForLevel(user.level + 1);
@@ -899,6 +906,13 @@ const helpers = {
   // ── AFK ──
   getAfk(guildId, userId) {
     return db.prepare('SELECT * FROM afk WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
+  },
+
+  setAfk(guildId, userId, reason = 'AFK') {
+    const now = Math.floor(Date.now() / 1000);
+    db.prepare(`INSERT INTO afk (guild_id, user_id, reason, created_at) VALUES (?, ?, ?, ?)
+      ON CONFLICT(guild_id, user_id) DO UPDATE SET reason = ?, created_at = ?`)
+      .run(guildId, userId, reason, now, reason, now);
   },
 
   removeAfk(guildId, userId) {

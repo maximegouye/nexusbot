@@ -16,17 +16,11 @@ const commands = [
       const roles = target.roles.cache.filter(r => r.id !== message.guild.id).sort((a,b) => b.position - a.position).map(r => `<@&${r.id}>`).slice(0, 10).join(' ') || 'Aucun';
       message.channel.send({ embeds: [new EmbedBuilder().setColor(target.displayHexColor || '#7B2FBE').setTitle(`👤 ${target.user.username}`).setThumbnail(target.user.displayAvatarURL({ size: 256 })).addFields(
         { name: '🆔 ID', value: target.id, inline: true },
-    category: 'Informations',
         { name: '📅 Compte créé', value: `<t:${Math.floor(target.user.createdTimestamp/1000)}:R>`, inline: true },
-    category: 'Informations',
         { name: '📥 Rejoint', value: `<t:${Math.floor(target.joinedTimestamp/1000)}:R>`, inline: true },
-    category: 'Informations',
         { name: '⭐ Niveau', value: `**${u.level||1}** (${u.xp||0} XP)`, inline: true },
-    category: 'Informations',
         { name: '💰 Solde', value: `**${(u.balance||0)} ${coin}**`, inline: true },
-    category: 'Informations',
         { name: '🎭 Rôles', value: roles, inline: false },
-    category: 'Informations',
       ).setTimestamp()] });
     }
   },
@@ -43,19 +37,12 @@ const commands = [
       const humans = g.memberCount - bots;
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle(`🏠 ${g.name}`).setThumbnail(g.iconURL()).addFields(
         { name: '🆔 ID', value: g.id, inline: true },
-    category: 'Informations',
         { name: '👑 Propriétaire', value: `<@${g.ownerId}>`, inline: true },
-    category: 'Informations',
         { name: '📅 Créé', value: `<t:${Math.floor(g.createdTimestamp/1000)}:R>`, inline: true },
-    category: 'Informations',
         { name: '👥 Membres', value: `**${humans}** humains + **${bots}** bots`, inline: true },
-    category: 'Informations',
         { name: '📋 Salons', value: `**${g.channels.cache.size}**`, inline: true },
-    category: 'Informations',
         { name: '🎭 Rôles', value: `**${g.roles.cache.size}**`, inline: true },
-    category: 'Informations',
         { name: '🚀 Boosts', value: `**${g.premiumSubscriptionCount||0}** (Niveau ${g.premiumTier})`, inline: true },
-    category: 'Informations',
       ).setTimestamp()] });
     }
   },
@@ -99,19 +86,12 @@ const commands = [
       if (!role) return message.reply('❌ Mentionnez un rôle valide.');
       message.channel.send({ embeds: [new EmbedBuilder().setColor(role.hexColor || '#7B2FBE').setTitle(`🎭 ${role.name}`).addFields(
         { name: '🆔 ID', value: role.id, inline: true },
-    category: 'Informations',
         { name: '🎨 Couleur', value: role.hexColor, inline: true },
-    category: 'Informations',
         { name: '👥 Membres', value: `**${role.members.size}**`, inline: true },
-    category: 'Informations',
         { name: '📌 Position', value: `**${role.position}**`, inline: true },
-    category: 'Informations',
         { name: '🤖 Bot', value: role.managed ? 'Oui' : 'Non', inline: true },
-    category: 'Informations',
         { name: '🎯 Mentionnable', value: role.mentionable ? 'Oui' : 'Non', inline: true },
-    category: 'Informations',
         { name: '📅 Créé', value: `<t:${Math.floor(role.createdTimestamp/1000)}:R>`, inline: true },
-    category: 'Informations',
       ).setTimestamp()] });
     }
   },
@@ -127,19 +107,12 @@ const commands = [
       const mem = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('🤖 NexusBot v2.0').setThumbnail(client.user.displayAvatarURL()).addFields(
         { name: '📋 Commandes', value: `**${client.commands.size}** slash + **∞** prefix`, inline: true },
-    category: 'Informations',
         { name: '🌐 Serveurs', value: `**${client.guilds.cache.size}**`, inline: true },
-    category: 'Informations',
         { name: '👥 Utilisateurs', value: `**${client.users.cache.size.toLocaleString()}**`, inline: true },
-    category: 'Informations',
         { name: '⏱️ Uptime', value: `${d}j ${h}h ${m}m`, inline: true },
-    category: 'Informations',
         { name: '💾 Mémoire', value: `${mem} MB`, inline: true },
-    category: 'Informations',
         { name: '⚡ Ping', value: `${client.ws.ping}ms`, inline: true },
-    category: 'Informations',
         { name: '🔧 Version', value: `Node ${process.version}`, inline: true },
-    category: 'Informations',
       ).setTimestamp()] });
     }
   },
@@ -153,7 +126,6 @@ const commands = [
       const m = await message.reply('🏓 Calcul...');
       const latency = m.createdTimestamp - message.createdTimestamp;
       m.edit({ content: null, embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🏓 Pong !').addFields({ name: '🌐 Latence API', value: `**${client.ws.ping}ms**`, inline: true }, { name: '💬 Latence message', value: `**${latency}ms**`, inline: true })] });
-    category: 'Informations',
     }
   },
   {
@@ -167,18 +139,12 @@ const commands = [
       const channel = message.mentions.channels.first() || message.channel;
       const fields = [
         { name: '🆔 ID', value: channel.id, inline: true },
-    category: 'Informations',
         { name: '📋 Type', value: channel.type.toString(), inline: true },
-    category: 'Informations',
         { name: '📅 Créé', value: `<t:${Math.floor(channel.createdTimestamp/1000)}:R>`, inline: true },
-    category: 'Informations',
       ];
       if (channel.topic) fields.push({ name: '📝 Sujet', value: channel.topic, inline: false });
-    category: 'Informations',
       if (channel.rateLimitPerUser) fields.push({ name: '🐌 Mode lent', value: `${channel.rateLimitPerUser}s`, inline: true });
-    category: 'Informations',
       if (channel.nsfw !== undefined) fields.push({ name: '🔞 NSFW', value: channel.nsfw ? 'Oui' : 'Non', inline: true });
-    category: 'Informations',
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle(`📋 #${channel.name}`).addFields(...fields).setTimestamp()] });
     }
   },
@@ -194,7 +160,6 @@ const commands = [
       const bots = g.members.cache.filter(m => m.user.bot).size;
       const online = g.members.cache.filter(m => m.presence?.status !== 'offline').size;
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('👥 Membres').addFields({ name: '👥 Total', value: `**${g.memberCount}**`, inline: true }, { name: '👤 Humains', value: `**${g.memberCount - bots}**`, inline: true }, { name: '🤖 Bots', value: `**${bots}**`, inline: true }, { name: '🟢 En ligne', value: `**${online}**`, inline: true }).setTimestamp()] });
-    category: 'Informations',
     }
   },
 ];
