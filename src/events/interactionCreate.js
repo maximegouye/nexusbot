@@ -38,6 +38,48 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+    // ── AIDE : menu catégories + boutons (sans collector, survit aux redémarrages) ──
+    if (_cfgId.startsWith('help_cat:') || _cfgId.startsWith('help_home:') || _cfgId.startsWith('help_config:')) {
+      try {
+        const { _build } = require('../commands/utility/help');
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const color = cfg.color || '#7B2FBE';
+        const uid = _cfgId.split(':')[1];
+        if (interaction.user.id !== uid) {
+          return interaction.reply({ content: '❌ Ce menu d\'aide ne t\'appartient pas. Lance la tienne avec `/aide`.', ephemeral: true });
+        }
+
+        if (_cfgId.startsWith('help_cat:')) {
+          const val = interaction.values?.[0] || 'accueil';
+          const embed = val === 'accueil'
+            ? _build.buildHomeEmbed(interaction, color)
+            : _build.buildCategoryEmbed(val, color);
+          return interaction.update({ embeds: [embed], components: _build.buildComponents(uid, val) });
+        }
+
+        if (_cfgId.startsWith('help_home:')) {
+          return interaction.update({
+            embeds: [_build.buildHomeEmbed(interaction, color)],
+            components: _build.buildComponents(uid, 'accueil'),
+          });
+        }
+
+        if (_cfgId.startsWith('help_config:')) {
+          const { buildMainMenu } = require('../utils/configPanel');
+          const panel = buildMainMenu(cfg, interaction.guild, uid);
+          return interaction.reply({ ...panel, ephemeral: true });
+        }
+        return;
+      } catch (e) {
+        console.error('[AIDE handler]', e);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
+        }
+        return;
+      }
+    }
+
     // ── MINES : boutons persistés (BDD) ───────────────────────────────
     if (interaction.isButton() && (_cfgId.startsWith('mines_pick:') || _cfgId === 'mines_cash')) {
       try {
