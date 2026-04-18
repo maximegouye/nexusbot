@@ -8,8 +8,8 @@ const ef = require('../../utils/embedFactory');
 const { PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
-  name: 'cfg-set',
-  aliases: ['cfgset', 'configset', 'dbset'],
+  name: 'cfgset',
+  aliases: ['cfg-set', 'configset', 'dbset', 'cfgs'],
   description: 'Modifier n\'importe quelle valeur du bot (admin)',
   category: 'Admin',
   permissions: String(PermissionFlagsBits.ManageGuild),
