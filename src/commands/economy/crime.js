@@ -43,7 +43,7 @@ module.exports = {
 
     const now      = Math.floor(Date.now() / 1000);
     const lastCrime = user.last_crime || 0;
-    const cooldown  = 21600; // 6h
+    const cooldown  = cfg.crime_cooldown > 0 ? cfg.crime_cooldown : 21600; // panel-configurable
 
     if (now - lastCrime < cooldown) {
       const remaining = cooldown - (now - lastCrime);
@@ -60,13 +60,20 @@ module.exports = {
     }
 
     const crime = CRIMES[Math.floor(Math.random() * CRIMES.length)];
-    const success = Math.random() > crime.risk;
+    // Panel override : cfg.crime_fail_rate (0-100) prime sur crime.risk par défaut
+    const failRate = (cfg.crime_fail_rate != null && cfg.crime_fail_rate >= 0 && cfg.crime_fail_rate <= 100)
+      ? cfg.crime_fail_rate / 100
+      : crime.risk;
+    const success = Math.random() > failRate;
 
     db.db.prepare('UPDATE users SET last_crime = ? WHERE user_id = ? AND guild_id = ?')
       .run(now, interaction.user.id, interaction.guildId);
 
     if (success) {
-      const earned = Math.floor(Math.random() * (crime.max - crime.min + 1)) + crime.min;
+      const gMin = (cfg.crime_min != null && cfg.crime_min > 0) ? cfg.crime_min : crime.min;
+      const gMax = (cfg.crime_max != null && cfg.crime_max > 0) ? cfg.crime_max : crime.max;
+      const [lo, hi] = gMin <= gMax ? [gMin, gMax] : [gMax, gMin];
+      const earned = Math.floor(Math.random() * (hi - lo + 1)) + lo;
       db.addCoins(interaction.user.id, interaction.guildId, earned);
 
       const msg = SUCCESS_MSGS[Math.floor(Math.random() * SUCCESS_MSGS.length)];

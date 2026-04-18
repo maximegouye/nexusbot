@@ -163,7 +163,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('fait')
-        .setDescription('Confirmer que vous avez bumped Disboard')
+        .setDescription('Confirmer que vous avez bumpé Disboard')
     ),
 
   cooldown: 2,
@@ -355,8 +355,8 @@ module.exports = {
 
         const embed = new EmbedBuilder()
           .setColor('#2ECC71')
-          .setTitle('✨ Merci d\'avoir bumped!')
-          .setDescription(`${interaction.user.username}, vous avez reçu **50 coins** pour votre bump!`)
+          .setTitle('✨ Merci d\'avoir bumpé !')
+          .setDescription(`${interaction.user.username}, tu as reçu **50 coins** pour ton bump !`)
           .addFields(
             { name: '⭐ Prochaine confirmation', value: `Disponible dans 2 heures` }
           )

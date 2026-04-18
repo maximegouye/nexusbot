@@ -52,7 +52,7 @@ module.exports = {
 
     const now      = Math.floor(Date.now() / 1000);
     const lastWork = user.last_work || 0;
-    const cooldown = 3600; // 1h
+    const cooldown = cfg.work_cooldown > 0 ? cfg.work_cooldown : 3600; // panel-configurable
 
     if (now - lastWork < cooldown) {
       const remaining = cooldown - (now - lastWork);
@@ -68,8 +68,13 @@ module.exports = {
       });
     }
 
-    const job    = JOBS[Math.floor(Math.random() * JOBS.length)];
-    const earned = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
+    const job = JOBS[Math.floor(Math.random() * JOBS.length)];
+    // Si des bornes globales sont configurées dans le panel, elles priment
+    // sur les bornes par métier (permet de multiplier massivement les gains).
+    const gMin = (cfg.work_min != null && cfg.work_min > 0) ? cfg.work_min : job.min;
+    const gMax = (cfg.work_max != null && cfg.work_max > 0) ? cfg.work_max : job.max;
+    const [lo, hi] = gMin <= gMax ? [gMin, gMax] : [gMax, gMin];
+    const earned = Math.floor(Math.random() * (hi - lo + 1)) + lo;
     const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)].replace('{job}', job.name);
 
     // Bonus streak de travail (3 jours consécutifs = bonus)

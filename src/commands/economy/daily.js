@@ -19,7 +19,7 @@ module.exports = {
 
     const now       = Math.floor(Date.now() / 1000);
     const lastDaily = user.last_daily || 0;
-    const cooldown  = 86400; // 24h
+    const cooldown  = cfg.daily_cooldown > 0 ? cfg.daily_cooldown : 86400; // panel-configurable
 
     if (now - lastDaily < cooldown) {
       const remaining = cooldown - (now - lastDaily);
@@ -39,12 +39,13 @@ module.exports = {
     const wasYesterday = lastDaily > 0 && (now - lastDaily) < (cooldown * 2);
     const newStreak    = wasYesterday ? (user.streak || 0) + 1 : 1;
 
-    // Récompenses en €
-    const base   = cfg.daily_amount || 25;
-    const streakBonus = Math.min(newStreak - 1, 30) * 2; // +2€/jour, max +60€
-    const milestones = { 7: 50, 14: 100, 30: 250, 60: 500, 100: 1000 };
-    const milestone  = milestones[newStreak] || 0;
-    const total      = base + streakBonus + milestone;
+    // Récompenses — tout est panel-configurable via &config → ⚡ Économie pro
+    const base         = cfg.daily_amount || 25;
+    const streakPct    = Math.max(0, cfg.daily_streak_bonus ?? 10); // % par jour de streak
+    const streakBonus  = Math.min(newStreak - 1, 60) * Math.max(1, Math.floor(base * streakPct / 100));
+    const milestones   = { 7: base * 2, 14: base * 4, 30: base * 10, 60: base * 20, 100: base * 40 };
+    const milestone    = milestones[newStreak] || 0;
+    const total        = base + streakBonus + milestone;
 
     db.addCoins(interaction.user.id, interaction.guildId, total);
     db.db.prepare('UPDATE users SET last_daily = ?, streak = ? WHERE user_id = ? AND guild_id = ?')

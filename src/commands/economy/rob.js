@@ -20,7 +20,7 @@ module.exports = {
     const victim   = db.getUser(target.id, interaction.guildId);
     const now      = Math.floor(Date.now() / 1000);
     const lastRob  = robber.last_rob || 0;
-    const cooldown = 43200; // 12h
+    const cooldown = cfg.rob_cooldown > 0 ? cfg.rob_cooldown : 43200; // panel-configurable
 
     if (now - lastRob < cooldown) {
       const remaining = cooldown - (now - lastRob);
@@ -50,7 +50,9 @@ module.exports = {
     const success = Math.random() < successRate;
 
     if (success) {
-      const pct    = 0.10 + Math.random() * 0.20; // vole 10-30% du portefeuille
+      // Panel override : cfg.rob_max_percent plafonne le % volé (défaut 30%)
+      const capPct = (cfg.rob_max_percent != null && cfg.rob_max_percent > 0) ? cfg.rob_max_percent / 100 : 0.30;
+      const pct    = Math.min(capPct, 0.10 + Math.random() * Math.max(0.01, capPct - 0.10));
       const stolen = Math.min(Math.floor(victim.balance * pct), victim.balance);
       db.addCoins(interaction.user.id, interaction.guildId, stolen);
       db.removeCoins(target.id, interaction.guildId, stolen);
@@ -69,7 +71,11 @@ module.exports = {
         ]
       });
     } else {
-      const fine = Math.min(Math.floor(robber.balance * 0.20), robber.balance);
+      // Panel override : cfg.rob_fail_penalty est un montant fixe (si > 0), sinon 20% du solde
+      const penaltyFlat = (cfg.rob_fail_penalty != null && cfg.rob_fail_penalty > 0) ? cfg.rob_fail_penalty : 0;
+      const fine = penaltyFlat > 0
+        ? Math.min(penaltyFlat, robber.balance)
+        : Math.min(Math.floor(robber.balance * 0.20), robber.balance);
       db.removeCoins(interaction.user.id, interaction.guildId, fine);
       db.addCoins(target.id, interaction.guildId, Math.floor(fine * 0.5)); // victime récupère 50%
 
