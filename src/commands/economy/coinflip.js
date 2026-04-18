@@ -7,7 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('coinflip')
     .setDescription('🪙 Lancer un défi pile ou face contre un autre membre')
-    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser').setRequired(true).setMinValue(1).setMaxValue(100000))
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser (aucune limite)').setRequired(true).setMinValue(1))
     .addStringOption(o => o.setName('choix').setDescription('Ton choix').setRequired(true)
       .addChoices({ name: '🦅 Face', value: 'face' }, { name: '🐍 Pile', value: 'pile' }))
     .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier (vide = open)').setRequired(false)),

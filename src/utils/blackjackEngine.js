@@ -115,7 +115,7 @@ function buildEmbed(game, opts = {}) {
         inline: true,
       },
     )
-    .setFooter({ text: game.over ? 'Partie terminée' : 'Blackjack · 60s par tour' })
+    .setFooter({ text: game.over ? 'Partie terminée' : '♠♥ Blackjack · tu as 30 minutes pour jouer' })
     .setTimestamp();
 }
 

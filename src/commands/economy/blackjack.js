@@ -48,7 +48,7 @@ module.exports = {
 
     const collector = msg.createMessageComponentCollector({
       componentType: ComponentType.Button,
-      time: 5 * 60_000,
+      time: 30 * 60_000, // 30 minutes
       filter: i => i.user.id === interaction.user.id,
     });
 

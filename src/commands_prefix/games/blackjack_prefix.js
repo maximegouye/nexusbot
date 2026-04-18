@@ -56,7 +56,7 @@ module.exports = {
 
     const collector = sent.createMessageComponentCollector({
       componentType: ComponentType.Button,
-      time: 5 * 60_000,
+      time: 30 * 60_000, // 30 minutes
       filter: i => i.user.id === message.author.id,
     });
 

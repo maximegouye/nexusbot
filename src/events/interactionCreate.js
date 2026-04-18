@@ -38,6 +38,174 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+    // ── DÉS : boutons Rejouer / ×2 ────────────────────────────────
+    if (_cfgId.startsWith('des_replay:') || _cfgId.startsWith('des_double:')) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const user = db2.getUser(interaction.user.id, interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+
+        const encoded = _cfgId.split(':').slice(1).join(':');
+        const parts   = decodeURIComponent(encoded).split(':');
+        const pari    = parts[0];
+        const num     = parts[1] ? parseInt(parts[1], 10) : null;
+        let mise      = parseInt(parts[2], 10) || 0;
+        if (_cfgId.startsWith('des_double:')) mise *= 2;
+
+        if (mise < 1 || mise > user.balance) {
+          return interaction.reply({ content: `❌ Solde insuffisant pour ${mise.toLocaleString('fr-FR')}${symbol}.`, ephemeral: true });
+        }
+
+        await interaction.deferUpdate().catch(() => {});
+        db2.removeCoins(interaction.user.id, interaction.guildId, mise);
+
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        await interaction.editReply({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#F39C12').setTitle('🎲 Les dés roulent…').setDescription('⚃ ⚁  ?  ⚅ ⚂')],
+          components: [],
+        }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1400));
+
+        const DICE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+        const NUM_MULT = { 2: 35, 3: 17, 4: 11, 5: 8, 6: 6, 7: 5, 8: 6, 9: 8, 10: 11, 11: 17, 12: 35 };
+        const d1 = 1 + Math.floor(Math.random() * 6);
+        const d2 = 1 + Math.floor(Math.random() * 6);
+        const total = d1 + d2;
+        let won = false, mult = 0, label = '';
+        switch (pari) {
+          case 'pair':   won = total % 2 === 0; mult = 2; label = '🔢 Pair';   break;
+          case 'impair': won = total % 2 === 1; mult = 2; label = '🔢 Impair'; break;
+          case 'bas':    won = total <= 6;      mult = 2; label = '⬇️ Bas';    break;
+          case 'haut':   won = total >= 8;      mult = 2; label = '⬆️ Haut';   break;
+          case 'sept':   won = total === 7;     mult = 5; label = '🎯 Sept';   break;
+          case 'numero': won = total === num;   mult = NUM_MULT[num] || 5; label = `🎰 Numéro ${num}`; break;
+        }
+        const gain = won ? mise * mult : 0;
+        if (gain > 0) db2.addCoins(interaction.user.id, interaction.guildId, gain);
+        const balanceAfter = Math.max(0, user.balance - mise + gain);
+
+        const encFor = encodeURIComponent(`${pari}:${num ?? ''}:${mise}`);
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`des_replay:${encFor}`).setLabel('🎲 Rejouer').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`des_double:${encFor}`).setLabel('✖️ Rejouer ×2').setStyle(ButtonStyle.Success),
+        );
+        await interaction.editReply({
+          embeds: [new EmbedBuilder().setColor(won ? '#2ECC71' : '#E74C3C')
+            .setTitle(won ? `🎲 GAGNÉ — ${total}` : `🎲 Perdu — ${total}`)
+            .setDescription(`${DICE[d1]} ${DICE[d2]}  →  **${total}**`)
+            .addFields(
+              { name: '🎯 Pari', value: label, inline: true },
+              { name: '💰 Mise', value: `${mise.toLocaleString('fr-FR')}${symbol}`, inline: true },
+              { name: '✖️ Mult.', value: `×${mult}`, inline: true },
+              won ? { name: '💵 Gain net', value: `**+${(gain - mise).toLocaleString('fr-FR')}${symbol}**`, inline: true }
+                  : { name: '💸 Perte',    value: `**-${mise.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+              { name: `${symbol} Solde`, value: `**${balanceAfter.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+            ).setTimestamp()],
+          components: [row],
+        }).catch(() => {});
+        return;
+      } catch (e) { console.error('[DÉS] Erreur handler:', e); }
+    }
+
+    // ── ROUE DE LA FORTUNE : Rejouer / ×2 ─────────────────────────
+    if (_cfgId.startsWith('roue_replay:') || _cfgId.startsWith('roue_double:')) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const user = db2.getUser(interaction.user.id, interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const encoded = _cfgId.split(':').slice(1).join(':');
+        let mise = parseInt(decodeURIComponent(encoded), 10) || 0;
+        if (_cfgId.startsWith('roue_double:')) mise *= 2;
+        if (mise < 1 || mise > user.balance) return interaction.reply({ content: `❌ Solde insuffisant.`, ephemeral: true });
+
+        await interaction.deferUpdate().catch(() => {});
+        db2.removeCoins(interaction.user.id, interaction.guildId, mise);
+
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        await interaction.editReply({ embeds: [new EmbedBuilder().setColor(cfg.color || '#9B59B6').setTitle('🎡 La roue tourne…')], components: [] }).catch(() => {});
+        await new Promise(r => setTimeout(r, 2000));
+
+        const CASES = [
+          { emoji: '💀', mult: 0,   weight: 30, label: '💀 Banqueroute' },
+          { emoji: '🪙', mult: 0.5, weight: 22, label: '🪙 Moitié remboursée' },
+          { emoji: '⚖️', mult: 1,   weight: 18, label: '⚖️ Mise récupérée' },
+          { emoji: '💰', mult: 1.5, weight: 12, label: '💰 Petit gain ×1.5' },
+          { emoji: '💎', mult: 2,   weight:  8, label: '💎 Gain ×2' },
+          { emoji: '🏆', mult: 3,   weight:  5, label: '🏆 Bon gain ×3' },
+          { emoji: '⭐', mult: 5,   weight:  3, label: '⭐ GROS gain ×5' },
+          { emoji: '💫', mult: 10,  weight:  2, label: '💫 JACKPOT ×10' },
+        ];
+        const POOL = CASES.flatMap(c => Array(c.weight).fill(c));
+        const pick = POOL[Math.floor(Math.random() * POOL.length)];
+        const gain = Math.floor(mise * pick.mult);
+        if (gain > 0) db2.addCoins(interaction.user.id, interaction.guildId, gain);
+        const net = gain - mise;
+        const balanceAfter = Math.max(0, user.balance - mise + gain);
+        const resColor = pick.mult === 0 ? '#E74C3C' : pick.mult < 1 ? '#F39C12' : pick.mult >= 5 ? '#9B59B6' : '#2ECC71';
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`roue_replay:${encodeURIComponent(String(mise))}`).setLabel('🎡 Rejouer').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`roue_double:${encodeURIComponent(String(mise))}`).setLabel('✖️ Rejouer ×2').setStyle(ButtonStyle.Success),
+        );
+        await interaction.editReply({
+          embeds: [new EmbedBuilder().setColor(resColor).setTitle(`🎡 La roue s'arrête sur… ${pick.emoji}`).setDescription(pick.label)
+            .addFields(
+              { name: '💰 Mise', value: `${mise.toLocaleString('fr-FR')}${symbol}`, inline: true },
+              { name: '✖️ Mult.', value: `×${pick.mult}`, inline: true },
+              { name: '🏆 Gain', value: `${gain.toLocaleString('fr-FR')}${symbol}`, inline: true },
+              { name: net >= 0 ? '📈 Bénéfice' : '📉 Perte', value: `**${net > 0 ? '+' : ''}${net.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+              { name: `${symbol} Solde`, value: `**${balanceAfter.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+            ).setTimestamp()],
+          components: [row],
+        }).catch(() => {});
+        return;
+      } catch (e) { console.error('[ROUE] Erreur handler:', e); }
+    }
+
+    // ── SLOTS : boutons Rejouer / ×2 / moitié ────────────────────────
+    if (_cfgId.startsWith('slots_replay:') || _cfgId.startsWith('slots_double:') || _cfgId.startsWith('slots_half:')) {
+      try {
+        const sl = require('../utils/slotsEngine');
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const user = db2.getUser(interaction.user.id, interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const color  = cfg.color || '#9B59B6';
+
+        const encoded = _cfgId.split(':').slice(1).join(':');
+        let mise = parseInt(decodeURIComponent(encoded), 10) || 0;
+        if (_cfgId.startsWith('slots_double:')) mise *= 2;
+        if (_cfgId.startsWith('slots_half:'))   mise = Math.max(1, Math.floor(mise / 2));
+
+        if (mise < 1 || mise > user.balance) {
+          return interaction.reply({
+            content: `❌ Solde insuffisant pour miser **${mise.toLocaleString('fr-FR')}${symbol}** (tu as ${user.balance.toLocaleString('fr-FR')}${symbol}).`,
+            ephemeral: true,
+          });
+        }
+
+        await interaction.deferUpdate().catch(() => {});
+        db2.removeCoins(interaction.user.id, interaction.guildId, mise);
+        await interaction.editReply({
+          embeds: [sl.buildSpinEmbed({ userName: interaction.user.username, mise, symbol, color })],
+          components: [],
+        }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1500));
+
+        const { reels, gain, label } = sl.runRound(mise);
+        if (gain > 0) db2.addCoins(interaction.user.id, interaction.guildId, gain);
+        const balanceAfter = Math.max(0, user.balance - mise + gain);
+
+        await interaction.editReply({
+          embeds: [sl.buildResultEmbed({ userName: interaction.user.username, mise, gain, label, reels, balanceAfter, symbol, color })],
+          components: [sl.buildReplayButtons(mise)],
+        }).catch(() => {});
+        return;
+      } catch (e) { console.error('[SLOTS] Erreur handler:', e); }
+    }
+
     // ── ROULETTE : bouton REJOUER et menu de choix de pari ───────────
     if (_cfgId.startsWith('roulette_replay:') || _cfgId.startsWith('roulette_double:') || _cfgId.startsWith('roulette_pick:')) {
       try {
