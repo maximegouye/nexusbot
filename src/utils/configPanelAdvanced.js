@@ -53,30 +53,31 @@ function backBtn(userId) {
 // CATÉGORIES AVANCÉES (exportées pour être fusionnées dans CATEGORIES)
 // ═══════════════════════════════════════════════════════════════
 const ADVANCED_CATEGORIES = [
-  { value: 'eco_pro',        label: '⚡ Économie pro',            description: 'Work/crime/rob, streak, taxes, intérêts — sans limite' },
-  { value: 'xp_pro',         label: '📊 XP pro',                  description: 'Cooldown ms, vocal, weekend, stack roles' },
-  { value: 'mod_pro',        label: '🔨 Modération pro',          description: 'Auto-escalation warns, durée mute, expiration' },
-  { value: 'logs_pro',       label: '📋 Logs granulaires',        description: 'Toggles par event (delete/edit/join/voice...)' },
-  { value: 'ai',             label: '🧠 Intelligence IA',         description: 'Provider, modèle, mention = question, rôle requis' },
-  { value: 'kv',             label: '🗄️ Éditeur libre (KV)',    description: 'Ajoute/modifie N\'IMPORTE quelle clé de config' },
-  { value: 'embeds',         label: '🎨 Éditeur d\'embed',       description: 'Créer et gérer des embeds personnalisés' },
-  { value: 'cmds_adv',       label: '⚡ Commandes custom',        description: 'Créer des commandes & personnalisées (texte ou embed)' },
-  { value: 'sys_msgs',       label: '📢 Messages système',       description: 'Welcome, leave, levelup, boost, daily...' },
-  { value: 'autoresp',       label: '🔁 Réponses automatiques',  description: 'Bot répond quand un message contient un mot-clé' },
+  { value: 'eco_pro',        label: '⚡ Économie avancée',        description: 'Travail, crime, vol, série, taxes, intérêts — sans limite' },
+  { value: 'xp_pro',         label: '📊 XP avancé',               description: 'Délai, vocal, bonus week-end, cumul des rôles' },
+  { value: 'mod_pro',        label: '🔨 Modération avancée',      description: 'Escalade automatique des avertissements, durée de rendu muet' },
+  { value: 'logs_pro',       label: '📋 Journaux détaillés',      description: 'Activer/désactiver chaque type d\'événement journalisé' },
+  { value: 'ai',             label: '🧠 Intelligence artificielle', description: 'Fournisseur, modèle, mention = question, rôle requis' },
+  { value: 'kv',             label: '🗄️ Éditeur libre de clés',  description: 'Ajoute/modifie N\'IMPORTE quelle clé de configuration' },
+  { value: 'ui_texts',       label: '🗣️ Textes & libellés',      description: 'Personnalise les textes du panneau (boutons, titres)' },
+  { value: 'embeds',         label: '🎨 Éditeur d\'encarts',      description: 'Créer et gérer des encarts (embeds) personnalisés' },
+  { value: 'cmds_adv',       label: '⚡ Commandes personnalisées', description: 'Créer des commandes & sur mesure (texte ou encart)' },
+  { value: 'sys_msgs',       label: '📢 Messages système',        description: 'Bienvenue, départ, niveau, boost, daily…' },
+  { value: 'autoresp',       label: '🔁 Réponses automatiques',   description: 'Le bot répond quand un message contient un mot-clé' },
   { value: 'level_roles',    label: '🏆 Rôles par niveau',        description: 'Attribue un rôle quand un membre atteint un niveau' },
-  { value: 'shop',           label: '🛒 Boutique',               description: 'Items, prix, stock, rôles attribués' },
-  { value: 'reaction_roles', label: '⭐ Reaction roles',          description: 'Réagir sur un message = rôle' },
-  { value: 'role_menus',     label: '📜 Menus de rôles',         description: 'Panneaux interactifs de sélection de rôles' },
-  { value: 'antiraid',       label: '🛡️ AntiRaid',              description: 'Protection contre les raids + comptes jeunes' },
-  { value: 'youtube',        label: '📺 Notifs YouTube',         description: 'Alertes quand une chaîne poste une vidéo' },
-  { value: 'twitch',         label: '🎮 Notifs Twitch',          description: 'Alertes quand un streamer passe en live' },
-  { value: 'giveaways',      label: '🎁 Giveaways',              description: 'Liste des concours et gestion' },
-  { value: 'scheduled',      label: '⏰ Messages programmés',     description: 'Messages automatiques (cron)' },
-  { value: 'quests',         label: '📋 Quêtes',                 description: 'Défis communautaires avec récompenses' },
+  { value: 'shop',           label: '🛒 Boutique',                description: 'Articles, prix, stock, rôles attribués' },
+  { value: 'reaction_roles', label: '⭐ Rôles par réaction',       description: 'Réagir sur un message = obtenir un rôle' },
+  { value: 'role_menus',     label: '📜 Menus de rôles',          description: 'Panneaux interactifs de sélection de rôles' },
+  { value: 'antiraid',       label: '🛡️ Anti-raid',              description: 'Protection contre les raids + comptes trop jeunes' },
+  { value: 'youtube',        label: '📺 Alertes YouTube',         description: 'Alertes quand une chaîne publie une vidéo' },
+  { value: 'twitch',         label: '🎮 Alertes Twitch',          description: 'Alertes quand un streameur démarre un direct' },
+  { value: 'giveaways',      label: '🎁 Concours',                description: 'Liste des concours et gestion' },
+  { value: 'scheduled',      label: '⏰ Messages programmés',      description: 'Messages automatiques récurrents (expressions CRON)' },
+  { value: 'quests',         label: '📋 Quêtes',                  description: 'Défis communautaires avec récompenses' },
   { value: 'polls',          label: '📬 Sondages',                description: 'Liste et gestion des sondages' },
-  { value: 'cmd_ctrl',       label: '🛠️ Cooldowns & toggles',   description: 'Activer/désactiver et régler les cooldowns par commande' },
-  { value: 'aliases',        label: '🔀 Aliases',                description: 'Raccourcis pour vos commandes' },
-  { value: 'backup',         label: '💾 Sauvegarde & Import',    description: 'Exporter / importer toute la config du serveur' },
+  { value: 'cmd_ctrl',       label: '🛠️ Délais & activations',   description: 'Activer/désactiver et régler les délais de chaque commande' },
+  { value: 'aliases',        label: '🔀 Raccourcis',              description: 'Alias : utiliser un autre nom pour une commande' },
+  { value: 'backup',         label: '💾 Sauvegarde & Import',     description: 'Exporter / importer toute la configuration du serveur' },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -1232,6 +1233,54 @@ function buildAIPanel(cfg, guild, userId, db) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SECTION : 🗣️ TEXTES & LIBELLÉS (personnalisation UI par serveur)
+// ═══════════════════════════════════════════════════════════════
+function buildUiTextsPanel(cfg, guild, userId, db, page = 0) {
+  const i18n = (() => { try { return require('./i18n'); } catch { return null; } })();
+  const catalogue = i18n ? i18n.CATALOGUE : [];
+  const overrides = new Map();
+  if (i18n) for (const r of i18n.listTexts(guild.id, db)) overrides.set(r.key, r.value);
+
+  const perPage = 15;
+  const maxPage = Math.max(0, Math.ceil(catalogue.length / perPage) - 1);
+  const p       = Math.min(Math.max(0, page), maxPage);
+  const slice   = catalogue.slice(p * perPage, p * perPage + perPage);
+
+  const lines = slice.map(e => {
+    const cur = overrides.get(e.key);
+    const mark = cur != null ? '✏️' : '⚪';
+    const val  = cur != null ? cur : e.default;
+    return `${mark} \`${e.key}\` = ${truncate(val, 60)}`;
+  }).join('\n') || '*Catalogue vide.*';
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🗣️ Textes & libellés')
+    .setDescription(
+      'Personnalise **N\'IMPORTE QUEL** texte du panneau depuis Discord.\n\n' +
+      '**✏️ = personnalisé** · **⚪ = texte par défaut**\n\n' +
+      lines,
+    )
+    .addFields(
+      { name: '📊 Textes', value: `**${catalogue.length}** référencés • **${overrides.size}** personnalisés`, inline: true },
+      { name: '📄 Page',   value: `**${p + 1}/${maxPage + 1}**`,                                            inline: true },
+    )
+    .setFooter({ text: 'Tu peux aussi ajouter un ID custom non listé ici via le bouton ✏️ Modifier.' });
+
+  const editBtn  = new ButtonBuilder().setCustomId(`adv:ui_texts:edit:${userId}`).setLabel('✏️ Modifier / Créer').setStyle(ButtonStyle.Primary);
+  const resetBtn = new ButtonBuilder().setCustomId(`adv:ui_texts:reset:${userId}`).setLabel('↩️ Rétablir le défaut').setStyle(ButtonStyle.Danger);
+  const resetAll = new ButtonBuilder().setCustomId(`adv:ui_texts:reset_all:${userId}`).setLabel('🗑️ Tout rétablir').setStyle(ButtonStyle.Danger);
+  const prev     = new ButtonBuilder().setCustomId(`adv:ui_texts:page:${userId}:${Math.max(0, p - 1)}`).setLabel('◀️').setStyle(ButtonStyle.Secondary).setDisabled(p === 0);
+  const next     = new ButtonBuilder().setCustomId(`adv:ui_texts:page:${userId}:${Math.min(maxPage, p + 1)}`).setLabel('▶️').setStyle(ButtonStyle.Secondary).setDisabled(p >= maxPage);
+
+  const rows = [
+    new ActionRowBuilder().addComponents(backBtn(userId), editBtn, resetBtn, resetAll),
+  ];
+  if (catalogue.length > perPage) rows.push(new ActionRowBuilder().addComponents(prev, next));
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SECTION : 🛡️ ANTIRAID
 // ═══════════════════════════════════════════════════════════════
 function buildAntiraidPanel(cfg, guild, userId, db) {
@@ -1544,6 +1593,7 @@ function buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client) {
     case 'logs_pro':       return buildLogsProPanel(cfg, guild, userId, db);
     case 'ai':             return buildAIPanel(cfg, guild, userId, db);
     case 'kv':             return buildKvPanel(cfg, guild, userId, db, 0, 'kv');
+    case 'ui_texts':       return buildUiTextsPanel(cfg, guild, userId, db, 0);
     case 'embeds':         return buildEmbedsPanel(cfg, guild, userId, db);
     case 'cmds_adv':       return buildCmdsAdvPanel(cfg, guild, userId, db, 0);
     case 'sys_msgs':       return buildSysMsgsPanel(cfg, guild, userId, db);
@@ -2091,6 +2141,34 @@ async function handleAdvancedInteraction(interaction, db, client) {
         { id: 'id', label: 'ID du sondage', style: TextInputStyle.Short, maxLength: 10 },
       ]);
       return interaction.showModal(modal);
+    }
+
+    // ── 🗣️ TEXTES UI ─────────────────────────────────────────
+    if (section === 'ui_texts') {
+      if (action === 'page') {
+        return interaction.update(buildUiTextsPanel(cfg, interaction.guild, userId, db, parseInt(arg, 10) || 0));
+      }
+      if (action === 'edit') {
+        const modal = buildSimpleModal(`adv_modal:ui_texts:save:${userId}`, '✏️ Personnaliser un texte', [
+          { id: 'key',   label: 'Identifiant (ex: btn.save ou titre.custom)', style: TextInputStyle.Short, maxLength: 80, placeholder: 'btn.save' },
+          { id: 'value', label: 'Nouveau texte (vide = garder le défaut)',     style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'reset') {
+        const modal = buildSimpleModal(`adv_modal:ui_texts:reset_one:${userId}`, '↩️ Rétablir le défaut', [
+          { id: 'key', label: 'Identifiant du texte à réinitialiser', style: TextInputStyle.Short, maxLength: 80 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'reset_all') {
+        // Supprime tous les ui:* du serveur
+        try {
+          const all = db.kvList(interaction.guildId, 'ui:') || [];
+          for (const r of all) db.kvDelete(interaction.guildId, r.key);
+        } catch {}
+        return interaction.update(buildUiTextsPanel(cfg, interaction.guild, userId, db, 0));
+      }
     }
 
     // ── 🗄️ ÉDITEUR LIBRE (KV + guild_config) ─────────────────
@@ -3034,6 +3112,25 @@ async function handleAdvancedInteraction(interaction, db, client) {
       const id = parseInt(field('id'), 10);
       db.endPoll(interaction.guildId, id);
       return interaction.update(buildPollsPanel(cfg, interaction.guild, uid, db));
+    }
+
+    // ── 🗣️ TEXTES UI — save / reset_one ──────────────────────
+    if (sect === 'ui_texts') {
+      const i18n = (() => { try { return require('./i18n'); } catch { return null; } })();
+      if (!i18n) return interaction.reply({ content: '❌ Module i18n indisponible.', ephemeral: true });
+      if (act === 'save') {
+        const key = field('key').trim();
+        if (!key) return interaction.reply({ content: '❌ Identifiant requis.', ephemeral: true });
+        const value = field('value').trim();
+        i18n.setText(interaction.guildId, db, key, value || null);
+        return interaction.update(buildUiTextsPanel(cfg, interaction.guild, uid, db, 0));
+      }
+      if (act === 'reset_one') {
+        const key = field('key').trim();
+        if (!key) return interaction.reply({ content: '❌ Identifiant requis.', ephemeral: true });
+        i18n.setText(interaction.guildId, db, key, null);
+        return interaction.update(buildUiTextsPanel(cfg, interaction.guild, uid, db, 0));
+      }
     }
 
     // ── 🗄️ KV : view / set / del ─────────────────────────────

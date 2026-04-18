@@ -38,6 +38,69 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+    // ── ROULETTE : bouton REJOUER et menu de choix de pari ───────────
+    if (_cfgId.startsWith('roulette_replay:') || _cfgId.startsWith('roulette_double:') || _cfgId.startsWith('roulette_pick:')) {
+      try {
+        const r  = require('../utils/rouletteEngine');
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const user = db2.getUser(interaction.user.id, interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+
+        let bet, mise;
+        if (_cfgId.startsWith('roulette_pick:')) {
+          // "roulette_pick:<mise_encoded>" — values[0] = type de pari choisi
+          if (!interaction.isStringSelectMenu()) return;
+          const miseEncoded = _cfgId.split(':')[1];
+          mise = parseInt(decodeURIComponent(miseEncoded), 10) || 0;
+          bet  = { type: interaction.values[0], param: null };
+        } else {
+          // replay ou double : customId = "roulette_replay:<type>:<param>:<mise>"
+          const encoded = _cfgId.split(':').slice(1).join(':');
+          const parts   = decodeURIComponent(encoded).split(':');
+          bet  = { type: parts[0], param: parts[1] || null };
+          mise = parseInt(parts[2], 10) || 0;
+          if (_cfgId.startsWith('roulette_double:')) mise *= 2;
+        }
+
+        if (mise < 1 || mise > user.balance) {
+          return interaction.reply({
+            content: `❌ Solde insuffisant pour miser **${mise.toLocaleString('fr-FR')}${symbol}** (tu as ${user.balance.toLocaleString('fr-FR')}${symbol}).`,
+            ephemeral: true,
+          });
+        }
+
+        await interaction.deferUpdate().catch(() => {});
+        db2.removeCoins(interaction.user.id, interaction.guildId, mise);
+
+        await interaction.editReply({
+          embeds: [r.buildSpinningEmbed({ userName: interaction.user.username, bet, mise, symbol, color: cfg.color })],
+          components: [],
+        }).catch(() => {});
+
+        await new Promise(res => setTimeout(res, 2000));
+
+        const result = r.spin();
+        const { won, mult } = r.checkWin(bet, result);
+        const delta = won ? mise * (mult - 1) : 0;
+        if (won) db2.addCoins(interaction.user.id, interaction.guildId, mise * mult);
+        const balanceAfter = won ? user.balance - mise + mise * mult : user.balance - mise;
+
+        await interaction.editReply({
+          embeds: [r.buildResultEmbed({
+            userName: interaction.user.username,
+            bet, mise, symbol, color: cfg.color,
+            result, won, mult, delta,
+            balanceAfter: Math.max(0, balanceAfter),
+          })],
+          components: [r.buildReplayButtons(bet, mise)],
+        }).catch(() => {});
+        return;
+      } catch (e) {
+        console.error('[ROULETTE] Erreur handler:', e);
+      }
+    }
+
     // ── PANNEAU AVANCÉ (adv: / adv_modal: / adv_chan: / adv_role: / adv_sel:) ──
     if (_cfgId.startsWith('adv:') || _cfgId.startsWith('adv_modal:') || _cfgId.startsWith('adv_chan:') || _cfgId.startsWith('adv_role:') || _cfgId.startsWith('adv_sel:')) {
       try {

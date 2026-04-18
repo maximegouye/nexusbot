@@ -1,130 +1,120 @@
 /**
- * NexusBot — Roulette Casino
- * /roulette <mise> <pari>
- * Parier sur : rouge/noir, pair/impair, 1-12/13-24/25-36, ou un numéro précis
+ * /roulette <mise> [pari] — Roulette européenne.
+ * Mise ILLIMITÉE (min 1, max = solde). Si pari omis, un menu propose les choix.
  */
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../../database/db');
+const r  = require('../../utils/rouletteEngine');
 
-// 0-36, 0 est vert (banque gagne toujours sur 0)
-const ROUGES = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-
-function getColor(n) {
-  if (n === 0) return '🟢';
-  return ROUGES.includes(n) ? '🔴' : '⚫';
+function parseBet(raw, balance) {
+  if (!raw) return null;
+  const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+  if (s === 'all' || s === 'tout' || s === 'max') return BigInt(balance);
+  if (s === 'moitié' || s === 'moitie' || s === '50%' || s === 'half') return BigInt(Math.floor(balance / 2));
+  const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  if (!isFinite(n) || n < 0) return null;
+  if (m[2] === '%') return BigInt(Math.floor(balance * Math.min(100, n) / 100));
+  return BigInt(Math.floor(n));
 }
+
+const CHOIX = [
+  { name: '🔴 Rouge (×2)',             value: 'rouge' },
+  { name: '⚫ Noir (×2)',               value: 'noir' },
+  { name: '🔢 Pair (×2)',               value: 'pair' },
+  { name: '🔢 Impair (×2)',             value: 'impair' },
+  { name: '1️⃣ Manque 1–18 (×2)',       value: 'manque' },
+  { name: '2️⃣ Passe 19–36 (×2)',       value: 'passe' },
+  { name: '🎯 1ère douzaine (×3)',      value: 'douzaine_1' },
+  { name: '🎯 2ème douzaine (×3)',      value: 'douzaine_2' },
+  { name: '🎯 3ème douzaine (×3)',      value: 'douzaine_3' },
+  { name: '📊 1ère colonne (×3)',       value: 'colonne_1' },
+  { name: '📊 2ème colonne (×3)',       value: 'colonne_2' },
+  { name: '📊 3ème colonne (×3)',       value: 'colonne_3' },
+  { name: '🟢 Numéro plein (×36)',      value: 'numero' },
+];
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('roulette')
-    .setDescription('🎡 Casino Roulette — tente ta chance !')
-    .addIntegerOption(o => o
-      .setName('mise')
-      .setDescription('Montant à miser (€)')
-      .setRequired(true)
-      .setMinValue(5)
-      .setMaxValue(10000)
-    )
-    .addStringOption(o => o
-      .setName('pari')
-      .setDescription('Sur quoi miser ?')
-      .setRequired(true)
-      .addChoices(
-        { name: '🔴 Rouge (×2)',             value: 'rouge' },
-        { name: '⚫ Noir (×2)',               value: 'noir' },
-        { name: '🔢 Pair (×2)',               value: 'pair' },
-        { name: '🔢 Impair (×2)',             value: 'impair' },
-        { name: '1️⃣ 1-12 (×3)',              value: '1-12' },
-        { name: '2️⃣ 13-24 (×3)',             value: '13-24' },
-        { name: '3️⃣ 25-36 (×3)',             value: '25-36' },
-        { name: '🟩 0 (×35)',                 value: '0' },
-      )
-    ),
-  cooldown: 5,
+    .setDescription('🎡 Roulette — mise ce que tu veux, choisis ton pari')
+    .addStringOption(o => o.setName('mise').setDescription('Montant misé (ex: 500, 1000, all, 25%)').setRequired(true).setMaxLength(20))
+    .addStringOption(o => o.setName('pari').setDescription('Type de pari').setRequired(false).addChoices(...CHOIX))
+    .addIntegerOption(o => o.setName('numero').setDescription('Si pari = Numéro plein : 0 à 36').setRequired(false).setMinValue(0).setMaxValue(36)),
+  cooldown: 3,
 
   async execute(interaction) {
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
-    const mise   = interaction.options.getInteger('mise');
-    const pari   = interaction.options.getString('pari');
+    const raw    = interaction.options.getString('mise');
 
-    // Vérification solde
-    if (user.balance < mise) {
+    const mise = parseBet(raw, user.balance);
+    if (mise == null)   return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (mise < 1n)      return interaction.reply({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (mise > BigInt(user.balance)) return interaction.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
+
+    const pariType = interaction.options.getString('pari');
+    if (!pariType) {
+      // Pas de pari → on propose le menu
       return interaction.reply({
         embeds: [new EmbedBuilder()
-          .setColor('#E74C3C')
-          .setTitle('❌ Solde insuffisant')
-          .setDescription(`Tu as **${user.balance.toLocaleString('fr')}${symbol}** mais tu veux miser **${mise.toLocaleString('fr')}${symbol}**.`)
-          .setFooter({ text: '/work /daily /crime pour gagner de l\'argent !' })
-        ], ephemeral: true
+          .setColor(cfg.color || '#9B59B6')
+          .setTitle('🎡 Choisis ton pari')
+          .setDescription(`Tu mises **${mise.toLocaleString('fr-FR')}${symbol}**. Sélectionne dans le menu ci-dessous.`)
+          .setFooter({ text: 'Pour miser sur un numéro précis, utilise /roulette mise pari:numero numero:<N>' })
+        ],
+        components: [r.buildChoiceMenu(Number(mise))],
+        ephemeral: true,
       });
     }
 
-    // Lancer la roulette
-    const result = Math.floor(Math.random() * 37); // 0 à 36
-    const colorEmoji = getColor(result);
-    const isRouge = ROUGES.includes(result);
-    const isNoir  = result > 0 && !isRouge;
-    const isPair  = result > 0 && result % 2 === 0;
-    const isImpair = result > 0 && result % 2 === 1;
-
-    // Calcul gain
-    let won = false;
-    let mult = 0;
-
-    switch (pari) {
-      case 'rouge':  won = isRouge;                          mult = 2; break;
-      case 'noir':   won = isNoir;                           mult = 2; break;
-      case 'pair':   won = isPair;                           mult = 2; break;
-      case 'impair': won = isImpair;                         mult = 2; break;
-      case '1-12':   won = result >= 1 && result <= 12;      mult = 3; break;
-      case '13-24':  won = result >= 13 && result <= 24;     mult = 3; break;
-      case '25-36':  won = result >= 25 && result <= 36;     mult = 3; break;
-      case '0':      won = result === 0;                     mult = 35; break;
+    let param = null;
+    if (pariType === 'numero') {
+      param = interaction.options.getInteger('numero');
+      if (param == null) return interaction.reply({ content: '❌ Pour un numéro plein, précise aussi `numero:<0-36>`.', ephemeral: true });
     }
 
-    const pariLabels = {
-      rouge: '🔴 Rouge', noir: '⚫ Noir', pair: '🔢 Pair', impair: '🔢 Impair',
-      '1-12': '1️⃣ 1-12', '13-24': '2️⃣ 13-24', '25-36': '3️⃣ 25-36', '0': '🟩 0',
-    };
+    await spinAndResolve(interaction, { type: pariType, param }, mise, cfg, symbol, user);
+  },
 
-    if (won) {
-      const gain = mise * mult;
-      const profit = gain - mise;
-      db.addCoins(interaction.user.id, interaction.guildId, profit);
-      return interaction.reply({
-        embeds: [new EmbedBuilder()
-          .setColor('#2ECC71')
-          .setTitle('🎡 Roulette — GAGNÉ !')
-          .setDescription(`La bille s'arrête sur **${colorEmoji} ${result}** !`)
-          .addFields(
-            { name: '🎯 Pari',          value: pariLabels[pari],                          inline: true },
-            { name: '💰 Mise',          value: `${mise.toLocaleString('fr')}${symbol}`,   inline: true },
-            { name: '✖️ Multiplicateur', value: `×${mult}`,                                inline: true },
-            { name: '💵 Gain',          value: `**+${profit.toLocaleString('fr')}${symbol}**`, inline: true },
-            { name: `${symbol} Solde`,  value: `**${(user.balance + profit).toLocaleString('fr')}${symbol}**`, inline: true },
-          )
-          .setFooter({ text: '🎡 La roulette tourne encore !' })
-          .setTimestamp()
-        ]
-      });
-    } else {
-      db.removeCoins(interaction.user.id, interaction.guildId, mise);
-      return interaction.reply({
-        embeds: [new EmbedBuilder()
-          .setColor('#E74C3C')
-          .setTitle('🎡 Roulette — Perdu !')
-          .setDescription(`La bille s'arrête sur **${colorEmoji} ${result}**... Ce n'était pas ton numéro.`)
-          .addFields(
-            { name: '🎯 Pari',          value: pariLabels[pari],                           inline: true },
-            { name: '💸 Perdu',         value: `**-${mise.toLocaleString('fr')}${symbol}**`, inline: true },
-            { name: `${symbol} Solde`,  value: `**${Math.max(0, user.balance - mise).toLocaleString('fr')}${symbol}**`, inline: true },
-          )
-          .setFooter({ text: 'Retente ta chance !' })
-          .setTimestamp()
-        ]
-      });
-    }
-  }
+  // Exporté pour que le handler de bouton/select puisse rappeler
+  _spinAndResolve: spinAndResolve,
 };
+
+async function spinAndResolve(interaction, bet, mise, cfg, symbol, user) {
+  const color = cfg.color || '#9B59B6';
+  const userName = interaction.user.username;
+  const miseNum = Number(mise);
+
+  // Prélèvement de la mise
+  db.removeCoins(interaction.user.id, interaction.guildId, miseNum);
+
+  // Phase de suspense (animation)
+  const spinEmbed = r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color });
+  let replyMsg;
+  if (interaction.replied || interaction.deferred) {
+    replyMsg = await interaction.editReply({ embeds: [spinEmbed], components: [] }).catch(() => null);
+  } else {
+    replyMsg = await interaction.reply({ embeds: [spinEmbed], components: [], fetchReply: true }).catch(() => null);
+  }
+
+  await new Promise(res => setTimeout(res, 2000));
+
+  // Tirage + résolution
+  const result = r.spin();
+  const { won, mult } = r.checkWin(bet, result);
+  const delta = won ? miseNum * (mult - 1) : 0;
+  if (won) db.addCoins(interaction.user.id, interaction.guildId, miseNum * mult);
+  const balanceAfter = won ? user.balance - miseNum + miseNum * mult : user.balance - miseNum;
+
+  const finalEmbed = r.buildResultEmbed({ userName, bet, mise: miseNum, symbol, color, result, won, mult, delta, balanceAfter: Math.max(0, balanceAfter) });
+  const replayRow  = r.buildReplayButtons(bet, miseNum);
+
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ embeds: [finalEmbed], components: [replayRow] }).catch(() => {});
+  } else {
+    await interaction.followUp({ embeds: [finalEmbed], components: [replayRow] }).catch(() => {});
+  }
+}
