@@ -100,12 +100,12 @@ function buildMainMenu(cfg, guild, userId) {
   // Les customId DOIVENT être distincts (Discord refuse les doublons).
   const selectBase = new StringSelectMenuBuilder()
     .setCustomId(`cfg:cat:${userId}`)
-    .setPlaceholder('📋 BASE : économie, XP, logs, tickets, rôles…')
+    .setPlaceholder('📋 Catégories de base (économie, XP, logs, tickets, rôles…)')
     .addOptions(BASE_CATEGORIES.slice(0, 25));
 
   const selectAdv = new StringSelectMenuBuilder()
     .setCustomId(`cfg:cat2:${userId}`)
-    .setPlaceholder('⚡ AVANCÉ : IA, commandes custom, embed, boutique…')
+    .setPlaceholder('⚡ Catégories avancées (IA, commandes personnalisées, encarts, boutique…)')
     .addOptions(ADVANCED_CATEGORIES.slice(0, 25));
 
   return {
