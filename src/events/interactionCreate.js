@@ -38,6 +38,120 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+    // ── MINES : boutons persistés (BDD) ───────────────────────────────
+    if (interaction.isButton() && (_cfgId.startsWith('mines_pick:') || _cfgId === 'mines_cash')) {
+      try {
+        const db2 = require('../database/db');
+        const mi  = require('../utils/minesEngine');
+        const sess = db2.getGameSession(interaction.message.id);
+        if (!sess || sess.game !== 'mines') {
+          return interaction.reply({ content: '⏱️ Cette partie de Mines a expiré. Lance `&mines <mise> <nb_mines>` pour en refaire une.', ephemeral: true });
+        }
+        if (interaction.user.id !== sess.user_id) {
+          return interaction.reply({ content: '❌ Cette partie n\'est pas la tienne.', ephemeral: true });
+        }
+
+        const game = sess.state.state;
+        const embedOpts = sess.state.embedOpts || { userName: interaction.user.username };
+
+        if (game.over) return interaction.reply({ content: '❌ Cette partie est terminée.', ephemeral: true });
+
+        if (_cfgId === 'mines_cash') {
+          mi.cashOut(game);
+        } else {
+          const idx = parseInt(_cfgId.split(':')[1], 10);
+          mi.revealSafe(game, idx);
+        }
+
+        if (game.over) {
+          if (game.cashed && BigInt(game.payout) > 0n) {
+            db2.addCoins(interaction.user.id, interaction.guildId, Number(BigInt(game.payout)));
+          }
+          db2.deleteGameSession(interaction.message.id);
+          await interaction.update({ embeds: [mi.buildEmbed(game, embedOpts)], components: [] }).catch(() => {});
+        } else {
+          db2.saveGameSession(interaction.message.id, interaction.user.id, interaction.guildId, interaction.channelId, 'mines', { state: game, embedOpts }, 1800);
+          await interaction.update({ embeds: [mi.buildEmbed(game, embedOpts)], components: mi.buildButtons(game) }).catch(() => {});
+        }
+        return;
+      } catch (e) {
+        console.error('[MINES handler]', e);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
+        }
+        return;
+      }
+    }
+
+    // ── CRASH : rejouer / ×2 ──────────────────────────────────────────
+    if (interaction.isButton() && (_cfgId.startsWith('crash_replay:') || _cfgId.startsWith('crash_double:'))) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const user = db2.getUser(interaction.user.id, interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+
+        const encoded = _cfgId.split(':').slice(1).join(':');
+        const parts = decodeURIComponent(encoded).split(':');
+        let mise = parseInt(parts[0], 10) || 0;
+        const cashout = parseFloat(parts[1]);
+        if (_cfgId.startsWith('crash_double:')) mise *= 2;
+
+        if (mise < 1 || mise > user.balance) {
+          return interaction.reply({ content: `❌ Solde insuffisant.`, ephemeral: true });
+        }
+
+        await interaction.deferUpdate().catch(() => {});
+        db2.removeCoins(interaction.user.id, interaction.guildId, mise);
+
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        await interaction.editReply({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#E67E22')
+            .setTitle('📈 Le multiplicateur grimpe…')
+            .setDescription(`🚀 ×1.00 — 1.50 — 2.00 …\n\nMise **${mise.toLocaleString('fr-FR')}${symbol}** · cashout ×${cashout}`)],
+          components: [],
+        }).catch(() => {});
+
+        await new Promise(r => setTimeout(r, 2000));
+
+        let crashPoint;
+        if (Math.random() < 0.03) crashPoint = 1.00;
+        else { const r = Math.random(); crashPoint = Math.max(1.00, (100 - 3) / ((1 - r) * 100)); }
+
+        const won = crashPoint >= cashout;
+        const gain = won ? Math.floor(mise * cashout) : 0;
+        if (gain > 0) db2.addCoins(interaction.user.id, interaction.guildId, gain);
+        const balanceAfter = Math.max(0, user.balance - mise + gain);
+
+        const barLen = Math.min(20, Math.floor(crashPoint * 2));
+        const bar = '█'.repeat(barLen) + '░'.repeat(Math.max(0, 20 - barLen));
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`crash_replay:${encodeURIComponent(mise + ':' + cashout)}`).setLabel('📈 Rejouer').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`crash_double:${encodeURIComponent(mise + ':' + cashout)}`).setLabel('✖️ Rejouer ×2').setStyle(ButtonStyle.Success),
+        );
+
+        await interaction.editReply({
+          embeds: [new EmbedBuilder()
+            .setColor(won ? '#2ECC71' : '#E74C3C')
+            .setTitle(won ? `📈 CASHED OUT ×${cashout.toFixed(2)} !` : `💥 CRASH à ×${crashPoint.toFixed(2)}`)
+            .setDescription(won
+              ? `🎉 Ton cashout ×${cashout} a été atteint. Multi final : **×${crashPoint.toFixed(2)}**.\n\n\`${bar}\``
+              : `💥 Le multi a crashé à **×${crashPoint.toFixed(2)}** avant ton cashout (×${cashout}).\n\n\`${bar}\``)
+            .addFields(
+              { name: '💰 Mise',    value: `${mise.toLocaleString('fr-FR')}${symbol}`, inline: true },
+              { name: '🎯 Cashout', value: `×${cashout.toFixed(2)}`,                    inline: true },
+              { name: '💥 Crash',   value: `×${crashPoint.toFixed(2)}`,                 inline: true },
+              won ? { name: '💵 Gain net', value: `**+${(gain - mise).toLocaleString('fr-FR')}${symbol}**`, inline: true }
+                  : { name: '💸 Perte',    value: `**-${mise.toLocaleString('fr-FR')}${symbol}**`,          inline: true },
+              { name: `${symbol} Solde`, value: `**${balanceAfter.toLocaleString('fr-FR')}${symbol}**`,    inline: true },
+            ).setTimestamp()],
+          components: [row],
+        }).catch(() => {});
+        return;
+      } catch (e) { console.error('[CRASH handler]', e); }
+    }
+
     // ── BLACKJACK : boutons persistés (BDD, survit aux redémarrages) ─
     if (interaction.isButton() && _cfgId.startsWith('bj_')) {
       try {
