@@ -1,8 +1,6 @@
 /**
- * &blackjack <mise> — Même moteur que le slash, même rendu, même qualité.
- * Accepte nombres, `all`, `tout`, `moitié`, `50%`.
+ * &blackjack <mise> — Même logique persistée que /blackjack.
  */
-const { ComponentType } = require('discord.js');
 const bj = require('../../utils/blackjackEngine');
 
 function parseBet(raw, balance) {
@@ -21,7 +19,7 @@ function parseBet(raw, balance) {
 module.exports = {
   name: 'blackjack',
   aliases: ['bj', '21'],
-  description: 'Blackjack — mise illimitée',
+  description: 'Blackjack — mise illimitée, état persisté',
   category: 'Jeux',
   cooldown: 3,
 
@@ -30,11 +28,11 @@ module.exports = {
     const user   = db.getUser(message.author.id, message.guild.id);
     const symbol = cfg.currency_emoji || '€';
     const raw    = (args[0] || '').trim();
-    if (!raw) return message.reply({ content: `💡 Utilise \`${'&blackjack <mise>'}\`. Exemples : \`&blackjack 500\`, \`&blackjack all\`, \`&blackjack 25%\`.` });
+    if (!raw) return message.reply({ content: '💡 Utilise `&blackjack <mise>`. Exemples : `&bj 500`, `&bj all`, `&bj 25%`.' });
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null)              return message.reply({ content: '❌ Mise invalide.' });
-    if (bet < 1n)                 return message.reply({ content: '❌ La mise doit être d\'au moins **1**.' });
+    if (bet == null)                return message.reply({ content: '❌ Mise invalide.' });
+    if (bet < 1n)                   return message.reply({ content: '❌ La mise doit être d\'au moins **1**.' });
     if (bet > BigInt(user.balance)) return message.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.` });
 
     db.removeCoins(message.author.id, message.guild.id, Number(bet));
@@ -54,51 +52,15 @@ module.exports = {
       allowedMentions: { repliedUser: false },
     });
 
-    const collector = sent.createMessageComponentCollector({
-      componentType: ComponentType.Button,
-      time: 30 * 60_000, // 30 minutes
-      filter: i => i.user.id === message.author.id,
-    });
-
-    collector.on('collect', async (btn) => {
-      if (game.over) return btn.reply({ content: '❌ Partie terminée.', ephemeral: true });
-      try {
-        switch (btn.customId) {
-          case 'bj_hit':       bj.playerHit(game); break;
-          case 'bj_stand':     bj.playerStand(game); break;
-          case 'bj_double': {
-            const cur = db.getUser(message.author.id, message.guild.id);
-            if (BigInt(cur.balance) < game.bet) { await btn.reply({ content: '❌ Solde insuffisant pour doubler.', ephemeral: true }); return; }
-            db.removeCoins(message.author.id, message.guild.id, Number(game.bet));
-            bj.playerDouble(game); break;
-          }
-          case 'bj_surrender': bj.playerSurrender(game); break;
-          case 'bj_insurance': {
-            const cur = db.getUser(message.author.id, message.guild.id);
-            const insAmount = game.bet / 2n;
-            if (BigInt(cur.balance) < insAmount) { await btn.reply({ content: '❌ Solde insuffisant pour l\'assurance.', ephemeral: true }); return; }
-            db.removeCoins(message.author.id, message.guild.id, Number(insAmount));
-            bj.playerInsure(game); break;
-          }
-        }
-        await btn.update({
-          embeds: [bj.buildEmbed(game, embedOpts)],
-          components: game.over ? [] : [bj.buildButtons(game)],
-        });
-        if (game.over) {
-          if (game.payout > 0n) db.addCoins(message.author.id, message.guild.id, Number(game.payout));
-          collector.stop();
-        }
-      } catch (e) { console.error('[&bj]', e); }
-    });
-
-    collector.on('end', async (_, reason) => {
-      if (reason === 'time' && !game.over) {
-        db.addCoins(message.author.id, message.guild.id, Number(game.bet));
-        game.message = '⏱️ Temps écoulé — mise remboursée.';
-        game.over = true;
-        await sent.edit({ embeds: [bj.buildEmbed(game, embedOpts)], components: [] }).catch(() => {});
-      }
-    });
+    // Persiste la session (30 min, survit au redémarrage)
+    db.saveGameSession(
+      sent.id,
+      message.author.id,
+      message.guild.id,
+      message.channel.id,
+      'blackjack',
+      { state: bj.serialize(game), embedOpts },
+      1800
+    );
   },
 };

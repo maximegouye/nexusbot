@@ -220,8 +220,43 @@ function startGame({ bet, balance }) {
   return { game, immediateFinish: false };
 }
 
+// Sérialise un game en JSON (BigInt → string)
+function serialize(game) {
+  return {
+    bet:         game.bet.toString(),
+    balance:     game.balance.toString(),
+    player:      game.player,
+    dealer:      game.dealer,
+    doubled:     game.doubled,
+    surrendered: game.surrendered,
+    insurance:   game.insurance.toString(),
+    over:        game.over,
+    message:     game.message,
+    outcome:     game.outcome,
+    payout:      game.payout.toString(),
+  };
+}
+
+// Reconstruit depuis JSON
+function deserialize(data) {
+  return {
+    bet:         BigInt(data.bet),
+    balance:     BigInt(data.balance),
+    player:      data.player || [],
+    dealer:      data.dealer || [],
+    doubled:     !!data.doubled,
+    surrendered: !!data.surrendered,
+    insurance:   BigInt(data.insurance || '0'),
+    over:        !!data.over,
+    message:     data.message || '',
+    outcome:     data.outcome || null,
+    payout:      BigInt(data.payout || '0'),
+  };
+}
+
 module.exports = {
   startGame, buildEmbed, buildButtons,
   playerHit, playerStand, playerDouble, playerSurrender, playerInsure,
   handValue, isBlackjack,
+  serialize, deserialize,
 };

@@ -38,6 +38,79 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+    // ── BLACKJACK : boutons persistés (BDD, survit aux redémarrages) ─
+    if (interaction.isButton() && _cfgId.startsWith('bj_')) {
+      try {
+        const db2 = require('../database/db');
+        const bjm = require('../utils/blackjackEngine');
+        const sess = db2.getGameSession(interaction.message.id);
+        if (!sess || sess.game !== 'blackjack') {
+          return interaction.reply({ content: '⏱️ Cette partie a expiré ou a été réinitialisée. Lance `&bj <mise>` pour en démarrer une nouvelle.', ephemeral: true });
+        }
+        if (interaction.user.id !== sess.user_id) {
+          return interaction.reply({ content: '❌ Cette partie n\'est pas la tienne.', ephemeral: true });
+        }
+
+        const game       = bjm.deserialize(sess.state.state);
+        const embedOpts  = sess.state.embedOpts || { symbol: '€', color: '#FFD700', userName: interaction.user.username };
+
+        if (game.over) {
+          return interaction.reply({ content: '❌ Cette partie est déjà terminée.', ephemeral: true });
+        }
+
+        switch (_cfgId) {
+          case 'bj_hit':       bjm.playerHit(game); break;
+          case 'bj_stand':     bjm.playerStand(game); break;
+          case 'bj_double': {
+            const cur = db2.getUser(interaction.user.id, interaction.guildId);
+            if (BigInt(cur.balance) < game.bet) {
+              return interaction.reply({ content: '❌ Solde insuffisant pour doubler.', ephemeral: true });
+            }
+            db2.removeCoins(interaction.user.id, interaction.guildId, Number(game.bet));
+            bjm.playerDouble(game);
+            break;
+          }
+          case 'bj_surrender': bjm.playerSurrender(game); break;
+          case 'bj_insurance': {
+            const cur = db2.getUser(interaction.user.id, interaction.guildId);
+            const insAmount = game.bet / 2n;
+            if (BigInt(cur.balance) < insAmount) {
+              return interaction.reply({ content: '❌ Solde insuffisant pour l\'assurance.', ephemeral: true });
+            }
+            db2.removeCoins(interaction.user.id, interaction.guildId, Number(insAmount));
+            bjm.playerInsure(game);
+            break;
+          }
+          default:
+            return interaction.reply({ content: '❌ Action inconnue.', ephemeral: true });
+        }
+
+        if (game.over) {
+          if (game.payout > 0n) db2.addCoins(interaction.user.id, interaction.guildId, Number(game.payout));
+          db2.deleteGameSession(interaction.message.id);
+          await interaction.update({ embeds: [bjm.buildEmbed(game, embedOpts)], components: [] }).catch(() => {});
+        } else {
+          db2.saveGameSession(
+            interaction.message.id,
+            interaction.user.id,
+            interaction.guildId,
+            interaction.channelId,
+            'blackjack',
+            { state: bjm.serialize(game), embedOpts },
+            1800
+          );
+          await interaction.update({ embeds: [bjm.buildEmbed(game, embedOpts)], components: [bjm.buildButtons(game)] }).catch(() => {});
+        }
+        return;
+      } catch (e) {
+        console.error('[BLACKJACK global handler]', e);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Erreur interne : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
+        }
+        return;
+      }
+    }
+
     // ── DÉS : boutons Rejouer / ×2 ────────────────────────────────
     if (_cfgId.startsWith('des_replay:') || _cfgId.startsWith('des_double:')) {
       try {

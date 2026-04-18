@@ -454,6 +454,19 @@ db.exec(`
     PRIMARY KEY (guild_id, key)
   );
 
+  -- Sessions de jeux persistées (blackjack, etc.)
+  -- Survivent aux redémarrages Railway
+  CREATE TABLE IF NOT EXISTS game_sessions (
+    message_id TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL,
+    guild_id   TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    game       TEXT NOT NULL,    -- 'blackjack' | ...
+    state_json TEXT NOT NULL,
+    created_at INTEGER DEFAULT (strftime('%s','now')),
+    expires_at INTEGER NOT NULL
+  );
+
   -- Sessions transitoires (éditeur d'embed en cours, etc.)
   CREATE TABLE IF NOT EXISTS edit_sessions (
     session_id TEXT PRIMARY KEY,
@@ -1658,6 +1671,35 @@ const helpers = {
       }
     });
     tx();
+  },
+
+  // ── Sessions de jeu persistées (survivent aux redémarrages) ──
+  saveGameSession(messageId, userId, guildId, channelId, game, state, ttlSeconds = 1800) {
+    const json = typeof state === 'string' ? state : JSON.stringify(state);
+    const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+    db.prepare(`INSERT OR REPLACE INTO game_sessions
+                (message_id, user_id, guild_id, channel_id, game, state_json, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(messageId, userId, guildId, channelId, game, json, expiresAt);
+  },
+
+  getGameSession(messageId) {
+    const row = db.prepare('SELECT * FROM game_sessions WHERE message_id = ?').get(messageId);
+    if (!row) return null;
+    if (row.expires_at < Math.floor(Date.now() / 1000)) {
+      db.prepare('DELETE FROM game_sessions WHERE message_id = ?').run(messageId);
+      return null;
+    }
+    try { row.state = JSON.parse(row.state_json); } catch { row.state = {}; }
+    return row;
+  },
+
+  deleteGameSession(messageId) {
+    db.prepare('DELETE FROM game_sessions WHERE message_id = ?').run(messageId);
+  },
+
+  cleanExpiredGameSessions() {
+    db.prepare('DELETE FROM game_sessions WHERE expires_at < ?').run(Math.floor(Date.now() / 1000));
   },
 
   // ── Sessions d'édition (éditeur d'embed, etc.) ──
