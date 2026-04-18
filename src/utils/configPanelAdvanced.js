@@ -1,0 +1,1771 @@
+/**
+ * NexusBot — Panneau de configuration AVANCÉ (extensions)
+ *
+ * Ce module ajoute au panneau principal (configPanel.js) :
+ *  - Éditeur d'embed visuel (templates réutilisables)
+ *  - Commandes personnalisées AVANCÉES (texte ou embed, cooldown, rôles, salons)
+ *  - Messages système configurables (welcome, leave, levelup, boost, daily, work...)
+ *  - Cooldowns & toggles par commande (override global)
+ *  - Aliases de commandes
+ *
+ * Le handler principal (`handleAdvancedInteraction`) prend les customId :
+ *    adv:<section>:<action>:<userId>[:<arg>]
+ *    adv_modal:<section>:<action>:<userId>[:<arg>]
+ *    adv_chan:<section>:<userId>[:<arg>]
+ *    adv_role:<section>:<userId>[:<arg>]
+ *    adv_sel:<section>:<userId>[:<arg>]
+ */
+
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+  ChannelSelectMenuBuilder,
+  RoleSelectMenuBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ChannelType,
+  PermissionFlagsBits,
+} = require('discord.js');
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS COMMUNS
+// ═══════════════════════════════════════════════════════════════
+function onOff(v)         { return v ? '✅ Activé' : '❌ Désactivé'; }
+function chanMention(id)  { return id ? `<#${id}>` : '`Non défini`'; }
+function roleMention(id)  { return id ? `<@&${id}>` : '`Non défini`'; }
+function truncate(s, n)   { if (!s) return ''; s = String(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+function safeJsonParse(s, fallback = null) {
+  try { return JSON.parse(s); } catch { return fallback; }
+}
+
+function backBtn(userId) {
+  return new ButtonBuilder()
+    .setCustomId(`cfg:menu:${userId}`)
+    .setLabel('← Menu principal')
+    .setStyle(ButtonStyle.Secondary);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CATÉGORIES AVANCÉES (exportées pour être fusionnées dans CATEGORIES)
+// ═══════════════════════════════════════════════════════════════
+const ADVANCED_CATEGORIES = [
+  { value: 'embeds',       label: '🎨 Éditeur d\'embed',      description: 'Créer et gérer des embeds personnalisés' },
+  { value: 'cmds_adv',     label: '⚡ Commandes custom',        description: 'Créer des commandes & personnalisées (texte ou embed)' },
+  { value: 'sys_msgs',     label: '📢 Messages système',       description: 'Welcome, leave, levelup, boost, daily...' },
+  { value: 'autoresp',     label: '🔁 Réponses automatiques',  description: 'Bot répond quand un message contient un mot-clé' },
+  { value: 'level_roles',  label: '🏆 Rôles par niveau',        description: 'Attribue un rôle quand un membre atteint un niveau' },
+  { value: 'cmd_ctrl',     label: '🛠️ Cooldowns & toggles',   description: 'Activer/désactiver et régler les cooldowns par commande' },
+  { value: 'aliases',      label: '🔀 Aliases',                description: 'Raccourcis pour vos commandes' },
+  { value: 'backup',       label: '💾 Sauvegarde & Import',    description: 'Exporter / importer toute la config du serveur' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// LISTE DES ÉVÉNEMENTS SYSTÈME CONFIGURABLES
+// ═══════════════════════════════════════════════════════════════
+const SYSTEM_EVENTS = [
+  { key: 'welcome',  label: '👋 Bienvenue',        desc: 'Nouveau membre', vars: '{user} {username} {server} {count}' },
+  { key: 'leave',    label: '🚪 Au revoir',         desc: 'Membre qui part', vars: '{user} {username} {server} {count}' },
+  { key: 'levelup',  label: '⭐ Passage de niveau', desc: 'Nouveau niveau atteint', vars: '{user} {username} {level} {xp}' },
+  { key: 'boost',    label: '🚀 Boost serveur',    desc: 'Membre qui boost', vars: '{user} {username} {server}' },
+  { key: 'daily',    label: '📅 Daily',            desc: 'Récompense daily réclamée', vars: '{user} {amount} {streak}' },
+  { key: 'work',     label: '💼 Work',             desc: 'Commande &work/&travail', vars: '{user} {amount} {job}' },
+  { key: 'crime',    label: '🕵️ Crime',            desc: 'Commande &crime', vars: '{user} {amount} {outcome}' },
+  { key: 'rob',      label: '🎭 Vol',              desc: 'Commande &rob', vars: '{user} {target} {amount} {outcome}' },
+  { key: 'rep',      label: '❤️ Réputation',       desc: 'Point de réputation reçu', vars: '{user} {target} {rep}' },
+  { key: 'birthday', label: '🎂 Anniversaire',     desc: 'Annonce d\'anniversaire', vars: '{user} {username} {age}' },
+  { key: 'ban',      label: '🔨 Ban',              desc: 'Ban de modération', vars: '{user} {mod} {reason}' },
+  { key: 'kick',     label: '👢 Kick',             desc: 'Kick de modération', vars: '{user} {mod} {reason}' },
+  { key: 'mute',     label: '🔇 Mute',             desc: 'Mute/timeout', vars: '{user} {mod} {duration} {reason}' },
+  { key: 'warn',     label: '⚠️ Avertissement',    desc: 'Warn reçu', vars: '{user} {mod} {reason} {count}' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : ÉDITEUR D'EMBED (templates réutilisables)
+// ═══════════════════════════════════════════════════════════════
+function buildEmbedsPanel(cfg, guild, userId, db) {
+  const templates = db.getEmbedTemplates ? db.getEmbedTemplates(guild.id) : [];
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🎨 Éditeur d\'embed')
+    .setDescription(
+      templates.length === 0
+        ? '*Aucun template d\'embed pour l\'instant.*\n\nClique sur **➕ Nouveau** pour créer un embed entièrement personnalisé : titre, description, couleur, champs, image, miniature, footer, auteur…'
+        : templates.slice(0, 15).map(t => `**${t.name}** — _${t.created_at ? new Date(t.created_at * 1000).toLocaleDateString('fr-FR') : '?'}_`).join('\n'),
+    )
+    .addFields({
+      name: '💡 Variables supportées',
+      value: '`{user}` `{username}` `{server}` `{channel}` `{count}` `{args}` `{arg1}` `{arg2}`…\n'
+          +  'Disponibles dans le titre, la description, les fields et le footer.',
+      inline: false,
+    })
+    .setFooter({ text: `${templates.length} template(s) — NexusBot — Éditeur d\'embed` });
+
+  const newBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:new:${userId}`)
+    .setLabel('➕ Nouveau')
+    .setStyle(ButtonStyle.Success);
+
+  const editBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:edit:${userId}`)
+    .setLabel('✏️ Modifier')
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(templates.length === 0);
+
+  const sendBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:send:${userId}`)
+    .setLabel('📤 Envoyer')
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(templates.length === 0);
+
+  const delBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:del:${userId}`)
+    .setLabel('🗑️ Supprimer')
+    .setStyle(ButtonStyle.Danger)
+    .setDisabled(templates.length === 0);
+
+  const rows = [new ActionRowBuilder().addComponents(backBtn(userId), newBtn, editBtn, sendBtn, delBtn)];
+
+  if (templates.length > 0) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId(`adv_sel:embeds_pick:${userId}`)
+      .setPlaceholder('📄 Choisir un template à prévisualiser…')
+      .addOptions(
+        templates.slice(0, 25).map(t => ({
+          label: truncate(t.name, 100),
+          value: t.name,
+          description: truncate((safeJsonParse(t.data_json, {})?.description) || 'Embed personnalisé', 100),
+        })),
+      );
+    rows.push(new ActionRowBuilder().addComponents(select));
+  }
+
+  return { embeds: [embed], components: rows };
+}
+
+// Prévisualisation d'un template en mode lecture
+function buildEmbedPreviewPanel(cfg, guild, userId, db, templateName) {
+  const tpl = db.getEmbedTemplate(guild.id, templateName);
+  if (!tpl) {
+    const embed = new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Template introuvable')
+      .setDescription(`Aucun template nommé \`${templateName}\`.`);
+    return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId))] };
+  }
+  const data = safeJsonParse(tpl.data_json, {});
+  const preview = rebuildEmbedFromData(data);
+
+  const header = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle(`🎨 Prévisualisation — ${tpl.name}`)
+    .setDescription('Voici à quoi ressemble ce template. Utilise les boutons ci-dessous pour le modifier, l\'envoyer ou le dupliquer.');
+
+  const backList = new ButtonBuilder()
+    .setCustomId(`adv:embeds:list:${userId}`)
+    .setLabel('← Liste')
+    .setStyle(ButtonStyle.Secondary);
+
+  const editBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:edit_start:${userId}:${encodeURIComponent(tpl.name)}`)
+    .setLabel('✏️ Modifier (rapide)')
+    .setStyle(ButtonStyle.Primary);
+
+  const fullBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:edit_full:${userId}:${encodeURIComponent(tpl.name)}`)
+    .setLabel('🎨 Éditeur complet')
+    .setStyle(ButtonStyle.Primary);
+
+  const sendBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:send_start:${userId}:${encodeURIComponent(tpl.name)}`)
+    .setLabel('📤 Envoyer vers un salon')
+    .setStyle(ButtonStyle.Success);
+
+  const delBtn = new ButtonBuilder()
+    .setCustomId(`adv:embeds:del_start:${userId}:${encodeURIComponent(tpl.name)}`)
+    .setLabel('🗑️ Supprimer')
+    .setStyle(ButtonStyle.Danger);
+
+  return {
+    embeds: [header, preview],
+    components: [new ActionRowBuilder().addComponents(backList, editBtn, fullBtn, sendBtn, delBtn)],
+  };
+}
+
+// Reconstruit un EmbedBuilder depuis les données JSON du template
+function rebuildEmbedFromData(data) {
+  const eb = new EmbedBuilder();
+  if (data.title)       eb.setTitle(truncate(data.title, 256));
+  if (data.description) eb.setDescription(truncate(data.description, 4096));
+  if (data.color && /^#?[0-9A-Fa-f]{6}$/.test(data.color)) eb.setColor(data.color.startsWith('#') ? data.color : '#' + data.color);
+  if (data.url)         { try { eb.setURL(data.url); } catch {} }
+  if (data.image)       { try { eb.setImage(data.image); } catch {} }
+  if (data.thumbnail)   { try { eb.setThumbnail(data.thumbnail); } catch {} }
+  if (data.footer_text) { eb.setFooter({ text: truncate(data.footer_text, 2048), iconURL: data.footer_icon || undefined }); }
+  if (data.author_name) { eb.setAuthor({ name: truncate(data.author_name, 256), iconURL: data.author_icon || undefined, url: data.author_url || undefined }); }
+  if (data.timestamp)   eb.setTimestamp();
+  if (Array.isArray(data.fields)) {
+    for (const f of data.fields.slice(0, 25)) {
+      if (!f?.name || !f?.value) continue;
+      eb.addFields({ name: truncate(f.name, 256), value: truncate(f.value, 1024), inline: !!f.inline });
+    }
+  }
+  // Fallback si embed vide
+  if (!data.title && !data.description && !(data.fields && data.fields.length)) {
+    eb.setDescription('_Embed vide — ajoute au moins un titre ou une description._');
+  }
+  return eb;
+}
+
+// Applique les variables utilisateur à une chaîne
+function applyVars(str, ctx) {
+  if (!str) return str;
+  return String(str)
+    .replace(/\{user\}/g,     ctx.userMention || '')
+    .replace(/\{username\}/g, ctx.username || '')
+    .replace(/\{server\}/g,   ctx.serverName || '')
+    .replace(/\{channel\}/g,  ctx.channelMention || '')
+    .replace(/\{count\}/g,    String(ctx.memberCount ?? ''))
+    .replace(/\{args\}/g,     ctx.args || '')
+    .replace(/\{arg(\d+)\}/g, (_, i) => (ctx.argArray?.[parseInt(i, 10) - 1] ?? ''))
+    .replace(/\{level\}/g,    String(ctx.level ?? ''))
+    .replace(/\{xp\}/g,       String(ctx.xp ?? ''))
+    .replace(/\{amount\}/g,   String(ctx.amount ?? ''))
+    .replace(/\{target\}/g,   ctx.targetMention || '')
+    .replace(/\{mod\}/g,      ctx.modMention || '')
+    .replace(/\{reason\}/g,   ctx.reason || '')
+    .replace(/\{duration\}/g, ctx.duration || '')
+    .replace(/\{streak\}/g,   String(ctx.streak ?? ''))
+    .replace(/\{job\}/g,      ctx.job || '')
+    .replace(/\{outcome\}/g,  ctx.outcome || '')
+    .replace(/\{rep\}/g,      String(ctx.rep ?? ''))
+    .replace(/\{age\}/g,      String(ctx.age ?? ''));
+}
+
+// Applique les variables à toutes les chaînes d'un template
+function applyVarsToTemplate(data, ctx) {
+  const out = { ...data };
+  if (out.title)       out.title       = applyVars(out.title, ctx);
+  if (out.description) out.description = applyVars(out.description, ctx);
+  if (out.footer_text) out.footer_text = applyVars(out.footer_text, ctx);
+  if (out.author_name) out.author_name = applyVars(out.author_name, ctx);
+  if (Array.isArray(out.fields)) {
+    out.fields = out.fields.map(f => ({
+      name: applyVars(f.name, ctx),
+      value: applyVars(f.value, ctx),
+      inline: !!f.inline,
+    }));
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : COMMANDES CUSTOM AVANCÉES
+// ═══════════════════════════════════════════════════════════════
+function buildCmdsAdvPanel(cfg, guild, userId, db, page = 0) {
+  const all     = db.getCustomCommands(guild.id);
+  const perPage = 10;
+  const maxPage = Math.max(0, Math.ceil(all.length / perPage) - 1);
+  const p       = Math.min(Math.max(0, page), maxPage);
+  const slice   = all.slice(p * perPage, p * perPage + perPage);
+
+  const desc = slice.length === 0
+    ? '*Aucune commande personnalisée.*\n\nClique sur **➕ Créer** pour ajouter une commande `&ma_commande` qui répond par du texte ou un embed complet.'
+    : slice.map(c => {
+        const typeIcon = c.response_type === 'embed' ? '🎨' : '💬';
+        const status   = c.enabled === 0 ? '🚫' : '✅';
+        const cd       = c.cooldown > 0 ? ` • ⏱️ ${c.cooldown}s` : '';
+        const uses     = c.uses > 0 ? ` • 🔁 ${c.uses}` : '';
+        return `${status} ${typeIcon} \`&${c.trigger}\`${cd}${uses}`;
+      }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('⚡ Commandes personnalisées')
+    .setDescription(desc)
+    .addFields(
+      { name: '📊 Total',  value: `**${all.length}** commande(s)`, inline: true },
+      { name: '📄 Page',   value: `**${p + 1}/${maxPage + 1}**`,    inline: true },
+      { name: '🔤 Variables', value: '`{user}` `{username}` `{server}` `{args}` `{arg1}`…', inline: false },
+    )
+    .setFooter({ text: 'NexusBot — Commandes personnalisées' });
+
+  const createBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:new:${userId}`)
+    .setLabel('➕ Créer (texte)')
+    .setStyle(ButtonStyle.Success);
+
+  const createEmbedBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:new_embed:${userId}`)
+    .setLabel('🎨 Créer (embed)')
+    .setStyle(ButtonStyle.Success);
+
+  const editBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:edit:${userId}`)
+    .setLabel('✏️ Modifier')
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(all.length === 0);
+
+  const toggleBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:toggle:${userId}`)
+    .setLabel('🔁 Activer / Désactiver')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(all.length === 0);
+
+  const delBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:del:${userId}`)
+    .setLabel('🗑️ Supprimer')
+    .setStyle(ButtonStyle.Danger)
+    .setDisabled(all.length === 0);
+
+  const prevBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:page:${userId}:${Math.max(0, p - 1)}`)
+    .setLabel('◀️')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(p === 0);
+
+  const nextBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:page:${userId}:${Math.min(maxPage, p + 1)}`)
+    .setLabel('▶️')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(p >= maxPage);
+
+  const rows = [
+    new ActionRowBuilder().addComponents(backBtn(userId), createBtn, createEmbedBtn),
+    new ActionRowBuilder().addComponents(editBtn, toggleBtn, delBtn),
+  ];
+
+  if (all.length > perPage) {
+    rows.push(new ActionRowBuilder().addComponents(prevBtn, nextBtn));
+  }
+
+  if (slice.length > 0) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId(`adv_sel:cmds_pick:${userId}`)
+      .setPlaceholder('🔎 Voir le détail d\'une commande…')
+      .addOptions(
+        slice.map(c => ({
+          label: `&${truncate(c.trigger, 95)}`,
+          value: c.trigger,
+          description: truncate(c.response_type === 'embed' ? '(embed)' : c.response, 100),
+        })),
+      );
+    rows.push(new ActionRowBuilder().addComponents(select));
+  }
+
+  return { embeds: [embed], components: rows };
+}
+
+// Détail d'une commande custom
+function buildCmdDetailPanel(cfg, guild, userId, db, trigger) {
+  const cmd = db.getCustomCommand(guild.id, trigger);
+  if (!cmd) {
+    return {
+      embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Commande introuvable').setDescription(`Aucune commande \`&${trigger}\`.`)],
+      components: [new ActionRowBuilder().addComponents(backBtn(userId))],
+    };
+  }
+
+  const allowedChans = safeJsonParse(cmd.allowed_channels, []);
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle(`⚡ &${cmd.trigger}`)
+    .addFields(
+      { name: '📝 Type',      value: cmd.response_type === 'embed' ? '🎨 Embed' : '💬 Texte', inline: true },
+      { name: '⚡ Statut',     value: onOff(cmd.enabled),                                     inline: true },
+      { name: '⏱️ Cooldown',   value: cmd.cooldown > 0 ? `**${cmd.cooldown}**s` : '*Aucun*', inline: true },
+      { name: '🎭 Rôle requis', value: cmd.required_role ? `<@&${cmd.required_role}>` : '*Aucun*', inline: true },
+      { name: '🔒 Permission', value: cmd.required_perm || '*Aucune*',                        inline: true },
+      { name: '🔁 Utilisations', value: String(cmd.uses || 0),                                inline: true },
+      { name: '🗑️ Supprimer trigger', value: cmd.delete_trigger ? '✅ Oui' : '❌ Non',        inline: true },
+      { name: '📣 Salons autorisés', value: allowedChans.length ? allowedChans.map(id => `<#${id}>`).join(', ') : '*Tous les salons*', inline: false },
+    );
+
+  if (cmd.response_type === 'embed' && cmd.embed_json) {
+    const previewData = safeJsonParse(cmd.embed_json, {});
+    const preview = rebuildEmbedFromData(previewData);
+    return packDetail(userId, cmd, [embed, preview]);
+  }
+
+  embed.addFields({ name: '💬 Réponse', value: truncate(cmd.response, 1024) || '*(vide)*', inline: false });
+  return packDetail(userId, cmd, [embed]);
+}
+
+function packDetail(userId, cmd, embeds) {
+  const back = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:list:${userId}`)
+    .setLabel('← Liste')
+    .setStyle(ButtonStyle.Secondary);
+
+  const editResp = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:edit_resp:${userId}:${encodeURIComponent(cmd.trigger)}`)
+    .setLabel('✏️ Modifier la réponse')
+    .setStyle(ButtonStyle.Primary);
+
+  const toggleBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:toggle_one:${userId}:${encodeURIComponent(cmd.trigger)}`)
+    .setLabel(cmd.enabled ? '⏸️ Désactiver' : '▶️ Activer')
+    .setStyle(cmd.enabled ? ButtonStyle.Secondary : ButtonStyle.Success);
+
+  const cdBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:set_cd:${userId}:${encodeURIComponent(cmd.trigger)}`)
+    .setLabel('⏱️ Cooldown')
+    .setStyle(ButtonStyle.Secondary);
+
+  const roleBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:set_role:${userId}:${encodeURIComponent(cmd.trigger)}`)
+    .setLabel('🎭 Rôle requis')
+    .setStyle(ButtonStyle.Secondary);
+
+  const delTrigBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:toggle_del:${userId}:${encodeURIComponent(cmd.trigger)}`)
+    .setLabel(cmd.delete_trigger ? '🗑️ Ne plus supprimer' : '🗑️ Supprimer trigger')
+    .setStyle(ButtonStyle.Secondary);
+
+  const delBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:del_one:${userId}:${encodeURIComponent(cmd.trigger)}`)
+    .setLabel('💥 Supprimer cette commande')
+    .setStyle(ButtonStyle.Danger);
+
+  return {
+    embeds,
+    components: [
+      new ActionRowBuilder().addComponents(back, editResp, toggleBtn),
+      new ActionRowBuilder().addComponents(cdBtn, roleBtn, delTrigBtn),
+      new ActionRowBuilder().addComponents(delBtn),
+    ],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : MESSAGES SYSTÈME
+// ═══════════════════════════════════════════════════════════════
+function buildSysMsgsPanel(cfg, guild, userId, db) {
+  const msgs = new Map();
+  for (const m of (db.getSystemMessages(guild.id) || [])) msgs.set(m.event, m);
+
+  const lines = SYSTEM_EVENTS.map(e => {
+    const m = msgs.get(e.key);
+    const on  = m?.enabled ?? 1;
+    const mode = m?.mode || 'text';
+    const modeIcon = mode === 'embed' ? '🎨' : mode === 'both' ? '🎨+💬' : '💬';
+    const hasCustom = m && (m.content || m.embed_json);
+    return `${on ? '✅' : '❌'} ${modeIcon} ${e.label}${hasCustom ? '' : ' _(par défaut)_'}`;
+  }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('📢 Messages système')
+    .setDescription(
+      'Personnalise le message envoyé par le bot pour chaque événement (texte ou embed complet).\n\n' +
+      lines,
+    )
+    .setFooter({ text: 'NexusBot — Messages système' });
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`adv_sel:sys_pick:${userId}`)
+    .setPlaceholder('📝 Choisir un événement à configurer…')
+    .addOptions(
+      SYSTEM_EVENTS.map(e => ({
+        label: e.label.replace(/^[^\w]+/, '').trim() || e.label,
+        value: e.key,
+        description: truncate(e.desc, 100),
+        emoji: (e.label.match(/^\p{Emoji}/u) || [undefined])[0],
+      })),
+    );
+
+  return {
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(backBtn(userId)),
+      new ActionRowBuilder().addComponents(select),
+    ],
+  };
+}
+
+function buildSysMsgDetailPanel(cfg, guild, userId, db, eventKey) {
+  const def = SYSTEM_EVENTS.find(e => e.key === eventKey);
+  if (!def) return buildSysMsgsPanel(cfg, guild, userId, db);
+  const m = db.getSystemMessage(guild.id, eventKey);
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle(`${def.label} — Configuration`)
+    .setDescription(def.desc)
+    .addFields(
+      { name: '⚡ Statut', value: onOff(m?.enabled ?? 1), inline: true },
+      { name: '🎨 Mode',   value: m?.mode === 'embed' ? 'Embed' : m?.mode === 'both' ? 'Texte + Embed' : 'Texte', inline: true },
+      { name: '📣 Salon',  value: m?.channel_id ? `<#${m.channel_id}>` : '*Salon par défaut de la catégorie*', inline: true },
+      { name: '💬 Texte',  value: m?.content ? `\`\`\`${truncate(m.content, 900)}\`\`\`` : '*Texte par défaut*', inline: false },
+      { name: '🔤 Variables', value: `\`${def.vars}\``, inline: false },
+    );
+
+  const rows = [];
+
+  const back = new ButtonBuilder()
+    .setCustomId(`adv:sys_msgs:list:${userId}`)
+    .setLabel('← Liste')
+    .setStyle(ButtonStyle.Secondary);
+
+  const toggle = new ButtonBuilder()
+    .setCustomId(`adv:sys_msgs:toggle:${userId}:${eventKey}`)
+    .setLabel((m?.enabled ?? 1) ? '⏸️ Désactiver' : '▶️ Activer')
+    .setStyle((m?.enabled ?? 1) ? ButtonStyle.Secondary : ButtonStyle.Success);
+
+  const editText = new ButtonBuilder()
+    .setCustomId(`adv:sys_msgs:edit_text:${userId}:${eventKey}`)
+    .setLabel('💬 Modifier le texte')
+    .setStyle(ButtonStyle.Primary);
+
+  const editEmbed = new ButtonBuilder()
+    .setCustomId(`adv:sys_msgs:edit_embed:${userId}:${eventKey}`)
+    .setLabel('🎨 Éditer l\'embed (JSON)')
+    .setStyle(ButtonStyle.Primary);
+
+  const modeBtn = new ButtonBuilder()
+    .setCustomId(`adv:sys_msgs:set_mode:${userId}:${eventKey}`)
+    .setLabel('🎛️ Mode (texte/embed/both)')
+    .setStyle(ButtonStyle.Secondary);
+
+  const resetBtn = new ButtonBuilder()
+    .setCustomId(`adv:sys_msgs:reset:${userId}:${eventKey}`)
+    .setLabel('↩️ Réinitialiser')
+    .setStyle(ButtonStyle.Danger);
+
+  const chanSelect = new ChannelSelectMenuBuilder()
+    .setCustomId(`adv_chan:sys_msgs:${userId}:${eventKey}`)
+    .setPlaceholder(`📣 Salon pour les messages "${def.label}" (laisser vide = par défaut)`)
+    .setChannelTypes(ChannelType.GuildText)
+    .setMinValues(0)
+    .setMaxValues(1);
+
+  rows.push(new ActionRowBuilder().addComponents(back, toggle, modeBtn, resetBtn));
+  rows.push(new ActionRowBuilder().addComponents(editText, editEmbed));
+  rows.push(new ActionRowBuilder().addComponents(chanSelect));
+
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : COOLDOWNS & TOGGLES PAR COMMANDE
+// ═══════════════════════════════════════════════════════════════
+function buildCmdCtrlPanel(cfg, guild, userId, db, client, page = 0) {
+  // Liste unifiée : commandes slash + préfixe
+  const slashNames  = client?.commands ? [...client.commands.keys()] : [];
+  const prefixNames = [];
+  try {
+    const { prefixCommands } = require('./prefixHandler');
+    if (prefixCommands) for (const k of prefixCommands.keys()) prefixNames.push(k);
+  } catch {}
+  const all = [...new Set([...slashNames, ...prefixNames])].sort();
+
+  const toggles = new Map();
+  for (const t of db.getCommandToggles(guild.id)) toggles.set(t.command, t);
+  const cds = new Map();
+  for (const c of db.getCooldownOverrides(guild.id)) cds.set(c.command, c);
+
+  const perPage = 10;
+  const maxPage = Math.max(0, Math.ceil(all.length / perPage) - 1);
+  const p       = Math.min(Math.max(0, page), maxPage);
+  const slice   = all.slice(p * perPage, p * perPage + perPage);
+
+  const lines = slice.map(name => {
+    const t = toggles.get(name);
+    const cd = cds.get(name);
+    const status = (t && t.enabled === 0) ? '🚫' : '✅';
+    const cdText = cd ? ` • ⏱️ ${cd.seconds}s` : '';
+    return `${status} \`${name}\`${cdText}`;
+  }).join('\n') || '*Aucune commande détectée.*';
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🛠️ Cooldowns & activation par commande')
+    .setDescription(lines)
+    .addFields(
+      { name: '📊 Commandes détectées', value: `**${all.length}** (slash + préfixe)`, inline: true },
+      { name: '📄 Page',                value: `**${p + 1}/${maxPage + 1}**`,         inline: true },
+    )
+    .setFooter({ text: 'NexusBot — Cooldowns & toggles' });
+
+  const prev = new ButtonBuilder()
+    .setCustomId(`adv:cmd_ctrl:page:${userId}:${Math.max(0, p - 1)}`)
+    .setLabel('◀️')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(p === 0);
+
+  const next = new ButtonBuilder()
+    .setCustomId(`adv:cmd_ctrl:page:${userId}:${Math.min(maxPage, p + 1)}`)
+    .setLabel('▶️')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(p >= maxPage);
+
+  const rows = [new ActionRowBuilder().addComponents(backBtn(userId), prev, next)];
+
+  if (slice.length > 0) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId(`adv_sel:cmd_ctrl_pick:${userId}`)
+      .setPlaceholder('⚙️ Configurer une commande…')
+      .addOptions(
+        slice.map(name => ({
+          label: truncate(name, 100),
+          value: name,
+          description: ((toggles.get(name)?.enabled === 0) ? '🚫 désactivée' : '✅ active') + (cds.get(name) ? ` • ⏱️ ${cds.get(name).seconds}s` : ''),
+        })),
+      );
+    rows.push(new ActionRowBuilder().addComponents(select));
+  }
+
+  return { embeds: [embed], components: rows };
+}
+
+function buildCmdCtrlDetailPanel(cfg, guild, userId, db, commandName) {
+  const enabled = db.isCommandEnabled(guild.id, commandName);
+  const cd      = db.getCooldownOverride(guild.id, commandName);
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle(`🛠️ ${commandName}`)
+    .addFields(
+      { name: '⚡ Statut',            value: onOff(enabled),                                              inline: true },
+      { name: '⏱️ Cooldown override', value: cd != null ? `**${cd}**s` : '*Aucun (cooldown de la commande)*', inline: true },
+    )
+    .setFooter({ text: 'NexusBot — Cooldowns & toggles' });
+
+  const back = new ButtonBuilder()
+    .setCustomId(`adv:cmd_ctrl:list:${userId}`)
+    .setLabel('← Liste')
+    .setStyle(ButtonStyle.Secondary);
+
+  const toggle = new ButtonBuilder()
+    .setCustomId(`adv:cmd_ctrl:toggle:${userId}:${encodeURIComponent(commandName)}`)
+    .setLabel(enabled ? '⏸️ Désactiver' : '▶️ Activer')
+    .setStyle(enabled ? ButtonStyle.Secondary : ButtonStyle.Success);
+
+  const cdBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmd_ctrl:set_cd:${userId}:${encodeURIComponent(commandName)}`)
+    .setLabel('⏱️ Définir cooldown')
+    .setStyle(ButtonStyle.Primary);
+
+  const resetCd = new ButtonBuilder()
+    .setCustomId(`adv:cmd_ctrl:reset_cd:${userId}:${encodeURIComponent(commandName)}`)
+    .setLabel('↩️ Cooldown par défaut')
+    .setStyle(ButtonStyle.Danger)
+    .setDisabled(cd == null);
+
+  return {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(back, toggle, cdBtn, resetCd)],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : ALIASES
+// ═══════════════════════════════════════════════════════════════
+function buildAliasesPanel(cfg, guild, userId, db) {
+  const all = db.getAliases(guild.id);
+  const desc = all.length === 0
+    ? '*Aucun alias.*\n\nUn alias permet d\'invoquer une commande par un autre nom.\nEx: `&r` → `&role` : taper `&r` exécute la commande `&role`.'
+    : all.slice(0, 25).map(a => `\`&${a.alias}\` → \`&${a.target}\``).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🔀 Aliases de commandes')
+    .setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}** alias`, inline: true })
+    .setFooter({ text: 'NexusBot — Aliases' });
+
+  const addBtn = new ButtonBuilder()
+    .setCustomId(`adv:aliases:new:${userId}`)
+    .setLabel('➕ Ajouter')
+    .setStyle(ButtonStyle.Success);
+
+  const delBtn = new ButtonBuilder()
+    .setCustomId(`adv:aliases:del:${userId}`)
+    .setLabel('🗑️ Supprimer')
+    .setStyle(ButtonStyle.Danger)
+    .setDisabled(all.length === 0);
+
+  return {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : ÉDITEUR D'EMBED COMPLET (mode avancé)
+// Ouvert depuis un template : affiche la prévisualisation + TOUS les boutons
+// pour éditer chaque partie (titre, desc, couleur, footer, image, thumbnail,
+// auteur, URL, timestamp, fields add/remove).
+// ═══════════════════════════════════════════════════════════════
+function buildEmbedEditorFull(cfg, guild, userId, db, templateName) {
+  const tpl = db.getEmbedTemplate(guild.id, templateName);
+  if (!tpl) {
+    return {
+      embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Template introuvable')],
+      components: [new ActionRowBuilder().addComponents(backBtn(userId))],
+    };
+  }
+  const data = safeJsonParse(tpl.data_json, {});
+  const preview = rebuildEmbedFromData(data);
+
+  const header = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle(`🎨 Éditeur complet — ${tpl.name}`)
+    .setDescription(
+      'Modifie chaque partie de l\'embed via les boutons ci-dessous. La prévisualisation se met à jour en direct.\n\n' +
+      `• **Fields** : ${Array.isArray(data.fields) ? data.fields.length : 0} / 25\n` +
+      `• **Image** : ${data.image ? '✅' : '—'}\n` +
+      `• **Thumbnail** : ${data.thumbnail ? '✅' : '—'}\n` +
+      `• **Auteur** : ${data.author_name ? '✅ ' + truncate(data.author_name, 40) : '—'}\n` +
+      `• **Timestamp** : ${data.timestamp ? '✅' : '—'}`,
+    );
+
+  const id = encodeURIComponent(tpl.name);
+
+  const back = new ButtonBuilder()
+    .setCustomId(`adv:embeds:preview:${userId}:${id}`)
+    .setLabel('← Aperçu')
+    .setStyle(ButtonStyle.Secondary);
+
+  const titleBtn = new ButtonBuilder().setCustomId(`adv:embeds:set_title:${userId}:${id}`).setLabel('📝 Titre').setStyle(ButtonStyle.Primary);
+  const descBtn  = new ButtonBuilder().setCustomId(`adv:embeds:set_desc:${userId}:${id}`).setLabel('📄 Description').setStyle(ButtonStyle.Primary);
+  const colorBtn = new ButtonBuilder().setCustomId(`adv:embeds:set_color:${userId}:${id}`).setLabel('🎨 Couleur').setStyle(ButtonStyle.Primary);
+  const urlBtn   = new ButtonBuilder().setCustomId(`adv:embeds:set_url:${userId}:${id}`).setLabel('🔗 URL du titre').setStyle(ButtonStyle.Primary);
+
+  const imgBtn    = new ButtonBuilder().setCustomId(`adv:embeds:set_image:${userId}:${id}`).setLabel('🖼️ Image').setStyle(ButtonStyle.Primary);
+  const thumbBtn  = new ButtonBuilder().setCustomId(`adv:embeds:set_thumb:${userId}:${id}`).setLabel('🔳 Thumbnail').setStyle(ButtonStyle.Primary);
+  const authorBtn = new ButtonBuilder().setCustomId(`adv:embeds:set_author:${userId}:${id}`).setLabel('👤 Auteur').setStyle(ButtonStyle.Primary);
+  const footerBtn = new ButtonBuilder().setCustomId(`adv:embeds:set_footer:${userId}:${id}`).setLabel('👣 Footer').setStyle(ButtonStyle.Primary);
+
+  const addFieldBtn = new ButtonBuilder().setCustomId(`adv:embeds:add_field:${userId}:${id}`).setLabel('➕ Ajouter un field').setStyle(ButtonStyle.Success).setDisabled((data.fields?.length ?? 0) >= 25);
+  const rmFieldBtn  = new ButtonBuilder().setCustomId(`adv:embeds:rm_field:${userId}:${id}`).setLabel('➖ Retirer un field').setStyle(ButtonStyle.Danger).setDisabled(!(data.fields?.length));
+  const tsBtn       = new ButtonBuilder().setCustomId(`adv:embeds:toggle_ts:${userId}:${id}`).setLabel(data.timestamp ? '🕑 Désact. timestamp' : '🕑 Activer timestamp').setStyle(ButtonStyle.Secondary);
+  const resetBtn    = new ButtonBuilder().setCustomId(`adv:embeds:reset:${userId}:${id}`).setLabel('↩️ Réinitialiser').setStyle(ButtonStyle.Danger);
+
+  return {
+    embeds: [header, preview],
+    components: [
+      new ActionRowBuilder().addComponents(back, titleBtn, descBtn, colorBtn, urlBtn),
+      new ActionRowBuilder().addComponents(imgBtn, thumbBtn, authorBtn, footerBtn),
+      new ActionRowBuilder().addComponents(addFieldBtn, rmFieldBtn, tsBtn, resetBtn),
+    ],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : AUTORESPONDER
+// ═══════════════════════════════════════════════════════════════
+function buildAutorespPanel(cfg, guild, userId, db, page = 0) {
+  const all     = db.getAutoresponders ? db.getAutoresponders(guild.id) : [];
+  const perPage = 10;
+  const maxPage = Math.max(0, Math.ceil(all.length / perPage) - 1);
+  const p       = Math.min(Math.max(0, page), maxPage);
+  const slice   = all.slice(p * perPage, p * perPage + perPage);
+
+  const lines = slice.length === 0
+    ? '*Aucune réponse automatique.*\n\nLe bot peut répondre automatiquement quand un message contient (ou est exactement) un certain mot-clé.\nExemple : trigger `bonjour` → répond "Salut {user} !"'
+    : slice.map(a => {
+        const match = a.exact_match ? '🎯 exact' : '🔎 contient';
+        const cd    = a.cooldown > 0 ? ` • ⏱️ ${a.cooldown}s` : '';
+        const uses  = a.uses > 0 ? ` • 🔁 ${a.uses}` : '';
+        return `${match} \`${truncate(a.trigger, 30)}\` → ${truncate(a.response, 50)}${cd}${uses}`;
+      }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🔁 Réponses automatiques')
+    .setDescription(lines)
+    .addFields(
+      { name: '📊 Total', value: `**${all.length}** réponse(s)`, inline: true },
+      { name: '📄 Page',  value: `**${p + 1}/${maxPage + 1}**`,    inline: true },
+    )
+    .setFooter({ text: 'NexusBot — Autoresponder' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:autoresp:new:${userId}`).setLabel('➕ Ajouter').setStyle(ButtonStyle.Success);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:autoresp:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+  const prev   = new ButtonBuilder().setCustomId(`adv:autoresp:page:${userId}:${Math.max(0, p - 1)}`).setLabel('◀️').setStyle(ButtonStyle.Secondary).setDisabled(p === 0);
+  const next   = new ButtonBuilder().setCustomId(`adv:autoresp:page:${userId}:${Math.min(maxPage, p + 1)}`).setLabel('▶️').setStyle(ButtonStyle.Secondary).setDisabled(p >= maxPage);
+
+  const rows = [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)];
+  if (all.length > perPage) rows.push(new ActionRowBuilder().addComponents(prev, next));
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : RÔLES PAR NIVEAU
+// ═══════════════════════════════════════════════════════════════
+function buildLevelRolesPanel(cfg, guild, userId, db) {
+  const all = db.getLevelRoles ? db.getLevelRoles(guild.id) : [];
+
+  const desc = all.length === 0
+    ? '*Aucun rôle par niveau.*\n\nDéfinis un rôle à attribuer automatiquement quand un membre atteint un certain niveau.\nExemple : niveau **5** → rôle **Confirmé**'
+    : all.map(r => `**Niveau ${r.level}** → <@&${r.role_id}>`).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🏆 Rôles par niveau')
+    .setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}** rôle(s) configuré(s)`, inline: true })
+    .setFooter({ text: 'NexusBot — Level Roles' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:level_roles:new:${userId}`).setLabel('➕ Ajouter').setStyle(ButtonStyle.Success);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:level_roles:del:${userId}`).setLabel('🗑️ Retirer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+
+  return {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : SAUVEGARDE & IMPORT
+// ═══════════════════════════════════════════════════════════════
+function buildBackupPanel(cfg, guild, userId, db) {
+  const stats = {
+    custom_commands: db.getCustomCommands(guild.id).length,
+    aliases:         db.getAliases(guild.id).length,
+    templates:       db.getEmbedTemplates(guild.id).length,
+    sys_msgs:        (db.getSystemMessages(guild.id) || []).length,
+    autoresp:        (db.getAutoresponders ? db.getAutoresponders(guild.id) : []).length,
+    level_roles:     (db.getLevelRoles ? db.getLevelRoles(guild.id) : []).length,
+    cooldowns:       db.getCooldownOverrides(guild.id).length,
+    toggles:         db.getCommandToggles(guild.id).length,
+  };
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('💾 Sauvegarde & Import')
+    .setDescription(
+      'Exporte toute ta configuration serveur dans un fichier JSON que tu pourras ré-importer plus tard ou sur un autre serveur NexusBot.\n\n' +
+      '**⚠️ L\'import ÉCRASE toutes les données des tables listées pour ce serveur.**',
+    )
+    .addFields(
+      { name: '📊 Contenu actuel', value:
+        `• ⚡ Commandes custom : **${stats.custom_commands}**\n` +
+        `• 🔀 Aliases : **${stats.aliases}**\n` +
+        `• 🎨 Templates embed : **${stats.templates}**\n` +
+        `• 📢 Messages système : **${stats.sys_msgs}**\n` +
+        `• 🔁 Autoresponders : **${stats.autoresp}**\n` +
+        `• 🏆 Rôles par niveau : **${stats.level_roles}**\n` +
+        `• ⏱️ Cooldowns : **${stats.cooldowns}**\n` +
+        `• 🚫 Toggles : **${stats.toggles}**`,
+        inline: false },
+    )
+    .setFooter({ text: 'NexusBot — Sauvegarde' });
+
+  const exportBtn = new ButtonBuilder().setCustomId(`adv:backup:export:${userId}`).setLabel('📤 Exporter (JSON)').setStyle(ButtonStyle.Success);
+  const importBtn = new ButtonBuilder().setCustomId(`adv:backup:import:${userId}`).setLabel('📥 Importer (coller JSON)').setStyle(ButtonStyle.Primary);
+
+  return {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(backBtn(userId), exportBtn, importBtn)],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DISPATCHER DES CATÉGORIES AVANCÉES
+// ═══════════════════════════════════════════════════════════════
+function buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client) {
+  switch (category) {
+    case 'embeds':      return buildEmbedsPanel(cfg, guild, userId, db);
+    case 'cmds_adv':    return buildCmdsAdvPanel(cfg, guild, userId, db, 0);
+    case 'sys_msgs':    return buildSysMsgsPanel(cfg, guild, userId, db);
+    case 'autoresp':    return buildAutorespPanel(cfg, guild, userId, db, 0);
+    case 'level_roles': return buildLevelRolesPanel(cfg, guild, userId, db);
+    case 'cmd_ctrl':    return buildCmdCtrlPanel(cfg, guild, userId, db, client, 0);
+    case 'aliases':     return buildAliasesPanel(cfg, guild, userId, db);
+    case 'backup':      return buildBackupPanel(cfg, guild, userId, db);
+    default:            return null;
+  }
+}
+
+function isAdvancedCategory(category) {
+  return ADVANCED_CATEGORIES.some(c => c.value === category);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODALS AVANCÉS
+// ═══════════════════════════════════════════════════════════════
+function buildSimpleModal(customId, title, fields) {
+  const modal = new ModalBuilder().setCustomId(customId).setTitle(truncate(title, 45));
+  for (const f of fields) {
+    const input = new TextInputBuilder()
+      .setCustomId(f.id)
+      .setLabel(truncate(f.label, 45))
+      .setStyle(f.style || TextInputStyle.Short)
+      .setRequired(f.required !== false);
+    if (f.placeholder) input.setPlaceholder(truncate(f.placeholder, 100));
+    if (f.minLength != null) input.setMinLength(f.minLength);
+    if (f.maxLength != null) input.setMaxLength(f.maxLength);
+    if (f.value) { try { input.setValue(truncate(String(f.value), f.maxLength || 4000)); } catch {} }
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+  }
+  return modal;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLER PRINCIPAL DES INTERACTIONS AVANCÉES
+// ═══════════════════════════════════════════════════════════════
+async function handleAdvancedInteraction(interaction, db, client) {
+  const customId = interaction.customId || '';
+  if (!/^adv(_modal|_chan|_role|_sel)?:/.test(customId)) return false;
+
+  const parts = customId.split(':');
+
+  // Sécurité : le dernier (ou avant-dernier) est l'userId
+  function getUserId() {
+    // Pour les modales, la sig est adv_modal:<section>:<action>:<userId>[:<arg>]
+    // Pour boutons : adv:<section>:<action>:<userId>[:<arg>]
+    // L'userId est toujours la 4e position (index 3)
+    return parts[3];
+  }
+  function checkOwner() {
+    const uid = getUserId();
+    if (interaction.user.id !== uid) {
+      interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+      return false;
+    }
+    return true;
+  }
+
+  const cfg     = db.getConfig(interaction.guildId);
+  const userId  = getUserId();
+  const section = parts[1];
+  const action  = parts[2];
+
+  // ─────────────────────────────────────────────────────────────
+  // BOUTONS (adv:<section>:<action>:<userId>[:<arg>])
+  // ─────────────────────────────────────────────────────────────
+  if (customId.startsWith('adv:') && interaction.isButton()) {
+    if (!checkOwner()) return true;
+    const arg = parts[4] ? decodeURIComponent(parts[4]) : null;
+
+    // ── EMBEDS ────────────────────────────────────────────────
+    if (section === 'embeds') {
+      if (action === 'list') {
+        return interaction.update(buildEmbedsPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:embeds:create:${userId}`, '🎨 Nouveau template d\'embed', [
+          { id: 'name',        label: 'Nom du template (unique)',      placeholder: 'mon_embed',           style: TextInputStyle.Short,     minLength: 1, maxLength: 50 },
+          { id: 'title',       label: 'Titre (facultatif)',             placeholder: 'Bienvenue !',          style: TextInputStyle.Short,     required: false, maxLength: 256 },
+          { id: 'description', label: 'Description (facultatif)',       placeholder: 'Contenu de l\'embed…', style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
+          { id: 'color',       label: 'Couleur HEX (facultatif)',       placeholder: '#7B2FBE',              style: TextInputStyle.Short,     required: false, maxLength: 7 },
+          { id: 'footer_text', label: 'Footer (facultatif)',            placeholder: 'NexusBot',             style: TextInputStyle.Short,     required: false, maxLength: 200 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'edit' || action === 'send' || action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:embeds:${action}_name:${userId}`,
+          action === 'send' ? '📤 Envoyer un template' : action === 'del' ? '🗑️ Supprimer un template' : '✏️ Modifier un template',
+          [{ id: 'name', label: 'Nom du template', placeholder: 'mon_embed', style: TextInputStyle.Short, maxLength: 50 }]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'edit_start' && arg) {
+        const tpl = db.getEmbedTemplate(interaction.guildId, arg);
+        if (!tpl) return interaction.reply({ content: '❌ Template introuvable.', ephemeral: true });
+        const d = safeJsonParse(tpl.data_json, {});
+        const modal = buildSimpleModal(`adv_modal:embeds:update:${userId}:${encodeURIComponent(arg)}`, '✏️ Modifier l\'embed', [
+          { id: 'title',       label: 'Titre',       value: d.title,       style: TextInputStyle.Short,     required: false, maxLength: 256 },
+          { id: 'description', label: 'Description', value: d.description, style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
+          { id: 'color',       label: 'Couleur HEX', value: d.color,       style: TextInputStyle.Short,     required: false, maxLength: 7 },
+          { id: 'footer_text', label: 'Footer',      value: d.footer_text, style: TextInputStyle.Short,     required: false, maxLength: 200 },
+          { id: 'image',       label: 'Image URL',   value: d.image,       style: TextInputStyle.Short,     required: false, maxLength: 500 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'send_start' && arg) {
+        const tpl = db.getEmbedTemplate(interaction.guildId, arg);
+        if (!tpl) return interaction.reply({ content: '❌ Template introuvable.', ephemeral: true });
+        const sel = new ChannelSelectMenuBuilder()
+          .setCustomId(`adv_chan:embeds_send:${userId}:${encodeURIComponent(arg)}`)
+          .setPlaceholder(`📤 Salon où envoyer l\'embed "${arg}"`)
+          .setChannelTypes(ChannelType.GuildText)
+          .setMinValues(1).setMaxValues(1);
+        const back = new ButtonBuilder().setCustomId(`adv:embeds:list:${userId}`).setLabel('← Annuler').setStyle(ButtonStyle.Secondary);
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`📤 Envoyer « ${tpl.name} »`).setDescription('Choisis le salon de destination ci-dessous.')],
+          components: [new ActionRowBuilder().addComponents(back), new ActionRowBuilder().addComponents(sel)],
+        });
+      }
+      if (action === 'del_start' && arg) {
+        db.deleteEmbedTemplate(interaction.guildId, arg);
+        return interaction.update(buildEmbedsPanel(cfg, interaction.guild, userId, db));
+      }
+    }
+
+    // ── COMMANDES CUSTOM AVANCÉES ─────────────────────────────
+    if (section === 'cmds_adv') {
+      if (action === 'list') {
+        return interaction.update(buildCmdsAdvPanel(cfg, interaction.guild, userId, db, 0));
+      }
+      if (action === 'page') {
+        const page = parseInt(arg, 10) || 0;
+        return interaction.update(buildCmdsAdvPanel(cfg, interaction.guild, userId, db, page));
+      }
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:cmds_adv:create_text:${userId}`, '➕ Nouvelle commande (texte)', [
+          { id: 'trigger',  label: 'Déclencheur (sans &)',          placeholder: 'bonjour',               style: TextInputStyle.Short,     maxLength: 30 },
+          { id: 'response', label: 'Réponse (variables autorisées)', placeholder: 'Salut {user} !',        style: TextInputStyle.Paragraph, maxLength: 2000 },
+          { id: 'cooldown', label: 'Cooldown en secondes (0 = aucun)', placeholder: '0',                   style: TextInputStyle.Short,     required: false, maxLength: 5 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'new_embed') {
+        const modal = buildSimpleModal(`adv_modal:cmds_adv:create_embed:${userId}`, '🎨 Nouvelle commande (embed)', [
+          { id: 'trigger',     label: 'Déclencheur (sans &)',  placeholder: 'regles',        style: TextInputStyle.Short,     maxLength: 30 },
+          { id: 'title',       label: 'Titre de l\'embed',     placeholder: '📜 Règles',     style: TextInputStyle.Short,     required: false, maxLength: 256 },
+          { id: 'description', label: 'Description',           placeholder: 'Règle 1 : …',   style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
+          { id: 'color',       label: 'Couleur HEX',           placeholder: '#7B2FBE',       style: TextInputStyle.Short,     required: false, maxLength: 7 },
+          { id: 'cooldown',    label: 'Cooldown (secondes, 0 = aucun)', placeholder: '0',    style: TextInputStyle.Short,     required: false, maxLength: 5 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'edit' || action === 'toggle' || action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:cmds_adv:${action}_pick:${userId}`,
+          action === 'del' ? '🗑️ Supprimer une commande' : action === 'toggle' ? '🔁 Activer/Désactiver' : '✏️ Modifier une commande',
+          [{ id: 'trigger', label: 'Déclencheur (sans &)', placeholder: 'bonjour', style: TextInputStyle.Short, maxLength: 30 }]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'toggle_one' && arg) {
+        const c = db.getCustomCommand(interaction.guildId, arg);
+        if (c) {
+          db.upsertCustomCommand(interaction.guildId, arg, {
+            ...c,
+            allowed_channels: safeJsonParse(c.allowed_channels, []),
+            enabled: c.enabled ? 0 : 1,
+            created_by: c.created_by,
+          });
+        }
+        return interaction.update(buildCmdDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'toggle_del' && arg) {
+        const c = db.getCustomCommand(interaction.guildId, arg);
+        if (c) {
+          db.upsertCustomCommand(interaction.guildId, arg, {
+            ...c,
+            allowed_channels: safeJsonParse(c.allowed_channels, []),
+            delete_trigger: c.delete_trigger ? 0 : 1,
+            created_by: c.created_by,
+          });
+        }
+        return interaction.update(buildCmdDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'del_one' && arg) {
+        db.deleteCustomCommand(interaction.guildId, arg);
+        return interaction.update(buildCmdsAdvPanel(cfg, interaction.guild, userId, db, 0));
+      }
+      if (action === 'set_cd' && arg) {
+        const c = db.getCustomCommand(interaction.guildId, arg);
+        const modal = buildSimpleModal(`adv_modal:cmds_adv:save_cd:${userId}:${encodeURIComponent(arg)}`, '⏱️ Cooldown', [
+          { id: 'seconds', label: 'Cooldown en secondes (0 = aucun)', placeholder: '10', style: TextInputStyle.Short, value: String(c?.cooldown ?? 0), maxLength: 6 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_role' && arg) {
+        const sel = new RoleSelectMenuBuilder()
+          .setCustomId(`adv_role:cmds_adv:${userId}:${encodeURIComponent(arg)}`)
+          .setPlaceholder(`🎭 Rôle requis pour &${arg} (vide = aucun)`)
+          .setMinValues(0).setMaxValues(1);
+        const back = new ButtonBuilder().setCustomId(`adv:cmds_adv:detail_btn:${userId}:${encodeURIComponent(arg)}`).setLabel('← Retour').setStyle(ButtonStyle.Secondary);
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`🎭 Rôle requis — &${arg}`).setDescription('Sélectionne un rôle requis pour utiliser cette commande, ou aucun pour rendre la commande publique.')],
+          components: [new ActionRowBuilder().addComponents(back), new ActionRowBuilder().addComponents(sel)],
+        });
+      }
+      if (action === 'edit_resp' && arg) {
+        const c = db.getCustomCommand(interaction.guildId, arg);
+        if (!c) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        const modal = buildSimpleModal(`adv_modal:cmds_adv:save_resp:${userId}:${encodeURIComponent(arg)}`, '✏️ Modifier la réponse', [
+          { id: 'response', label: 'Nouvelle réponse (texte)', value: c.response, style: TextInputStyle.Paragraph, maxLength: 2000 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'detail_btn' && arg) {
+        return interaction.update(buildCmdDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+    }
+
+    // ── MESSAGES SYSTÈME ──────────────────────────────────────
+    if (section === 'sys_msgs') {
+      if (action === 'list') {
+        return interaction.update(buildSysMsgsPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'toggle' && arg) {
+        const m = db.getSystemMessage(interaction.guildId, arg);
+        db.upsertSystemMessage(interaction.guildId, arg, {
+          enabled: (m?.enabled ?? 1) ? 0 : 1,
+          mode: m?.mode || 'text',
+          content: m?.content,
+          embed_json: m?.embed_json,
+          channel_id: m?.channel_id,
+        });
+        return interaction.update(buildSysMsgDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'edit_text' && arg) {
+        const m = db.getSystemMessage(interaction.guildId, arg);
+        const def = SYSTEM_EVENTS.find(e => e.key === arg);
+        const modal = buildSimpleModal(`adv_modal:sys_msgs:save_text:${userId}:${arg}`, `💬 ${def?.label || arg}`, [
+          { id: 'content', label: 'Texte (variables autorisées)', value: m?.content || '', style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'edit_embed' && arg) {
+        const m = db.getSystemMessage(interaction.guildId, arg);
+        const def = SYSTEM_EVENTS.find(e => e.key === arg);
+        const current = m?.embed_json ? truncate(m.embed_json, 3900) : '';
+        const placeholder = '{"title":"Exemple","description":"Salut {user}","color":"#7B2FBE"}';
+        const modal = buildSimpleModal(`adv_modal:sys_msgs:save_embed:${userId}:${arg}`, `🎨 Embed — ${def?.label || arg}`, [
+          { id: 'embed_json', label: 'JSON de l\'embed', value: current, placeholder, style: TextInputStyle.Paragraph, required: false, maxLength: 3900 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_mode' && arg) {
+        const m = db.getSystemMessage(interaction.guildId, arg);
+        const cur = m?.mode || 'text';
+        const next = cur === 'text' ? 'embed' : cur === 'embed' ? 'both' : 'text';
+        db.upsertSystemMessage(interaction.guildId, arg, {
+          enabled: m?.enabled ?? 1,
+          mode: next,
+          content: m?.content,
+          embed_json: m?.embed_json,
+          channel_id: m?.channel_id,
+        });
+        return interaction.update(buildSysMsgDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'reset' && arg) {
+        db.upsertSystemMessage(interaction.guildId, arg, { enabled: 1, mode: 'text', content: null, embed_json: null, channel_id: null });
+        return interaction.update(buildSysMsgDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+    }
+
+    // ── COOLDOWNS / TOGGLES ───────────────────────────────────
+    if (section === 'cmd_ctrl') {
+      if (action === 'list') {
+        return interaction.update(buildCmdCtrlPanel(cfg, interaction.guild, userId, db, client, 0));
+      }
+      if (action === 'page') {
+        const page = parseInt(arg, 10) || 0;
+        return interaction.update(buildCmdCtrlPanel(cfg, interaction.guild, userId, db, client, page));
+      }
+      if (action === 'toggle' && arg) {
+        const cur = db.isCommandEnabled(interaction.guildId, arg);
+        db.setCommandEnabled(interaction.guildId, arg, !cur);
+        return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'set_cd' && arg) {
+        const cd = db.getCooldownOverride(interaction.guildId, arg);
+        const modal = buildSimpleModal(`adv_modal:cmd_ctrl:save_cd:${userId}:${encodeURIComponent(arg)}`, `⏱️ Cooldown — ${arg}`, [
+          { id: 'seconds', label: 'Cooldown en secondes (0 = désactiver override)', value: String(cd ?? ''), placeholder: '10', style: TextInputStyle.Short, maxLength: 6 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'reset_cd' && arg) {
+        db.removeCooldownOverride(interaction.guildId, arg);
+        return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+    }
+
+    // ── ÉDITEUR EMBED : handlers pour le mode complet ─────────
+    if (section === 'embeds') {
+      if (action === 'preview' && arg) {
+        return interaction.update(buildEmbedPreviewPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'edit_full' && arg) {
+        return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, userId, db, arg));
+      }
+      // Boutons set_xxx : ouvrent un modal pour éditer une propriété
+      const simpleFields = {
+        set_title:   { key: 'title',       label: 'Titre',          style: TextInputStyle.Short,     max: 256 },
+        set_desc:    { key: 'description', label: 'Description',    style: TextInputStyle.Paragraph, max: 4000 },
+        set_color:   { key: 'color',       label: 'Couleur HEX',    style: TextInputStyle.Short,     max: 7 },
+        set_url:     { key: 'url',         label: 'URL du titre',   style: TextInputStyle.Short,     max: 500 },
+        set_image:   { key: 'image',       label: 'Image URL',      style: TextInputStyle.Short,     max: 500 },
+        set_thumb:   { key: 'thumbnail',   label: 'Thumbnail URL',  style: TextInputStyle.Short,     max: 500 },
+        set_footer:  { key: 'footer_text', label: 'Footer',         style: TextInputStyle.Paragraph, max: 2000 },
+      };
+      if (simpleFields[action] && arg) {
+        const tpl = db.getEmbedTemplate(interaction.guildId, arg);
+        const data = tpl ? safeJsonParse(tpl.data_json, {}) : {};
+        const conf = simpleFields[action];
+        const modal = buildSimpleModal(`adv_modal:embeds:save_${conf.key}:${userId}:${encodeURIComponent(arg)}`, `✏️ ${conf.label}`, [
+          { id: 'value', label: `${conf.label} (vide = retirer)`, value: data[conf.key], style: conf.style, required: false, maxLength: conf.max },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_author' && arg) {
+        const tpl = db.getEmbedTemplate(interaction.guildId, arg);
+        const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
+        const modal = buildSimpleModal(`adv_modal:embeds:save_author:${userId}:${encodeURIComponent(arg)}`, '👤 Auteur', [
+          { id: 'author_name', label: 'Nom de l\'auteur (vide = retirer)', value: d.author_name, style: TextInputStyle.Short, required: false, maxLength: 256 },
+          { id: 'author_icon', label: 'Icône URL',                          value: d.author_icon, style: TextInputStyle.Short, required: false, maxLength: 500 },
+          { id: 'author_url',  label: 'Lien cliquable',                     value: d.author_url,  style: TextInputStyle.Short, required: false, maxLength: 500 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'add_field' && arg) {
+        const modal = buildSimpleModal(`adv_modal:embeds:save_field:${userId}:${encodeURIComponent(arg)}`, '➕ Ajouter un field', [
+          { id: 'name',   label: 'Nom du field',        style: TextInputStyle.Short,     maxLength: 256 },
+          { id: 'value',  label: 'Valeur',              style: TextInputStyle.Paragraph, maxLength: 1024 },
+          { id: 'inline', label: 'Inline ? (oui/non)',  style: TextInputStyle.Short,     required: false, maxLength: 3, placeholder: 'non' },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'rm_field' && arg) {
+        const modal = buildSimpleModal(`adv_modal:embeds:rm_field:${userId}:${encodeURIComponent(arg)}`, '➖ Retirer un field', [
+          { id: 'index', label: 'Numéro du field (à partir de 1)', style: TextInputStyle.Short, maxLength: 3, placeholder: '1' },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'toggle_ts' && arg) {
+        const tpl = db.getEmbedTemplate(interaction.guildId, arg);
+        const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
+        d.timestamp = !d.timestamp;
+        db.upsertEmbedTemplate(interaction.guildId, arg, d, interaction.user.id);
+        return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'reset' && arg) {
+        db.upsertEmbedTemplate(interaction.guildId, arg, { title: null, description: null, color: null }, interaction.user.id);
+        return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, userId, db, arg));
+      }
+    }
+
+    // ── AUTORESPONDER ─────────────────────────────────────────
+    if (section === 'autoresp') {
+      if (action === 'list') {
+        return interaction.update(buildAutorespPanel(cfg, interaction.guild, userId, db, 0));
+      }
+      if (action === 'page') {
+        return interaction.update(buildAutorespPanel(cfg, interaction.guild, userId, db, parseInt(arg, 10) || 0));
+      }
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:autoresp:create:${userId}`, '➕ Nouvelle réponse auto', [
+          { id: 'trigger',  label: 'Mot-clé déclencheur',                   placeholder: 'bonjour',     style: TextInputStyle.Short,     maxLength: 100 },
+          { id: 'response', label: 'Réponse (variables autorisées)',        placeholder: 'Salut {user}!', style: TextInputStyle.Paragraph, maxLength: 2000 },
+          { id: 'exact',    label: 'Match exact ? (oui/non)',                placeholder: 'non',         style: TextInputStyle.Short,     required: false, maxLength: 3 },
+          { id: 'cooldown', label: 'Cooldown secondes (0 = aucun)',          placeholder: '0',           style: TextInputStyle.Short,     required: false, maxLength: 6 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:autoresp:del_pick:${userId}`, '🗑️ Supprimer une réponse auto', [
+          { id: 'trigger', label: 'Mot-clé déclencheur', style: TextInputStyle.Short, maxLength: 100 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── LEVEL ROLES ───────────────────────────────────────────
+    if (section === 'level_roles') {
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:level_roles:set_level:${userId}`, '➕ Rôle pour un niveau', [
+          { id: 'level', label: 'Niveau requis (1-500)', style: TextInputStyle.Short, maxLength: 3, placeholder: '5' },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:level_roles:del_pick:${userId}`, '🗑️ Retirer un rôle de niveau', [
+          { id: 'level', label: 'Niveau à retirer', style: TextInputStyle.Short, maxLength: 3, placeholder: '5' },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'pick_role' && arg) {
+        // arg = level
+        const sel = new RoleSelectMenuBuilder()
+          .setCustomId(`adv_role:level_roles:${userId}:${arg}`)
+          .setPlaceholder(`🎭 Rôle à attribuer au niveau ${arg}`)
+          .setMinValues(1).setMaxValues(1);
+        const back = new ButtonBuilder().setCustomId(`adv:level_roles:list:${userId}`).setLabel('← Annuler').setStyle(ButtonStyle.Secondary);
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`🏆 Rôle pour le niveau ${arg}`).setDescription('Sélectionne le rôle à attribuer.')],
+          components: [new ActionRowBuilder().addComponents(back), new ActionRowBuilder().addComponents(sel)],
+        });
+      }
+      if (action === 'list') {
+        return interaction.update(buildLevelRolesPanel(cfg, interaction.guild, userId, db));
+      }
+    }
+
+    // ── BACKUP / IMPORT ───────────────────────────────────────
+    if (section === 'backup') {
+      if (action === 'export') {
+        const payload = db.exportGuildConfig(interaction.guildId);
+        const json = JSON.stringify(payload, null, 2);
+        // Limite Discord 25 MB pour attachements ; le JSON reste petit
+        const buf = Buffer.from(json, 'utf8');
+        if (buf.length > 8_000_000) {
+          return interaction.reply({ content: '❌ Config trop volumineuse pour être envoyée (>8 MB).', ephemeral: true });
+        }
+        const { AttachmentBuilder } = require('discord.js');
+        const file = new AttachmentBuilder(buf, { name: `nexusbot_config_${interaction.guild.name.replace(/[^a-z0-9_\-]/gi, '_')}.json` });
+        return interaction.reply({
+          content: '✅ Voici ta sauvegarde complète. Garde-la précieusement — tu pourras la ré-importer plus tard.',
+          files: [file],
+          ephemeral: true,
+        });
+      }
+      if (action === 'import') {
+        const modal = buildSimpleModal(`adv_modal:backup:do_import:${userId}`, '📥 Importer une config', [
+          { id: 'json', label: 'Colle ici le JSON d\'export', placeholder: '{"_meta":{...}, ...}', style: TextInputStyle.Paragraph, maxLength: 4000 },
+          { id: 'confirm', label: 'Tape CONFIRMER pour valider (écrase !)', placeholder: 'CONFIRMER', style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── ALIASES ───────────────────────────────────────────────
+    if (section === 'aliases') {
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:aliases:create:${userId}`, '➕ Nouvel alias', [
+          { id: 'alias',  label: 'Alias (ex: r)',            placeholder: 'r',    style: TextInputStyle.Short, maxLength: 30 },
+          { id: 'target', label: 'Commande cible (ex: role)', placeholder: 'role', style: TextInputStyle.Short, maxLength: 30 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:aliases:del_pick:${userId}`, '🗑️ Supprimer un alias', [
+          { id: 'alias', label: 'Alias à supprimer', placeholder: 'r', style: TextInputStyle.Short, maxLength: 30 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // SELECT MENUS (adv_sel:...)
+  // ─────────────────────────────────────────────────────────────
+  if (customId.startsWith('adv_sel:') && interaction.isStringSelectMenu()) {
+    const which = parts[1];
+    const uid   = parts[2];
+    if (interaction.user.id !== uid) {
+      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+    }
+    const val = interaction.values[0];
+    if (which === 'embeds_pick') {
+      return interaction.update(buildEmbedPreviewPanel(cfg, interaction.guild, uid, db, val));
+    }
+    if (which === 'cmds_pick') {
+      return interaction.update(buildCmdDetailPanel(cfg, interaction.guild, uid, db, val));
+    }
+    if (which === 'sys_pick') {
+      return interaction.update(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, val));
+    }
+    if (which === 'cmd_ctrl_pick') {
+      return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, val));
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // CHANNEL SELECTORS (adv_chan:...)
+  // ─────────────────────────────────────────────────────────────
+  if (customId.startsWith('adv_chan:') && interaction.isChannelSelectMenu()) {
+    const which = parts[1];
+    const uid   = parts[2];
+    if (interaction.user.id !== uid) {
+      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+    }
+    const channelId = interaction.values[0] || null;
+
+    if (which === 'sys_msgs') {
+      const eventKey = parts[3];
+      const m = db.getSystemMessage(interaction.guildId, eventKey);
+      db.upsertSystemMessage(interaction.guildId, eventKey, {
+        enabled: m?.enabled ?? 1,
+        mode: m?.mode || 'text',
+        content: m?.content,
+        embed_json: m?.embed_json,
+        channel_id: channelId,
+      });
+      await interaction.deferUpdate();
+      return interaction.editReply(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey));
+    }
+
+    if (which === 'embeds_send') {
+      const name = parts[3] ? decodeURIComponent(parts[3]) : null;
+      const tpl = name ? db.getEmbedTemplate(interaction.guildId, name) : null;
+      if (!tpl || !channelId) {
+        return interaction.reply({ content: '❌ Impossible d\'envoyer : template ou salon manquant.', ephemeral: true });
+      }
+      const data = safeJsonParse(tpl.data_json, {});
+      const ctx = {
+        userMention: `<@${interaction.user.id}>`,
+        username: interaction.user.username,
+        serverName: interaction.guild.name,
+        memberCount: interaction.guild.memberCount,
+      };
+      const eb = rebuildEmbedFromData(applyVarsToTemplate(data, ctx));
+      const chan = interaction.guild.channels.cache.get(channelId);
+      if (!chan) return interaction.reply({ content: '❌ Salon introuvable.', ephemeral: true });
+      try {
+        await chan.send({ embeds: [eb] });
+      } catch (e) {
+        return interaction.reply({ content: `❌ Envoi impossible : ${e.message?.slice(0, 150)}`, ephemeral: true });
+      }
+      await interaction.deferUpdate();
+      return interaction.editReply(buildEmbedsPanel(cfg, interaction.guild, uid, db));
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ROLE SELECTORS (adv_role:...)
+  // ─────────────────────────────────────────────────────────────
+  if (customId.startsWith('adv_role:') && interaction.isRoleSelectMenu()) {
+    const which = parts[1];
+    const uid   = parts[2];
+    if (interaction.user.id !== uid) {
+      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+    }
+    const roleId = interaction.values[0] || null;
+
+    if (which === 'cmds_adv') {
+      const trigger = parts[3] ? decodeURIComponent(parts[3]) : null;
+      const c = trigger ? db.getCustomCommand(interaction.guildId, trigger) : null;
+      if (c) {
+        db.upsertCustomCommand(interaction.guildId, trigger, {
+          ...c,
+          allowed_channels: safeJsonParse(c.allowed_channels, []),
+          required_role: roleId,
+          created_by: c.created_by,
+        });
+      }
+      await interaction.deferUpdate();
+      return interaction.editReply(buildCmdDetailPanel(cfg, interaction.guild, uid, db, trigger));
+    }
+
+    if (which === 'level_roles') {
+      // parts[3] = level
+      const level = parseInt(parts[3], 10);
+      if (!isNaN(level) && roleId) {
+        db.addLevelRole(interaction.guildId, level, roleId);
+      }
+      await interaction.deferUpdate();
+      return interaction.editReply(buildLevelRolesPanel(cfg, interaction.guild, uid, db));
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MODAL SUBMITS (adv_modal:...)
+  // ─────────────────────────────────────────────────────────────
+  if (customId.startsWith('adv_modal:') && interaction.isModalSubmit()) {
+    const sect = parts[1];
+    const act  = parts[2];
+    const uid  = parts[3];
+    if (interaction.user.id !== uid) {
+      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+    }
+    const extra = parts[4] ? decodeURIComponent(parts[4]) : null;
+    const field = (id, def = '') => { try { return interaction.fields.getTextInputValue(id); } catch { return def; } };
+
+    // ── EMBEDS ────────────────────────────────────────────────
+    if (sect === 'embeds') {
+      if (act === 'create') {
+        const name = field('name').toLowerCase().trim().replace(/\s+/g, '_');
+        if (!name) return interaction.reply({ content: '❌ Nom requis.', ephemeral: true });
+        const data = {
+          title:       field('title').trim() || null,
+          description: field('description').trim() || null,
+          color:       field('color').trim() || null,
+          footer_text: field('footer_text').trim() || null,
+        };
+        if (!data.title && !data.description) {
+          return interaction.reply({ content: '❌ Ajoute au moins un titre ou une description.', ephemeral: true });
+        }
+        db.upsertEmbedTemplate(interaction.guildId, name, data, interaction.user.id);
+        return interaction.update(buildEmbedsPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'update' && extra) {
+        const current = db.getEmbedTemplate(interaction.guildId, extra);
+        const data = current ? safeJsonParse(current.data_json, {}) : {};
+        data.title       = field('title').trim()       || null;
+        data.description = field('description').trim() || null;
+        data.color       = field('color').trim()       || null;
+        data.footer_text = field('footer_text').trim() || null;
+        data.image       = field('image').trim()       || null;
+        db.upsertEmbedTemplate(interaction.guildId, extra, data, interaction.user.id);
+        return interaction.update(buildEmbedPreviewPanel(cfg, interaction.guild, uid, db, extra));
+      }
+      if (act === 'edit_name') {
+        const name = field('name').toLowerCase().trim();
+        const tpl = db.getEmbedTemplate(interaction.guildId, name);
+        if (!tpl) return interaction.reply({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
+        return interaction.update(buildEmbedPreviewPanel(cfg, interaction.guild, uid, db, name));
+      }
+      if (act === 'send_name') {
+        const name = field('name').toLowerCase().trim();
+        const tpl = db.getEmbedTemplate(interaction.guildId, name);
+        if (!tpl) return interaction.reply({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
+        return interaction.update(buildEmbedPreviewPanel(cfg, interaction.guild, uid, db, name));
+      }
+      if (act === 'del_name') {
+        const name = field('name').toLowerCase().trim();
+        const n = db.deleteEmbedTemplate(interaction.guildId, name);
+        if (!n) return interaction.reply({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
+        return interaction.update(buildEmbedsPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── COMMANDES CUSTOM ──────────────────────────────────────
+    if (sect === 'cmds_adv') {
+      if (act === 'create_text') {
+        const trigger  = field('trigger').toLowerCase().trim().replace(/\s+/g, '_').replace(/^&+/, '');
+        const response = field('response').trim();
+        const cooldown = parseInt(field('cooldown', '0'), 10) || 0;
+        if (!trigger || !response) return interaction.reply({ content: '❌ Déclencheur et réponse obligatoires.', ephemeral: true });
+        db.upsertCustomCommand(interaction.guildId, trigger, {
+          response, response_type: 'text',
+          cooldown, enabled: 1, created_by: interaction.user.id,
+        });
+        return interaction.update(buildCmdsAdvPanel(cfg, interaction.guild, uid, db, 0));
+      }
+      if (act === 'create_embed') {
+        const trigger     = field('trigger').toLowerCase().trim().replace(/\s+/g, '_').replace(/^&+/, '');
+        const title       = field('title').trim();
+        const description = field('description').trim();
+        const color       = field('color').trim() || null;
+        const cooldown    = parseInt(field('cooldown', '0'), 10) || 0;
+        if (!trigger) return interaction.reply({ content: '❌ Déclencheur obligatoire.', ephemeral: true });
+        if (!title && !description) return interaction.reply({ content: '❌ Ajoute au moins un titre ou une description.', ephemeral: true });
+        const embedJson = JSON.stringify({ title: title || null, description: description || null, color });
+        db.upsertCustomCommand(interaction.guildId, trigger, {
+          response: title || description || '',
+          response_type: 'embed',
+          embed_json: embedJson,
+          cooldown, enabled: 1, created_by: interaction.user.id,
+        });
+        return interaction.update(buildCmdsAdvPanel(cfg, interaction.guild, uid, db, 0));
+      }
+      if (act === 'edit_pick' || act === 'toggle_pick' || act === 'del_pick') {
+        const trigger = field('trigger').toLowerCase().trim().replace(/^&+/, '');
+        const c = db.getCustomCommand(interaction.guildId, trigger);
+        if (!c) return interaction.reply({ content: `❌ \`&${trigger}\` introuvable.`, ephemeral: true });
+        if (act === 'del_pick') {
+          db.deleteCustomCommand(interaction.guildId, trigger);
+          return interaction.update(buildCmdsAdvPanel(cfg, interaction.guild, uid, db, 0));
+        }
+        if (act === 'toggle_pick') {
+          db.upsertCustomCommand(interaction.guildId, trigger, {
+            ...c,
+            allowed_channels: safeJsonParse(c.allowed_channels, []),
+            enabled: c.enabled ? 0 : 1,
+            created_by: c.created_by,
+          });
+        }
+        return interaction.update(buildCmdDetailPanel(cfg, interaction.guild, uid, db, trigger));
+      }
+      if (act === 'save_resp' && extra) {
+        const c = db.getCustomCommand(interaction.guildId, extra);
+        if (!c) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        const response = field('response').trim();
+        db.upsertCustomCommand(interaction.guildId, extra, {
+          ...c, allowed_channels: safeJsonParse(c.allowed_channels, []),
+          response, created_by: c.created_by,
+        });
+        return interaction.update(buildCmdDetailPanel(cfg, interaction.guild, uid, db, extra));
+      }
+      if (act === 'save_cd' && extra) {
+        const c = db.getCustomCommand(interaction.guildId, extra);
+        if (!c) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        const cd = Math.max(0, parseInt(field('seconds', '0'), 10) || 0);
+        db.upsertCustomCommand(interaction.guildId, extra, {
+          ...c, allowed_channels: safeJsonParse(c.allowed_channels, []),
+          cooldown: cd, created_by: c.created_by,
+        });
+        return interaction.update(buildCmdDetailPanel(cfg, interaction.guild, uid, db, extra));
+      }
+    }
+
+    // ── MESSAGES SYSTÈME ──────────────────────────────────────
+    if (sect === 'sys_msgs') {
+      const eventKey = extra;
+      if (!eventKey) return interaction.reply({ content: '❌ Événement manquant.', ephemeral: true });
+      const m = db.getSystemMessage(interaction.guildId, eventKey);
+
+      if (act === 'save_text') {
+        const content = field('content').trim() || null;
+        db.upsertSystemMessage(interaction.guildId, eventKey, {
+          enabled: m?.enabled ?? 1, mode: m?.mode || (content ? 'text' : 'text'),
+          content, embed_json: m?.embed_json, channel_id: m?.channel_id,
+        });
+        return interaction.update(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey));
+      }
+      if (act === 'save_embed') {
+        const raw = field('embed_json').trim() || null;
+        if (raw) {
+          const parsed = safeJsonParse(raw, null);
+          if (!parsed) return interaction.reply({ content: '❌ JSON invalide.', ephemeral: true });
+        }
+        db.upsertSystemMessage(interaction.guildId, eventKey, {
+          enabled: m?.enabled ?? 1, mode: m?.mode === 'text' ? 'embed' : (m?.mode || 'embed'),
+          content: m?.content, embed_json: raw, channel_id: m?.channel_id,
+        });
+        return interaction.update(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey));
+      }
+    }
+
+    // ── COOLDOWNS / TOGGLES ───────────────────────────────────
+    if (sect === 'cmd_ctrl') {
+      if (act === 'save_cd' && extra) {
+        const raw = field('seconds').trim();
+        const cd = parseInt(raw, 10);
+        if (raw === '' || cd === 0) {
+          db.removeCooldownOverride(interaction.guildId, extra);
+        } else {
+          if (isNaN(cd) || cd < 0) return interaction.reply({ content: '❌ Nombre entier positif attendu.', ephemeral: true });
+          db.setCooldownOverride(interaction.guildId, extra, cd);
+        }
+        return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, extra));
+      }
+    }
+
+    // ── ÉDITEUR EMBED : sauvegardes de chaque propriété ──────
+    if (sect === 'embeds') {
+      const saveFieldMap = {
+        save_title:       'title',
+        save_description: 'description',
+        save_color:       'color',
+        save_url:         'url',
+        save_image:       'image',
+        save_thumbnail:   'thumbnail',
+        save_footer_text: 'footer_text',
+      };
+      if (saveFieldMap[act] && extra) {
+        const key = saveFieldMap[act];
+        const val = field('value').trim();
+        const tpl = db.getEmbedTemplate(interaction.guildId, extra);
+        const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
+        d[key] = val || null;
+        db.upsertEmbedTemplate(interaction.guildId, extra, d, interaction.user.id);
+        return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, uid, db, extra));
+      }
+      if (act === 'save_author' && extra) {
+        const tpl = db.getEmbedTemplate(interaction.guildId, extra);
+        const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
+        d.author_name = field('author_name').trim() || null;
+        d.author_icon = field('author_icon').trim() || null;
+        d.author_url  = field('author_url').trim()  || null;
+        db.upsertEmbedTemplate(interaction.guildId, extra, d, interaction.user.id);
+        return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, uid, db, extra));
+      }
+      if (act === 'save_field' && extra) {
+        const name   = field('name').trim();
+        const value  = field('value').trim();
+        const inline = /^(oui|yes|y|o|true|1)$/i.test(field('inline', 'non').trim());
+        if (!name || !value) return interaction.reply({ content: '❌ Nom ET valeur requis.', ephemeral: true });
+        const tpl = db.getEmbedTemplate(interaction.guildId, extra);
+        const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
+        if (!Array.isArray(d.fields)) d.fields = [];
+        if (d.fields.length >= 25) return interaction.reply({ content: '❌ Max 25 fields atteint.', ephemeral: true });
+        d.fields.push({ name, value, inline });
+        db.upsertEmbedTemplate(interaction.guildId, extra, d, interaction.user.id);
+        return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, uid, db, extra));
+      }
+      if (act === 'rm_field' && extra) {
+        const idx = parseInt(field('index'), 10);
+        if (isNaN(idx) || idx < 1) return interaction.reply({ content: '❌ Numéro invalide.', ephemeral: true });
+        const tpl = db.getEmbedTemplate(interaction.guildId, extra);
+        const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
+        if (!Array.isArray(d.fields) || idx > d.fields.length) return interaction.reply({ content: '❌ Field inexistant.', ephemeral: true });
+        d.fields.splice(idx - 1, 1);
+        db.upsertEmbedTemplate(interaction.guildId, extra, d, interaction.user.id);
+        return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, uid, db, extra));
+      }
+    }
+
+    // ── AUTORESPONDER ────────────────────────────────────────
+    if (sect === 'autoresp') {
+      if (act === 'create') {
+        const trigger  = field('trigger').toLowerCase().trim();
+        const response = field('response').trim();
+        const exact    = /^(oui|yes|y|o|true|1)$/i.test(field('exact', 'non').trim());
+        const cd       = Math.max(0, parseInt(field('cooldown', '0'), 10) || 0);
+        if (!trigger || !response) return interaction.reply({ content: '❌ Trigger et réponse requis.', ephemeral: true });
+        db.upsertAutoresponder(interaction.guildId, trigger, { response, exact_match: exact, cooldown: cd });
+        return interaction.update(buildAutorespPanel(cfg, interaction.guild, uid, db, 0));
+      }
+      if (act === 'del_pick') {
+        const trigger = field('trigger').toLowerCase().trim();
+        const n = db.deleteAutoresponder(interaction.guildId, trigger);
+        if (!n) return interaction.reply({ content: `❌ Trigger \`${trigger}\` introuvable.`, ephemeral: true });
+        return interaction.update(buildAutorespPanel(cfg, interaction.guild, uid, db, 0));
+      }
+    }
+
+    // ── LEVEL ROLES ──────────────────────────────────────────
+    if (sect === 'level_roles') {
+      if (act === 'set_level') {
+        const level = parseInt(field('level'), 10);
+        if (isNaN(level) || level < 1 || level > 500) return interaction.reply({ content: '❌ Niveau invalide (1-500).', ephemeral: true });
+        // Ouvrir un sélecteur de rôle
+        const sel = new RoleSelectMenuBuilder()
+          .setCustomId(`adv_role:level_roles:${uid}:${level}`)
+          .setPlaceholder(`🎭 Rôle pour le niveau ${level}`)
+          .setMinValues(1).setMaxValues(1);
+        const back = new ButtonBuilder().setCustomId(`adv:level_roles:list:${uid}`).setLabel('← Annuler').setStyle(ButtonStyle.Secondary);
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`🏆 Rôle pour le niveau ${level}`).setDescription('Sélectionne le rôle à attribuer automatiquement aux membres atteignant ce niveau.')],
+          components: [new ActionRowBuilder().addComponents(back), new ActionRowBuilder().addComponents(sel)],
+        });
+      }
+      if (act === 'del_pick') {
+        const level = parseInt(field('level'), 10);
+        if (isNaN(level) || level < 1) return interaction.reply({ content: '❌ Niveau invalide.', ephemeral: true });
+        const n = db.removeLevelRole(interaction.guildId, level);
+        if (!n) return interaction.reply({ content: `❌ Aucun rôle pour le niveau ${level}.`, ephemeral: true });
+        return interaction.update(buildLevelRolesPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── BACKUP / IMPORT ──────────────────────────────────────
+    if (sect === 'backup' && act === 'do_import') {
+      const json    = field('json').trim();
+      const confirm = field('confirm').trim();
+      if (confirm !== 'CONFIRMER') return interaction.reply({ content: '❌ Tape CONFIRMER pour valider l\'import.', ephemeral: true });
+      const parsed = safeJsonParse(json, null);
+      if (!parsed || typeof parsed !== 'object') return interaction.reply({ content: '❌ JSON invalide.', ephemeral: true });
+      try {
+        db.importGuildConfig(interaction.guildId, parsed);
+      } catch (e) {
+        return interaction.reply({ content: `❌ Erreur import : ${e.message?.slice(0, 150)}`, ephemeral: true });
+      }
+      return interaction.update(buildBackupPanel(cfg, interaction.guild, uid, db));
+    }
+
+    // ── ALIASES ───────────────────────────────────────────────
+    if (sect === 'aliases') {
+      if (act === 'create') {
+        const alias  = field('alias').toLowerCase().trim().replace(/\s+/g, '').replace(/^&+/, '');
+        const target = field('target').toLowerCase().trim().replace(/\s+/g, '').replace(/^&+/, '');
+        if (!alias || !target) return interaction.reply({ content: '❌ Alias et cible requis.', ephemeral: true });
+        if (alias === target) return interaction.reply({ content: '❌ L\'alias doit être différent de la cible.', ephemeral: true });
+        db.setAlias(interaction.guildId, alias, target, interaction.user.id);
+        return interaction.update(buildAliasesPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'del_pick') {
+        const alias = field('alias').toLowerCase().trim().replace(/^&+/, '');
+        const n = db.deleteAlias(interaction.guildId, alias);
+        if (!n) return interaction.reply({ content: `❌ Alias \`${alias}\` introuvable.`, ephemeral: true });
+        return interaction.update(buildAliasesPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+  }
+
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORTS
+// ═══════════════════════════════════════════════════════════════
+module.exports = {
+  ADVANCED_CATEGORIES,
+  SYSTEM_EVENTS,
+  buildAdvancedCategoryPanel,
+  isAdvancedCategory,
+  handleAdvancedInteraction,
+  // utilitaires réutilisables
+  rebuildEmbedFromData,
+  applyVars,
+  applyVarsToTemplate,
+  safeJsonParse,
+};

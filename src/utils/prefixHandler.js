@@ -81,45 +81,57 @@ async function handlePrefixMessage(message, client) {
   if (!usedPrefix) return false;
 
   const args = content.split(/\s+/);
-  const commandName = args.shift().toLowerCase();
-  if (!commandName) return false;
+  const commandNameRaw = args.shift().toLowerCase();
+  if (!commandNameRaw) return false;
 
-  // Résoudre alias
+  // Charger le moteur custom (avec fallback sécurisé)
+  let engine = null;
+  try { engine = require('./customCommandsEngine'); } catch {}
+
+  // 1) Résoudre alias (BDD d'abord, puis aliases définis dans les commandes JS)
+  let commandName = commandNameRaw;
+  if (engine) {
+    const aliased = engine.resolveAlias(message.guild.id, commandNameRaw, db);
+    if (aliased) commandName = aliased;
+  }
   const resolvedName = prefixAliases.get(commandName) || commandName;
   const cmd = prefixCommands.get(resolvedName);
 
   if (!cmd) {
-    // Tenter les commandes custom du serveur
-    const custom = db.getCustomCommand(message.guild.id, usedPrefix + commandName);
-    if (custom) {
-      const response = custom.response
-        .replace('{user}', `<@${message.author.id}>`)
-        .replace('{username}', message.author.username)
-        .replace('{server}', message.guild.name)
-        .replace('{args}', args.join(' '));
-      await message.channel.send(response).catch(() => {});
-      return true;
+    // 2) Commande custom (BDD) — moteur riche (texte/embed/cooldown/rôle/salons)
+    if (engine) {
+      const handled = await engine.tryExecuteCustom(message, commandNameRaw, args, db);
+      if (handled) return true;
     }
     return false;
   }
 
-  // Vérifier permissions
+  // 3) Check toggle global pour cette commande
+  if (engine && engine.isCommandDisabled(message.guild.id, cmd.name, db)) {
+    await message.reply(`❌ La commande \`${usedPrefix}${cmd.name}\` est désactivée sur ce serveur.`).catch(() => {});
+    return true;
+  }
+
+  // 4) Permissions statiques définies dans le fichier de la commande
   if (cmd.permissions && !message.member.permissions.has(BigInt(cmd.permissions))) {
     await message.reply(`❌ Permission manquante : \`${cmd.permissions}\``).catch(() => {});
     return true;
   }
 
-  // Vérifier cooldown
-  if (cmd.cooldown) {
+  // 5) Cooldown (override BDD > défaut de la commande)
+  const cdSeconds = engine
+    ? engine.resolveCooldown(message.guild.id, cmd.name, cmd.cooldown || 0, db)
+    : (cmd.cooldown || 0);
+  if (cdSeconds > 0) {
     const key = `prefix_cd:${cmd.name}:${message.author.id}`;
-    const cd = client._prefixCooldowns?.get(key);
-    if (cd && Date.now() < cd) {
-      const left = ((cd - Date.now()) / 1000).toFixed(1);
+    const exp = client._prefixCooldowns?.get(key);
+    if (exp && Date.now() < exp) {
+      const left = ((exp - Date.now()) / 1000).toFixed(1);
       await message.reply(`⏱️ Attends encore **${left}s**.`).catch(() => {});
       return true;
     }
     if (!client._prefixCooldowns) client._prefixCooldowns = new Map();
-    client._prefixCooldowns.set(key, Date.now() + cmd.cooldown * 1000);
+    client._prefixCooldowns.set(key, Date.now() + cdSeconds * 1000);
   }
 
   try {

@@ -367,15 +367,101 @@ db.exec(`
     UNIQUE(guild_id, level)
   );
 
-  -- Commandes personnalisées
+  -- Commandes personnalisées (texte OU embed JSON)
   CREATE TABLE IF NOT EXISTS custom_commands (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id    TEXT NOT NULL,
-    trigger     TEXT NOT NULL,
-    response    TEXT NOT NULL,
-    created_by  TEXT NOT NULL,
-    created_at  INTEGER DEFAULT (strftime('%s','now')),
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id         TEXT NOT NULL,
+    trigger          TEXT NOT NULL,
+    response         TEXT NOT NULL,
+    response_type    TEXT DEFAULT 'text',     -- 'text' | 'embed' | 'reaction'
+    embed_json       TEXT,                     -- JSON de l'embed si response_type='embed'
+    cooldown         INTEGER DEFAULT 0,        -- cooldown en secondes, 0 = aucun
+    required_role    TEXT,                     -- rôle requis (optionnel)
+    required_perm    TEXT,                     -- permission Discord requise (optionnel)
+    allowed_channels TEXT DEFAULT '[]',        -- JSON array de channel IDs (vide = tous)
+    enabled          INTEGER DEFAULT 1,
+    uses             INTEGER DEFAULT 0,
+    delete_trigger   INTEGER DEFAULT 0,        -- supprimer le message déclencheur
+    created_by       TEXT NOT NULL,
+    updated_at       INTEGER DEFAULT (strftime('%s','now')),
+    created_at       INTEGER DEFAULT (strftime('%s','now')),
     UNIQUE(guild_id, trigger)
+  );
+
+  -- Aliases de commandes (&r → &role etc.)
+  CREATE TABLE IF NOT EXISTS command_aliases (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id   TEXT NOT NULL,
+    alias      TEXT NOT NULL,
+    target     TEXT NOT NULL,
+    created_by TEXT,
+    created_at INTEGER DEFAULT (strftime('%s','now')),
+    UNIQUE(guild_id, alias)
+  );
+
+  -- Overrides de cooldown par commande (per-guild)
+  CREATE TABLE IF NOT EXISTS cooldown_overrides (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id   TEXT NOT NULL,
+    command    TEXT NOT NULL,
+    seconds    INTEGER NOT NULL,
+    updated_at INTEGER DEFAULT (strftime('%s','now')),
+    UNIQUE(guild_id, command)
+  );
+
+  -- Overrides d'activation par commande (activer/désactiver individuellement)
+  CREATE TABLE IF NOT EXISTS command_toggles (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id   TEXT NOT NULL,
+    command    TEXT NOT NULL,
+    enabled    INTEGER NOT NULL DEFAULT 1,
+    updated_at INTEGER DEFAULT (strftime('%s','now')),
+    UNIQUE(guild_id, command)
+  );
+
+  -- Templates d'embeds réutilisables (éditeur visuel)
+  CREATE TABLE IF NOT EXISTS embed_templates (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id   TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    data_json  TEXT NOT NULL,
+    created_by TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s','now')),
+    created_at INTEGER DEFAULT (strftime('%s','now')),
+    UNIQUE(guild_id, name)
+  );
+
+  -- Messages système configurables (welcome, leave, levelup, boost, etc.)
+  CREATE TABLE IF NOT EXISTS system_messages (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id   TEXT NOT NULL,
+    event      TEXT NOT NULL,
+    enabled    INTEGER DEFAULT 1,
+    mode       TEXT DEFAULT 'text',       -- 'text' | 'embed' | 'both'
+    content    TEXT,
+    embed_json TEXT,
+    channel_id TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s','now')),
+    UNIQUE(guild_id, event)
+  );
+
+  -- Store clé/valeur libre pour TOUT paramètre futur (évite les migrations)
+  CREATE TABLE IF NOT EXISTS guild_kv (
+    guild_id   TEXT NOT NULL,
+    key        TEXT NOT NULL,
+    value      TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s','now')),
+    PRIMARY KEY (guild_id, key)
+  );
+
+  -- Sessions transitoires (éditeur d'embed en cours, etc.)
+  CREATE TABLE IF NOT EXISTS edit_sessions (
+    session_id TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL,
+    guild_id   TEXT NOT NULL,
+    type       TEXT NOT NULL,
+    data_json  TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
   );
 
   -- Notes de modération (modlog silencieux)
@@ -751,6 +837,17 @@ const migrations = [
   { table: 'guild_config', column: 'ticket_welcome_msg', sql: "ALTER TABLE guild_config ADD COLUMN ticket_welcome_msg TEXT" },
   { table: 'guild_config', column: 'starboard_channel',  sql: "ALTER TABLE guild_config ADD COLUMN starboard_channel TEXT" },
   { table: 'guild_config', column: 'starboard_threshold',sql: "ALTER TABLE guild_config ADD COLUMN starboard_threshold INTEGER DEFAULT 3" },
+  // custom_commands — nouvelles colonnes v3 (rendu riche)
+  { table: 'custom_commands', column: 'response_type',    sql: "ALTER TABLE custom_commands ADD COLUMN response_type TEXT DEFAULT 'text'" },
+  { table: 'custom_commands', column: 'embed_json',       sql: "ALTER TABLE custom_commands ADD COLUMN embed_json TEXT" },
+  { table: 'custom_commands', column: 'cooldown',         sql: "ALTER TABLE custom_commands ADD COLUMN cooldown INTEGER DEFAULT 0" },
+  { table: 'custom_commands', column: 'required_role',    sql: "ALTER TABLE custom_commands ADD COLUMN required_role TEXT" },
+  { table: 'custom_commands', column: 'required_perm',    sql: "ALTER TABLE custom_commands ADD COLUMN required_perm TEXT" },
+  { table: 'custom_commands', column: 'allowed_channels', sql: "ALTER TABLE custom_commands ADD COLUMN allowed_channels TEXT DEFAULT '[]'" },
+  { table: 'custom_commands', column: 'enabled',          sql: "ALTER TABLE custom_commands ADD COLUMN enabled INTEGER DEFAULT 1" },
+  { table: 'custom_commands', column: 'uses',             sql: "ALTER TABLE custom_commands ADD COLUMN uses INTEGER DEFAULT 0" },
+  { table: 'custom_commands', column: 'delete_trigger',   sql: "ALTER TABLE custom_commands ADD COLUMN delete_trigger INTEGER DEFAULT 0" },
+  { table: 'custom_commands', column: 'updated_at',       sql: "ALTER TABLE custom_commands ADD COLUMN updated_at INTEGER DEFAULT 0" },
 ];
 
 for (const m of migrations) {
@@ -997,6 +1094,359 @@ const helpers = {
 
   getCustomCommands(guildId) {
     return db.prepare('SELECT * FROM custom_commands WHERE guild_id = ?').all(guildId);
+  },
+
+  // ── Commandes perso — CRUD avancé (texte, embed, cooldowns, rôles, salons) ──
+  upsertCustomCommand(guildId, trigger, data) {
+    // data: { response, response_type, embed_json, cooldown, required_role,
+    //         required_perm, allowed_channels, enabled, delete_trigger, created_by }
+    const now = Math.floor(Date.now() / 1000);
+    const t   = String(trigger).toLowerCase().trim().replace(/^&+/, '');
+    db.prepare(`
+      INSERT INTO custom_commands
+        (guild_id, trigger, response, response_type, embed_json, cooldown,
+         required_role, required_perm, allowed_channels, enabled, delete_trigger,
+         created_by, updated_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(guild_id, trigger) DO UPDATE SET
+        response         = excluded.response,
+        response_type    = excluded.response_type,
+        embed_json       = excluded.embed_json,
+        cooldown         = excluded.cooldown,
+        required_role    = excluded.required_role,
+        required_perm    = excluded.required_perm,
+        allowed_channels = excluded.allowed_channels,
+        enabled          = excluded.enabled,
+        delete_trigger   = excluded.delete_trigger,
+        updated_at       = excluded.updated_at
+    `).run(
+      guildId, t,
+      data.response ?? '',
+      data.response_type ?? 'text',
+      data.embed_json ?? null,
+      data.cooldown ?? 0,
+      data.required_role ?? null,
+      data.required_perm ?? null,
+      JSON.stringify(data.allowed_channels ?? []),
+      data.enabled === 0 ? 0 : 1,
+      data.delete_trigger ? 1 : 0,
+      data.created_by ?? '0',
+      now, now,
+    );
+    return helpers.getCustomCommand(guildId, t);
+  },
+
+  deleteCustomCommand(guildId, trigger) {
+    const t = String(trigger).toLowerCase().trim().replace(/^&+/, '');
+    return db.prepare('DELETE FROM custom_commands WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').run(guildId, t).changes;
+  },
+
+  incrementCustomCommandUses(guildId, trigger) {
+    try {
+      db.prepare('UPDATE custom_commands SET uses = uses + 1 WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').run(guildId, trigger);
+    } catch {}
+  },
+
+  // ── Aliases ──
+  getAlias(guildId, alias) {
+    return db.prepare('SELECT * FROM command_aliases WHERE guild_id = ? AND LOWER(alias) = LOWER(?)').get(guildId, alias);
+  },
+
+  getAliases(guildId) {
+    return db.prepare('SELECT * FROM command_aliases WHERE guild_id = ?').all(guildId);
+  },
+
+  setAlias(guildId, alias, target, createdBy) {
+    db.prepare(`
+      INSERT INTO command_aliases (guild_id, alias, target, created_by)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(guild_id, alias) DO UPDATE SET target = excluded.target
+    `).run(guildId, String(alias).toLowerCase(), String(target).toLowerCase(), createdBy ?? '0');
+  },
+
+  deleteAlias(guildId, alias) {
+    return db.prepare('DELETE FROM command_aliases WHERE guild_id = ? AND LOWER(alias) = LOWER(?)').run(guildId, alias).changes;
+  },
+
+  // ── Cooldown overrides ──
+  getCooldownOverride(guildId, command) {
+    const row = db.prepare('SELECT seconds FROM cooldown_overrides WHERE guild_id = ? AND command = ?').get(guildId, command);
+    return row ? row.seconds : null;
+  },
+
+  getCooldownOverrides(guildId) {
+    return db.prepare('SELECT * FROM cooldown_overrides WHERE guild_id = ?').all(guildId);
+  },
+
+  setCooldownOverride(guildId, command, seconds) {
+    db.prepare(`
+      INSERT INTO cooldown_overrides (guild_id, command, seconds, updated_at)
+      VALUES (?, ?, ?, strftime('%s','now'))
+      ON CONFLICT(guild_id, command) DO UPDATE SET seconds = excluded.seconds, updated_at = strftime('%s','now')
+    `).run(guildId, command, Math.max(0, parseInt(seconds, 10) || 0));
+  },
+
+  removeCooldownOverride(guildId, command) {
+    return db.prepare('DELETE FROM cooldown_overrides WHERE guild_id = ? AND command = ?').run(guildId, command).changes;
+  },
+
+  // ── Command toggles (activer/désactiver une commande) ──
+  isCommandEnabled(guildId, command) {
+    const row = db.prepare('SELECT enabled FROM command_toggles WHERE guild_id = ? AND command = ?').get(guildId, command);
+    return row ? !!row.enabled : true; // activé par défaut
+  },
+
+  getCommandToggles(guildId) {
+    return db.prepare('SELECT * FROM command_toggles WHERE guild_id = ?').all(guildId);
+  },
+
+  setCommandEnabled(guildId, command, enabled) {
+    db.prepare(`
+      INSERT INTO command_toggles (guild_id, command, enabled, updated_at)
+      VALUES (?, ?, ?, strftime('%s','now'))
+      ON CONFLICT(guild_id, command) DO UPDATE SET enabled = excluded.enabled, updated_at = strftime('%s','now')
+    `).run(guildId, command, enabled ? 1 : 0);
+  },
+
+  // ── Embed templates ──
+  getEmbedTemplate(guildId, name) {
+    return db.prepare('SELECT * FROM embed_templates WHERE guild_id = ? AND LOWER(name) = LOWER(?)').get(guildId, name);
+  },
+
+  getEmbedTemplates(guildId) {
+    return db.prepare('SELECT * FROM embed_templates WHERE guild_id = ? ORDER BY updated_at DESC').all(guildId);
+  },
+
+  upsertEmbedTemplate(guildId, name, data, createdBy) {
+    const json = typeof data === 'string' ? data : JSON.stringify(data);
+    db.prepare(`
+      INSERT INTO embed_templates (guild_id, name, data_json, created_by, updated_at)
+      VALUES (?, ?, ?, ?, strftime('%s','now'))
+      ON CONFLICT(guild_id, name) DO UPDATE SET data_json = excluded.data_json, updated_at = strftime('%s','now')
+    `).run(guildId, name, json, createdBy ?? '0');
+    return helpers.getEmbedTemplate(guildId, name);
+  },
+
+  deleteEmbedTemplate(guildId, name) {
+    return db.prepare('DELETE FROM embed_templates WHERE guild_id = ? AND LOWER(name) = LOWER(?)').run(guildId, name).changes;
+  },
+
+  // ── Messages système (welcome, leave, levelup, boost, daily, work, ...) ──
+  getSystemMessage(guildId, event) {
+    return db.prepare('SELECT * FROM system_messages WHERE guild_id = ? AND event = ?').get(guildId, event);
+  },
+
+  getSystemMessages(guildId) {
+    return db.prepare('SELECT * FROM system_messages WHERE guild_id = ?').all(guildId);
+  },
+
+  upsertSystemMessage(guildId, event, data) {
+    // data: { enabled, mode, content, embed_json, channel_id }
+    db.prepare(`
+      INSERT INTO system_messages (guild_id, event, enabled, mode, content, embed_json, channel_id, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%s','now'))
+      ON CONFLICT(guild_id, event) DO UPDATE SET
+        enabled    = excluded.enabled,
+        mode       = excluded.mode,
+        content    = excluded.content,
+        embed_json = excluded.embed_json,
+        channel_id = excluded.channel_id,
+        updated_at = strftime('%s','now')
+    `).run(
+      guildId, event,
+      data.enabled === 0 ? 0 : 1,
+      data.mode ?? 'text',
+      data.content ?? null,
+      typeof data.embed_json === 'string' ? data.embed_json : (data.embed_json ? JSON.stringify(data.embed_json) : null),
+      data.channel_id ?? null,
+    );
+    return helpers.getSystemMessage(guildId, event);
+  },
+
+  // ── KV store libre ──
+  kvGet(guildId, key, defaultValue = null) {
+    const row = db.prepare('SELECT value FROM guild_kv WHERE guild_id = ? AND key = ?').get(guildId, key);
+    if (!row) return defaultValue;
+    try { return JSON.parse(row.value); } catch { return row.value; }
+  },
+
+  kvSet(guildId, key, value) {
+    const v = typeof value === 'string' ? value : JSON.stringify(value);
+    db.prepare(`
+      INSERT INTO guild_kv (guild_id, key, value, updated_at)
+      VALUES (?, ?, ?, strftime('%s','now'))
+      ON CONFLICT(guild_id, key) DO UPDATE SET value = excluded.value, updated_at = strftime('%s','now')
+    `).run(guildId, key, v);
+  },
+
+  kvDelete(guildId, key) {
+    db.prepare('DELETE FROM guild_kv WHERE guild_id = ? AND key = ?').run(guildId, key);
+  },
+
+  kvList(guildId, prefix) {
+    if (prefix) {
+      return db.prepare('SELECT * FROM guild_kv WHERE guild_id = ? AND key LIKE ?').all(guildId, prefix + '%');
+    }
+    return db.prepare('SELECT * FROM guild_kv WHERE guild_id = ?').all(guildId);
+  },
+
+  // ── Autoresponder (triggers automatiques dans un message) ──
+  getAutoresponders(guildId) {
+    return db.prepare('SELECT * FROM autoresponder WHERE guild_id = ? ORDER BY id ASC').all(guildId);
+  },
+
+  getAutoresponder(guildId, trigger) {
+    return db.prepare('SELECT * FROM autoresponder WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').get(guildId, trigger);
+  },
+
+  getAutoresponderById(guildId, id) {
+    return db.prepare('SELECT * FROM autoresponder WHERE guild_id = ? AND id = ?').get(guildId, id);
+  },
+
+  upsertAutoresponder(guildId, trigger, data) {
+    // data: { response, exact_match, cooldown }
+    db.prepare(`
+      INSERT INTO autoresponder (guild_id, trigger, response, exact_match, cooldown)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(guild_id, trigger) DO UPDATE SET
+        response    = excluded.response,
+        exact_match = excluded.exact_match,
+        cooldown    = excluded.cooldown
+    `).run(
+      guildId, String(trigger).toLowerCase().trim(),
+      data.response ?? '',
+      data.exact_match ? 1 : 0,
+      Math.max(0, parseInt(data.cooldown, 10) || 0),
+    );
+    return helpers.getAutoresponder(guildId, trigger);
+  },
+
+  deleteAutoresponder(guildId, trigger) {
+    return db.prepare('DELETE FROM autoresponder WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').run(guildId, trigger).changes;
+  },
+
+  deleteAutoresponderById(guildId, id) {
+    return db.prepare('DELETE FROM autoresponder WHERE guild_id = ? AND id = ?').run(guildId, id).changes;
+  },
+
+  // ── Level roles (déjà getLevelRoles + checkAndAssignLevelRoles, on ajoute add/remove) ──
+  addLevelRole(guildId, level, roleId) {
+    db.prepare(`
+      INSERT INTO level_roles (guild_id, level, role_id) VALUES (?, ?, ?)
+      ON CONFLICT(guild_id, level) DO UPDATE SET role_id = excluded.role_id
+    `).run(guildId, parseInt(level, 10), roleId);
+  },
+
+  removeLevelRole(guildId, level) {
+    return db.prepare('DELETE FROM level_roles WHERE guild_id = ? AND level = ?').run(guildId, parseInt(level, 10)).changes;
+  },
+
+  // ── Export / Import complet de la config ──
+  exportGuildConfig(guildId) {
+    return {
+      _meta:           { exported_at: Math.floor(Date.now() / 1000), guild_id: guildId, schema: 'nexus-v3' },
+      guild_config:    db.prepare('SELECT * FROM guild_config WHERE guild_id = ?').get(guildId) || {},
+      custom_commands: db.prepare('SELECT * FROM custom_commands WHERE guild_id = ?').all(guildId),
+      command_aliases: db.prepare('SELECT * FROM command_aliases WHERE guild_id = ?').all(guildId),
+      cooldown_overrides: db.prepare('SELECT * FROM cooldown_overrides WHERE guild_id = ?').all(guildId),
+      command_toggles: db.prepare('SELECT * FROM command_toggles WHERE guild_id = ?').all(guildId),
+      embed_templates: db.prepare('SELECT * FROM embed_templates WHERE guild_id = ?').all(guildId),
+      system_messages: db.prepare('SELECT * FROM system_messages WHERE guild_id = ?').all(guildId),
+      autoresponder:   db.prepare('SELECT * FROM autoresponder WHERE guild_id = ?').all(guildId),
+      level_roles:     db.prepare('SELECT * FROM level_roles WHERE guild_id = ?').all(guildId),
+      guild_kv:        db.prepare('SELECT * FROM guild_kv WHERE guild_id = ?').all(guildId),
+    };
+  },
+
+  importGuildConfig(guildId, payload) {
+    // payload: résultat de exportGuildConfig()
+    // Écrase les tables listées. Ne supprime pas les données existantes, fait des upserts.
+    const tx = db.transaction(() => {
+      if (payload.guild_config && Object.keys(payload.guild_config).length) {
+        const gc = { ...payload.guild_config };
+        delete gc.guild_id; delete gc.created_at;
+        helpers.getConfig(guildId); // ensure row
+        for (const k of Object.keys(gc)) {
+          try { db.prepare(`UPDATE guild_config SET ${k} = ? WHERE guild_id = ?`).run(gc[k], guildId); } catch {}
+        }
+      }
+      const upsertAll = (rows, insertSQL) => {
+        if (!Array.isArray(rows)) return;
+        for (const r of rows) {
+          try { db.prepare(insertSQL).run(r); } catch {}
+        }
+      };
+      // Nettoyer puis réinsérer pour une import propre des listes
+      for (const tbl of ['custom_commands','command_aliases','cooldown_overrides','command_toggles','embed_templates','system_messages','autoresponder','level_roles','guild_kv']) {
+        if (payload[tbl]) db.prepare(`DELETE FROM ${tbl} WHERE guild_id = ?`).run(guildId);
+      }
+      // Ré-import brut : INSERT OR REPLACE pour chaque
+      for (const r of (payload.custom_commands || [])) {
+        try {
+          db.prepare(`INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, response_type, embed_json, cooldown, required_role, required_perm, allowed_channels, enabled, uses, delete_trigger, created_by, updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+            .run(guildId, r.trigger, r.response, r.response_type ?? 'text', r.embed_json ?? null, r.cooldown ?? 0, r.required_role ?? null, r.required_perm ?? null, r.allowed_channels ?? '[]', r.enabled ?? 1, r.uses ?? 0, r.delete_trigger ?? 0, r.created_by ?? '0', r.updated_at ?? null, r.created_at ?? null);
+        } catch {}
+      }
+      for (const r of (payload.command_aliases || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO command_aliases (guild_id, alias, target, created_by, created_at) VALUES (?,?,?,?,?)`).run(guildId, r.alias, r.target, r.created_by ?? '0', r.created_at ?? null); } catch {}
+      }
+      for (const r of (payload.cooldown_overrides || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO cooldown_overrides (guild_id, command, seconds, updated_at) VALUES (?,?,?,?)`).run(guildId, r.command, r.seconds, r.updated_at ?? null); } catch {}
+      }
+      for (const r of (payload.command_toggles || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO command_toggles (guild_id, command, enabled, updated_at) VALUES (?,?,?,?)`).run(guildId, r.command, r.enabled, r.updated_at ?? null); } catch {}
+      }
+      for (const r of (payload.embed_templates || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO embed_templates (guild_id, name, data_json, created_by, updated_at, created_at) VALUES (?,?,?,?,?,?)`).run(guildId, r.name, r.data_json, r.created_by ?? '0', r.updated_at ?? null, r.created_at ?? null); } catch {}
+      }
+      for (const r of (payload.system_messages || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO system_messages (guild_id, event, enabled, mode, content, embed_json, channel_id, updated_at) VALUES (?,?,?,?,?,?,?,?)`).run(guildId, r.event, r.enabled ?? 1, r.mode ?? 'text', r.content ?? null, r.embed_json ?? null, r.channel_id ?? null, r.updated_at ?? null); } catch {}
+      }
+      for (const r of (payload.autoresponder || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO autoresponder (guild_id, trigger, response, exact_match, cooldown, uses, created_at) VALUES (?,?,?,?,?,?,?)`).run(guildId, r.trigger, r.response, r.exact_match ?? 0, r.cooldown ?? 0, r.uses ?? 0, r.created_at ?? null); } catch {}
+      }
+      for (const r of (payload.level_roles || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO level_roles (guild_id, level, role_id) VALUES (?,?,?)`).run(guildId, r.level, r.role_id); } catch {}
+      }
+      for (const r of (payload.guild_kv || [])) {
+        try { db.prepare(`INSERT OR REPLACE INTO guild_kv (guild_id, key, value, updated_at) VALUES (?,?,?,?)`).run(guildId, r.key, r.value, r.updated_at ?? null); } catch {}
+      }
+    });
+    tx();
+  },
+
+  // ── Sessions d'édition (éditeur d'embed, etc.) ──
+  createEditSession(userId, guildId, type, data, ttlSeconds = 1800) {
+    const sessionId = `${userId}:${type}:${Date.now().toString(36)}`;
+    const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const json = typeof data === 'string' ? data : JSON.stringify(data);
+    db.prepare(`INSERT OR REPLACE INTO edit_sessions (session_id, user_id, guild_id, type, data_json, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?)`).run(sessionId, userId, guildId, type, json, expiresAt);
+    return sessionId;
+  },
+
+  getEditSession(sessionId) {
+    const row = db.prepare('SELECT * FROM edit_sessions WHERE session_id = ?').get(sessionId);
+    if (!row) return null;
+    if (row.expires_at < Math.floor(Date.now() / 1000)) {
+      db.prepare('DELETE FROM edit_sessions WHERE session_id = ?').run(sessionId);
+      return null;
+    }
+    try { row.data = JSON.parse(row.data_json); } catch { row.data = {}; }
+    return row;
+  },
+
+  updateEditSession(sessionId, data) {
+    const json = typeof data === 'string' ? data : JSON.stringify(data);
+    db.prepare('UPDATE edit_sessions SET data_json = ? WHERE session_id = ?').run(json, sessionId);
+  },
+
+  deleteEditSession(sessionId) {
+    db.prepare('DELETE FROM edit_sessions WHERE session_id = ?').run(sessionId);
+  },
+
+  cleanExpiredEditSessions() {
+    db.prepare('DELETE FROM edit_sessions WHERE expires_at < ?').run(Math.floor(Date.now() / 1000));
   },
 };
 

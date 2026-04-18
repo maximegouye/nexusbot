@@ -21,7 +21,17 @@ const {
 // ═══════════════════════════════════════════════════════════════
 // CATÉGORIES DU PANNEAU
 // ═══════════════════════════════════════════════════════════════
-const CATEGORIES = [
+// Catégories avancées (définies dans configPanelAdvanced.js)
+let ADVANCED_CATEGORIES = [];
+let advancedModule = null;
+try {
+  advancedModule = require('./configPanelAdvanced');
+  ADVANCED_CATEGORIES = advancedModule.ADVANCED_CATEGORIES || [];
+} catch (e) {
+  console.warn('[configPanel] configPanelAdvanced non chargé:', e.message);
+}
+
+const BASE_CATEGORIES = [
   { value: 'general',       label: '🔧 Général',          description: 'Préfixe, couleur, paramètres de base' },
   { value: 'eco',           label: '💰 Économie',          description: 'Monnaie, daily, gains par message' },
   { value: 'xp',            label: '⭐ XP & Niveaux',      description: 'XP, multiplicateur, salon de niveau' },
@@ -34,10 +44,13 @@ const CATEGORIES = [
   { value: 'vocal',         label: '🔊 Salons vocaux',     description: 'TempVoice, salon créateur' },
   { value: 'starboard',     label: '⭐ Starboard',         description: 'Salon et seuil du starboard' },
   { value: 'jeux',          label: '🎮 Jeux',              description: 'Casino, paris, mises min/max' },
-  { value: 'reponses',      label: '💬 Réponses perso',    description: 'Commandes personnalisées (&déclencheur)' },
+  { value: 'reponses',      label: '💬 Réponses perso',    description: 'Commandes personnalisées simples' },
   { value: 'anniversaires', label: '🎂 Anniversaires',     description: 'Salon et rôle d\'anniversaire' },
   { value: 'modules',       label: '🔌 Modules',           description: 'Activer/désactiver les modules' },
 ];
+
+// CATEGORIES = BASE + ADVANCED fusionnées (Discord limite à 25 options dans un select)
+const CATEGORIES = [...BASE_CATEGORIES, ...ADVANCED_CATEGORIES].slice(0, 25);
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -775,7 +788,12 @@ function buildModulesPanel(cfg, guild, userId) {
 // ═══════════════════════════════════════════════════════════════
 // DISPATCHER CATÉGORIES
 // ═══════════════════════════════════════════════════════════════
-function buildCategoryPanel(category, cfg, guild, userId, db) {
+function buildCategoryPanel(category, cfg, guild, userId, db, client) {
+  // Délégation aux catégories avancées (embeds, cmds_adv, sys_msgs, cmd_ctrl, aliases)
+  if (advancedModule && advancedModule.isAdvancedCategory(category)) {
+    const panel = advancedModule.buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client);
+    if (panel) return panel;
+  }
   switch (category) {
     case 'general':       return buildGeneralPanel(cfg, guild, userId);
     case 'eco':           return buildEcoPanel(cfg, guild, userId);
@@ -1081,7 +1099,7 @@ function getCategoryForKey(key) {
 // ═══════════════════════════════════════════════════════════════
 // GESTIONNAIRE PRINCIPAL DES INTERACTIONS CFG
 // ═══════════════════════════════════════════════════════════════
-async function handleConfigInteraction(interaction, db) {
+async function handleConfigInteraction(interaction, db, client) {
   const customId = interaction.customId || '';
   if (!customId.startsWith('cfg')) return false;
 
@@ -1114,7 +1132,7 @@ async function handleConfigInteraction(interaction, db) {
     const userId   = customId.split(':')[2];
     const category = interaction.values[0];
     const cfg      = db.getConfig(interaction.guildId);
-    return interaction.update(buildCategoryPanel(category, cfg, interaction.guild, userId, db));
+    return interaction.update(buildCategoryPanel(category, cfg, interaction.guild, userId, db, client));
   }
 
   // ── cfg:toggle:key:userId — Basculer un booléen ───────────────
@@ -1129,7 +1147,7 @@ async function handleConfigInteraction(interaction, db) {
     const newCfg   = db.getConfig(interaction.guildId);
     const category = getCategoryForKey(key);
     const panel    = category
-      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db)
+      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
     return interaction.update(panel);
   }
@@ -1154,7 +1172,7 @@ async function handleConfigInteraction(interaction, db) {
     const newCfg   = db.getConfig(interaction.guildId);
     const category = getCategoryForKey(key);
     const panel    = category
-      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db)
+      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
     return interaction.update(panel);
   }
@@ -1171,7 +1189,7 @@ async function handleConfigInteraction(interaction, db) {
     const category = getCategoryForKey(key);
     await interaction.deferUpdate();
     const panel = category
-      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db)
+      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
     return interaction.editReply(panel);
   }
@@ -1188,7 +1206,7 @@ async function handleConfigInteraction(interaction, db) {
     const category = getCategoryForKey(key);
     await interaction.deferUpdate();
     const panel = category
-      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db)
+      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
     return interaction.editReply(panel);
   }
@@ -1281,7 +1299,7 @@ async function handleConfigInteraction(interaction, db) {
     const newCfg   = db.getConfig(interaction.guildId);
     const category = getCategoryForKey(key);
     const panel    = category
-      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db)
+      ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
 
     try { return await interaction.update(panel); }

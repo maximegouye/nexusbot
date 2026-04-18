@@ -34,8 +34,20 @@ async function _handleInteraction(interaction, client) {
     if (_cfgId.startsWith('cfg:') || _cfgId.startsWith('cfg_chan:') || _cfgId.startsWith('cfg_role:') || _cfgId.startsWith('cfg_modal:')) {
       const { handleConfigInteraction } = require('../utils/configPanel');
       const _db = require('../database/db');
-      const _handled = await handleConfigInteraction(interaction, _db);
+      const _handled = await handleConfigInteraction(interaction, _db, client);
       if (_handled !== false) return;
+    }
+
+    // ── PANNEAU AVANCÉ (adv: / adv_modal: / adv_chan: / adv_role: / adv_sel:) ──
+    if (_cfgId.startsWith('adv:') || _cfgId.startsWith('adv_modal:') || _cfgId.startsWith('adv_chan:') || _cfgId.startsWith('adv_role:') || _cfgId.startsWith('adv_sel:')) {
+      try {
+        const { handleAdvancedInteraction } = require('../utils/configPanelAdvanced');
+        const _db2 = require('../database/db');
+        const _handled2 = await handleAdvancedInteraction(interaction, _db2, client);
+        if (_handled2 !== false) return;
+      } catch (e) {
+        console.error('[ADV-PANEL] Erreur:', e);
+      }
     }
 
     // ── SLASH COMMANDS ───────────────────────────────────
@@ -63,13 +75,32 @@ async function _handleInteraction(interaction, client) {
         } catch {}
       }
 
+      // ── Toggle + cooldown override (panneau config) ─────
+      let _cooldownOverride = null;
+      try {
+        const _db3 = require('../database/db');
+        // /config doit toujours rester accessible (sinon on peut s'auto-verrouiller)
+        if (interaction.commandName !== 'config' && interaction.commandName !== 'nexus') {
+          if (!_db3.isCommandEnabled(interaction.guildId, command.data.name)) {
+            return interaction.reply({
+              embeds: [new EmbedBuilder()
+                .setColor('#E74C3C')
+                .setTitle('🚫 Commande désactivée')
+                .setDescription(`La commande \`/${command.data.name}\` est désactivée sur ce serveur.\nUn administrateur peut la réactiver via \`/config\` → 🛠️ Cooldowns & toggles.`)
+              ], ephemeral: true
+            });
+          }
+        }
+        _cooldownOverride = _db3.getCooldownOverride(interaction.guildId, command.data.name);
+      } catch {}
+
       // Cooldown
       if (!client.cooldowns.has(command.data.name)) {
         client.cooldowns.set(command.data.name, new Map());
       }
       const now = Date.now();
       const ts  = client.cooldowns.get(command.data.name);
-      const cd  = (command.cooldown ?? 3) * 1000;
+      const cd  = ((_cooldownOverride != null ? _cooldownOverride : (command.cooldown ?? 3))) * 1000;
 
       if (ts.has(interaction.user.id)) {
         const exp = ts.get(interaction.user.id) + cd;
