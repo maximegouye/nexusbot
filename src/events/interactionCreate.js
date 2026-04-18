@@ -38,6 +38,134 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+    // ── CASINO MENU : boutons jeu + stats + top ────────────────────
+    if (interaction.isButton() && _cfgId.startsWith('casino_')) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const parts = _cfgId.split(':');
+        const action = parts[0].replace('casino_', '');
+        const uid = parts[1];
+
+        const { EmbedBuilder } = require('discord.js');
+
+        if (action === 'stats') {
+          const stats = db2.getGameStats(interaction.user.id, interaction.guildId);
+          if (!stats.length) {
+            return interaction.reply({ content: '📊 Aucune partie jouée pour l\'instant. Lance un jeu !', ephemeral: true });
+          }
+          const lines = stats.sort((a, b) => b.played - a.played).map(g => {
+            const wr = g.played > 0 ? Math.round(g.won / g.played * 100) : 0;
+            const net = (g.total_won - g.total_bet);
+            return `**${g.game}** — ${g.played} parties · ${g.won}✅/${g.lost}❌ (${wr}%) · net ${net >= 0 ? '+' : ''}${net.toLocaleString('fr-FR')}${symbol}`;
+          }).join('\n');
+          return interaction.reply({
+            embeds: [new EmbedBuilder().setColor(cfg.color || '#E67E22').setTitle(`📊 Stats détaillées — ${interaction.user.username}`).setDescription(lines)],
+            ephemeral: true,
+          });
+        }
+
+        if (action === 'top') {
+          // Top par biggest_win
+          const top = db2.db.prepare(`
+            SELECT user_id, SUM(biggest_win) as big, SUM(total_won) as won, SUM(played) as played
+            FROM game_stats WHERE guild_id = ? GROUP BY user_id ORDER BY big DESC LIMIT 10
+          `).all(interaction.guildId);
+          const lines = top.map((r, i) => `${['🥇','🥈','🥉'][i] || `**${i+1}.**`} <@${r.user_id}> · plus gros gain : **${(r.big || 0).toLocaleString('fr-FR')}${symbol}** · ${r.played} parties`).join('\n');
+          return interaction.reply({
+            embeds: [new EmbedBuilder().setColor(cfg.color || '#F1C40F').setTitle('🏆 Top gagnants du casino').setDescription(lines || '*Aucun joueur.*')],
+            ephemeral: true,
+          });
+        }
+
+        // Shortcuts → afficher aide pour la commande
+        const shortcuts = {
+          bj:     'Tape `&bj <mise>` ou `/blackjack` (ex: `&bj all`, `&bj 5000`)',
+          poker:  'Tape `&poker <mise>` (ex: `&poker 1000`, `&poker 50%`)',
+          roul:   'Tape `&roulette <mise> <pari>` (ex: `&roulette 500 rouge`)',
+          roue:   'Tape `&roue <mise>` (ex: `&roue all`)',
+          slots:  'Tape `&slots <mise>` (ex: `&slots 100`)',
+          mines:  'Tape `&mines <mise> [nb_mines]` (ex: `&mines 1000 3`)',
+          crash:  'Tape `&crash <mise> <cashout>` (ex: `&crash 500 3.0`)',
+          des:    'Tape `&des <mise> <pari>` (ex: `&des 100 sept`)',
+          crypto: 'Tape `&crypto` pour le marché, `&crypto portefeuille` pour ton wallet, `&crypto acheter BTC 1000`',
+        };
+        if (shortcuts[action]) {
+          return interaction.reply({ content: `💡 **${action.toUpperCase()}** — ${shortcuts[action]}`, ephemeral: true });
+        }
+        return;
+      } catch (e) { console.error('[CASINO handler]', e); }
+    }
+
+    // ── CRYPTO : boutons marché/wallet/buy/sell ────────────────────
+    if (interaction.isButton() && (_cfgId.startsWith('crypto_market:') || _cfgId.startsWith('crypto_wallet:') || _cfgId.startsWith('crypto_buy:') || _cfgId.startsWith('crypto_sell:'))) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const user = db2.getUser(interaction.user.id, interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const action = _cfgId.split(':')[0].replace('crypto_', '');
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+        const fmtPrice = p => p >= 1000 ? p.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : p >= 1 ? p.toFixed(2) : p >= 0.01 ? p.toFixed(4) : p.toFixed(8);
+        const uid = interaction.user.id;
+        const buttons = [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`crypto_market:${uid}`).setLabel('📊 Marché').setStyle(ButtonStyle.Primary),
+          new ButtonBuilder().setCustomId(`crypto_wallet:${uid}`).setLabel('💼 Portefeuille').setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder().setCustomId(`crypto_buy:${uid}`).setLabel('🟢 Acheter').setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId(`crypto_sell:${uid}`).setLabel('🔴 Vendre').setStyle(ButtonStyle.Danger),
+        )];
+
+        if (action === 'market') {
+          const market = db2.getCryptoMarket();
+          const lines = market.map(c => {
+            const delta = c.prev_price > 0 ? ((c.price - c.prev_price) / c.prev_price) * 100 : 0;
+            const arrow = delta > 0.5 ? '🟢📈' : delta < -0.5 ? '🔴📉' : '⚪';
+            return `${c.emoji} **${c.symbol}** · ${c.name}\n${arrow} **${fmtPrice(c.price)} ${symbol}** (${delta >= 0 ? '+' : ''}${delta.toFixed(2)}%)`;
+          }).join('\n\n');
+          return interaction.update({
+            embeds: [new EmbedBuilder().setColor(cfg.color || '#F39C12').setTitle('💰 Marché Crypto · NexusExchange').setDescription(lines)
+              .setFooter({ text: 'Prix fluctuants toutes les 5 min' }).setTimestamp()],
+            components: buttons,
+          });
+        }
+
+        if (action === 'wallet') {
+          const wallet = db2.getWallet(interaction.user.id, interaction.guildId);
+          const market = new Map((db2.getCryptoMarket() || []).map(c => [c.symbol, c]));
+          let totalValue = 0;
+          const lines = wallet.map(w => {
+            const m = market.get(w.crypto); if (!m) return null;
+            const value = w.amount * m.price;
+            totalValue += value;
+            const profit = (m.price - w.avg_buy) * w.amount;
+            const arrow = profit > 0 ? '🟢' : profit < 0 ? '🔴' : '⚪';
+            return `${m.emoji} **${w.crypto}** — ${w.amount.toFixed(6)} × ${fmtPrice(m.price)}${symbol}\n${arrow} Valeur : **${Math.floor(value).toLocaleString('fr-FR')}${symbol}**`;
+          }).filter(Boolean).join('\n\n');
+          return interaction.update({
+            embeds: [new EmbedBuilder().setColor(cfg.color || '#2ECC71').setTitle('💼 Portefeuille crypto')
+              .setDescription(lines || '*Aucune crypto. Utilise 🟢 Acheter pour commencer.*')
+              .addFields(
+                { name: '💰 Valeur totale', value: `**${Math.floor(totalValue).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+                { name: `${symbol} Solde`,   value: `**${user.balance.toLocaleString('fr-FR')}${symbol}**`,          inline: true },
+              ).setTimestamp()],
+            components: buttons,
+          });
+        }
+
+        if (action === 'buy' || action === 'sell') {
+          return interaction.reply({
+            content: action === 'buy'
+              ? '💡 **Acheter :** tape `&crypto acheter <SYMBOLE> <montant>` ou `/crypto acheter`. Symboles : BTC, ETH, SOL, DOGE, NEX, PEPE.\nExemples : `&crypto acheter BTC 1000` · `&crypto acheter NEX all` · `&crypto acheter DOGE 25%`'
+              : '💡 **Vendre :** tape `&crypto vendre <SYMBOLE> <quantité>` ou `/crypto vendre`.\nExemples : `&crypto vendre BTC 0.001` · `&crypto vendre DOGE all` · `&crypto vendre NEX 50%`',
+            ephemeral: true,
+          });
+        }
+        return;
+      } catch (e) { console.error('[CRYPTO handler]', e); }
+    }
+
     // ── POKER : boutons hold / draw (persistés en BDD) ──────────────
     if (interaction.isButton() && (_cfgId.startsWith('poker_hold:') || _cfgId === 'poker_draw')) {
       try {

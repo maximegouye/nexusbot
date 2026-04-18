@@ -454,6 +454,43 @@ db.exec(`
     PRIMARY KEY (guild_id, key)
   );
 
+  -- Portefeuille crypto par utilisateur
+  CREATE TABLE IF NOT EXISTS crypto_wallet (
+    user_id    TEXT NOT NULL,
+    guild_id   TEXT NOT NULL,
+    crypto     TEXT NOT NULL,
+    amount     REAL DEFAULT 0,
+    avg_buy    REAL DEFAULT 0,
+    updated_at INTEGER DEFAULT (strftime('%s','now')),
+    PRIMARY KEY (user_id, guild_id, crypto)
+  );
+
+  -- Marché crypto (prix courants + tendance)
+  CREATE TABLE IF NOT EXISTS crypto_market (
+    symbol     TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    emoji      TEXT DEFAULT '🪙',
+    price      REAL NOT NULL,
+    prev_price REAL NOT NULL,
+    volatility REAL DEFAULT 0.02,
+    updated_at INTEGER DEFAULT (strftime('%s','now'))
+  );
+
+  -- Statistiques de jeux par user
+  CREATE TABLE IF NOT EXISTS game_stats (
+    user_id    TEXT NOT NULL,
+    guild_id   TEXT NOT NULL,
+    game       TEXT NOT NULL,
+    played     INTEGER DEFAULT 0,
+    won        INTEGER DEFAULT 0,
+    lost       INTEGER DEFAULT 0,
+    total_bet  INTEGER DEFAULT 0,
+    total_won  INTEGER DEFAULT 0,
+    biggest_win INTEGER DEFAULT 0,
+    biggest_loss INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, guild_id, game)
+  );
+
   -- Sessions de jeux persistées (blackjack, etc.)
   -- Survivent aux redémarrages Railway
   CREATE TABLE IF NOT EXISTS game_sessions (
@@ -1671,6 +1708,118 @@ const helpers = {
       }
     });
     tx();
+  },
+
+  // ── Crypto : marché + portefeuille ──
+  seedCryptoMarket() {
+    const seeds = [
+      { symbol: 'BTC', name: 'Bitcoin',    emoji: '₿',  price: 65000, volatility: 0.02 },
+      { symbol: 'ETH', name: 'Ethereum',   emoji: '♦️', price: 3500,  volatility: 0.025 },
+      { symbol: 'SOL', name: 'Solana',     emoji: '☀️', price: 150,   volatility: 0.04 },
+      { symbol: 'DOGE', name: 'Dogecoin',  emoji: '🐕', price: 0.15,  volatility: 0.06 },
+      { symbol: 'NEX', name: 'NexusCoin',  emoji: '💎', price: 42,    volatility: 0.08 },
+      { symbol: 'PEPE', name: 'Pepe',      emoji: '🐸', price: 0.00001, volatility: 0.12 },
+    ];
+    for (const s of seeds) {
+      try {
+        db.prepare(`INSERT OR IGNORE INTO crypto_market (symbol, name, emoji, price, prev_price, volatility)
+                    VALUES (?, ?, ?, ?, ?, ?)`)
+          .run(s.symbol, s.name, s.emoji, s.price, s.price, s.volatility);
+      } catch {}
+    }
+  },
+
+  getCryptoMarket() {
+    return db.prepare('SELECT * FROM crypto_market ORDER BY price DESC').all();
+  },
+
+  getCryptoPrice(symbol) {
+    return db.prepare('SELECT * FROM crypto_market WHERE symbol = ?').get(symbol.toUpperCase());
+  },
+
+  // Simulation de fluctuation — appelée par un worker cron
+  tickCryptoPrices() {
+    const rows = helpers.getCryptoMarket();
+    const tx = db.transaction(() => {
+      for (const r of rows) {
+        const drift = (Math.random() - 0.5) * 2 * (r.volatility || 0.02);
+        const newPrice = Math.max(0.0000001, r.price * (1 + drift));
+        db.prepare(`UPDATE crypto_market SET prev_price = price, price = ?, updated_at = strftime('%s','now') WHERE symbol = ?`)
+          .run(newPrice, r.symbol);
+      }
+    });
+    tx();
+  },
+
+  getWallet(userId, guildId) {
+    return db.prepare('SELECT * FROM crypto_wallet WHERE user_id = ? AND guild_id = ? AND amount > 0').all(userId, guildId);
+  },
+
+  getWalletItem(userId, guildId, symbol) {
+    return db.prepare('SELECT * FROM crypto_wallet WHERE user_id = ? AND guild_id = ? AND crypto = ?').get(userId, guildId, symbol);
+  },
+
+  buyCrypto(userId, guildId, symbol, amountCoins) {
+    const market = helpers.getCryptoPrice(symbol);
+    if (!market) throw new Error('Crypto introuvable');
+    const user = helpers.getUser(userId, guildId);
+    if (user.balance < amountCoins) throw new Error('Solde insuffisant');
+    const qty = amountCoins / market.price;
+    const existing = helpers.getWalletItem(userId, guildId, symbol.toUpperCase());
+    if (existing) {
+      const totalQty = existing.amount + qty;
+      const avgBuy = ((existing.avg_buy * existing.amount) + (market.price * qty)) / totalQty;
+      db.prepare(`UPDATE crypto_wallet SET amount = ?, avg_buy = ?, updated_at = strftime('%s','now')
+                  WHERE user_id = ? AND guild_id = ? AND crypto = ?`)
+        .run(totalQty, avgBuy, userId, guildId, symbol.toUpperCase());
+    } else {
+      db.prepare(`INSERT INTO crypto_wallet (user_id, guild_id, crypto, amount, avg_buy) VALUES (?, ?, ?, ?, ?)`)
+        .run(userId, guildId, symbol.toUpperCase(), qty, market.price);
+    }
+    helpers.removeCoins(userId, guildId, amountCoins);
+    return { qty, price: market.price, symbol: market.symbol };
+  },
+
+  sellCrypto(userId, guildId, symbol, quantity) {
+    const market = helpers.getCryptoPrice(symbol);
+    if (!market) throw new Error('Crypto introuvable');
+    const item = helpers.getWalletItem(userId, guildId, symbol.toUpperCase());
+    if (!item || item.amount < quantity) throw new Error('Quantité insuffisante');
+    const coins = Math.floor(quantity * market.price);
+    const newQty = item.amount - quantity;
+    if (newQty < 0.0000001) {
+      db.prepare('DELETE FROM crypto_wallet WHERE user_id = ? AND guild_id = ? AND crypto = ?').run(userId, guildId, symbol.toUpperCase());
+    } else {
+      db.prepare(`UPDATE crypto_wallet SET amount = ?, updated_at = strftime('%s','now') WHERE user_id = ? AND guild_id = ? AND crypto = ?`)
+        .run(newQty, userId, guildId, symbol.toUpperCase());
+    }
+    helpers.addCoins(userId, guildId, coins);
+    return { coins, price: market.price, qtySold: quantity };
+  },
+
+  // ── Stats jeux ──
+  addGameStat(userId, guildId, game, { won, bet, payout }) {
+    helpers.ensureGameStatRow(userId, guildId, game);
+    const w = won ? 1 : 0, l = won ? 0 : 1;
+    const net = (payout || 0) - (bet || 0);
+    db.prepare(`
+      UPDATE game_stats SET
+        played = played + 1,
+        won = won + ?, lost = lost + ?,
+        total_bet = total_bet + ?,
+        total_won = total_won + ?,
+        biggest_win = CASE WHEN ? > biggest_win THEN ? ELSE biggest_win END,
+        biggest_loss = CASE WHEN ? > biggest_loss THEN ? ELSE biggest_loss END
+      WHERE user_id = ? AND guild_id = ? AND game = ?
+    `).run(w, l, bet || 0, payout || 0, net > 0 ? net : 0, net > 0 ? net : 0, net < 0 ? -net : 0, net < 0 ? -net : 0, userId, guildId, game);
+  },
+
+  ensureGameStatRow(userId, guildId, game) {
+    db.prepare(`INSERT OR IGNORE INTO game_stats (user_id, guild_id, game) VALUES (?, ?, ?)`).run(userId, guildId, game);
+  },
+
+  getGameStats(userId, guildId) {
+    return db.prepare('SELECT * FROM game_stats WHERE user_id = ? AND guild_id = ?').all(userId, guildId);
   },
 
   // ── Sessions de jeu persistées (survivent aux redémarrages) ──

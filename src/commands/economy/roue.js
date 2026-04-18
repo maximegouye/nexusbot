@@ -54,22 +54,31 @@ module.exports = {
     db.removeCoins(interaction.user.id, interaction.guildId, mise);
 
     const color = cfg.color || '#9B59B6';
-    await interaction.reply({
-      embeds: [new EmbedBuilder().setColor(color)
-        .setTitle('🎡 La roue tourne…')
+    // Animation : on simule la roue qui tourne en mettant à jour plusieurs fois
+    const WHEEL_EMOJIS = CASES.map(c => c.emoji);
+    const buildSpinEmbed = (frame) => {
+      const fakePick = WHEEL_EMOJIS[frame % WHEEL_EMOJIS.length];
+      const dots = '.'.repeat((frame % 4) + 1);
+      return new EmbedBuilder().setColor(color)
+        .setTitle(`🎡 La roue tourne${dots}`)
         .setDescription([
           '```',
-          '   💀  🪙  ⚖️',
-          '  💫         💰',
-          '   ⭐   ?   💎',
-          '      🏆      ',
+          `        ⬆️        `,
+          `   💀  🪙  ⚖️    `,
+          `  💫   ${fakePick}   💰  `,
+          `   ⭐       💎    `,
+          `      🏆         `,
           '```',
           `**${interaction.user.username}** mise **${mise.toLocaleString('fr-FR')}${symbol}**…`,
-        ].join('\n'))
-      ],
-    });
+          `\n🎯 La bille tourne…`,
+        ].join('\n'));
+    };
 
-    await new Promise(r => setTimeout(r, 2000));
+    await interaction.reply({ embeds: [buildSpinEmbed(0)] });
+    for (let i = 1; i <= 6; i++) {
+      await new Promise(r => setTimeout(r, 450));
+      await interaction.editReply({ embeds: [buildSpinEmbed(i)] }).catch(() => {});
+    }
 
     const pick = POOL[Math.floor(Math.random() * POOL.length)];
     const gain = Math.floor(mise * pick.mult);

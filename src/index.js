@@ -119,6 +119,18 @@ client.once('clientReady', async () => {
     startScheduledWorker(client);
   } catch (e) { console.error('[ScheduledWorker] Erreur init:', e.message); }
 
+  // ── Crypto : seed du marché + ticker toutes les 5 min ───
+  try {
+    const dbMod = require('./database/db');
+    if (dbMod.seedCryptoMarket) {
+      dbMod.seedCryptoMarket();
+      console.log('[Crypto] Marché initialisé');
+      setInterval(() => {
+        try { dbMod.tickCryptoPrices(); } catch (e) { console.error('[Crypto tick]', e.message); }
+      }, 5 * 60_000);
+    }
+  } catch (e) { console.error('[Crypto] Erreur init:', e.message); }
+
   // ── Enregistrer les commandes ──────────────────────────
   const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
