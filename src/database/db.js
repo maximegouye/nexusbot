@@ -1609,6 +1609,138 @@ const helpers = {
   },
   deleteScheduledMessage(guildId, id) { return db.prepare('DELETE FROM scheduled_messages WHERE guild_id = ? AND id = ?').run(guildId, id).changes; },
 
+  // ── Éditeur BDD universel (pour /cfg-set) ──
+  // Liste toutes les tables du serveur (à filtrer par guild_id quand pertinent)
+  listAllTables() {
+    return db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(r => r.name);
+  },
+
+  listTableColumns(tableName) {
+    // Sécurité : n'accepte que [A-Za-z0-9_]
+    if (!/^[A-Za-z0-9_]+$/.test(tableName)) throw new Error('Nom de table invalide');
+    return db.prepare(`PRAGMA table_info(${tableName})`).all().map(c => ({ name: c.name, type: c.type, notnull: c.notnull, pk: c.pk }));
+  },
+
+  /**
+   * Modifie une valeur arbitraire.
+   *
+   * Formats de chemin supportés :
+   *   "guild_config.prefix"                        → UPDATE guild_config SET prefix=? WHERE guild_id=?
+   *   "guild_kv.foo"                               → kvSet('foo', value)
+   *   "users.balance.<user_id>"                   → UPDATE users SET balance=? WHERE user_id=? AND guild_id=?
+   *   "custom_commands.response.<trigger>"        → UPDATE custom_commands SET response=? WHERE trigger=? AND guild_id=?
+   *   "autoresponder.response.<id>"               → UPDATE autoresponder SET response=? WHERE id=? AND guild_id=?
+   *
+   * Le second segment est la colonne. Le troisième (optionnel) est l'identifiant
+   * (user_id pour users, trigger pour custom_commands, id pour les autres).
+   */
+  setArbitrary(guildId, path, rawValue) {
+    if (!path) throw new Error('Chemin vide');
+    const parts = path.split('.');
+    if (parts.length < 2) throw new Error('Format invalide. Utilise `table.colonne[.id]`');
+    const [table, column, ...rest] = parts;
+    const extra = rest.join('.');
+
+    // Typer la valeur
+    let value = rawValue;
+    if (value === 'NULL' || value === 'null' || value === '') value = null;
+    else if (/^-?\d+$/.test(value)) value = parseInt(value, 10);
+    else if (/^-?\d*\.\d+$/.test(value)) value = parseFloat(value);
+    else if (value === 'true')  value = 1;
+    else if (value === 'false') value = 0;
+
+    // Cas spécial : guild_kv (toujours 2 segments, 2e = clé)
+    if (table === 'guild_kv') {
+      helpers.kvSet(guildId, column, rawValue === 'NULL' ? null : rawValue);
+      return { ok: true, where: `guild_kv.${column}`, value: rawValue };
+    }
+
+    // Valider la table et la colonne
+    if (!/^[A-Za-z0-9_]+$/.test(table) || !/^[A-Za-z0-9_]+$/.test(column)) {
+      throw new Error('Identifiants invalides');
+    }
+    const tables = helpers.listAllTables();
+    if (!tables.includes(table)) throw new Error(`Table inconnue: ${table}`);
+    const cols = helpers.listTableColumns(table).map(c => c.name);
+    if (!cols.includes(column)) throw new Error(`Colonne ${column} inconnue dans ${table}`);
+
+    // Détermine la clause WHERE selon la table
+    let sql, params;
+    if (table === 'guild_config') {
+      helpers.getConfig(guildId);
+      sql = `UPDATE guild_config SET ${column} = ? WHERE guild_id = ?`;
+      params = [value, guildId];
+    } else if (table === 'users') {
+      if (!extra) throw new Error('Pour users, précise aussi user_id : `users.balance.<user_id>`');
+      helpers.getUser(extra, guildId);
+      sql = `UPDATE users SET ${column} = ? WHERE user_id = ? AND guild_id = ?`;
+      params = [value, extra, guildId];
+    } else if (table === 'custom_commands' || table === 'autoresponder') {
+      if (!extra) throw new Error(`Précise le trigger/id pour ${table} : \`${table}.${column}.<trigger_ou_id>\``);
+      const keyCol = table === 'custom_commands' ? 'trigger' : (/^\d+$/.test(extra) ? 'id' : 'trigger');
+      sql = `UPDATE ${table} SET ${column} = ? WHERE ${keyCol} = ? AND guild_id = ?`;
+      params = [value, extra, guildId];
+    } else if (cols.includes('guild_id')) {
+      // Par défaut : on match via guild_id et l'id `extra` si fourni sur colonne id
+      if (extra && cols.includes('id')) {
+        sql = `UPDATE ${table} SET ${column} = ? WHERE id = ? AND guild_id = ?`;
+        params = [value, extra, guildId];
+      } else {
+        sql = `UPDATE ${table} SET ${column} = ? WHERE guild_id = ?`;
+        params = [value, guildId];
+      }
+    } else {
+      // Table sans guild_id — on accepte avec id explicite si fourni
+      if (!extra) throw new Error(`${table} n'a pas de guild_id. Précise un id : \`${table}.${column}.<id>\``);
+      sql = `UPDATE ${table} SET ${column} = ? WHERE id = ?`;
+      params = [value, extra];
+    }
+
+    const res = db.prepare(sql).run(...params);
+    return { ok: true, changes: res.changes, sql, value };
+  },
+
+  /**
+   * Lit une valeur arbitraire.
+   * Format : "table.column[.id]"
+   */
+  getArbitrary(guildId, path) {
+    if (!path) throw new Error('Chemin vide');
+    const parts = path.split('.');
+    if (parts.length < 2) throw new Error('Format invalide');
+    const [table, column, ...rest] = parts;
+    const extra = rest.join('.');
+
+    if (table === 'guild_kv') return helpers.kvGet(guildId, column, null);
+
+    if (!/^[A-Za-z0-9_]+$/.test(table) || !/^[A-Za-z0-9_]+$/.test(column)) throw new Error('Identifiants invalides');
+    const tables = helpers.listAllTables();
+    if (!tables.includes(table)) throw new Error(`Table inconnue: ${table}`);
+    const cols = helpers.listTableColumns(table).map(c => c.name);
+    if (!cols.includes(column)) throw new Error(`Colonne ${column} inconnue dans ${table}`);
+
+    if (table === 'guild_config') {
+      const row = helpers.getConfig(guildId);
+      return row[column];
+    }
+    if (table === 'users') {
+      if (!extra) throw new Error('Précise user_id pour users');
+      const row = helpers.getUser(extra, guildId);
+      return row[column];
+    }
+    if (cols.includes('guild_id')) {
+      if (extra && cols.includes('id')) {
+        const row = db.prepare(`SELECT ${column} FROM ${table} WHERE id = ? AND guild_id = ?`).get(extra, guildId);
+        return row ? row[column] : null;
+      }
+      const row = db.prepare(`SELECT ${column} FROM ${table} WHERE guild_id = ? LIMIT 1`).get(guildId);
+      return row ? row[column] : null;
+    }
+    if (!extra) throw new Error(`Précise un id pour ${table}`);
+    const row = db.prepare(`SELECT ${column} FROM ${table} WHERE id = ?`).get(extra);
+    return row ? row[column] : null;
+  },
+
   // ── Introspection guild_config : liste les colonnes + valeurs ──
   listGuildConfigColumns() {
     return db.prepare('PRAGMA table_info(guild_config)').all().map(c => ({ name: c.name, type: c.type, notnull: c.notnull }));
