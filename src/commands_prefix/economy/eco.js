@@ -520,9 +520,10 @@ const commands = [
   },
 
   {
-    name: 'dice',
-    aliases: ['de', 'roll', 'des', 'd6', 'dés'],
-    description: 'Lancer des dés contre le bot',
+    // DEPRECATED : remplacé par commands_prefix/games/des_prefix.js (version premium)
+    name: 'dice_old',
+    aliases: [],
+    description: '[OBSOLÈTE] Ancien lancer de dés (remplacé par &des)',
     usage: '[mise] [faces]',
     category: 'Casino',
     cooldown: 5,
@@ -555,9 +556,10 @@ const commands = [
   },
 
   {
-    name: 'blackjack',
-    aliases: ['bj', '21', 'vingteetun', 'blackj'],
-    description: 'Jouer au Blackjack avec des boutons interactifs (cooldown 5s)',
+    // DEPRECATED : remplacé par commands_prefix/games/blackjack_prefix.js (version premium avec état persisté)
+    name: 'blackjack_old',
+    aliases: [],
+    description: '[OBSOLÈTE] Ancien blackjack (remplacé par &blackjack / &bj)',
     usage: '[mise]',
     category: 'Casino',
     cooldown: 5,
@@ -813,9 +815,13 @@ const commands = [
   },
 
   {
-    name: 'roulette',
-    aliases: ['rou', 'roue', 'spin'],
-    description: 'Roulette — rouge/noir, pair/impair, numéro',
+    // DEPRECATED : l'ancienne roulette simpliste de eco.js a été remplacée par
+    // la version premium dans commands_prefix/games/roulette_prefix.js.
+    // Elle est renommée 'roulette_old' et sans alias pour ne pas entrer en
+    // conflit avec la nouvelle (&roulette / &roue gèrent leurs propres jeux).
+    name: 'roulette_old',
+    aliases: [],
+    description: '[OBSOLÈTE] Ancienne roulette (remplacée par /roulette et /roue)',
     usage: '[rouge/noir/pair/impair/0-36] [mise]',
     category: 'Casino',
     cooldown: 5,

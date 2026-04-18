@@ -7,6 +7,9 @@ const {
   ChannelType,
   StringSelectMenuBuilder,
   AttachmentBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require('discord.js');
 
 module.exports = {
@@ -36,6 +39,113 @@ async function _handleInteraction(interaction, client) {
       const _db = require('../database/db');
       const _handled = await handleConfigInteraction(interaction, _db, client);
       if (_handled !== false) return;
+    }
+
+    // ── BANQUE : boutons dep/ret/refresh + modals ───────────────────
+    if (interaction.isButton() && _cfgId.startsWith('banque_')) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const user = db2.getUser(interaction.user.id, interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const ef = require('../utils/embedFactory');
+        const parts = _cfgId.split(':');
+        const action = parts[0].replace('banque_', '');
+        const uid = parts[1];
+        if (interaction.user.id !== uid) {
+          return interaction.reply({ content: '❌ Cette banque n\'est pas la tienne.', ephemeral: true });
+        }
+
+        if (action === 'refresh') {
+          const { _build } = require('../commands/economy/banque');
+          return interaction.update({ embeds: [_build.buildEmbed(user, cfg)], components: _build.buildButtons(uid) });
+        }
+
+        if (action === 'depall') {
+          if (user.balance <= 0) return interaction.reply({ content: '❌ Tu n\'as rien à déposer.', ephemeral: true });
+          db2.db.prepare('UPDATE users SET bank = bank + balance, balance = 0 WHERE user_id = ? AND guild_id = ?').run(uid, interaction.guildId);
+          const user2 = db2.getUser(uid, interaction.guildId);
+          const { _build } = require('../commands/economy/banque');
+          return interaction.update({ embeds: [_build.buildEmbed(user2, cfg)], components: _build.buildButtons(uid) });
+        }
+
+        if (action === 'retall') {
+          if (user.bank <= 0) return interaction.reply({ content: '❌ Ta banque est vide.', ephemeral: true });
+          db2.db.prepare('UPDATE users SET balance = balance + bank, bank = 0 WHERE user_id = ? AND guild_id = ?').run(uid, interaction.guildId);
+          const user2 = db2.getUser(uid, interaction.guildId);
+          const { _build } = require('../commands/economy/banque');
+          return interaction.update({ embeds: [_build.buildEmbed(user2, cfg)], components: _build.buildButtons(uid) });
+        }
+
+        if (action === 'dep' || action === 'ret') {
+          const modal = new ModalBuilder()
+            .setCustomId(`banque_${action}_modal:${uid}`)
+            .setTitle(action === 'dep' ? '🟢 Déposer' : '🔴 Retirer');
+          const input = new TextInputBuilder()
+            .setCustomId('montant')
+            .setLabel(`Montant (ex: 500, 10000, all, 50%)`)
+            .setStyle(TextInputStyle.Short)
+            .setMaxLength(20)
+            .setRequired(true);
+          modal.addComponents(new ActionRowBuilder().addComponents(input));
+          return interaction.showModal(modal);
+        }
+
+        if (action === 'crypto') {
+          const wallet = db2.getWallet(uid, interaction.guildId);
+          const market = new Map((db2.getCryptoMarket() || []).map(c => [c.symbol, c]));
+          let total = 0;
+          const lines = wallet.map(w => {
+            const m = market.get(w.crypto); if (!m) return null;
+            const v = w.amount * m.price;
+            total += v;
+            return `${m.emoji} **${w.crypto}** — ${w.amount.toFixed(6)} = ${Math.floor(v).toLocaleString('fr-FR')}${symbol}`;
+          }).filter(Boolean).join('\n') || '*Aucune crypto.*';
+          return interaction.reply({
+            embeds: [ef.money(`💹 Crypto`, lines + `\n\n**Valeur totale : ${Math.floor(total).toLocaleString('fr-FR')}${symbol}**`)],
+            ephemeral: true,
+          });
+        }
+        return;
+      } catch (e) { console.error('[BANQUE handler]', e); }
+    }
+
+    // ── BANQUE MODAL : dépôt/retrait avec montant ───────────────────
+    if (interaction.isModalSubmit() && (_cfgId.startsWith('banque_dep_modal:') || _cfgId.startsWith('banque_ret_modal:'))) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const ef = require('../utils/embedFactory');
+        const isDep = _cfgId.startsWith('banque_dep_modal:');
+        const uid = _cfgId.split(':')[1];
+        if (interaction.user.id !== uid) return interaction.reply({ content: '❌ Pas ta banque.', ephemeral: true });
+
+        const raw = interaction.fields.getTextInputValue('montant').trim().toLowerCase();
+        const user = db2.getUser(uid, interaction.guildId);
+        const source = isDep ? user.balance : user.bank;
+
+        let amount;
+        const s = raw.replace(/[\s_,]/g, '');
+        if (s === 'all' || s === 'tout' || s === 'max') amount = source;
+        else if (s === 'half' || s === '50%' || s === 'moitié' || s === 'moitie') amount = Math.floor(source / 2);
+        else {
+          const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+          if (!m) return interaction.reply({ embeds: [ef.error('Montant invalide', 'Ex : 500 · 10000 · all · 50% · moitié')], ephemeral: true });
+          amount = m[2] === '%' ? Math.floor(source * Math.min(100, parseFloat(m[1])) / 100) : Math.floor(parseFloat(m[1]));
+        }
+        if (amount < 1 || amount > source) return interaction.reply({ embeds: [ef.error('Montant hors limites', `Disponible : **${source.toLocaleString('fr-FR')}${symbol}**`)], ephemeral: true });
+
+        if (isDep) {
+          db2.db.prepare('UPDATE users SET balance = balance - ?, bank = bank + ? WHERE user_id = ? AND guild_id = ?').run(amount, amount, uid, interaction.guildId);
+        } else {
+          db2.db.prepare('UPDATE users SET balance = balance + ?, bank = bank - ? WHERE user_id = ? AND guild_id = ?').run(amount, amount, uid, interaction.guildId);
+        }
+
+        const user2 = db2.getUser(uid, interaction.guildId);
+        const { _build } = require('../commands/economy/banque');
+        return interaction.update({ embeds: [_build.buildEmbed(user2, cfg)], components: _build.buildButtons(uid) });
+      } catch (e) { console.error('[BANQUE modal]', e); }
     }
 
     // ── CASINO MENU : boutons jeu + stats + top ────────────────────
