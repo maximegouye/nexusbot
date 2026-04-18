@@ -12,3 +12,7 @@ data/*.db-journal
 data_seed/
 *.zip
 *.tar.gz
+*.bak
+*.backup
+*.orig
+*.tmp
