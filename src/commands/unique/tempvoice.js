@@ -345,7 +345,7 @@ async function handleKick(interaction, guildId, userId) {
     // Get the member to kick
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
     if (!member || member.voice.channelId !== channel.id) {
-      return interaction.reply({ content: `❌ ${targetUser.username} is not in your voice channel.`, ephemeral: true });
+      return interaction.reply({ content: `❌ ${targetUser.username} n'est pas dans ton salon vocal.`, ephemeral: true });
     }
 
     // Disconnect the user

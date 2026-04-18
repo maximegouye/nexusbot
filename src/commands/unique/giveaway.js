@@ -18,7 +18,7 @@ module.exports = {
       .addIntegerOption(o => o.setName('gagnants').setDescription('Nombre de gagnants').setRequired(true).setMinValue(1).setMaxValue(20))
       .addStringOption(o => o.setName('prix').setDescription('Prix à gagner').setRequired(true).setMaxLength(200))
       .addIntegerOption(o => o.setName('min_niveau').setDescription('Niveau minimum requis').setRequired(false).setMinValue(1))
-      .addIntegerOption(o => o.setName('min_balance').setDescription('Balance minimum requise').setRequired(false).setMinValue(0))
+      .addIntegerOption(o => o.setName('min_balance').setDescription('Solde minimum requis pour participer').setRequired(false).setMinValue(0))
       .addRoleOption(o => o.setName('role_bonus').setDescription('Rôle avec entrées bonus').setRequired(false))
       .addStringOption(o => o.setName('salon').setDescription('Salon (défaut: salon actuel)').setRequired(false)))
     .addSubcommand(s => s.setName('end').setDescription('⏹️ Terminer un giveaway maintenant')
@@ -52,7 +52,7 @@ module.exports = {
 
       const requirements = [];
       if (minLevel > 0) requirements.push(`⭐ Niveau minimum : **${minLevel}**`);
-      if (minBal > 0) requirements.push(`💰 Balance minimum : **${minBal.toLocaleString('fr')}** ${cfg.currency_name || 'coins'}`);
+      if (minBal > 0) requirements.push(`💰 Solde minimum : **${minBal.toLocaleString('fr')}** ${cfg.currency_name || 'coins'}`);
       if (roleBonus) requirements.push(`🎟️ **${roleBonus.name}** → entrées bonus`);
 
       const embed = new EmbedBuilder()

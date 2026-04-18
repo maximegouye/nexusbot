@@ -33,7 +33,7 @@ module.exports = {
       .addStringOption(o => o.setName('style').setDescription('Style du bouton')
         .addChoices(
           { name: '🟦 Bleu (Primary)', value: 'Primary' },
-          { name: '🟩 Vert (Success)', value: 'Success' },
+          { name: '🟩 Vert', value: 'Success' },
           { name: '🟥 Rouge (Danger)', value: 'Danger' },
           { name: '⬜ Gris (Secondary)', value: 'Secondary' },
         )))

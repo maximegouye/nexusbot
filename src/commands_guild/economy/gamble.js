@@ -175,9 +175,9 @@ module.exports = {
       };
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('bj_hit').setLabel('Carte (Hit)').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('bj_stand').setLabel('Rester (Stand)').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('bj_double').setLabel('Double Down').setStyle(ButtonStyle.Danger).setDisabled(user.balance < mise),
+        new ButtonBuilder().setCustomId('bj_hit').setLabel('🎴 Tirer').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('bj_stand').setLabel('🛑 Rester').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('bj_double').setLabel('✖️ Doubler').setStyle(ButtonStyle.Danger).setDisabled(user.balance < mise),
       );
 
       const msg = await interaction.reply({ embeds: [buildBJEmbed(bjState)], components: [row], fetchReply: true });

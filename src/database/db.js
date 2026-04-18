@@ -740,9 +740,17 @@ const migrations = [
   { table: 'users', column: 'last_bump',           sql: "ALTER TABLE users ADD COLUMN last_bump INTEGER DEFAULT 0" },
   // Paramètres jeux
   { table: 'guild_config', column: 'game_enabled',  sql: "ALTER TABLE guild_config ADD COLUMN game_enabled INTEGER DEFAULT 1" },
-  { table: 'guild_config', column: 'game_min_bet',  sql: "ALTER TABLE guild_config ADD COLUMN game_min_bet INTEGER DEFAULT 10" },
-  { table: 'guild_config', column: 'game_max_bet',  sql: "ALTER TABLE guild_config ADD COLUMN game_max_bet INTEGER DEFAULT 50000" },
-  { table: 'guild_config', column: 'boost_channel', sql: "ALTER TABLE guild_config ADD COLUMN boost_channel TEXT" },
+  { table: 'guild_config', column: 'game_min_bet',       sql: "ALTER TABLE guild_config ADD COLUMN game_min_bet INTEGER DEFAULT 10" },
+  { table: 'guild_config', column: 'game_max_bet',       sql: "ALTER TABLE guild_config ADD COLUMN game_max_bet INTEGER DEFAULT 1000000" },
+  { table: 'guild_config', column: 'boost_channel',      sql: "ALTER TABLE guild_config ADD COLUMN boost_channel TEXT" },
+  // Paramètres supplémentaires v3
+  { table: 'guild_config', column: 'rob_enabled',        sql: "ALTER TABLE guild_config ADD COLUMN rob_enabled INTEGER DEFAULT 1" },
+  { table: 'guild_config', column: 'transfer_fee',       sql: "ALTER TABLE guild_config ADD COLUMN transfer_fee INTEGER DEFAULT 5" },
+  { table: 'guild_config', column: 'prefix',             sql: "ALTER TABLE guild_config ADD COLUMN prefix TEXT DEFAULT '&'" },
+  { table: 'guild_config', column: 'level_msg',          sql: "ALTER TABLE guild_config ADD COLUMN level_msg TEXT" },
+  { table: 'guild_config', column: 'ticket_welcome_msg', sql: "ALTER TABLE guild_config ADD COLUMN ticket_welcome_msg TEXT" },
+  { table: 'guild_config', column: 'starboard_channel',  sql: "ALTER TABLE guild_config ADD COLUMN starboard_channel TEXT" },
+  { table: 'guild_config', column: 'starboard_threshold',sql: "ALTER TABLE guild_config ADD COLUMN starboard_threshold INTEGER DEFAULT 3" },
 ];
 
 for (const m of migrations) {

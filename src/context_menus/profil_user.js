@@ -21,7 +21,7 @@ module.exports = {
       .addFields(
         { name: '📊 Niveau', value: `**${level}**`, inline: true },
         { name: '⭐ XP', value: `**${u.xp.toLocaleString('fr')}**`, inline: true },
-        { name: '💰 Balance', value: `**${(u.balance + u.bank).toLocaleString('fr')}** 🪙`, inline: true },
+        { name: '💰 Solde', value: `**${(u.balance + u.bank).toLocaleString('fr')}** 🪙`, inline: true },
         { name: '💬 Messages', value: `**${(u.message_count || 0).toLocaleString('fr')}**`, inline: true },
         { name: '🎙️ Vocal', value: `**${u.voice_minutes || 0}** min`, inline: true },
         { name: '👍 Réputation', value: `**${u.reputation || 0}**`, inline: true },
