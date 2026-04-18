@@ -53,6 +53,10 @@ function backBtn(userId) {
 // CATÉGORIES AVANCÉES (exportées pour être fusionnées dans CATEGORIES)
 // ═══════════════════════════════════════════════════════════════
 const ADVANCED_CATEGORIES = [
+  { value: 'eco_pro',        label: '⚡ Économie pro',            description: 'Work/crime/rob, streak, taxes, intérêts — sans limite' },
+  { value: 'xp_pro',         label: '📊 XP pro',                  description: 'Cooldown ms, vocal, weekend, stack roles' },
+  { value: 'mod_pro',        label: '🔨 Modération pro',          description: 'Auto-escalation warns, durée mute, expiration' },
+  { value: 'logs_pro',       label: '📋 Logs granulaires',        description: 'Toggles par event (delete/edit/join/voice...)' },
   { value: 'ai',             label: '🧠 Intelligence IA',         description: 'Provider, modèle, mention = question, rôle requis' },
   { value: 'kv',             label: '🗄️ Éditeur libre (KV)',    description: 'Ajoute/modifie N\'IMPORTE quelle clé de config' },
   { value: 'embeds',         label: '🎨 Éditeur d\'embed',       description: 'Créer et gérer des embeds personnalisés' },
@@ -1374,10 +1378,170 @@ function buildPollsPanel(cfg, guild, userId, db) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SECTION : ⚡ ÉCONOMIE PRO (sans aucune limite)
+// ═══════════════════════════════════════════════════════════════
+function buildEcoProPanel(cfg, guild, userId, db) {
+  const c = db.getConfig(guild.id);
+  const coin = c.currency_emoji || '🪙';
+  const fmt = v => (v == null ? '*(non défini)*' : v === -1 ? '∞' : v.toLocaleString('fr-FR'));
+
+  const embed = new EmbedBuilder()
+    .setColor(c.color || '#7B2FBE')
+    .setTitle('⚡ Économie — Mode expert')
+    .setDescription('Tous les montants acceptent jusqu\'à **10²⁰** (aucune limite pratique).\nUtilise -1 pour "illimité" quand c\'est pertinent.')
+    .addFields(
+      { name: '💼 Work',       value: `Gain : **${fmt(c.work_min)}–${fmt(c.work_max)}** ${coin}\nCooldown : **${fmt(c.work_cooldown)}**s`, inline: true },
+      { name: '🕵️ Crime',      value: `Gain : **${fmt(c.crime_min)}–${fmt(c.crime_max)}** ${coin}\nCooldown : **${fmt(c.crime_cooldown)}**s\nÉchec : **${fmt(c.crime_fail_rate)}%**`, inline: true },
+      { name: '🎭 Rob',         value: `Max : **${fmt(c.rob_max_percent)}%** de la victime\nPénalité échec : **${fmt(c.rob_fail_penalty)}** ${coin}\nCooldown : **${fmt(c.rob_cooldown)}**s`, inline: true },
+      { name: '📅 Daily',       value: `Montant : **${fmt(c.daily_amount)}** ${coin}\nCooldown : **${fmt(c.daily_cooldown)}**s\nStreak bonus : **${fmt(c.daily_streak_bonus)}%/j**`, inline: true },
+      { name: '🏦 Banque',      value: `Intérêt : **${fmt(c.bank_interest_rate)}%/j**\nDépôt max : **${fmt(c.bank_max_deposit)}** ${coin}`, inline: true },
+      { name: '🛒 Shop',        value: `Taxe : **${fmt(c.shop_tax_rate)}%**`, inline: true },
+    )
+    .setFooter({ text: 'NexusBot — Économie Pro' });
+
+  const rows = [
+    new ActionRowBuilder().addComponents(
+      backBtn(userId),
+      new ButtonBuilder().setCustomId(`adv:eco_pro:work:${userId}`).setLabel('💼 Work').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:eco_pro:crime:${userId}`).setLabel('🕵️ Crime').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:eco_pro:rob:${userId}`).setLabel('🎭 Rob').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:eco_pro:daily:${userId}`).setLabel('📅 Daily').setStyle(ButtonStyle.Primary),
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`adv:eco_pro:bank:${userId}`).setLabel('🏦 Banque').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:eco_pro:shop_tax:${userId}`).setLabel('🛒 Taxe shop').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:eco_pro:reset_all:${userId}`).setLabel('↩️ Tout réinitialiser').setStyle(ButtonStyle.Danger),
+    ),
+  ];
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 📊 XP PRO (sans aucune limite)
+// ═══════════════════════════════════════════════════════════════
+function buildXpProPanel(cfg, guild, userId, db) {
+  const c = db.getConfig(guild.id);
+  const embed = new EmbedBuilder()
+    .setColor(c.color || '#7B2FBE')
+    .setTitle('📊 XP — Mode expert')
+    .setDescription('Tous les réglages XP sans limite. Cooldown en millisecondes.')
+    .addFields(
+      { name: '📝 XP par message',    value: `**${c.xp_rate ?? 15}** XP`,                                   inline: true },
+      { name: '⏱️ Cooldown message',  value: `**${(c.xp_cooldown_ms ?? 60000).toLocaleString('fr-FR')}** ms`, inline: true },
+      { name: '🎙️ XP vocal',          value: onOff(c.xp_voice_enabled ?? 1),                               inline: true },
+      { name: '🎙️ XP/min vocal',      value: `**${c.xp_voice_rate ?? 5}** XP`,                             inline: true },
+      { name: '✖️ Multiplicateur',     value: `×**${c.xp_multiplier ?? 1}**`,                               inline: true },
+      { name: '🎉 Bonus weekend',     value: `×**${c.xp_weekend_bonus ?? 0}** (0 = off)`,                  inline: true },
+      { name: '📚 Stack rôles',        value: (c.xp_stack_roles ?? 1) ? '✅ Garder tous' : '❌ Garder max', inline: true },
+      { name: '🔔 Annonces >= niveau', value: `**${c.xp_min_level_msg ?? 1}**`,                            inline: true },
+    )
+    .setFooter({ text: 'NexusBot — XP Pro' });
+
+  const rows = [
+    new ActionRowBuilder().addComponents(
+      backBtn(userId),
+      new ButtonBuilder().setCustomId(`adv:xp_pro:rate:${userId}`).setLabel('📝 XP/message').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:xp_pro:cd_ms:${userId}`).setLabel('⏱️ Cooldown ms').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:xp_pro:voice:${userId}`).setLabel('🎙️ Vocal').setStyle(ButtonStyle.Primary),
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`adv:xp_pro:mult:${userId}`).setLabel('✖️ Multiplicateur').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:xp_pro:weekend:${userId}`).setLabel('🎉 Bonus weekend').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:xp_pro:min_msg:${userId}`).setLabel('🔔 Seuil annonce').setStyle(ButtonStyle.Primary),
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`adv:xp_pro:toggle_voice:${userId}`).setLabel((c.xp_voice_enabled ?? 1) ? '🎙️ Vocal OFF' : '🎙️ Vocal ON').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`adv:xp_pro:toggle_stack:${userId}`).setLabel((c.xp_stack_roles ?? 1) ? '📚 Stack OFF' : '📚 Stack ON').setStyle(ButtonStyle.Secondary),
+    ),
+  ];
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 🔨 MODÉRATION PRO (escalation auto)
+// ═══════════════════════════════════════════════════════════════
+function buildModProPanel(cfg, guild, userId, db) {
+  const c = db.getConfig(guild.id);
+  const embed = new EmbedBuilder()
+    .setColor(c.color || '#7B2FBE')
+    .setTitle('🔨 Modération — Mode expert')
+    .setDescription('Escalation automatique des warns. Durée de mute et expiration configurables.')
+    .addFields(
+      { name: '⚡ Escalation auto',      value: onOff(c.auto_escalate_warns ?? 0),                   inline: true },
+      { name: '🔇 → Mute à partir de',    value: `**${c.escalate_mute_count ?? 3}** warns`,           inline: true },
+      { name: '👢 → Kick à partir de',    value: `**${c.escalate_kick_count ?? 5}** warns`,           inline: true },
+      { name: '🔨 → Ban à partir de',     value: `**${c.escalate_ban_count ?? 10}** warns`,           inline: true },
+      { name: '⏳ Durée mute par défaut', value: `**${(c.default_mute_duration ?? 3600).toLocaleString('fr-FR')}**s`, inline: true },
+      { name: '📅 Expiration des warns',  value: `**${c.warn_expire_days ?? 30}** jours (0 = jamais)`, inline: true },
+    )
+    .setFooter({ text: 'NexusBot — Modération Pro' });
+
+  const rows = [
+    new ActionRowBuilder().addComponents(
+      backBtn(userId),
+      new ButtonBuilder().setCustomId(`adv:mod_pro:toggle_escalate:${userId}`).setLabel((c.auto_escalate_warns ?? 0) ? '⏸️ Désact. escalation' : '▶️ Act. escalation').setStyle((c.auto_escalate_warns ?? 0) ? ButtonStyle.Secondary : ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`adv:mod_pro:set_seuils:${userId}`).setLabel('📏 Seuils warns').setStyle(ButtonStyle.Primary),
+    ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`adv:mod_pro:set_mute:${userId}`).setLabel('⏳ Durée mute').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`adv:mod_pro:set_expire:${userId}`).setLabel('📅 Expiration warns').setStyle(ButtonStyle.Primary),
+    ),
+  ];
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 📋 LOGS GRANULAIRES
+// ═══════════════════════════════════════════════════════════════
+const LOG_EVENTS = [
+  { key: 'log_message_delete',  label: '🗑️ Suppression de messages' },
+  { key: 'log_message_edit',    label: '✏️ Édition de messages' },
+  { key: 'log_member_join',     label: '📥 Arrivée de membres' },
+  { key: 'log_member_leave',    label: '📤 Départ de membres' },
+  { key: 'log_role_changes',    label: '🎭 Changements de rôles' },
+  { key: 'log_voice',           label: '🔊 Activité vocale' },
+  { key: 'log_channel_changes', label: '📂 Salons créés/modifiés/supprimés' },
+  { key: 'log_bans',            label: '🔨 Bans & unbans' },
+];
+
+function buildLogsProPanel(cfg, guild, userId, db) {
+  const c = db.getConfig(guild.id);
+  const lines = LOG_EVENTS.map(e => `${(c[e.key] ?? 1) ? '✅' : '❌'} ${e.label}`).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(c.color || '#7B2FBE')
+    .setTitle('📋 Logs granulaires')
+    .setDescription('Choisis précisément quels événements enregistrer dans le salon de logs.\n\n' + lines)
+    .setFooter({ text: 'NexusBot — Logs Pro' });
+
+  // 2 rows de toggles (4 par row)
+  const rows = [new ActionRowBuilder().addComponents(backBtn(userId))];
+  let current = new ActionRowBuilder();
+  for (let i = 0; i < LOG_EVENTS.length; i++) {
+    const e = LOG_EVENTS[i];
+    const on = !!(c[e.key] ?? 1);
+    current.addComponents(new ButtonBuilder()
+      .setCustomId(`adv:logs_pro:toggle:${userId}:${e.key}`)
+      .setLabel(e.label.replace(/^[^\w]+/, '').trim().slice(0, 20))
+      .setStyle(on ? ButtonStyle.Success : ButtonStyle.Secondary)
+    );
+    if (current.components.length === 4 || i === LOG_EVENTS.length - 1) {
+      rows.push(current);
+      current = new ActionRowBuilder();
+    }
+  }
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // DISPATCHER DES CATÉGORIES AVANCÉES
 // ═══════════════════════════════════════════════════════════════
 function buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client) {
   switch (category) {
+    case 'eco_pro':        return buildEcoProPanel(cfg, guild, userId, db);
+    case 'xp_pro':         return buildXpProPanel(cfg, guild, userId, db);
+    case 'mod_pro':        return buildModProPanel(cfg, guild, userId, db);
+    case 'logs_pro':       return buildLogsProPanel(cfg, guild, userId, db);
     case 'ai':             return buildAIPanel(cfg, guild, userId, db);
     case 'kv':             return buildKvPanel(cfg, guild, userId, db, 0, 'kv');
     case 'embeds':         return buildEmbedsPanel(cfg, guild, userId, db);
@@ -1530,7 +1694,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const modal = buildSimpleModal(`adv_modal:cmds_adv:create_text:${userId}`, '➕ Nouvelle commande (texte)', [
           { id: 'trigger',  label: 'Déclencheur (sans &)',          placeholder: 'bonjour',               style: TextInputStyle.Short,     maxLength: 30 },
           { id: 'response', label: 'Réponse (variables autorisées)', placeholder: 'Salut {user} !',        style: TextInputStyle.Paragraph, maxLength: 2000 },
-          { id: 'cooldown', label: 'Cooldown en secondes (0 = aucun)', placeholder: '0',                   style: TextInputStyle.Short,     required: false, maxLength: 5 },
+          { id: 'cooldown', label: 'Cooldown en secondes (0 = aucun)', placeholder: '0',                   style: TextInputStyle.Short,     required: false, maxLength: 20 },
         ]);
         return interaction.showModal(modal);
       }
@@ -1540,7 +1704,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
           { id: 'title',       label: 'Titre de l\'embed',     placeholder: '📜 Règles',     style: TextInputStyle.Short,     required: false, maxLength: 256 },
           { id: 'description', label: 'Description',           placeholder: 'Règle 1 : …',   style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
           { id: 'color',       label: 'Couleur HEX',           placeholder: '#7B2FBE',       style: TextInputStyle.Short,     required: false, maxLength: 7 },
-          { id: 'cooldown',    label: 'Cooldown (secondes, 0 = aucun)', placeholder: '0',    style: TextInputStyle.Short,     required: false, maxLength: 5 },
+          { id: 'cooldown',    label: 'Cooldown (secondes, 0 = aucun)', placeholder: '0',    style: TextInputStyle.Short,     required: false, maxLength: 20 },
         ]);
         return interaction.showModal(modal);
       }
@@ -1581,7 +1745,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (action === 'set_cd' && arg) {
         const c = db.getCustomCommand(interaction.guildId, arg);
         const modal = buildSimpleModal(`adv_modal:cmds_adv:save_cd:${userId}:${encodeURIComponent(arg)}`, '⏱️ Cooldown', [
-          { id: 'seconds', label: 'Cooldown en secondes (0 = aucun)', placeholder: '10', style: TextInputStyle.Short, value: String(c?.cooldown ?? 0), maxLength: 6 },
+          { id: 'seconds', label: 'Cooldown en secondes (0 = aucun)', placeholder: '10', style: TextInputStyle.Short, value: String(c?.cooldown ?? 0), maxLength: 20 },
         ]);
         return interaction.showModal(modal);
       }
@@ -1679,7 +1843,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (action === 'set_cd' && arg) {
         const cd = db.getCooldownOverride(interaction.guildId, arg);
         const modal = buildSimpleModal(`adv_modal:cmd_ctrl:save_cd:${userId}:${encodeURIComponent(arg)}`, `⏱️ Cooldown — ${arg}`, [
-          { id: 'seconds', label: 'Cooldown en secondes (0 = désactiver override)', value: String(cd ?? ''), placeholder: '10', style: TextInputStyle.Short, maxLength: 6 },
+          { id: 'seconds', label: 'Cooldown en secondes (0 = désactiver override)', value: String(cd ?? ''), placeholder: '10', style: TextInputStyle.Short, maxLength: 20 },
         ]);
         return interaction.showModal(modal);
       }
@@ -1687,6 +1851,135 @@ async function handleAdvancedInteraction(interaction, db, client) {
         db.removeCooldownOverride(interaction.guildId, arg);
         return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, userId, db, arg));
       }
+    }
+
+    // ── ⚡ ÉCONOMIE PRO ──────────────────────────────────────
+    if (section === 'eco_pro') {
+      const c = db.getConfig(interaction.guildId);
+      if (action === 'work') {
+        const modal = buildSimpleModal(`adv_modal:eco_pro:save_work:${userId}`, '💼 Work — gains & cooldown', [
+          { id: 'min',      label: 'Gain minimum',             value: String(c.work_min ?? 10),      style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'max',      label: 'Gain maximum',             value: String(c.work_max ?? 100),     style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'cooldown', label: 'Cooldown (secondes)',      value: String(c.work_cooldown ?? 3600), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'crime') {
+        const modal = buildSimpleModal(`adv_modal:eco_pro:save_crime:${userId}`, '🕵️ Crime — gains, cooldown, échec', [
+          { id: 'min',      label: 'Gain minimum',             value: String(c.crime_min ?? 50),      style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'max',      label: 'Gain maximum',             value: String(c.crime_max ?? 500),     style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'cooldown', label: 'Cooldown (secondes)',      value: String(c.crime_cooldown ?? 7200), style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'fail',     label: 'Taux d\'échec (%)',        value: String(c.crime_fail_rate ?? 40), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'rob') {
+        const modal = buildSimpleModal(`adv_modal:eco_pro:save_rob:${userId}`, '🎭 Rob — max, pénalité, cooldown', [
+          { id: 'max_pct',  label: 'Max % du solde victime',    value: String(c.rob_max_percent ?? 30), style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'penalty',  label: 'Pénalité si échec',         value: String(c.rob_fail_penalty ?? 100), style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'cooldown', label: 'Cooldown (secondes)',       value: String(c.rob_cooldown ?? 14400), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'daily') {
+        const modal = buildSimpleModal(`adv_modal:eco_pro:save_daily:${userId}`, '📅 Daily — montant, cooldown, streak', [
+          { id: 'amount',   label: 'Montant daily',             value: String(c.daily_amount ?? 25),   style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'cooldown', label: 'Cooldown (secondes)',        value: String(c.daily_cooldown ?? 86400), style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'streak',   label: 'Bonus streak (% par jour)',  value: String(c.daily_streak_bonus ?? 10), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'bank') {
+        const modal = buildSimpleModal(`adv_modal:eco_pro:save_bank:${userId}`, '🏦 Banque — intérêt, max dépôt', [
+          { id: 'interest', label: 'Taux intérêt par jour (%)',  value: String(c.bank_interest_rate ?? 0), style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'max_dep',  label: 'Dépôt maximum (-1 = illimité)', value: String(c.bank_max_deposit ?? -1), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'shop_tax') {
+        const modal = buildSimpleModal(`adv_modal:eco_pro:save_tax:${userId}`, '🛒 Taxe boutique (%)', [
+          { id: 'rate', label: 'Pourcentage prélevé à chaque achat', value: String(c.shop_tax_rate ?? 0), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'reset_all') {
+        const defaults = {
+          work_min:10, work_max:100, work_cooldown:3600,
+          crime_min:50, crime_max:500, crime_cooldown:7200, crime_fail_rate:40,
+          rob_max_percent:30, rob_fail_penalty:100, rob_cooldown:14400,
+          daily_amount:25, daily_cooldown:86400, daily_streak_bonus:10,
+          bank_interest_rate:0, bank_max_deposit:-1, shop_tax_rate:0,
+        };
+        for (const [k, v] of Object.entries(defaults)) db.setConfig(interaction.guildId, k, v);
+        return interaction.update(buildEcoProPanel(cfg, interaction.guild, userId, db));
+      }
+    }
+
+    // ── 📊 XP PRO ────────────────────────────────────────────
+    if (section === 'xp_pro') {
+      const c = db.getConfig(interaction.guildId);
+      const simple = (act, key, label, value) => ({ id: 'value', label, value: String(value), style: TextInputStyle.Short, maxLength: 20 });
+      const map = {
+        rate:    { title: '📝 XP par message',           key: 'xp_rate',         value: c.xp_rate ?? 15 },
+        cd_ms:   { title: '⏱️ Cooldown XP (millisecondes)', key: 'xp_cooldown_ms', value: c.xp_cooldown_ms ?? 60000 },
+        voice:   { title: '🎙️ XP par minute vocal',       key: 'xp_voice_rate',  value: c.xp_voice_rate ?? 5 },
+        mult:    { title: '✖️ Multiplicateur XP global',   key: 'xp_multiplier',  value: c.xp_multiplier ?? 1 },
+        weekend: { title: '🎉 Bonus XP weekend (0=off)',    key: 'xp_weekend_bonus', value: c.xp_weekend_bonus ?? 0 },
+        min_msg: { title: '🔔 Seuil d\'annonce de niveau',  key: 'xp_min_level_msg', value: c.xp_min_level_msg ?? 1 },
+      };
+      if (map[action]) {
+        const m = map[action];
+        const modal = buildSimpleModal(`adv_modal:xp_pro:save:${userId}:${m.key}`, m.title, [
+          { id: 'value', label: 'Nouvelle valeur (numérique, sans limite)', value: String(m.value), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'toggle_voice') {
+        db.setConfig(interaction.guildId, 'xp_voice_enabled', (c.xp_voice_enabled ?? 1) ? 0 : 1);
+        return interaction.update(buildXpProPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'toggle_stack') {
+        db.setConfig(interaction.guildId, 'xp_stack_roles', (c.xp_stack_roles ?? 1) ? 0 : 1);
+        return interaction.update(buildXpProPanel(cfg, interaction.guild, userId, db));
+      }
+    }
+
+    // ── 🔨 MODÉRATION PRO ────────────────────────────────────
+    if (section === 'mod_pro') {
+      const c = db.getConfig(interaction.guildId);
+      if (action === 'toggle_escalate') {
+        db.setConfig(interaction.guildId, 'auto_escalate_warns', (c.auto_escalate_warns ?? 0) ? 0 : 1);
+        return interaction.update(buildModProPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'set_seuils') {
+        const modal = buildSimpleModal(`adv_modal:mod_pro:save_seuils:${userId}`, '📏 Seuils d\'escalation', [
+          { id: 'mute', label: 'Mute à partir de X warns',  value: String(c.escalate_mute_count ?? 3),  style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'kick', label: 'Kick à partir de X warns',  value: String(c.escalate_kick_count ?? 5),  style: TextInputStyle.Short, maxLength: 20 },
+          { id: 'ban',  label: 'Ban à partir de X warns',   value: String(c.escalate_ban_count ?? 10),  style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_mute') {
+        const modal = buildSimpleModal(`adv_modal:mod_pro:save_mute:${userId}`, '⏳ Durée de mute par défaut (secondes)', [
+          { id: 'value', label: 'Durée en secondes (sans limite)', value: String(c.default_mute_duration ?? 3600), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_expire') {
+        const modal = buildSimpleModal(`adv_modal:mod_pro:save_expire:${userId}`, '📅 Expiration des warns (jours)', [
+          { id: 'value', label: 'Jours avant expiration (0 = jamais)', value: String(c.warn_expire_days ?? 30), style: TextInputStyle.Short, maxLength: 20 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 📋 LOGS PRO ──────────────────────────────────────────
+    if (section === 'logs_pro' && action === 'toggle') {
+      const key = arg; // ex: log_message_delete
+      if (!LOG_EVENTS.find(e => e.key === key)) return interaction.reply({ content: '❌ Event inconnu.', ephemeral: true });
+      const c = db.getConfig(interaction.guildId);
+      db.setConfig(interaction.guildId, key, (c[key] ?? 1) ? 0 : 1);
+      return interaction.update(buildLogsProPanel(cfg, interaction.guild, userId, db));
     }
 
     // ── 🛡️ ANTIRAID ──────────────────────────────────────────
@@ -1937,7 +2230,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (action === 'set_cd' && arg) {
         const a = db.getAutoresponder(interaction.guildId, arg);
         const modal = buildSimpleModal(`adv_modal:autoresp:save_cd:${userId}:${encodeURIComponent(arg)}`, '⏱️ Cooldown', [
-          { id: 'seconds', label: 'Cooldown (secondes, 0 = aucun)', value: String(a?.cooldown ?? 0), style: TextInputStyle.Short, maxLength: 6 },
+          { id: 'seconds', label: 'Cooldown (secondes, 0 = aucun)', value: String(a?.cooldown ?? 0), style: TextInputStyle.Short, maxLength: 20 },
         ]);
         return interaction.showModal(modal);
       }
@@ -2137,7 +2430,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
           { id: 'trigger',  label: 'Mot-clé déclencheur',                   placeholder: 'bonjour',     style: TextInputStyle.Short,     maxLength: 100 },
           { id: 'response', label: 'Réponse (variables autorisées)',        placeholder: 'Salut {user}!', style: TextInputStyle.Paragraph, maxLength: 2000 },
           { id: 'exact',    label: 'Match exact ? (oui/non)',                placeholder: 'non',         style: TextInputStyle.Short,     required: false, maxLength: 3 },
-          { id: 'cooldown', label: 'Cooldown secondes (0 = aucun)',          placeholder: '0',           style: TextInputStyle.Short,     required: false, maxLength: 6 },
+          { id: 'cooldown', label: 'Cooldown secondes (0 = aucun)',          placeholder: '0',           style: TextInputStyle.Short,     required: false, maxLength: 20 },
         ]);
         return interaction.showModal(modal);
       }
@@ -2569,6 +2862,76 @@ async function handleAdvancedInteraction(interaction, db, client) {
           db.setCooldownOverride(interaction.guildId, extra, cd);
         }
         return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, extra));
+      }
+    }
+
+    // ── ⚡ ÉCONOMIE PRO — saves ───────────────────────────────
+    if (sect === 'eco_pro') {
+      const toInt = (s, d = 0) => {
+        const n = parseInt(String(s).replace(/[\s,_]/g, ''), 10);
+        return isNaN(n) ? d : n;
+      };
+      if (act === 'save_work') {
+        db.setConfig(interaction.guildId, 'work_min',      toInt(field('min'),      10));
+        db.setConfig(interaction.guildId, 'work_max',      toInt(field('max'),      100));
+        db.setConfig(interaction.guildId, 'work_cooldown', toInt(field('cooldown'), 3600));
+        return interaction.update(buildEcoProPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_crime') {
+        db.setConfig(interaction.guildId, 'crime_min',       toInt(field('min'),      50));
+        db.setConfig(interaction.guildId, 'crime_max',       toInt(field('max'),      500));
+        db.setConfig(interaction.guildId, 'crime_cooldown',  toInt(field('cooldown'), 7200));
+        db.setConfig(interaction.guildId, 'crime_fail_rate', toInt(field('fail'),     40));
+        return interaction.update(buildEcoProPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_rob') {
+        db.setConfig(interaction.guildId, 'rob_max_percent',  toInt(field('max_pct'),  30));
+        db.setConfig(interaction.guildId, 'rob_fail_penalty', toInt(field('penalty'),  100));
+        db.setConfig(interaction.guildId, 'rob_cooldown',     toInt(field('cooldown'), 14400));
+        return interaction.update(buildEcoProPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_daily') {
+        db.setConfig(interaction.guildId, 'daily_amount',       toInt(field('amount'),   25));
+        db.setConfig(interaction.guildId, 'daily_cooldown',     toInt(field('cooldown'), 86400));
+        db.setConfig(interaction.guildId, 'daily_streak_bonus', toInt(field('streak'),   10));
+        return interaction.update(buildEcoProPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_bank') {
+        db.setConfig(interaction.guildId, 'bank_interest_rate', toInt(field('interest'), 0));
+        db.setConfig(interaction.guildId, 'bank_max_deposit',   toInt(field('max_dep'),  -1));
+        return interaction.update(buildEcoProPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_tax') {
+        db.setConfig(interaction.guildId, 'shop_tax_rate', toInt(field('rate'), 0));
+        return interaction.update(buildEcoProPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── 📊 XP PRO — save (extra = nom de la colonne) ─────────
+    if (sect === 'xp_pro' && act === 'save' && extra) {
+      const raw = field('value').trim().replace(/[\s,_]/g, '');
+      const n = /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : NaN;
+      if (isNaN(n)) return interaction.reply({ content: '❌ Valeur numérique requise.', ephemeral: true });
+      db.setConfig(interaction.guildId, extra, extra === 'xp_multiplier' ? n : Math.trunc(n));
+      return interaction.update(buildXpProPanel(cfg, interaction.guild, uid, db));
+    }
+
+    // ── 🔨 MODÉRATION PRO — saves ────────────────────────────
+    if (sect === 'mod_pro') {
+      const toInt = (s, d = 0) => { const n = parseInt(String(s).replace(/[\s,_]/g, ''), 10); return isNaN(n) ? d : n; };
+      if (act === 'save_seuils') {
+        db.setConfig(interaction.guildId, 'escalate_mute_count', toInt(field('mute'), 3));
+        db.setConfig(interaction.guildId, 'escalate_kick_count', toInt(field('kick'), 5));
+        db.setConfig(interaction.guildId, 'escalate_ban_count',  toInt(field('ban'),  10));
+        return interaction.update(buildModProPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_mute') {
+        db.setConfig(interaction.guildId, 'default_mute_duration', toInt(field('value'), 3600));
+        return interaction.update(buildModProPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_expire') {
+        db.setConfig(interaction.guildId, 'warn_expire_days', toInt(field('value'), 30));
+        return interaction.update(buildModProPanel(cfg, interaction.guild, uid, db));
       }
     }
 
