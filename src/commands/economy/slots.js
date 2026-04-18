@@ -44,9 +44,26 @@ module.exports = {
     const spinEmbed = sl.buildSpinEmbed({ userName: interaction.user.username, mise: miseNum, symbol, color });
     await interaction.reply({ embeds: [spinEmbed] });
 
-    await new Promise(r => setTimeout(r, 1500));
-
+    // Pré-calcul du résultat final pour animer la révélation
     const { reels, gain, label } = sl.runRound(miseNum);
+
+    // Animation : 4 frames brouillées puis verrouillage rouleau par rouleau
+    for (let i = 0; i < 3; i++) {
+      await new Promise(r => setTimeout(r, 350));
+      await interaction.editReply({
+        embeds: [sl.buildAnimFrame({ userName: interaction.user.username, mise: miseNum, symbol, color, locked: 0, finalReels: reels })],
+      }).catch(() => {});
+    }
+    await new Promise(r => setTimeout(r, 400));
+    await interaction.editReply({
+      embeds: [sl.buildAnimFrame({ userName: interaction.user.username, mise: miseNum, symbol, color, locked: 1, finalReels: reels })],
+    }).catch(() => {});
+    await new Promise(r => setTimeout(r, 500));
+    await interaction.editReply({
+      embeds: [sl.buildAnimFrame({ userName: interaction.user.username, mise: miseNum, symbol, color, locked: 2, finalReels: reels })],
+    }).catch(() => {});
+    await new Promise(r => setTimeout(r, 650));
+
     if (gain > 0) db.addCoins(interaction.user.id, interaction.guildId, gain);
     const balanceAfter = Math.max(0, user.balance - miseNum + gain);
 

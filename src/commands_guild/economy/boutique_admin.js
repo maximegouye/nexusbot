@@ -14,7 +14,7 @@ module.exports = {
 
     .addSubcommand(s => s.setName('ajouter').setDescription('➕ Ajouter un article à la boutique')
       .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
-      .addIntegerOption(o => o.setName('prix').setDescription('Prix en coins').setRequired(true).setMinValue(1).setMaxValue(10_000_000))
+      .addStringOption(o => o.setName('prix').setDescription('Prix en coins (aucune limite)').setRequired(true).setMaxLength(30))
       .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200))
       .addStringOption(o => o.setName('emoji').setDescription('Emoji de l\'article (ex: 🎩)').setMaxLength(10))
       .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat'))

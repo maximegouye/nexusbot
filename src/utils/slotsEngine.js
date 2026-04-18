@@ -74,6 +74,32 @@ function buildSpinEmbed({ userName, mise, symbol, color }) {
     .setFooter({ text: '🎰 Les rouleaux tournent…' });
 }
 
+/**
+ * Frame intermédiaire : les rouleaux se fixent progressivement
+ * `locked` = nombre de rouleaux déjà fixés (0, 1, 2)
+ * Les rouleaux non-fixés affichent un symbole aléatoire (brouillé)
+ */
+function buildAnimFrame({ userName, mise, symbol, color, locked, finalReels }) {
+  const reels = [0, 1, 2].map(i => {
+    if (i < locked) return finalReels[i].emoji;
+    return spinSymbol().emoji;
+  });
+  const bars = [0, 1, 2].map(i => i < locked ? '🔒' : '🌀');
+  return new EmbedBuilder()
+    .setColor(color || '#9B59B6')
+    .setTitle('🎰 En cours…')
+    .setDescription([
+      '```',
+      '╔═══════════════════╗',
+      `║   ${reels[0]}   ${reels[1]}   ${reels[2]}    ║`,
+      '╚═══════════════════╝',
+      '```',
+      `${bars.join(' ')}   (${locked}/3 verrouillés)`,
+      `Mise de **${userName}** : **${mise.toLocaleString('fr-FR')}${symbol}**`,
+    ].join('\n'))
+    .setFooter({ text: '🎰 Les rouleaux s\'arrêtent un à un…' });
+}
+
 function buildResultEmbed({ userName, mise, gain, label, reels, balanceAfter, symbol, color }) {
   const won = gain > 0;
   const net = gain - mise;
@@ -110,4 +136,4 @@ function buildReplayButtons(mise) {
   );
 }
 
-module.exports = { SYMBOLS, runRound, buildSpinEmbed, buildResultEmbed, buildReplayButtons };
+module.exports = { SYMBOLS, runRound, buildSpinEmbed, buildAnimFrame, buildResultEmbed, buildReplayButtons };

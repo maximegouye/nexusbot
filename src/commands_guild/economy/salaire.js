@@ -29,7 +29,7 @@ module.exports = {
 
     .addSubcommand(s => s.setName('configurer').setDescription('⚙️ Définir le salaire d\'un rôle (admin)')
       .addRoleOption(o => o.setName('role').setDescription('Rôle concerné').setRequired(true))
-      .addIntegerOption(o => o.setName('montant').setDescription('Salaire à recevoir').setRequired(true).setMinValue(1).setMaxValue(1_000_000))
+      .addStringOption(o => o.setName('montant').setDescription('Salaire à recevoir (aucune limite)').setRequired(true).setMaxLength(30))
       .addStringOption(o => o.setName('intervalle').setDescription('Fréquence de paiement').setRequired(true)
         .addChoices(
           { name: '⏰ Toutes les heures', value: 'hourly' },

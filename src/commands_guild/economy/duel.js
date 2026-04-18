@@ -12,13 +12,28 @@ module.exports = {
     .setName('duel-argent')
     .setDescription('⚔️ Défie un membre en duel pour voler ses coins !')
     .addUserOption(o => o.setName('adversaire').setDescription('Ton adversaire').setRequired(true))
-    .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setRequired(true).setMinValue(50)),
+    .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)),
   cooldown: 10,
 
   async execute(interaction) {
     const opponent = interaction.options.getUser('adversaire');
-    const mise     = interaction.options.getInteger('mise');
+    const miseRaw  = interaction.options.get('mise')?.value;
     const cfg      = db.getConfig(interaction.guildId);
+    const _me      = db.getUser(interaction.user.id, interaction.guildId);
+    const parseBet = (raw, base) => {
+      const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
+      if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+      if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+      const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+      if (!m) return NaN;
+      const n = parseFloat(m[1]);
+      if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+      return Math.floor(n);
+    };
+    const mise = parseBet(miseRaw, _me.balance);
+    if (!Number.isFinite(mise) || mise < 50) {
+      return interaction.reply({ content: '❌ Mise invalide. Minimum **50**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+    }
     const emoji    = cfg.currency_emoji || '€';
     const name     = cfg.currency_name  || 'Euros';
 

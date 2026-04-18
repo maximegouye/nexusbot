@@ -25,7 +25,7 @@ module.exports = {
     .addSubcommand(s => s.setName('parier').setDescription('🏇 Parier sur un cheval')
       .addStringOption(o => o.setName('cheval').setDescription('Cheval sur lequel parier').setRequired(true)
         .addChoices(...HORSES.map(h => ({ name: `${h.emoji} ${h.name} (x${h.odds})`, value: h.name }))))
-      .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setRequired(true).setMinValue(10).setMaxValue(5000)))
+      .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
     .addSubcommand(s => s.setName('cotes').setDescription('📊 Voir les cotes actuelles')),
 
   async execute(interaction) {
@@ -45,9 +45,23 @@ module.exports = {
 
     if (sub === 'parier') {
       const chosenName = interaction.options.getString('cheval');
-      const mise = interaction.options.getInteger('mise');
-      const chosen = HORSES.find(h => h.name === chosenName);
       const u = db.getUser(userId, guildId);
+      const parseBet = (raw, base) => {
+        const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
+        if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+        if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+        const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+        if (!m) return NaN;
+        const n = parseFloat(m[1]);
+        if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+        return Math.floor(n);
+      };
+      const miseRaw = interaction.options.get('mise')?.value;
+      const mise = parseBet(miseRaw, u.balance);
+      if (!Number.isFinite(mise) || mise < 10) {
+        return interaction.reply({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+      }
+      const chosen = HORSES.find(h => h.name === chosenName);
 
       if (u.balance < mise) return interaction.reply({ content: `❌ Solde insuffisant.`, ephemeral: true });
 

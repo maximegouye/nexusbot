@@ -58,16 +58,17 @@ module.exports = {
     .setDescription('🎲 Collection de mini-jeux rapides')
     .addSubcommand(s => s.setName('plusmoins')
       .setDescription('🔢 Devinez le nombre secret (1–100)')
-      .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setMinValue(0).setMaxValue(500)))
+      .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setMaxLength(30)))
     .addSubcommand(s => s.setName('anagramme')
       .setDescription('🔤 Reconstituez le mot à partir de ses lettres mélangées')
-      .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setMinValue(0).setMaxValue(500)))
+      .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setMaxLength(30)))
     .addSubcommand(s => s.setName('reaction')
       .setDescription('⚡ Tapez l\'emoji le plus vite possible !')
-      .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setMinValue(0).setMaxValue(500)))
+      .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setMaxLength(30)))
     .addSubcommand(s => s.setName('maths')
       .setDescription('➕ Résoudre un calcul rapidement !')
-      .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setMinValue(0).setMaxValue(500))),
+      .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setMaxLength(30))),
+  // ↑ Toutes les mises sont maintenant des strings pour lever les limites
 
   cooldown: 5,
 
@@ -75,7 +76,21 @@ module.exports = {
     const sub     = interaction.options.getSubcommand();
     const userId  = interaction.user.id;
     const guildId = interaction.guildId;
-    const mise    = interaction.options.getInteger('mise') || 0;
+    const _me0    = db.getUser(userId, guildId);
+    const parseBet = (raw, base) => {
+      if (raw == null) return 0;
+      const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+      if (!s) return 0;
+      if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+      if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+      const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+      if (!m) return NaN;
+      const n = parseFloat(m[1]);
+      if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+      return Math.floor(n);
+    };
+    const miseRaw = interaction.options.get('mise')?.value;
+    const mise    = Number.isFinite(parseBet(miseRaw, _me0.balance)) ? parseBet(miseRaw, _me0.balance) : 0;
 
     if (activeGames.has(userId)) return interaction.reply({ content: '⚠️ Tu as déjà un jeu en cours !', ephemeral: true });
 

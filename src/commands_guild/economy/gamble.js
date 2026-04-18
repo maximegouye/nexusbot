@@ -60,9 +60,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('gamble')
     .setDescription('🎰 Joue à des jeux d\'argent')
-    .addSubcommand(s => s.setName('slots').setDescription('🎰 Machine à sous').addIntegerOption(o => o.setName('mise').setDescription('Mise').setRequired(true).setMinValue(10)))
-    .addSubcommand(s => s.setName('coinflip').setDescription('🪙 Pile ou face').addIntegerOption(o => o.setName('mise').setDescription('Mise').setRequired(true).setMinValue(10)).addStringOption(o => o.setName('choix').setDescription('pile ou face').setRequired(true).addChoices({ name: '🪙 Pile', value: 'pile' }, { name: '🎖️ Face', value: 'face' })))
-    .addSubcommand(s => s.setName('blackjack').setDescription('🃏 Joue au Blackjack').addIntegerOption(o => o.setName('mise').setDescription('Mise').setRequired(true).setMinValue(10))),
+    .addSubcommand(s => s.setName('slots').setDescription('🎰 Machine à sous').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%/nombre) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
+    .addSubcommand(s => s.setName('coinflip').setDescription('🪙 Pile ou face').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)).addStringOption(o => o.setName('choix').setDescription('pile ou face').setRequired(true).addChoices({ name: '🪙 Pile', value: 'pile' }, { name: '🎖️ Face', value: 'face' })))
+    .addSubcommand(s => s.setName('blackjack').setDescription('🃏 Joue au Blackjack').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30))),
   cooldown: 5,
 
   async execute(interaction) {
@@ -70,8 +70,23 @@ module.exports = {
     const cfg   = db.getConfig(interaction.guildId);
     const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Euros';
-    const mise  = interaction.options.getInteger('mise');
     const user  = db.getUser(interaction.user.id, interaction.guildId);
+    // parseBet accepte nombres, all, tout, max, moitié, 50%
+    const parseBet = (raw, base) => {
+      const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
+      if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+      if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+      const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+      if (!m) return NaN;
+      const n = parseFloat(m[1]);
+      if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+      return Math.floor(n);
+    };
+    const miseRaw = interaction.options.get('mise')?.value;
+    const mise = parseBet(miseRaw, user.balance);
+    if (!Number.isFinite(mise) || mise < 10) {
+      return interaction.reply({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+    }
 
     if (user.balance < mise) {
       return interaction.reply({ content: `❌ Mise insuffisante ! Tu n'as que **${user.balance.toLocaleString('fr')} ${name}**.`, ephemeral: true });

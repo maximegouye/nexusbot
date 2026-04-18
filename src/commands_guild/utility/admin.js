@@ -55,21 +55,21 @@ module.exports = {
       .setDescription('💰 Gérer la monnaie des joueurs')
       .addSubcommand(s => s
         .setName('donner')
-        .setDescription('💰 Donner des coins à un joueur')
+        .setDescription('💰 Donner des coins à un joueur (aucune limite)')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Montant à donner').setRequired(true).setMinValue(1).setMaxValue(10_000_000))
+        .addStringOption(o => o.setName('montant').setDescription('Montant (nombre, all, 50%) — ILLIMITÉ').setRequired(true).setMaxLength(30))
         .addStringOption(o => o.setName('raison').setDescription('Raison (optionnel)').setMaxLength(200)))
       .addSubcommand(s => s
         .setName('retirer')
-        .setDescription('💸 Retirer des coins à un joueur')
+        .setDescription('💸 Retirer des coins à un joueur (aucune limite)')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Montant à retirer').setRequired(true).setMinValue(1).setMaxValue(10_000_000))
+        .addStringOption(o => o.setName('montant').setDescription('Montant (nombre, all, 50%) — ILLIMITÉ').setRequired(true).setMaxLength(30))
         .addStringOption(o => o.setName('raison').setDescription('Raison (optionnel)').setMaxLength(200)))
       .addSubcommand(s => s
         .setName('definir')
-        .setDescription('🔧 Définir exactement le solde d\'un joueur')
+        .setDescription('🔧 Définir exactement le solde d\'un joueur (aucune limite)')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Nouveau solde').setRequired(true).setMinValue(0).setMaxValue(100_000_000)))
+        .addStringOption(o => o.setName('montant').setDescription('Nouveau solde (nombre, underscores OK) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
       .addSubcommand(s => s
         .setName('reset')
         .setDescription('🗑️ Remettre à zéro le solde d\'un joueur')
@@ -82,7 +82,7 @@ module.exports = {
         .setName('banque_definir')
         .setDescription('🏦 Définir le solde bancaire d\'un joueur')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Nouveau solde bancaire').setRequired(true).setMinValue(0)))
+        .addStringOption(o => o.setName('montant').setDescription('Nouveau solde bancaire (nombre) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
       .addSubcommand(s => s
         .setName('voir')
         .setDescription('👁️ Voir le solde complet d\'un joueur')
@@ -99,22 +99,22 @@ module.exports = {
         .setName('donner')
         .setDescription('⭐ Donner de l\'XP à un joueur')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('XP à donner').setRequired(true).setMinValue(1).setMaxValue(1_000_000)))
+        .addStringOption(o => o.setName('montant').setDescription('XP à donner (ILLIMITÉ)').setRequired(true).setMaxLength(30)))
       .addSubcommand(s => s
         .setName('retirer')
         .setDescription('💔 Retirer de l\'XP à un joueur')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('XP à retirer').setRequired(true).setMinValue(1).setMaxValue(1_000_000)))
+        .addStringOption(o => o.setName('montant').setDescription('XP à retirer (ILLIMITÉ)').setRequired(true).setMaxLength(30)))
       .addSubcommand(s => s
         .setName('definir')
         .setDescription('🔧 Définir l\'XP exact d\'un joueur')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Nouvel XP').setRequired(true).setMinValue(0).setMaxValue(100_000_000)))
+        .addStringOption(o => o.setName('montant').setDescription('Nouvel XP (ILLIMITÉ)').setRequired(true).setMaxLength(30)))
       .addSubcommand(s => s
         .setName('niveau_definir')
         .setDescription('🏆 Définir le niveau d\'un joueur directement')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('niveau').setDescription('Nouveau niveau').setRequired(true).setMinValue(1).setMaxValue(500)))
+        .addStringOption(o => o.setName('niveau').setDescription('Nouveau niveau (ILLIMITÉ)').setRequired(true).setMaxLength(10)))
       .addSubcommand(s => s
         .setName('reset')
         .setDescription('🗑️ Remettre à zéro l\'XP et le niveau d\'un joueur')
@@ -153,7 +153,7 @@ module.exports = {
         .setName('reputation_definir')
         .setDescription('⭐ Définir la réputation d\'un joueur')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Nouvelle réputation').setRequired(true).setMinValue(-1000).setMaxValue(10000)))
+        .addStringOption(o => o.setName('montant').setDescription('Nouvelle réputation (nombre, peut être négatif)').setRequired(true).setMaxLength(30)))
     )
 
     // ╔══════════════════════════════╗
@@ -231,7 +231,27 @@ module.exports = {
     // ════════════════════════════════════════
     if (group === 'monnaie') {
       const target = interaction.options.getUser('joueur');
-      const amount = interaction.options.getInteger('montant');
+      // Parse le montant en String pour accepter tout (nombre, underscores, raccourcis, BigInt-compatible)
+      const parseAmount = (raw, base) => {
+        if (raw == null) return 0;
+        const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+        if (!s) return 0;
+        if (s === 'all' || s === 'tout' || s === 'max') return Number(base || 0);
+        if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+        const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+        if (!m) return NaN;
+        const n = parseFloat(m[1]);
+        if (!isFinite(n) || n < 0) return NaN;
+        if (m[2] === '%') return Math.floor(Number(base || 0) * Math.min(100, n) / 100);
+        return Math.floor(n);
+      };
+      const rawMontant = interaction.options.getString('montant') ?? interaction.options.get('montant')?.value;
+      const targetUser = db.getUser(target.id, guildId);
+      const base = sub === 'retirer' ? targetUser.balance : (sub === 'banque_definir' ? targetUser.bank : targetUser.balance);
+      const amount = parseAmount(rawMontant, base);
+      if (!isFinite(amount) || amount < 0 || isNaN(amount)) {
+        return interaction.reply({ content: '❌ Montant invalide. Accepte : nombres (500, 1_000_000_000), `all`, `50%`, `moitié`.', ephemeral: true });
+      }
       const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
 
       if (sub === 'donner') {
@@ -325,7 +345,19 @@ module.exports = {
     // ════════════════════════════════════════
     if (group === 'xp') {
       const target = interaction.options.getUser('joueur');
-      const amount = interaction.options.getInteger('montant');
+      const parseXP = (raw) => {
+        if (raw == null) return NaN;
+        const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+        if (!s) return NaN;
+        const m = s.match(/^(-?\d+(?:\.\d+)?)$/);
+        if (!m) return NaN;
+        return Math.floor(parseFloat(m[1]));
+      };
+      const rawAmount = interaction.options.getString('montant') ?? interaction.options.get('montant')?.value;
+      const amount = parseXP(rawAmount);
+      if (sub !== 'reset' && sub !== 'reset_serveur' && sub !== 'niveau_definir' && (!Number.isFinite(amount) || isNaN(amount))) {
+        return interaction.reply({ content: '❌ Montant XP invalide. Accepte : nombres (500, 1_000_000_000).', ephemeral: true });
+      }
 
       if (sub === 'donner') {
         db.db.prepare('UPDATE users SET xp = xp + ? WHERE user_id=? AND guild_id=?').run(amount, target.id, guildId);
@@ -361,7 +393,8 @@ module.exports = {
       }
 
       if (sub === 'niveau_definir') {
-        const niveau = interaction.options.getInteger('niveau');
+        const rawNiveau = interaction.options.getString('niveau') ?? interaction.options.get('niveau')?.value;
+        const niveau = Math.max(1, Math.floor(Number(String(rawNiveau).replace(/[\s_,]/g, ''))) || 1);
         // Calcule l'XP minimum pour ce niveau
         const xpNeeded = db.getXPForLevel ? db.getXPForLevel(niveau) : Math.floor(100 * Math.pow(1.35, niveau - 1));
         db.db.prepare('UPDATE users SET level=?, xp=? WHERE user_id=? AND guild_id=?').run(niveau, xpNeeded, target.id, guildId);
@@ -463,7 +496,8 @@ module.exports = {
       }
 
       if (sub === 'reputation_definir') {
-        const montant = interaction.options.getInteger('montant');
+        const rawRep = interaction.options.getString('montant') ?? interaction.options.get('montant')?.value;
+        const montant = Math.floor(Number(String(rawRep).replace(/[\s_,]/g, ''))) || 0;
         db.db.prepare('UPDATE users SET reputation=? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
         return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
           .setDescription(`⭐ La réputation de <@${target.id}> a été définie à **${montant}**.`)

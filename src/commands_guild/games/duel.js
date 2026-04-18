@@ -24,7 +24,7 @@ module.exports = {
     .setDescription('⚔️ Défis et combats entre membres')
     .addSubcommand(s => s.setName('defier').setDescription('⚔️ Défier un membre en duel')
       .addUserOption(o => o.setName('adversaire').setDescription('Qui défier ?').setRequired(true))
-      .addIntegerOption(o => o.setName('mise').setDescription('Coins à miser (optionnel)').setMinValue(0).setMaxValue(10000)))
+      .addStringOption(o => o.setName('mise').setDescription('Coins à miser (optionnel, all/tout/50%) — ILLIMITÉ').setMaxLength(30)))
     .addSubcommand(s => s.setName('stats').setDescription('📊 Voir tes statistiques de duel')
       .addUserOption(o => o.setName('membre').setDescription('Voir les stats d\'un autre')))
     .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des duellistes')),
@@ -38,7 +38,24 @@ module.exports = {
 
     if (sub === 'defier') {
       const opponent = interaction.options.getUser('adversaire');
-      const mise = interaction.options.getInteger('mise') || 0;
+      const _me = db.getUser(userId, guildId);
+      const parseBet = (raw, base) => {
+        if (raw == null) return 0;
+        const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+        if (!s) return 0;
+        if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+        if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+        const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+        if (!m) return NaN;
+        const n = parseFloat(m[1]);
+        if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+        return Math.floor(n);
+      };
+      const miseRaw = interaction.options.get('mise')?.value;
+      const mise = parseBet(miseRaw, _me.balance);
+      if (!Number.isFinite(mise) || mise < 0) {
+        return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
+      }
 
       if (opponent.bot) return interaction.reply({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
       if (opponent.id === userId) return interaction.reply({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });

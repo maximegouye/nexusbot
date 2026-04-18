@@ -7,13 +7,28 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('coinflip')
     .setDescription('🪙 Lancer un défi pile ou face contre un autre membre')
-    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser (aucune limite)').setRequired(true).setMinValue(1))
+    .addStringOption(o => o.setName('mise').setDescription('Montant à miser (all, tout, 50% acceptés) — ILLIMITÉ').setRequired(true).setMaxLength(30))
     .addStringOption(o => o.setName('choix').setDescription('Ton choix').setRequired(true)
       .addChoices({ name: '🦅 Face', value: 'face' }, { name: '🐍 Pile', value: 'pile' }))
     .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier (vide = open)').setRequired(false)),
 
   async execute(interaction) {
-    const mise       = interaction.options.getInteger('mise');
+    const miseRaw = interaction.options.get('mise')?.value;
+    const challenger0 = db.getUser(interaction.user.id, interaction.guildId);
+    const parseBet = (raw, base) => {
+      const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+      if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+      if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+      const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+      if (!m) return NaN;
+      const n = parseFloat(m[1]);
+      if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+      return Math.floor(n);
+    };
+    const mise = parseBet(miseRaw, challenger0.balance);
+    if (!Number.isFinite(mise) || mise < 1) {
+      return interaction.reply({ content: '❌ Mise invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+    }
     const adversaire = interaction.options.getUser('adversaire');
     const choix      = interaction.options.getString('choix');
     const userId     = interaction.user.id;
@@ -21,7 +36,7 @@ module.exports = {
     if (adversaire?.id === userId) return interaction.reply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
 
     const challenger = db.getUser(userId, interaction.guildId);
-    if ((challenger.balance || 0) < mise) return interaction.reply({ content: `❌ Solde insuffisant (${challenger.balance ?? 0} 🪙).`, ephemeral: true });
+    if ((challenger.balance || 0) < mise) return interaction.reply({ content: `❌ Solde insuffisant (${(challenger.balance ?? 0).toLocaleString('fr-FR')} 🪙 / besoin: ${mise.toLocaleString('fr-FR')} 🪙).`, ephemeral: true });
 
     // Réserver la mise
     db.db.prepare('UPDATE users SET balance=balance-? WHERE user_id=? AND guild_id=?').run(mise, userId, interaction.guildId);

@@ -58,12 +58,11 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('poker')
     .setDescription('🃏 Video Poker (Jacks or Better) — mise et tire tes cartes !')
-    .addIntegerOption(o => o
+    .addStringOption(o => o
       .setName('mise')
-      .setDescription('Montant à miser (€)')
+      .setDescription('Montant à miser (aucune limite — tape all / tout / max / 50%)')
       .setRequired(true)
-      .setMinValue(10)
-      .setMaxValue(5000)
+      .setMaxLength(30)
     ),
   cooldown: 5,
 
@@ -71,7 +70,27 @@ module.exports = {
     const cfg    = db.getConfig(interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
     const user   = db.getUser(interaction.user.id, interaction.guildId);
-    const mise   = interaction.options.getInteger('mise');
+    const miseRaw = interaction.options.getString('mise');
+
+    // Parse mise : accepte chiffres bruts, all/tout/max/moitié/50%/etc.
+    const parseAmount = (raw, base) => {
+      const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+      if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+      if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+      const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+      if (!m) return NaN;
+      const n = parseFloat(m[1]);
+      if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+      return Math.floor(n);
+    };
+
+    const mise = parseAmount(miseRaw, user.balance);
+    if (!Number.isFinite(mise) || mise < 10) {
+      return interaction.reply({
+        content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `tout`, `max`, `50%`, `moitié`.',
+        ephemeral: true
+      });
+    }
 
     if (user.balance < mise) {
       return interaction.reply({

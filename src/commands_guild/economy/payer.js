@@ -10,13 +10,27 @@ module.exports = {
     .setName('payer')
     .setDescription('💸 Envoyer des euros à un autre membre')
     .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true))
-    .addIntegerOption(o => o.setName('montant').setDescription('Montant à envoyer (€)').setRequired(true).setMinValue(1))
+    .addStringOption(o => o.setName('montant').setDescription('Montant à envoyer (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30))
     .addStringOption(o => o.setName('note').setDescription('Note/raison (optionnel)').setRequired(false).setMaxLength(100)),
   cooldown: 5,
 
   async execute(interaction) {
     const target  = interaction.options.getUser('membre');
-    const amount  = interaction.options.getInteger('montant');
+    const senderPre = db.getUser(interaction.user.id, interaction.guildId);
+    const parseBet = (raw, base) => {
+      const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
+      if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+      if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+      const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+      if (!m) return NaN;
+      const n = parseFloat(m[1]);
+      if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+      return Math.floor(n);
+    };
+    const amount = parseBet(interaction.options.get('montant')?.value, senderPre.balance);
+    if (!Number.isFinite(amount) || amount < 1) {
+      return interaction.reply({ content: '❌ Montant invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+    }
     const note    = interaction.options.getString('note') || '';
     const cfg     = db.getConfig(interaction.guildId);
     const symbol  = cfg.currency_emoji || '€';
