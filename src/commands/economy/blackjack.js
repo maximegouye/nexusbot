@@ -4,14 +4,14 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('blackjack')
-    .setDescription('Play a game of blackjack with a bet')
+    .setDescription('Jouer au Blackjack avec une mise')
     .addIntegerOption(option =>
       option
         .setName('mise')
-        .setDescription('Amount to bet (10-10000 coins)')
+        .setDescription('Montant à parier (10-50000 pièces)')
         .setRequired(true)
         .setMinValue(10)
-        .setMaxValue(10000)
+        .setMaxValue(50000)
     ),
 
   cooldown: 3,
@@ -20,21 +20,29 @@ module.exports = {
     const userId = interaction.user.id;
     const guildId = interaction.guildId;
     const bet = interaction.options.getInteger('mise');
+    const cfg = db.getConfig(guildId);
+    const coin = cfg?.currency_emoji || '💰';
 
-    // Check user balance
+    // Vérifier le compte utilisateur
     const userRow = db.db.prepare('SELECT balance FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
     if (!userRow) {
-      return interaction.reply({ content: '❌ You need to have an account first. Use `/balance` to create one.', ephemeral: true });
+      return interaction.reply({
+        content: '❌ Vous devez créer un compte d\'abord. Utilisez `/balance` pour créer un compte.',
+        ephemeral: true
+      });
     }
 
     if (userRow.balance < bet) {
-      return interaction.reply({ content: `❌ You don't have enough coins. Your balance: ${userRow.balance} coins`, ephemeral: true });
+      return interaction.reply({
+        content: `❌ Vous n'avez pas assez de pièces. Votre solde: ${userRow.balance} ${coin}`,
+        ephemeral: true
+      });
     }
 
-    // Deduct bet from balance immediately
+    // Déduire la mise immédiatement
     db.db.prepare('UPDATE users SET balance = balance - ? WHERE user_id = ? AND guild_id = ?').run(bet, userId, guildId);
 
-    // Initialize game state
+    // Initialiser l'état du jeu
     const game = {
       playerHand: [],
       dealerHand: [],
@@ -44,7 +52,7 @@ module.exports = {
       playerStand: false,
     };
 
-    // Deal initial cards
+    // Distribuer les cartes initiales
     game.playerHand.push(drawCard());
     game.playerHand.push(drawCard());
     game.dealerHand.push(drawCard());
@@ -52,35 +60,35 @@ module.exports = {
 
     updateHandValues(game);
 
-    // Check for blackjack
+    // Vérifier le blackjack naturel
     if (game.playerValue === 21 && game.playerHand.length === 2) {
-      const winnings = Math.floor(bet * 2.5); // 1.5x on original bet = 2.5x total (bet + winnings)
+      const winnings = Math.floor(bet * 2.5);
       db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(winnings, userId, guildId);
 
-      const embed = createGameEmbed(game, `🎉 BLACKJACK! You win **${winnings}** coins!`, true);
+      const embed = createGameEmbed(game, `🎉 BLACKJACK ! Vous gagnez **${winnings}** ${coin} !`, true);
       return interaction.reply({ embeds: [embed] });
     }
 
-    // Create buttons
+    // Créer les boutons
     const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('hit')
-        .setLabel('Hit')
+        .setLabel('🎴 Tirer')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId('stand')
-        .setLabel('Stand')
+        .setLabel('🛑 Rester')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId('double')
-        .setLabel('Double Down')
+        .setLabel('✖️ Doubler')
         .setStyle(ButtonStyle.Danger)
     );
 
-    const embed = createGameEmbed(game, 'Your turn!', false);
+    const embed = createGameEmbed(game, 'À votre tour !', false);
     const response = await interaction.reply({ embeds: [embed], components: [buttons], fetchReply: true });
 
-    // Collector for button interactions
+    // Collecteur pour les interactions de bouton
     const collector = response.createMessageComponentCollector({
       componentType: ComponentType.Button,
       time: 60000,
@@ -91,7 +99,7 @@ module.exports = {
 
     collector.on('collect', async (i) => {
       if (game.gameOver) {
-        await i.reply({ content: 'Game is already over!', ephemeral: true });
+        await i.reply({ content: '❌ Le jeu est déjà terminé !', ephemeral: true });
         return;
       }
 
@@ -101,17 +109,16 @@ module.exports = {
 
         if (game.playerValue > 21) {
           game.gameOver = true;
-          db.db.prepare('UPDATE users SET balance = balance - ? WHERE user_id = ? AND guild_id = ?').run(0, userId, guildId); // Already deducted
-          const embed = createGameEmbed(game, `💥 BUST! You went over 21. You lose **${bet}** coins.`, true);
+          const embed = createGameEmbed(game, `💥 BUST ! Vous avez dépassé 21. Vous perdez **${bet}** ${coin}.`, true);
           await i.update({ embeds: [embed], components: [] });
           collector.stop();
         } else {
-          const embed = createGameEmbed(game, 'Your turn!', false);
+          const embed = createGameEmbed(game, 'À votre tour !', false);
           await i.update({ embeds: [embed] });
         }
       } else if (i.customId === 'stand') {
         game.playerStand = true;
-        // Dealer's turn
+        // Tour du croupier
         while (game.dealerValue < 17) {
           game.dealerHand.push(drawCard());
           updateHandValues(game);
@@ -124,24 +131,24 @@ module.exports = {
         if (result === 'player-win') {
           winnings = bet * 2;
           db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(winnings, userId, guildId);
-          const embed = createGameEmbed(game, `🎉 You win! +**${winnings}** coins!`, true, true);
+          const embed = createGameEmbed(game, `🎉 Vous gagnez ! +**${winnings}** ${coin} !`, true, true);
           await i.update({ embeds: [embed], components: [] });
         } else if (result === 'dealer-win') {
-          const embed = createGameEmbed(game, `💥 Dealer wins. You lose **${bet}** coins.`, true, true);
+          const embed = createGameEmbed(game, `💥 Le croupier gagne. Vous perdez **${bet}** ${coin}.`, true, true);
           await i.update({ embeds: [embed], components: [] });
         } else {
-          winnings = bet; // Return original bet on push
+          winnings = bet;
           db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(winnings, userId, guildId);
-          const embed = createGameEmbed(game, `🤝 Push! Your bet of **${bet}** coins is returned.`, true, true);
+          const embed = createGameEmbed(game, `🤝 Égalité ! Votre mise de **${bet}** ${coin} est restituée.`, true, true);
           await i.update({ embeds: [embed], components: [] });
         }
 
         collector.stop();
       } else if (i.customId === 'double') {
-        // Check if user has enough coins for double down (original bet already deducted)
+        // Vérifier si l'utilisateur a assez de pièces pour doubler
         const updatedUser = db.db.prepare('SELECT balance FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
         if (updatedUser.balance < bet) {
-          await i.reply({ content: `❌ You don't have enough coins to double down!`, ephemeral: true });
+          await i.reply({ content: `❌ Vous n'avez pas assez de pièces pour doubler !`, ephemeral: true });
           return;
         }
 
@@ -154,12 +161,12 @@ module.exports = {
         if (game.playerValue > 21) {
           game.gameOver = true;
           const doubleLoss = bet * 2;
-          const embed = createGameEmbed(game, `💥 BUST on double down! You lose **${doubleLoss}** coins.`, true);
+          const embed = createGameEmbed(game, `💥 BUST au doublement ! Vous perdez **${doubleLoss}** ${coin}.`, true);
           await i.update({ embeds: [embed], components: [] });
           collector.stop();
         } else {
           game.playerStand = true;
-          // Dealer's turn
+          // Tour du croupier
           while (game.dealerValue < 17) {
             game.dealerHand.push(drawCard());
             updateHandValues(game);
@@ -173,15 +180,15 @@ module.exports = {
           if (result === 'player-win') {
             winnings = totalBet * 2;
             db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(winnings, userId, guildId);
-            const embed = createGameEmbed(game, `🎉 Double down wins! +**${winnings}** coins!`, true, true);
+            const embed = createGameEmbed(game, `🎉 Doublement gagnant ! +**${winnings}** ${coin} !`, true, true);
             await i.update({ embeds: [embed], components: [] });
           } else if (result === 'dealer-win') {
-            const embed = createGameEmbed(game, `💥 Dealer wins. You lose **${totalBet}** coins.`, true, true);
+            const embed = createGameEmbed(game, `💥 Le croupier gagne. Vous perdez **${totalBet}** ${coin}.`, true, true);
             await i.update({ embeds: [embed], components: [] });
           } else {
             winnings = totalBet;
             db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(winnings, userId, guildId);
-            const embed = createGameEmbed(game, `🤝 Push on double down! Your **${totalBet}** coins are returned.`, true, true);
+            const embed = createGameEmbed(game, `🤝 Égalité au doublement ! Votre mise de **${totalBet}** ${coin} est restituée.`, true, true);
             await i.update({ embeds: [embed], components: [] });
           }
 
@@ -198,7 +205,7 @@ module.exports = {
   },
 };
 
-// Helper functions
+// Fonctions d'aide
 function drawCard() {
   const suits = ['♠', '♥', '♦', '♣'];
   const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -259,22 +266,22 @@ function createGameEmbed(game, status, gameEnd = false, showDealer = false) {
     .setTitle('♠♥ Blackjack ♦♣')
     .addFields(
       {
-        name: "🎰 Dealer's Hand",
-        value: `${gameEnd || game.playerStand ? formatHand(game.dealerHand) : formatHand(game.dealerHand, true)}\n**Total:** ${gameEnd || game.playerStand ? game.dealerValue : '?'}`,
+        name: "🎰 Main du Croupier",
+        value: `${gameEnd || game.playerStand ? formatHand(game.dealerHand) : formatHand(game.dealerHand, true)}\n**Valeur :** ${gameEnd || game.playerStand ? game.dealerValue : '?'}`,
         inline: false,
       },
       {
-        name: "🎯 Your Hand",
-        value: `${formatHand(game.playerHand)}\n**Total:** ${game.playerValue}`,
+        name: "🎯 Votre Main",
+        value: `${formatHand(game.playerHand)}\n**Valeur :** ${game.playerValue}`,
         inline: false,
       },
       {
-        name: '📊 Status',
+        name: '📊 Statut',
         value: status,
         inline: false,
       }
     )
-    .setFooter({ text: 'Good luck!' })
+    .setFooter({ text: 'Bonne chance !' })
     .setTimestamp();
 
   return embed;

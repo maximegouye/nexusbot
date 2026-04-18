@@ -54,7 +54,7 @@ const commands = [
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet = parseInt(args[0]);
-      if (!bet || bet < 50) return message.reply('❌ Mise minimum 50 coins. Usage: `!roulette 500`');
+      if (!bet || bet < 50) return message.reply('❌ Mise minimum 50 pièces. Usage: `&roulette 500`');
       const u = db.getUser(message.author.id, message.guild.id);
       if ((u.balance||0) < bet) return message.reply('❌ Solde insuffisant.');
 
@@ -166,10 +166,10 @@ const commands = [
       if ((u.balance||0) < bet) return message.reply('❌ Solde insuffisant.');
       const current = Math.floor(Math.random()*98)+1;
       await message.channel.send({ embeds:[new EmbedBuilder().setColor('#3498DB').setTitle('📈 Plus Haut ou Plus Bas ?').setDescription(`Le nombre actuel est **${current}** (sur 100)\nTapez \`haut\` ou \`bas\` !`).addFields({name:'💰 Mise',value:`${bet} ${coin}`,inline:true})] });
-      const filter = m=>m.author.id===message.author.id&&['haut','bas','h','b','high','low'].includes(m.content.toLowerCase());
+      const filter = m=>m.author.id===message.author.id&&['haut','bas','h','b'].includes(m.content.toLowerCase());
       try {
         const col = await message.channel.awaitMessages({filter,max:1,time:15000,errors:['time']});
-        const choice = ['haut','h','high'].includes(col.first().content.toLowerCase()) ? 'haut' : 'bas';
+        const choice = ['haut','h'].includes(col.first().content.toLowerCase()) ? 'haut' : 'bas';
         const next = Math.floor(Math.random()*98)+1;
         const correct = (choice==='haut' && next>current) || (choice==='bas' && next<current);
         db.addCoins(message.author.id, message.guild.id, correct ? bet : -bet);

@@ -557,16 +557,17 @@ const commands = [
   {
     name: 'blackjack',
     aliases: ['bj', '21', 'vingteetun', 'blackj'],
-    description: 'Jouer au Blackjack (cooldown 5s)',
+    description: 'Jouer au Blackjack avec des boutons interactifs (cooldown 5s)',
     usage: '[mise]',
     category: 'Casino',
     cooldown: 5,
     async execute(message, args, client, db) {
+      const { EmbedBuilder: EMB, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet  = parseInt(args[0]) || 100;
       if (bet < 10) return message.reply('❌ Mise minimum **10 €**.');
-      if (bet > 20000) return message.reply('❌ Mise maximum **20 000 €**.');
+      if (bet > 50000) return message.reply('❌ Mise maximum **50 000 €**.');
       const u = db.getUser(message.author.id, message.guild.id);
       if ((u.balance || 0) < bet) return message.reply(`❌ Solde insuffisant (**${fmt(u.balance)} ${coin}** disponibles).`);
       db.removeCoins(message.author.id, message.guild.id, bet);
@@ -574,47 +575,172 @@ const commands = [
       const player = [deck.pop(), deck.pop()];
       const dealer = [deck.pop(), deck.pop()];
       const ps = handScore(player);
-      const ds = handScore(dealer);
+
       // Blackjack naturel
-      if (ps === 21) {
+      if (ps === 21 && player.length === 2) {
         const payout = Math.floor(bet * 2.5);
         db.addCoins(message.author.id, message.guild.id, payout);
-        return message.channel.send({ embeds: [new EmbedBuilder()
+        return message.channel.send({ embeds: [new EMB()
           .setColor('#F1C40F')
           .setTitle('🃏 BLACKJACK ! Victoire naturelle !')
-          .setDescription(`**Vous :** ${player.map(cardStr).join(' ')} = **21**\n**Dealer :** ${dealer.map(cardStr).join(' ')} = **${ds}**`)
+          .setDescription(`**Vous :** ${player.map(cardStr).join(' ')} = **21**\n**Croupier :** ${dealer.map(cardStr).join(' ')} = **${handScore(dealer)}**`)
           .addFields({ name: '💰 Gain', value: `**+${fmt(payout - bet)} ${coin}**  (×2.5)`, inline: true })
+          .setFooter({ text: 'Excellent ! Blackjack naturel !' })
         ]});
       }
-      // Simulation bot (stratégie basique)
-      const botHand = [...dealer];
-      while (handScore(botHand) < 17) botHand.push(deck.pop());
-      const bs = handScore(botHand);
-      const playerBust = ps > 21;
-      const botBust    = bs > 21;
-      let resultTitle, gained = 0;
-      if (playerBust) {
-        resultTitle = '❌ Bust ! Vous avez dépassé 21.';
-      } else if (botBust || ps > bs) {
-        gained = bet * 2;
-        db.addCoins(message.author.id, message.guild.id, gained);
-        resultTitle = '✅ Victoire !';
-      } else if (ps === bs) {
-        db.addCoins(message.author.id, message.guild.id, bet);
-        resultTitle = '🤝 Égalité !';
-        gained = bet;
-      } else {
-        resultTitle = '❌ Défaite !';
-      }
-      message.channel.send({ embeds: [new EmbedBuilder()
-        .setColor(gained > bet ? '#2ECC71' : gained === bet ? '#F39C12' : '#E74C3C')
-        .setTitle(`🃏 Blackjack — ${resultTitle}`)
-        .addFields(
-          { name: `🙋 Vous (${ps})`,       value: player.map(cardStr).join(' '),  inline: true },
-          { name: `🤖 Dealer (${bs})`,     value: botHand.map(cardStr).join(' '), inline: true },
-          { name: '💰 Résultat', value: gained > bet ? `**+${fmt(gained - bet)} ${coin}**` : gained === bet ? 'Mise récupérée' : `-${fmt(bet)} ${coin}`, inline: true },
-        )
-      ]});
+
+      // Créer les boutons
+      const buttons = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('bj_hit')
+          .setLabel('🎴 Tirer')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('bj_stand')
+          .setLabel('🛑 Rester')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('bj_double')
+          .setLabel('✖️ Doubler')
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      // État du jeu
+      const gameState = {
+        playerHand: [...player],
+        dealerHand: [...dealer],
+        deck: deck,
+        gameOver: false,
+        doubleBet: false,
+        playerStand: false
+      };
+
+      const createEmbed = (title, status) => {
+        const playerVal = handScore(gameState.playerHand);
+        const dealerVal = handScore(gameState.dealerHand);
+        return new EMB()
+          .setColor('#FFD700')
+          .setTitle(title)
+          .addFields(
+            { name: '🎰 Main du Croupier', value: `${gameState.gameOver || gameState.playerStand ? gameState.dealerHand.map(cardStr).join(' ') : gameState.dealerHand[0] ? `${cardStr(gameState.dealerHand[0])} 🂠` : 'Vide'}\n**Valeur :** ${gameState.gameOver || gameState.playerStand ? dealerVal : '?'}`, inline: false },
+            { name: '🎯 Votre Main', value: `${gameState.playerHand.map(cardStr).join(' ')}\n**Valeur :** ${playerVal}`, inline: false },
+            { name: '📊 Statut', value: status, inline: false }
+          )
+          .setFooter({ text: 'À votre tour !' });
+      };
+
+      let msg = await message.channel.send({ embeds: [createEmbed('♠♥ Blackjack ♦♣', 'À votre tour !')], components: [buttons] });
+
+      const collector = msg.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        time: 60000,
+        filter: i => i.user.id === message.author.id
+      });
+
+      collector.on('collect', async (i) => {
+        if (gameState.gameOver) {
+          await i.reply({ content: '❌ Le jeu est déjà terminé !', ephemeral: true });
+          return;
+        }
+
+        if (i.customId === 'bj_hit') {
+          gameState.playerHand.push(gameState.deck.pop());
+          const playerVal = handScore(gameState.playerHand);
+
+          if (playerVal > 21) {
+            gameState.gameOver = true;
+            await i.update({ embeds: [createEmbed('♠♥ Blackjack ♦♣', `💥 BUST ! Vous avez dépassé 21. Vous perdez **${bet}** ${coin}.`)], components: [] });
+            collector.stop();
+          } else {
+            await i.update({ embeds: [createEmbed('♠♥ Blackjack ♦♣', 'À votre tour !')] });
+          }
+        } else if (i.customId === 'bj_stand') {
+          gameState.playerStand = true;
+
+          // Tour du croupier
+          while (handScore(gameState.dealerHand) < 17) {
+            gameState.dealerHand.push(gameState.deck.pop());
+          }
+
+          gameState.gameOver = true;
+          const playerVal = handScore(gameState.playerHand);
+          const dealerVal = handScore(gameState.dealerHand);
+          let resultMsg = '';
+          let gained = 0;
+
+          if (dealerVal > 21) {
+            gained = bet * 2;
+            db.addCoins(message.author.id, message.guild.id, gained);
+            resultMsg = `🎉 Le croupier a bust ! Vous gagnez **+${gained}** ${coin} !`;
+          } else if (playerVal > dealerVal) {
+            gained = bet * 2;
+            db.addCoins(message.author.id, message.guild.id, gained);
+            resultMsg = `🎉 Vous gagnez ! +**${gained}** ${coin} !`;
+          } else if (dealerVal > playerVal) {
+            resultMsg = `💥 Le croupier gagne. Vous perdez **${bet}** ${coin}.`;
+          } else {
+            db.addCoins(message.author.id, message.guild.id, bet);
+            resultMsg = `🤝 Égalité ! Votre mise est restituée.`;
+          }
+
+          await i.update({ embeds: [createEmbed('♠♥ Blackjack ♦♣', resultMsg)], components: [] });
+          collector.stop();
+        } else if (i.customId === 'bj_double') {
+          const updated = db.getUser(message.author.id, message.guild.id);
+          if ((updated.balance || 0) < bet) {
+            await i.reply({ content: '❌ Vous n\'avez pas assez de pièces pour doubler !', ephemeral: true });
+            return;
+          }
+
+          gameState.doubleBet = true;
+          db.removeCoins(message.author.id, message.guild.id, bet);
+          gameState.playerHand.push(gameState.deck.pop());
+          const playerVal = handScore(gameState.playerHand);
+
+          if (playerVal > 21) {
+            gameState.gameOver = true;
+            await i.update({ embeds: [createEmbed('♠♥ Blackjack ♦♣', `💥 BUST au doublement ! Vous perdez **${bet * 2}** ${coin}.`)], components: [] });
+            collector.stop();
+            return;
+          }
+
+          gameState.playerStand = true;
+          while (handScore(gameState.dealerHand) < 17) {
+            gameState.dealerHand.push(gameState.deck.pop());
+          }
+
+          gameState.gameOver = true;
+          const playerValFinal = handScore(gameState.playerHand);
+          const dealerVal = handScore(gameState.dealerHand);
+          let resultMsg = '';
+          let gained = 0;
+          const totalBet = bet * 2;
+
+          if (dealerVal > 21) {
+            gained = totalBet * 2;
+            db.addCoins(message.author.id, message.guild.id, gained);
+            resultMsg = `🎉 Le croupier a bust ! Doublement gagnant ! +**${gained}** ${coin} !`;
+          } else if (playerValFinal > dealerVal) {
+            gained = totalBet * 2;
+            db.addCoins(message.author.id, message.guild.id, gained);
+            resultMsg = `🎉 Doublement gagnant ! +**${gained}** ${coin} !`;
+          } else if (dealerVal > playerValFinal) {
+            resultMsg = `💥 Le croupier gagne. Vous perdez **${totalBet}** ${coin}.`;
+          } else {
+            db.addCoins(message.author.id, message.guild.id, totalBet);
+            resultMsg = `🤝 Égalité ! Votre mise est restituée.`;
+          }
+
+          await i.update({ embeds: [createEmbed('♠♥ Blackjack ♦♣', resultMsg)], components: [] });
+          collector.stop();
+        }
+      });
+
+      collector.on('end', (collected, reason) => {
+        if (reason === 'time') {
+          msg.edit({ components: [] }).catch(() => {});
+        }
+      });
     }
   },
 
@@ -658,7 +784,7 @@ const commands = [
       const coin = cfg.currency_emoji || '€';
       const choice = args[0]?.toLowerCase();
       const bet    = parseInt(args[1]);
-      if (!['haute', 'basse', 'high', 'low', 'h', 'b'].includes(choice)) return message.reply('❌ Choisissez `haute` ou `basse`. Ex: `&highlow haute 300`');
+      if (!['haute', 'basse', 'h', 'b'].includes(choice)) return message.reply('❌ Choisissez `haute` ou `basse`. Ex: `&highlow haute 300`');
       if (!bet || bet < 10) return message.reply('❌ Mise minimum **10 €**.');
       const u = db.getUser(message.author.id, message.guild.id);
       if ((u.balance || 0) < bet) return message.reply('❌ Solde insuffisant.');
@@ -666,7 +792,7 @@ const commands = [
       const card1 = deck.pop();
       const card2 = deck.pop();
       const v1 = cardVal(card1), v2 = cardVal(card2);
-      const isHigh = ['haute','high','h'].includes(choice);
+      const isHigh = ['haute','h'].includes(choice);
       const win = isHigh ? v2 > v1 : v2 < v1;
       const tie = v1 === v2;
       if (tie) {
@@ -676,7 +802,7 @@ const commands = [
       else     db.removeCoins(message.author.id, message.guild.id, bet);
       message.channel.send({ embeds: [new EmbedBuilder()
         .setColor(win ? '#2ECC71' : '#E74C3C')
-        .setTitle(`🃏 High or Low — ${win ? 'Gagné !' : 'Perdu !'}`)
+        .setTitle(`🃏 Haute ou Basse — ${win ? 'Gagné !' : 'Perdu !'}`)
         .addFields(
           { name: '🃏 Première carte', value: `${cardStr(card1)} (${v1})`,  inline: true },
           { name: '🃏 Deuxième carte', value: `${cardStr(card2)} (${v2})`,  inline: true },
@@ -707,9 +833,9 @@ const commands = [
       const isPair  = num !== 0 && num % 2 === 0;
       let win = false, mult = 1;
       if (['rouge','red','r'].includes(choice)) { win = isRouge; mult = 2; }
-      else if (['noir','black','n'].includes(choice)) { win = !isRouge && num !== 0; mult = 2; }
-      else if (['pair','even','p'].includes(choice)) { win = isPair; mult = 2; }
-      else if (['impair','odd','i'].includes(choice)) { win = !isPair && num !== 0; mult = 2; }
+      else if (['noir','n'].includes(choice)) { win = !isRouge && num !== 0; mult = 2; }
+      else if (['pair','p'].includes(choice)) { win = isPair; mult = 2; }
+      else if (['impair','i'].includes(choice)) { win = !isPair && num !== 0; mult = 2; }
       else if (['1-12','premiere'].includes(choice)) { win = num >= 1 && num <= 12; mult = 3; }
       else if (['13-24','deuxieme'].includes(choice)) { win = num >= 13 && num <= 24; mult = 3; }
       else if (['25-36','troisieme'].includes(choice)) { win = num >= 25 && num <= 36; mult = 3; }

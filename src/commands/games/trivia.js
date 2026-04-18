@@ -249,7 +249,7 @@ module.exports = {
           .setTitle(result)
           .addFields(
             { name: 'Réponse correcte', value: String.fromCharCode(65 + correctIndex) + ': ' + QUESTIONS[parseInt(index)].choices[correctIndex], inline: false },
-            { name: 'Coins gagnés', value: `💰 ${coins}`, inline: true }
+            { name: '💰 Coins gagnés', value: `💰 ${coins}`, inline: true }
           )
           .setColor(color);
 
@@ -302,7 +302,7 @@ module.exports = {
             { name: 'Questions répondues', value: `${stats.total}`, inline: true },
             { name: 'Bonnes réponses', value: `${stats.correct}`, inline: true },
             { name: 'Pourcentage de réussite', value: `${percentage}%`, inline: true },
-            { name: 'Coins gagnés', value: `💰 ${stats.coins_earned}`, inline: true }
+            { name: '💰 Coins gagnés', value: `💰 ${stats.coins_earned}`, inline: true }
           )
           .setColor(Colors.Gold)
           .setThumbnail(user.displayAvatarURL());

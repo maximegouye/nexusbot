@@ -62,7 +62,7 @@ const commands = [
     usage: '[nouveau préfixe]',
     cooldown: 5,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Admin requis.');
+      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const newPrefix = args[0];
       if (!newPrefix || newPrefix.length > 5) return message.reply('❌ Préfixe valide de 1-5 caractères requis.');
       db.setConfig(message.guild.id, 'prefix', newPrefix);
@@ -77,7 +77,7 @@ const commands = [
     usage: '[titre] | [description] | [couleur]',
     cooldown: 5,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission MANAGE_MESSAGES requise.');
+      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const parts = args.join(' ').split('|').map(s => s.trim());
       const title = parts[0] || 'Message';
       const desc = parts[1] || '';
@@ -120,7 +120,7 @@ const commands = [
     async execute(message, args, client, db) {
       const timeStr = args[0];
       const msg = args.slice(1).join(' ');
-      if (!timeStr || !msg) return message.reply('❌ Usage : `n!remind 1h30m [message]`');
+      if (!timeStr || !msg) return message.reply('❌ Usage : `&remind 1h30m [message]`');
       let secs = 0;
       const matches = timeStr.match(/(\d+)\s*([jhdms])/gi) || [];
       for (const m of matches) {
@@ -228,8 +228,8 @@ const commands = [
     usage: '[durée] [prix]',
     cooldown: 10,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission MANAGE_MESSAGES requise.');
-      if (args.length < 2) return message.reply('❌ Usage : `n!giveaway 1h PlayStation 5`');
+      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
+      if (args.length < 2) return message.reply('❌ Usage : `&giveaway 1h PlayStation 5`');
       const timeStr = args[0];
       const prize = args.slice(1).join(' ');
       let secs = 0;

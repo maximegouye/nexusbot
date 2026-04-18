@@ -16,7 +16,7 @@ const commands = [
     async execute(message, args, client, db) {
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
-      if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission BAN requise.');
+      if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission de bannir requise.');
       const reason = args.slice(1).join(' ') || 'Aucune raison';
       try {
         await target.ban({ reason, deleteMessageSeconds: 86400 });
@@ -33,7 +33,7 @@ const commands = [
     usage: '@membre [raison]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x2n)) return message.reply('❌ Permission KICK requise.');
+      if (!message.member.permissions.has(0x2n)) return message.reply('❌ Permission d'expulser requise.');
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
       const reason = args.slice(1).join(' ') || 'Aucune raison';
@@ -51,7 +51,7 @@ const commands = [
     usage: '@membre [durée en minutes] [raison]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission TIMEOUT requise.');
+      if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission de mettre en timeout requise.');
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
       const mins = parseInt(args[1]) || 10;
@@ -70,7 +70,7 @@ const commands = [
     usage: '@membre',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission TIMEOUT requise.');
+      if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission de mettre en timeout requise.');
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
       await target.timeout(null);
@@ -85,7 +85,7 @@ const commands = [
     usage: '@membre [raison]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission MANAGE_MESSAGES requise.');
+      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const target = message.mentions.users.first() || await client.users.fetch(args[0]).catch(() => null);
       if (!target) return message.reply('❌ Mentionnez un membre.');
       const reason = args.slice(1).join(' ') || 'Aucune raison';
@@ -117,7 +117,7 @@ const commands = [
     usage: '@membre',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Admin requis.');
+      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const target = message.mentions.users.first();
       if (!target) return message.reply('❌ Mentionnez un membre.');
       db.db.prepare('DELETE FROM warnings WHERE guild_id=? AND user_id=?').run(message.guild.id, target.id);
@@ -132,7 +132,7 @@ const commands = [
     usage: '[nombre 1-100] [@membre]',
     cooldown: 5,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission MANAGE_MESSAGES requise.');
+      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const amount = Math.min(parseInt(args[0]) || 10, 100);
       if (isNaN(amount) || amount < 1) return message.reply('❌ Nombre entre 1 et 100.');
       const filterMember = message.mentions.members.first();
@@ -153,7 +153,7 @@ const commands = [
     usage: '[#salon]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Admin requis.');
+      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const channel = message.mentions.channels.first() || message.channel;
       await channel.permissionOverwrites.edit(message.guild.roles.everyone, { SendMessages: false });
       message.channel.send(`🔒 <#${channel.id}> verrouillé.`);
@@ -167,7 +167,7 @@ const commands = [
     usage: '[#salon]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Admin requis.');
+      if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const channel = message.mentions.channels.first() || message.channel;
       await channel.permissionOverwrites.edit(message.guild.roles.everyone, { SendMessages: null });
       message.channel.send(`🔓 <#${channel.id}> déverrouillé.`);
@@ -181,7 +181,7 @@ const commands = [
     usage: '[secondes 0-21600]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission MANAGE_MESSAGES requise.');
+      if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const secs = Math.min(parseInt(args[0]) || 0, 21600);
       await message.channel.setRateLimitPerUser(secs);
       message.reply(secs === 0 ? '✅ Mode lent désactivé.' : `✅ Mode lent : **${secs}s** entre chaque message.`);
@@ -195,7 +195,7 @@ const commands = [
     usage: '@membre [nouveau pseudo]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x8000000n)) return message.reply('❌ Permission MANAGE_NICKNAMES requise.');
+      if (!message.member.permissions.has(0x8000000n)) return message.reply('❌ Permission de gérer les pseudos requise.');
       const target = message.mentions.members.first();
       if (!target) return message.reply('❌ Mentionnez un membre.');
       const nick = args.slice(1).join(' ') || null;
@@ -211,7 +211,7 @@ const commands = [
     usage: '@membre @role',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission MANAGE_ROLES requise.');
+      if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission de gérer les rôles requise.');
       const target = message.mentions.members.first();
       const role = message.mentions.roles.first();
       if (!target || !role) return message.reply('❌ Mentionnez un membre et un rôle.');
@@ -232,7 +232,7 @@ const commands = [
     usage: '[user_id] [raison]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission BAN requise.');
+      if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission de bannir requise.');
       if (!args[0]) return message.reply('❌ Fournissez l\'ID de l\'utilisateur.');
       try {
         await message.guild.bans.remove(args[0], args.slice(1).join(' ') || 'Débanni');
@@ -248,7 +248,7 @@ const commands = [
     usage: '@membre [durée en heures] [raison]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission BAN requise.');
+      if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission de bannir requise.');
       const target = message.mentions.members.first();
       if (!target) return message.reply('❌ Mentionnez un membre.');
       const hours = parseInt(args[1]) || 24;

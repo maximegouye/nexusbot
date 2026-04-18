@@ -4,37 +4,37 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('tempvoice')
-    .setDescription('Temporary voice channel management system')
+    .setDescription('Gestion des salons vocaux temporaires')
     .addSubcommand(subcommand =>
       subcommand
         .setName('setup')
-        .setDescription('Set up the temporary voice channel system (admin only)')
+        .setDescription('Configurer le système de salons vocaux temporaires (admin)')
         .addChannelOption(option =>
           option
             .setName('categorie-discord')
-            .setDescription('The Discord category where the voice channels will be created')
+            .setDescription('Catégorie Discord où créer les salons vocaux')
             .setRequired(true)
         )
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('renommer')
-        .setDescription('Rename your temporary voice channel')
+        .setDescription('Renommer votre salon vocal temporaire')
         .addStringOption(option =>
           option
             .setName('nouveau-nom')
-            .setDescription('The new name for your voice channel')
+            .setDescription('Nouveau nom du salon vocal')
             .setRequired(true)
         )
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('limite')
-        .setDescription('Set user limit for your temporary voice channel')
+        .setDescription("Définir la limite d'utilisateurs du salon")
         .addIntegerOption(option =>
           option
             .setName('nombre')
-            .setDescription('User limit (0 = unlimited)')
+            .setDescription('Limite (0 = illimité)')
             .setRequired(true)
             .setMinValue(0)
             .setMaxValue(99)
@@ -43,44 +43,44 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('lock')
-        .setDescription('Lock your temporary voice channel (prevent others from joining)')
+        .setDescription('Verrouiller votre salon vocal')
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('unlock')
-        .setDescription('Unlock your temporary voice channel')
+        .setDescription('Déverrouiller votre salon vocal')
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('expulser')
-        .setDescription('Kick someone from your temporary voice channel')
+        .setDescription("Expulser quelqu'un de votre salon vocal")
         .addUserOption(option =>
           option
             .setName('user')
-            .setDescription('The user to kick')
+            .setDescription('Utilisateur à expulser')
             .setRequired(true)
         )
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('transferer')
-        .setDescription('Transfer ownership of your temporary voice channel')
+        .setDescription('Transférer la propriété de votre salon vocal')
         .addUserOption(option =>
           option
             .setName('user')
-            .setDescription('The user to transfer ownership to')
+            .setDescription('Utilisateur à qui transférer la propriété')
             .setRequired(true)
         )
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('statut')
-        .setDescription('Show information about your current temporary voice channel')
+        .setDescription('Afficher les infos de votre salon vocal')
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('desactiver')
-        .setDescription('Disable the temporary voice channel system (admin only)')
+        .setDescription('Désactiver le système de salons temporaires (admin)')
     ),
 
   cooldown: 2,
@@ -151,13 +151,13 @@ function initializeDatabase() {
 async function handleSetup(interaction, guildId) {
   // Check admin permissions
   if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-    return interaction.reply({ content: '❌ Only administrators can set up the temporary voice system.', ephemeral: true });
+    return interaction.reply({ content: '❌ Seuls les administrateurs peuvent configurer ce système.', ephemeral: true });
   }
 
   const category = interaction.options.getChannel('categorie-discord');
 
   if (category.type !== 4) {
-    return interaction.reply({ content: '❌ The selected channel must be a category.', ephemeral: true });
+    return interaction.reply({ content: '❌ Le salon sélectionné doit être une catégorie Discord.', ephemeral: true });
   }
 
   try {
@@ -181,18 +181,18 @@ async function handleSetup(interaction, guildId) {
 
     const embed = new EmbedBuilder()
       .setColor('#00FF00')
-      .setTitle('✅ Temporary Voice System Enabled')
-      .setDescription(`The temporary voice channel system has been set up successfully!`)
+      .setTitle('✅ Système de Salons Vocaux Activé')
+      .setDescription(`Le système de salons vocaux temporaires a été configuré avec succès !`)
       .addFields(
-        { name: '📍 Creator Channel', value: `<#${creatorChannel.id}>`, inline: false },
-        { name: '📂 Category', value: `${category.name}`, inline: false },
-        { name: '💡 How it works', value: 'Users can join the creator channel and a personal voice channel will be automatically created for them.', inline: false }
+        { name: '📍 Salon Créateur', value: `<#${creatorChannel.id}>`, inline: false },
+        { name: '📂 Catégorie', value: `${category.name}`, inline: false },
+        { name: '💡 Comment ça fonctionne', value: 'Les membres rejoignent le salon créateur — un salon vocal personnel est créé automatiquement.', inline: false }
       )
       .setTimestamp();
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error setting up the system: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors de la configuration : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -204,7 +204,7 @@ async function handleRename(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ You don\'t have an active temporary voice channel.', ephemeral: true });
+    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
@@ -212,20 +212,20 @@ async function handleRename(interaction, guildId, userId) {
     if (!channel) {
       // Clean up stale entry
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: '❌ Your temporary voice channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     await channel.setName(newName);
 
     const embed = new EmbedBuilder()
       .setColor('#0099FF')
-      .setTitle('✅ Channel Renamed')
-      .setDescription(`Your voice channel has been renamed to: **${newName}**`)
+      .setTitle('✅ Salon Renommé')
+      .setDescription(`Votre salon vocal a été renommé en : **${newName}**`)
       .setTimestamp();
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error renaming channel: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors du renommage : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -236,14 +236,14 @@ async function handleLimit(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ You don\'t have an active temporary voice channel.', ephemeral: true });
+    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: '❌ Your temporary voice channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     await channel.setUserLimit(limit === 0 ? 0 : limit);
@@ -251,13 +251,13 @@ async function handleLimit(interaction, guildId, userId) {
     const limitText = limit === 0 ? 'unlimited' : `${limit} users`;
     const embed = new EmbedBuilder()
       .setColor('#0099FF')
-      .setTitle('✅ User Limit Updated')
-      .setDescription(`Your voice channel user limit is now: **${limitText}**`)
+      .setTitle('✅ Limite Mise à Jour')
+      .setDescription(`La limite de votre salon vocal est maintenant : **${limitText}**`)
       .setTimestamp();
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error setting user limit: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors de la définition de la limite : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -266,14 +266,14 @@ async function handleLock(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ You don\'t have an active temporary voice channel.', ephemeral: true });
+    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: '❌ Your temporary voice channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Update permissions to prevent others from joining
@@ -283,13 +283,13 @@ async function handleLock(interaction, guildId, userId) {
 
     const embed = new EmbedBuilder()
       .setColor('#FF6600')
-      .setTitle('🔒 Channel Locked')
-      .setDescription('Your voice channel is now locked. Only the owner can invite users.')
+      .setTitle('🔒 Salon Verrouillé')
+      .setDescription('Votre salon vocal est maintenant verrouillé. Seul le propriétaire peut inviter des membres.')
       .setTimestamp();
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error locking channel: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors du verrouillage : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -298,14 +298,14 @@ async function handleUnlock(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ You don\'t have an active temporary voice channel.', ephemeral: true });
+    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: '❌ Your temporary voice channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Update permissions to allow others to join
@@ -315,13 +315,13 @@ async function handleUnlock(interaction, guildId, userId) {
 
     const embed = new EmbedBuilder()
       .setColor('#00FF00')
-      .setTitle('🔓 Channel Unlocked')
-      .setDescription('Your voice channel is now unlocked. Everyone can join.')
+      .setTitle('🔓 Salon Déverrouillé')
+      .setDescription('Votre salon vocal est maintenant ouvert à tous.')
       .setTimestamp();
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error unlocking channel: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors du déverrouillage : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -332,14 +332,14 @@ async function handleKick(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ You don\'t have an active temporary voice channel.', ephemeral: true });
+    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: '❌ Your temporary voice channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Get the member to kick
@@ -353,13 +353,13 @@ async function handleKick(interaction, guildId, userId) {
 
     const embed = new EmbedBuilder()
       .setColor('#FF0000')
-      .setTitle('👢 User Kicked')
-      .setDescription(`**${targetUser.username}** has been kicked from your voice channel.`)
+      .setTitle('👢 Membre Expulsé')
+      .setDescription(`**${targetUser.username}** a été expulsé de votre salon vocal.`)
       .setTimestamp();
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error kicking user: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors de l'expulsion : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -370,7 +370,7 @@ async function handleTransfer(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ You don\'t have an active temporary voice channel.', ephemeral: true });
+    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   if (newOwner.id === userId) {
@@ -381,7 +381,7 @@ async function handleTransfer(interaction, guildId, userId) {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: '❌ Your temporary voice channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Update the database with new owner
@@ -390,13 +390,13 @@ async function handleTransfer(interaction, guildId, userId) {
 
     const embed = new EmbedBuilder()
       .setColor('#0099FF')
-      .setTitle('👑 Ownership Transferred')
-      .setDescription(`Your voice channel ownership has been transferred to **${newOwner.username}**.`)
+      .setTitle('👑 Propriété Transférée')
+      .setDescription(`La propriété de votre salon a été transférée à **${newOwner.username}**.`)
       .setTimestamp();
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error transferring ownership: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors du transfert : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -405,14 +405,14 @@ async function handleStatus(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ You don\'t have an active temporary voice channel.', ephemeral: true });
+    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: '❌ Your temporary voice channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     const userCount = channel.members.size;
@@ -436,14 +436,14 @@ async function handleStatus(interaction, guildId, userId) {
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error fetching channel status: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors de la récupération du statut : ${error.message}`, ephemeral: true });
   }
 }
 
 async function handleDisable(interaction, guildId) {
   // Check admin permissions
   if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-    return interaction.reply({ content: '❌ Only administrators can disable the temporary voice system.', ephemeral: true });
+    return interaction.reply({ content: '❌ Seuls les administrateurs peuvent désactiver ce système.', ephemeral: true });
   }
 
   try {
@@ -471,8 +471,8 @@ async function handleDisable(interaction, guildId) {
 
     const embed = new EmbedBuilder()
       .setColor('#FF0000')
-      .setTitle('❌ Temporary Voice System Disabled')
-      .setDescription('The temporary voice channel system has been completely disabled.')
+      .setTitle('❌ Système de Salons Vocaux Désactivé')
+      .setDescription('Le système de salons vocaux temporaires a été complètement désactivé.')
       .addFields(
         { name: '🗑️ Cleanup', value: `${channels.length} temporary voice channel(s) have been deleted.`, inline: false }
       )
@@ -480,6 +480,6 @@ async function handleDisable(interaction, guildId) {
 
     interaction.reply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Error disabling the system: ${error.message}`, ephemeral: true });
+    interaction.reply({ content: `❌ Erreur lors de la désactivation : ${error.message}`, ephemeral: true });
   }
 }
