@@ -46,8 +46,9 @@ module.exports = {
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
-    const pari   = interaction.options.getString('pari');
-    const raw    = interaction.options.getString('mise');
+    const pari    = interaction.options.getString('pari');
+    const miseRaw = interaction.options.get('mise');
+    const raw     = miseRaw ? String(miseRaw.value) : null;
 
     const bet = parseBet(raw, user.balance);
     if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });

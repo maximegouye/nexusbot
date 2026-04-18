@@ -38,6 +38,49 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+    // ── POKER : boutons hold / draw (persistés en BDD) ──────────────
+    if (interaction.isButton() && (_cfgId.startsWith('poker_hold:') || _cfgId === 'poker_draw')) {
+      try {
+        const db2 = require('../database/db');
+        const pk  = require('../utils/pokerEngine');
+        const sess = db2.getGameSession(interaction.message.id);
+        if (!sess || sess.game !== 'poker') {
+          return interaction.reply({ content: '⏱️ Cette partie de Poker a expiré. Lance `&poker <mise>` pour en refaire une.', ephemeral: true });
+        }
+        if (interaction.user.id !== sess.user_id) {
+          return interaction.reply({ content: '❌ Cette partie n\'est pas la tienne.', ephemeral: true });
+        }
+
+        const state = pk.deserialize(sess.state.state);
+        const embedOpts = sess.state.embedOpts || { userName: interaction.user.username, symbol: '€', color: '#9B59B6' };
+
+        if (state.phase !== 'hold') {
+          return interaction.reply({ content: '❌ Cette partie est déjà terminée.', ephemeral: true });
+        }
+
+        if (_cfgId === 'poker_draw') {
+          pk.resolve(state);
+          const bet = state.bet;
+          const gain = BigInt(Math.floor(Number(bet) * (state.result?.mult || 0)));
+          if (gain > 0n) db2.addCoins(interaction.user.id, interaction.guildId, Number(gain));
+          db2.deleteGameSession(interaction.message.id);
+          await interaction.update({ embeds: [pk.buildEmbed(state, embedOpts)], components: [] }).catch(() => {});
+        } else {
+          const idx = parseInt(_cfgId.split(':')[1], 10);
+          pk.toggleHold(state, idx);
+          db2.saveGameSession(interaction.message.id, interaction.user.id, interaction.guildId, interaction.channelId, 'poker', { state: pk.serialize(state), embedOpts }, 1800);
+          await interaction.update({ embeds: [pk.buildEmbed(state, embedOpts)], components: pk.buildButtons(state) }).catch(() => {});
+        }
+        return;
+      } catch (e) {
+        console.error('[POKER handler]', e);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
+        }
+        return;
+      }
+    }
+
     // ── AIDE : menu catégories + boutons (sans collector, survit aux redémarrages) ──
     if (_cfgId.startsWith('help_cat:') || _cfgId.startsWith('help_home:') || _cfgId.startsWith('help_config:')) {
       try {

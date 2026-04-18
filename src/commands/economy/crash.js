@@ -44,14 +44,15 @@ module.exports = {
     .setName('crash')
     .setDescription('📈 Jeu du Crash — vise un multiplicateur, encaisse avant le crash')
     .addStringOption(o => o.setName('mise').setDescription('Ex: 500, 1000, all, 25%').setRequired(true).setMaxLength(20))
-    .addNumberOption(o => o.setName('cashout').setDescription('Multiplicateur cible (ex: 2.0, 5.0, 100.0)').setRequired(true).setMinValue(1.01).setMaxValue(10000)),
+    .addNumberOption(o => o.setName('cashout').setDescription('Multiplicateur cible (ex: 2.0, 5.0, 1000, pas de max)').setRequired(true).setMinValue(1.01)),
   cooldown: 3,
 
   async execute(interaction) {
     const cfg     = db.getConfig(interaction.guildId);
     const user    = db.getUser(interaction.user.id, interaction.guildId);
     const symbol  = cfg.currency_emoji || '€';
-    const raw     = interaction.options.getString('mise');
+    const miseRaw = interaction.options.get('mise');
+    const raw     = miseRaw ? String(miseRaw.value) : null;
     const cashout = interaction.options.getNumber('cashout');
 
     const bet = parseBet(raw, user.balance);

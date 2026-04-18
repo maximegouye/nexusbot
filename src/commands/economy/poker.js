@@ -1,10 +1,10 @@
 /**
- * /mines <mise> [mines] — Démineur casino. Mises ILLIMITÉES.
- * État persisté en BDD → survit aux redémarrages.
+ * /poker <mise> — Video Poker "Jacks or Better". Mises ILLIMITÉES.
+ * État persisté en BDD → boutons survivent aux redémarrages.
  */
 const { SlashCommandBuilder } = require('discord.js');
 const db = require('../../database/db');
-const mi = require('../../utils/minesEngine');
+const pk = require('../../utils/pokerEngine');
 
 function parseBet(raw, balance) {
   if (!raw) return null;
@@ -21,10 +21,9 @@ function parseBet(raw, balance) {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('mines')
-    .setDescription('💣 Démineur casino — découvre les diamants sans toucher les mines')
-    .addStringOption(o => o.setName('mise').setDescription('Ex: 500, 1000, all, 25%').setRequired(true).setMaxLength(20))
-    .addIntegerOption(o => o.setName('mines').setDescription('Nombre de mines cachées (1–19, défaut 3)').setMinValue(1).setMaxValue(19)),
+    .setName('poker')
+    .setDescription('🎴 Video Poker — Jacks or Better · garde les cartes, relance, encaisse')
+    .addStringOption(o => o.setName('mise').setDescription('Ex: 500, 1000, all, 25%').setRequired(true).setMaxLength(20)),
   cooldown: 3,
 
   async execute(interaction) {
@@ -32,8 +31,7 @@ module.exports = {
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
     const miseRaw = interaction.options.get('mise');
-    const raw     = miseRaw ? String(miseRaw.value) : null;
-    const mines  = interaction.options.getInteger('mines') ?? 3;
+    const raw = miseRaw ? String(miseRaw.value) : null;
 
     const bet = parseBet(raw, user.balance);
     if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
@@ -42,15 +40,15 @@ module.exports = {
 
     db.removeCoins(interaction.user.id, interaction.guildId, Number(bet));
 
-    const game = mi.createGame(bet, mines);
-    const embedOpts = { symbol, color: cfg.color || '#F39C12', userName: interaction.user.username };
+    const game = pk.startGame(bet);
+    const embedOpts = { symbol, color: cfg.color || '#9B59B6', userName: interaction.user.username };
 
     const msg = await interaction.reply({
-      embeds: [mi.buildEmbed(game, embedOpts)],
-      components: mi.buildButtons(game),
+      embeds: [pk.buildEmbed(game, embedOpts)],
+      components: pk.buildButtons(game),
       fetchReply: true,
     });
 
-    db.saveGameSession(msg.id, interaction.user.id, interaction.guildId, interaction.channelId, 'mines', { state: game, embedOpts }, 1800);
+    db.saveGameSession(msg.id, interaction.user.id, interaction.guildId, interaction.channelId, 'poker', { state: pk.serialize(game), embedOpts }, 1800);
   },
 };

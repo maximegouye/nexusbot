@@ -48,7 +48,9 @@ module.exports = {
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
-    const raw    = interaction.options.getString('mise');
+    // Accepte String OU Integer (compat cache Discord qui peut encore avoir l'ancienne signature)
+    const miseRaw = interaction.options.get('mise');
+    const raw     = miseRaw ? String(miseRaw.value) : null;
 
     const mise = parseBet(raw, user.balance);
     if (mise == null)   return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });

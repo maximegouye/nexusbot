@@ -43,7 +43,7 @@ module.exports = {
     if (bet > BigInt(user.balance)) return message.reply(`❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`);
 
     const cashout = parseFloat(args[1]);
-    if (isNaN(cashout) || cashout < 1.01 || cashout > 10000) return message.reply('❌ Cashout invalide (1.01 – 10000).');
+    if (isNaN(cashout) || cashout < 1.01) return message.reply('❌ Cashout invalide (minimum 1.01, pas de max).');
 
     const miseNum = Number(bet);
     db.removeCoins(message.author.id, message.guild.id, miseNum);
