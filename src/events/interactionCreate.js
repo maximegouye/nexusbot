@@ -29,6 +29,15 @@ module.exports = {
 
 async function _handleInteraction(interaction, client) {
 
+    // ── PANNEAU DE CONFIGURATION (cfg: / cfg_chan: / cfg_role: / cfg_modal:) ──
+    const _cfgId = interaction.customId || '';
+    if (_cfgId.startsWith('cfg:') || _cfgId.startsWith('cfg_chan:') || _cfgId.startsWith('cfg_role:') || _cfgId.startsWith('cfg_modal:')) {
+      const { handleConfigInteraction } = require('../utils/configPanel');
+      const _db = require('../database/db');
+      const _handled = await handleConfigInteraction(interaction, _db);
+      if (_handled !== false) return;
+    }
+
     // ── SLASH COMMANDS ───────────────────────────────────
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
