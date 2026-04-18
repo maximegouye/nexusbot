@@ -97,13 +97,14 @@ function buildMainMenu(cfg, guild, userId) {
 
   // Deux selects séparés pour contourner la limite 25 options/select de Discord
   // → toutes les catégories restent accessibles, rien n'est coupé.
+  // Les customId DOIVENT être distincts (Discord refuse les doublons).
   const selectBase = new StringSelectMenuBuilder()
     .setCustomId(`cfg:cat:${userId}`)
     .setPlaceholder('📋 BASE : économie, XP, logs, tickets, rôles…')
     .addOptions(BASE_CATEGORIES.slice(0, 25));
 
   const selectAdv = new StringSelectMenuBuilder()
-    .setCustomId(`cfg:cat:${userId}`)
+    .setCustomId(`cfg:cat2:${userId}`)
     .setPlaceholder('⚡ AVANCÉ : IA, commandes custom, embed, boutique…')
     .addOptions(ADVANCED_CATEGORIES.slice(0, 25));
 
@@ -1136,8 +1137,8 @@ async function handleConfigInteraction(interaction, db, client) {
     return interaction.update(buildMainMenu(cfg, interaction.guild, userId));
   }
 
-  // ── cfg:cat:userId — Sélection de catégorie ───────────────────
-  if (interaction.isStringSelectMenu() && customId.startsWith('cfg:cat:')) {
+  // ── cfg:cat:userId / cfg:cat2:userId — Sélection de catégorie ───
+  if (interaction.isStringSelectMenu() && (customId.startsWith('cfg:cat:') || customId.startsWith('cfg:cat2:'))) {
     if (!checkOwner()) return true;
     const userId   = customId.split(':')[2];
     const category = interaction.values[0];

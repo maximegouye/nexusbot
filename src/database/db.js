@@ -464,6 +464,20 @@ db.exec(`
     expires_at INTEGER NOT NULL
   );
 
+  -- Messages programmés (cron)
+  CREATE TABLE IF NOT EXISTS scheduled_messages (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id     TEXT NOT NULL,
+    channel_id   TEXT NOT NULL,
+    cron         TEXT NOT NULL,       -- ex: '0 9 * * *' = tous les jours 9h
+    content      TEXT,
+    embed_json   TEXT,                -- alternative: embed
+    enabled      INTEGER DEFAULT 1,
+    last_sent_at INTEGER DEFAULT 0,
+    created_by   TEXT,
+    created_at   INTEGER DEFAULT (strftime('%s','now'))
+  );
+
   -- Notes de modération (modlog silencieux)
   CREATE TABLE IF NOT EXISTS mod_notes (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1435,6 +1449,74 @@ const helpers = {
   deleteRoleMenu(guildId, id) {
     return db.prepare('DELETE FROM role_menus WHERE guild_id = ? AND id = ?').run(guildId, id).changes;
   },
+
+  // ── AntiRaid ──
+  getAntiraidConfig(guildId) {
+    let row = db.prepare('SELECT * FROM antiraid_config WHERE guild_id = ?').get(guildId);
+    if (!row) {
+      db.prepare('INSERT OR IGNORE INTO antiraid_config (guild_id) VALUES (?)').run(guildId);
+      row = db.prepare('SELECT * FROM antiraid_config WHERE guild_id = ?').get(guildId);
+    }
+    return row;
+  },
+
+  setAntiraidField(guildId, key, value) {
+    const allowed = ['enabled','join_threshold','join_window_secs','action','new_account_days','new_account_action','captcha_enabled','whitelist_roles'];
+    if (!allowed.includes(key)) throw new Error('Champ antiraid inconnu: ' + key);
+    helpers.getAntiraidConfig(guildId);
+    db.prepare(`UPDATE antiraid_config SET ${key} = ? WHERE guild_id = ?`).run(value, guildId);
+    return helpers.getAntiraidConfig(guildId);
+  },
+
+  // ── YouTube / Twitch subs ──
+  getYoutubeSubs(guildId)  { return db.prepare('SELECT * FROM youtube_subs WHERE guild_id = ?').all(guildId); },
+  addYoutubeSub(guildId, data) {
+    const info = db.prepare(`INSERT OR IGNORE INTO youtube_subs (guild_id, channel_id, yt_channel_id, yt_channel_name, message, role_ping) VALUES (?,?,?,?,?,?)`)
+      .run(guildId, data.channel_id, data.yt_channel_id, data.yt_channel_name ?? null, data.message ?? null, data.role_ping ?? null);
+    return info.changes;
+  },
+  removeYoutubeSub(guildId, id) { return db.prepare('DELETE FROM youtube_subs WHERE guild_id = ? AND id = ?').run(guildId, id).changes; },
+
+  getTwitchSubs(guildId)   { return db.prepare('SELECT * FROM twitch_subs WHERE guild_id = ?').all(guildId); },
+  addTwitchSub(guildId, data) {
+    const info = db.prepare(`INSERT OR IGNORE INTO twitch_subs (guild_id, channel_id, twitch_login, message, role_ping) VALUES (?,?,?,?,?)`)
+      .run(guildId, data.channel_id, data.twitch_login, data.message ?? null, data.role_ping ?? null);
+    return info.changes;
+  },
+  removeTwitchSub(guildId, id) { return db.prepare('DELETE FROM twitch_subs WHERE guild_id = ? AND id = ?').run(guildId, id).changes; },
+
+  // ── Giveaways (read / cancel) ──
+  listGiveaways(guildId) { return db.prepare('SELECT * FROM giveaways WHERE guild_id = ? ORDER BY ends_at DESC LIMIT 50').all(guildId); },
+  endGiveaway(guildId, id) { return db.prepare(`UPDATE giveaways SET status = 'ended' WHERE guild_id = ? AND id = ?`).run(guildId, id).changes; },
+  cancelGiveaway(guildId, id) { return db.prepare(`UPDATE giveaways SET status = 'cancelled' WHERE guild_id = ? AND id = ?`).run(guildId, id).changes; },
+
+  // ── Quêtes ──
+  listQuests(guildId) { return db.prepare('SELECT * FROM quests WHERE guild_id = ? ORDER BY id DESC').all(guildId); },
+  createQuest(guildId, data) {
+    const info = db.prepare(`INSERT INTO quests (guild_id, title, description, target, reward, ends_at) VALUES (?,?,?,?,?,?)`)
+      .run(guildId, data.title, data.description, parseInt(data.target, 10) || 0, data.reward ?? '', data.ends_at ?? null);
+    return db.prepare('SELECT * FROM quests WHERE id = ?').get(info.lastInsertRowid);
+  },
+  deleteQuest(guildId, id) { return db.prepare('DELETE FROM quests WHERE guild_id = ? AND id = ?').run(guildId, id).changes; },
+
+  // ── Polls (listing) ──
+  listPolls(guildId) { return db.prepare('SELECT * FROM polls WHERE guild_id = ? ORDER BY id DESC LIMIT 50').all(guildId); },
+  endPoll(guildId, id) { return db.prepare('UPDATE polls SET ended = 1 WHERE guild_id = ? AND id = ?').run(guildId, id).changes; },
+
+  // ── Messages programmés ──
+  listScheduledMessages(guildId) { return db.prepare('SELECT * FROM scheduled_messages WHERE guild_id = ? ORDER BY id ASC').all(guildId); },
+  createScheduledMessage(guildId, data) {
+    const info = db.prepare(`INSERT INTO scheduled_messages (guild_id, channel_id, cron, content, embed_json, enabled, created_by) VALUES (?,?,?,?,?,?,?)`)
+      .run(guildId, data.channel_id, data.cron, data.content ?? null, data.embed_json ?? null, data.enabled === 0 ? 0 : 1, data.created_by ?? '0');
+    return db.prepare('SELECT * FROM scheduled_messages WHERE id = ?').get(info.lastInsertRowid);
+  },
+  toggleScheduledMessage(guildId, id) {
+    const r = db.prepare('SELECT enabled FROM scheduled_messages WHERE guild_id = ? AND id = ?').get(guildId, id);
+    if (!r) return 0;
+    db.prepare('UPDATE scheduled_messages SET enabled = ? WHERE guild_id = ? AND id = ?').run(r.enabled ? 0 : 1, guildId, id);
+    return 1;
+  },
+  deleteScheduledMessage(guildId, id) { return db.prepare('DELETE FROM scheduled_messages WHERE guild_id = ? AND id = ?').run(guildId, id).changes; },
 
   // ── Introspection guild_config : liste les colonnes + valeurs ──
   listGuildConfigColumns() {

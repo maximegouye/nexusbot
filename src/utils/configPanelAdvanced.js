@@ -53,19 +53,26 @@ function backBtn(userId) {
 // CATÉGORIES AVANCÉES (exportées pour être fusionnées dans CATEGORIES)
 // ═══════════════════════════════════════════════════════════════
 const ADVANCED_CATEGORIES = [
-  { value: 'ai',           label: '🧠 Intelligence IA',        description: 'Provider, modèle, mention = question, rôle requis' },
-  { value: 'kv',           label: '🗄️ Éditeur libre (KV)',    description: 'Ajoute/modifie N\'IMPORTE quelle clé de config' },
-  { value: 'embeds',       label: '🎨 Éditeur d\'embed',      description: 'Créer et gérer des embeds personnalisés' },
-  { value: 'cmds_adv',     label: '⚡ Commandes custom',        description: 'Créer des commandes & personnalisées (texte ou embed)' },
-  { value: 'sys_msgs',     label: '📢 Messages système',       description: 'Welcome, leave, levelup, boost, daily...' },
-  { value: 'autoresp',     label: '🔁 Réponses automatiques',  description: 'Bot répond quand un message contient un mot-clé' },
-  { value: 'level_roles',  label: '🏆 Rôles par niveau',        description: 'Attribue un rôle quand un membre atteint un niveau' },
-  { value: 'shop',         label: '🛒 Boutique',               description: 'Items, prix, stock, rôles attribués' },
-  { value: 'reaction_roles', label: '⭐ Reaction roles',         description: 'Réagir sur un message = rôle' },
-  { value: 'role_menus',   label: '📜 Menus de rôles',         description: 'Panneaux interactifs de sélection de rôles' },
-  { value: 'cmd_ctrl',     label: '🛠️ Cooldowns & toggles',   description: 'Activer/désactiver et régler les cooldowns par commande' },
-  { value: 'aliases',      label: '🔀 Aliases',                description: 'Raccourcis pour vos commandes' },
-  { value: 'backup',       label: '💾 Sauvegarde & Import',    description: 'Exporter / importer toute la config du serveur' },
+  { value: 'ai',             label: '🧠 Intelligence IA',         description: 'Provider, modèle, mention = question, rôle requis' },
+  { value: 'kv',             label: '🗄️ Éditeur libre (KV)',    description: 'Ajoute/modifie N\'IMPORTE quelle clé de config' },
+  { value: 'embeds',         label: '🎨 Éditeur d\'embed',       description: 'Créer et gérer des embeds personnalisés' },
+  { value: 'cmds_adv',       label: '⚡ Commandes custom',        description: 'Créer des commandes & personnalisées (texte ou embed)' },
+  { value: 'sys_msgs',       label: '📢 Messages système',       description: 'Welcome, leave, levelup, boost, daily...' },
+  { value: 'autoresp',       label: '🔁 Réponses automatiques',  description: 'Bot répond quand un message contient un mot-clé' },
+  { value: 'level_roles',    label: '🏆 Rôles par niveau',        description: 'Attribue un rôle quand un membre atteint un niveau' },
+  { value: 'shop',           label: '🛒 Boutique',               description: 'Items, prix, stock, rôles attribués' },
+  { value: 'reaction_roles', label: '⭐ Reaction roles',          description: 'Réagir sur un message = rôle' },
+  { value: 'role_menus',     label: '📜 Menus de rôles',         description: 'Panneaux interactifs de sélection de rôles' },
+  { value: 'antiraid',       label: '🛡️ AntiRaid',              description: 'Protection contre les raids + comptes jeunes' },
+  { value: 'youtube',        label: '📺 Notifs YouTube',         description: 'Alertes quand une chaîne poste une vidéo' },
+  { value: 'twitch',         label: '🎮 Notifs Twitch',          description: 'Alertes quand un streamer passe en live' },
+  { value: 'giveaways',      label: '🎁 Giveaways',              description: 'Liste des concours et gestion' },
+  { value: 'scheduled',      label: '⏰ Messages programmés',     description: 'Messages automatiques (cron)' },
+  { value: 'quests',         label: '📋 Quêtes',                 description: 'Défis communautaires avec récompenses' },
+  { value: 'polls',          label: '📬 Sondages',                description: 'Liste et gestion des sondages' },
+  { value: 'cmd_ctrl',       label: '🛠️ Cooldowns & toggles',   description: 'Activer/désactiver et régler les cooldowns par commande' },
+  { value: 'aliases',        label: '🔀 Aliases',                description: 'Raccourcis pour vos commandes' },
+  { value: 'backup',         label: '💾 Sauvegarde & Import',    description: 'Exporter / importer toute la config du serveur' },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -1221,6 +1228,152 @@ function buildAIPanel(cfg, guild, userId, db) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SECTION : 🛡️ ANTIRAID
+// ═══════════════════════════════════════════════════════════════
+function buildAntiraidPanel(cfg, guild, userId, db) {
+  const a = db.getAntiraidConfig(guild.id) || {};
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🛡️ Protection AntiRaid')
+    .setDescription('Limite les arrivées massives suspectes et les comptes trop jeunes.')
+    .addFields(
+      { name: '⚡ Statut',               value: onOff(a.enabled ?? 0),                              inline: true },
+      { name: '🚪 Seuil d\'arrivées',    value: `**${a.join_threshold ?? 10}** en ${a.join_window_secs ?? 30}s`, inline: true },
+      { name: '🔨 Action raid',          value: `\`${a.action || 'kick'}\``,                        inline: true },
+      { name: '👶 Comptes jeunes',       value: `< ${a.new_account_days ?? 7} j → \`${a.new_account_action || 'kick'}\``, inline: true },
+      { name: '🔒 CAPTCHA',              value: onOff(a.captcha_enabled ?? 0),                      inline: true },
+    )
+    .setFooter({ text: 'NexusBot — AntiRaid' });
+
+  const toggle = new ButtonBuilder().setCustomId(`adv:antiraid:toggle:${userId}`).setLabel((a.enabled ?? 0) ? '⏸️ Désactiver' : '▶️ Activer').setStyle((a.enabled ?? 0) ? ButtonStyle.Secondary : ButtonStyle.Success);
+  const thresh = new ButtonBuilder().setCustomId(`adv:antiraid:set_thresh:${userId}`).setLabel('🚪 Seuil & fenêtre').setStyle(ButtonStyle.Primary);
+  const action = new ButtonBuilder().setCustomId(`adv:antiraid:cycle_action:${userId}`).setLabel('🔨 Cycle action').setStyle(ButtonStyle.Primary);
+  const newAcc = new ButtonBuilder().setCustomId(`adv:antiraid:set_newacc:${userId}`).setLabel('👶 Comptes jeunes').setStyle(ButtonStyle.Primary);
+  const captcha = new ButtonBuilder().setCustomId(`adv:antiraid:toggle_captcha:${userId}`).setLabel((a.captcha_enabled ?? 0) ? '🔒 CAPTCHA OFF' : '🔒 CAPTCHA ON').setStyle(ButtonStyle.Secondary);
+
+  return { embeds: [embed], components: [
+    new ActionRowBuilder().addComponents(backBtn(userId), toggle, captcha),
+    new ActionRowBuilder().addComponents(thresh, action, newAcc),
+  ] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 📺 YOUTUBE / 🎮 TWITCH
+// ═══════════════════════════════════════════════════════════════
+function buildYoutubePanel(cfg, guild, userId, db) {
+  const all = db.getYoutubeSubs ? db.getYoutubeSubs(guild.id) : [];
+  const desc = all.length === 0
+    ? '*Aucune chaîne suivie.*\n\nLe bot surveille une chaîne YouTube et annonce chaque nouvelle vidéo dans un salon.'
+    : all.slice(0, 20).map(s => `**#${s.id}** <#${s.channel_id}> ← \`${truncate(s.yt_channel_name || s.yt_channel_id, 40)}\``).join('\n');
+
+  const embed = new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('📺 Notifications YouTube').setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}**`, inline: true })
+    .setFooter({ text: 'NexusBot — YouTube' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:youtube:new:${userId}`).setLabel('➕ Ajouter').setStyle(ButtonStyle.Success);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:youtube:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)] };
+}
+
+function buildTwitchPanel(cfg, guild, userId, db) {
+  const all = db.getTwitchSubs ? db.getTwitchSubs(guild.id) : [];
+  const desc = all.length === 0
+    ? '*Aucun streamer suivi.*\n\nLe bot annonce quand un streamer Twitch passe en live.'
+    : all.slice(0, 20).map(s => `**#${s.id}** <#${s.channel_id}> ← \`${truncate(s.twitch_login, 40)}\``).join('\n');
+
+  const embed = new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('🎮 Notifications Twitch').setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}**`, inline: true })
+    .setFooter({ text: 'NexusBot — Twitch' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:twitch:new:${userId}`).setLabel('➕ Ajouter').setStyle(ButtonStyle.Success);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:twitch:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 🎁 GIVEAWAYS
+// ═══════════════════════════════════════════════════════════════
+function buildGiveawaysPanel(cfg, guild, userId, db) {
+  const all = db.listGiveaways ? db.listGiveaways(guild.id) : [];
+  const now = Math.floor(Date.now() / 1000);
+  const desc = all.length === 0
+    ? '*Aucun giveaway.*\n\nUtilise `/giveaway` ou `&giveaway` pour en créer un.'
+    : all.slice(0, 10).map(g => {
+        const icon = g.status === 'active' ? (g.ends_at > now ? '🟢' : '⏰') : g.status === 'ended' ? '⚫' : '❌';
+        const time = g.ends_at ? `<t:${g.ends_at}:R>` : '';
+        return `${icon} **#${g.id}** ${truncate(g.prize, 40)} — ${g.winners_count || 1} 🏆 — ${time}`;
+      }).join('\n');
+
+  const embed = new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('🎁 Giveaways').setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}**`, inline: true })
+    .setFooter({ text: 'NexusBot — Giveaways' });
+
+  const endBtn = new ButtonBuilder().setCustomId(`adv:giveaways:end:${userId}`).setLabel('⏰ Terminer un giveaway').setStyle(ButtonStyle.Primary).setDisabled(all.length === 0);
+  const cancelBtn = new ButtonBuilder().setCustomId(`adv:giveaways:cancel:${userId}`).setLabel('❌ Annuler un giveaway').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), endBtn, cancelBtn)] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : ⏰ MESSAGES PROGRAMMÉS
+// ═══════════════════════════════════════════════════════════════
+function buildScheduledPanel(cfg, guild, userId, db) {
+  const all = db.listScheduledMessages ? db.listScheduledMessages(guild.id) : [];
+  const desc = all.length === 0
+    ? '*Aucun message programmé.*\n\nProgramme un message récurrent avec une expression CRON (ex: `0 9 * * *` = tous les jours à 9h).'
+    : all.slice(0, 20).map(s => `${s.enabled ? '✅' : '⏸️'} **#${s.id}** \`${s.cron}\` → <#${s.channel_id}> ${truncate(s.content || '(embed)', 40)}`).join('\n');
+
+  const embed = new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('⏰ Messages programmés').setDescription(desc)
+    .addFields(
+      { name: '📊 Total', value: `**${all.length}**`, inline: true },
+      { name: '🔤 Syntaxe CRON', value: '`m h j M J` — ex: `0 9 * * *` (9h tous les jours)', inline: false },
+    )
+    .setFooter({ text: 'NexusBot — Scheduled' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:scheduled:new:${userId}`).setLabel('➕ Programmer').setStyle(ButtonStyle.Success);
+  const toggleBtn = new ButtonBuilder().setCustomId(`adv:scheduled:toggle:${userId}`).setLabel('🔁 Activer/Désact.').setStyle(ButtonStyle.Secondary).setDisabled(all.length === 0);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:scheduled:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, toggleBtn, delBtn)] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 📋 QUÊTES
+// ═══════════════════════════════════════════════════════════════
+function buildQuestsPanel(cfg, guild, userId, db) {
+  const all = db.listQuests ? db.listQuests(guild.id) : [];
+  const desc = all.length === 0
+    ? '*Aucune quête.*\n\nCrée des défis communautaires avec un objectif à atteindre et une récompense.'
+    : all.slice(0, 15).map(q => {
+        const status = q.status === 'active' ? '🎯' : '✅';
+        return `${status} **#${q.id}** ${truncate(q.title, 40)} (${q.current}/${q.target}) • 🎁 ${truncate(q.reward, 40)}`;
+      }).join('\n');
+
+  const embed = new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('📋 Quêtes communautaires').setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}**`, inline: true })
+    .setFooter({ text: 'NexusBot — Quêtes' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:quests:new:${userId}`).setLabel('➕ Créer').setStyle(ButtonStyle.Success);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:quests:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 📬 SONDAGES
+// ═══════════════════════════════════════════════════════════════
+function buildPollsPanel(cfg, guild, userId, db) {
+  const all = db.listPolls ? db.listPolls(guild.id) : [];
+  const desc = all.length === 0
+    ? '*Aucun sondage.*\n\nUtilise `/sondage` ou `&sondage` pour en créer.'
+    : all.slice(0, 10).map(p => `${p.ended ? '✅' : '🟢'} **#${p.id}** ${truncate(p.question, 60)}`).join('\n');
+
+  const embed = new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('📬 Sondages').setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}**`, inline: true })
+    .setFooter({ text: 'NexusBot — Sondages' });
+
+  const endBtn = new ButtonBuilder().setCustomId(`adv:polls:end:${userId}`).setLabel('⏰ Terminer').setStyle(ButtonStyle.Primary).setDisabled(all.length === 0);
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), endBtn)] };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // DISPATCHER DES CATÉGORIES AVANCÉES
 // ═══════════════════════════════════════════════════════════════
 function buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client) {
@@ -1235,6 +1388,13 @@ function buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client) {
     case 'shop':           return buildShopPanel(cfg, guild, userId, db, 0);
     case 'reaction_roles': return buildReactionRolesPanel(cfg, guild, userId, db);
     case 'role_menus':     return buildRoleMenusPanel(cfg, guild, userId, db);
+    case 'antiraid':       return buildAntiraidPanel(cfg, guild, userId, db);
+    case 'youtube':        return buildYoutubePanel(cfg, guild, userId, db);
+    case 'twitch':         return buildTwitchPanel(cfg, guild, userId, db);
+    case 'giveaways':      return buildGiveawaysPanel(cfg, guild, userId, db);
+    case 'scheduled':      return buildScheduledPanel(cfg, guild, userId, db);
+    case 'quests':         return buildQuestsPanel(cfg, guild, userId, db);
+    case 'polls':          return buildPollsPanel(cfg, guild, userId, db);
     case 'cmd_ctrl':       return buildCmdCtrlPanel(cfg, guild, userId, db, client, 0);
     case 'aliases':        return buildAliasesPanel(cfg, guild, userId, db);
     case 'backup':         return buildBackupPanel(cfg, guild, userId, db);
@@ -1527,6 +1687,117 @@ async function handleAdvancedInteraction(interaction, db, client) {
         db.removeCooldownOverride(interaction.guildId, arg);
         return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, userId, db, arg));
       }
+    }
+
+    // ── 🛡️ ANTIRAID ──────────────────────────────────────────
+    if (section === 'antiraid') {
+      if (action === 'toggle') {
+        const a = db.getAntiraidConfig(interaction.guildId);
+        db.setAntiraidField(interaction.guildId, 'enabled', a.enabled ? 0 : 1);
+        return interaction.update(buildAntiraidPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'toggle_captcha') {
+        const a = db.getAntiraidConfig(interaction.guildId);
+        db.setAntiraidField(interaction.guildId, 'captcha_enabled', a.captcha_enabled ? 0 : 1);
+        return interaction.update(buildAntiraidPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'cycle_action') {
+        const a = db.getAntiraidConfig(interaction.guildId);
+        const cycle = ['kick', 'ban', 'mute'];
+        const i = cycle.indexOf(a.action || 'kick');
+        db.setAntiraidField(interaction.guildId, 'action', cycle[(i + 1) % cycle.length]);
+        return interaction.update(buildAntiraidPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'set_thresh') {
+        const a = db.getAntiraidConfig(interaction.guildId);
+        const modal = buildSimpleModal(`adv_modal:antiraid:save_thresh:${userId}`, '🚪 Seuil de raid', [
+          { id: 'threshold', label: 'Arrivées max', value: String(a.join_threshold ?? 10), style: TextInputStyle.Short, maxLength: 4 },
+          { id: 'window',    label: 'Fenêtre en secondes', value: String(a.join_window_secs ?? 30), style: TextInputStyle.Short, maxLength: 4 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_newacc') {
+        const a = db.getAntiraidConfig(interaction.guildId);
+        const modal = buildSimpleModal(`adv_modal:antiraid:save_newacc:${userId}`, '👶 Comptes jeunes', [
+          { id: 'days',   label: 'Jours min avant d\'autoriser', value: String(a.new_account_days ?? 7), style: TextInputStyle.Short, maxLength: 3 },
+          { id: 'action', label: 'Action (kick | ban | mute)',    value: a.new_account_action || 'kick', style: TextInputStyle.Short, maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 📺 YOUTUBE / 🎮 TWITCH ────────────────────────────────
+    if (section === 'youtube' || section === 'twitch') {
+      const label = section === 'youtube' ? 'YouTube' : 'Twitch';
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:${section}:create:${userId}`, `➕ Nouvelle alerte ${label}`, [
+          { id: 'channel_id', label: 'ID du salon Discord où poster',              style: TextInputStyle.Short, maxLength: 30 },
+          { id: 'target',     label: section === 'youtube' ? 'ID de la chaîne YouTube (UCxxx)' : 'Login Twitch (ex: ninja)', style: TextInputStyle.Short, maxLength: 100 },
+          { id: 'message',    label: 'Message (optionnel)', placeholder: section === 'youtube' ? '🎬 Nouvelle vidéo de {channel} ! {url}' : '🔴 {streamer} est EN LIVE ! {url}', style: TextInputStyle.Paragraph, required: false, maxLength: 500 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:${section}:del_pick:${userId}`, `🗑️ Supprimer alerte ${label}`, [
+          { id: 'id', label: 'ID de l\'alerte', style: TextInputStyle.Short, maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 🎁 GIVEAWAYS ──────────────────────────────────────────
+    if (section === 'giveaways') {
+      if (action === 'end' || action === 'cancel') {
+        const modal = buildSimpleModal(`adv_modal:giveaways:${action}_pick:${userId}`, action === 'end' ? '⏰ Terminer' : '❌ Annuler', [
+          { id: 'id', label: 'ID du giveaway', style: TextInputStyle.Short, maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── ⏰ SCHEDULED ──────────────────────────────────────────
+    if (section === 'scheduled') {
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:scheduled:create:${userId}`, '➕ Programmer un message', [
+          { id: 'channel_id', label: 'ID du salon',                       style: TextInputStyle.Short, maxLength: 30 },
+          { id: 'cron',       label: 'Expression CRON (ex: 0 9 * * *)',   style: TextInputStyle.Short, maxLength: 30, placeholder: '0 9 * * *' },
+          { id: 'content',    label: 'Contenu du message (texte)',         style: TextInputStyle.Paragraph, maxLength: 2000 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'toggle' || action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:scheduled:${action}_pick:${userId}`, action === 'del' ? '🗑️ Supprimer' : '🔁 Activer/Désact.', [
+          { id: 'id', label: 'ID du message programmé', style: TextInputStyle.Short, maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 📋 QUÊTES ─────────────────────────────────────────────
+    if (section === 'quests') {
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:quests:create:${userId}`, '➕ Nouvelle quête', [
+          { id: 'title',       label: 'Titre',                           style: TextInputStyle.Short,     maxLength: 100 },
+          { id: 'description', label: 'Description',                      style: TextInputStyle.Paragraph, maxLength: 500 },
+          { id: 'target',      label: 'Objectif (nombre)',                style: TextInputStyle.Short,     maxLength: 10, placeholder: '100' },
+          { id: 'reward',      label: 'Récompense (texte libre)',         style: TextInputStyle.Short,     maxLength: 200 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:quests:del_pick:${userId}`, '🗑️ Supprimer une quête', [
+          { id: 'id', label: 'ID de la quête', style: TextInputStyle.Short, maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 📬 SONDAGES ───────────────────────────────────────────
+    if (section === 'polls' && action === 'end') {
+      const modal = buildSimpleModal(`adv_modal:polls:end_pick:${userId}`, '⏰ Terminer un sondage', [
+        { id: 'id', label: 'ID du sondage', style: TextInputStyle.Short, maxLength: 10 },
+      ]);
+      return interaction.showModal(modal);
     }
 
     // ── 🗄️ ÉDITEUR LIBRE (KV + guild_config) ─────────────────
@@ -2299,6 +2570,107 @@ async function handleAdvancedInteraction(interaction, db, client) {
         }
         return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, extra));
       }
+    }
+
+    // ── 🛡️ ANTIRAID — save modals ────────────────────────────
+    if (sect === 'antiraid') {
+      if (act === 'save_thresh') {
+        const t = parseInt(field('threshold'), 10);
+        const w = parseInt(field('window'), 10);
+        if (isNaN(t) || t < 2) return interaction.reply({ content: '❌ Seuil invalide (>=2).', ephemeral: true });
+        if (isNaN(w) || w < 5) return interaction.reply({ content: '❌ Fenêtre invalide (>=5s).', ephemeral: true });
+        db.setAntiraidField(interaction.guildId, 'join_threshold', t);
+        db.setAntiraidField(interaction.guildId, 'join_window_secs', w);
+        return interaction.update(buildAntiraidPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_newacc') {
+        const d = parseInt(field('days'), 10);
+        const a = field('action', 'kick').toLowerCase().trim();
+        if (isNaN(d) || d < 0) return interaction.reply({ content: '❌ Jours invalides.', ephemeral: true });
+        if (!['kick', 'ban', 'mute'].includes(a)) return interaction.reply({ content: '❌ Action : kick, ban ou mute.', ephemeral: true });
+        db.setAntiraidField(interaction.guildId, 'new_account_days', d);
+        db.setAntiraidField(interaction.guildId, 'new_account_action', a);
+        return interaction.update(buildAntiraidPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── 📺 YOUTUBE / 🎮 TWITCH ────────────────────────────────
+    if (sect === 'youtube' || sect === 'twitch') {
+      if (act === 'create') {
+        const channel_id = field('channel_id').trim();
+        const target     = field('target').trim();
+        const message    = field('message').trim() || null;
+        if (!channel_id || !target) return interaction.reply({ content: '❌ Salon + cible requis.', ephemeral: true });
+        if (sect === 'youtube') db.addYoutubeSub(interaction.guildId, { channel_id, yt_channel_id: target, message });
+        else                    db.addTwitchSub(interaction.guildId, { channel_id, twitch_login: target.toLowerCase(), message });
+        return interaction.update(sect === 'youtube' ? buildYoutubePanel(cfg, interaction.guild, uid, db) : buildTwitchPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'del_pick') {
+        const id = parseInt(field('id'), 10);
+        if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+        const n = sect === 'youtube' ? db.removeYoutubeSub(interaction.guildId, id) : db.removeTwitchSub(interaction.guildId, id);
+        if (!n) return interaction.reply({ content: `❌ #${id} introuvable.`, ephemeral: true });
+        return interaction.update(sect === 'youtube' ? buildYoutubePanel(cfg, interaction.guild, uid, db) : buildTwitchPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── 🎁 GIVEAWAYS ──────────────────────────────────────────
+    if (sect === 'giveaways') {
+      const id = parseInt(field('id'), 10);
+      if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+      if (act === 'end_pick')    { db.endGiveaway(interaction.guildId, id);    return interaction.update(buildGiveawaysPanel(cfg, interaction.guild, uid, db)); }
+      if (act === 'cancel_pick') { db.cancelGiveaway(interaction.guildId, id); return interaction.update(buildGiveawaysPanel(cfg, interaction.guild, uid, db)); }
+    }
+
+    // ── ⏰ SCHEDULED ──────────────────────────────────────────
+    if (sect === 'scheduled') {
+      if (act === 'create') {
+        const channel_id = field('channel_id').trim();
+        const cron       = field('cron').trim();
+        const content    = field('content').trim();
+        if (!channel_id || !cron || !content) return interaction.reply({ content: '❌ Tous les champs requis.', ephemeral: true });
+        // Validation basique du cron (5 tokens)
+        if (cron.split(/\s+/).length !== 5) return interaction.reply({ content: '❌ Expression CRON invalide (5 tokens).', ephemeral: true });
+        db.createScheduledMessage(interaction.guildId, { channel_id, cron, content, enabled: 1, created_by: interaction.user.id });
+        return interaction.update(buildScheduledPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'toggle_pick') {
+        const id = parseInt(field('id'), 10);
+        if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+        db.toggleScheduledMessage(interaction.guildId, id);
+        return interaction.update(buildScheduledPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'del_pick') {
+        const id = parseInt(field('id'), 10);
+        if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+        db.deleteScheduledMessage(interaction.guildId, id);
+        return interaction.update(buildScheduledPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── 📋 QUÊTES ─────────────────────────────────────────────
+    if (sect === 'quests') {
+      if (act === 'create') {
+        db.createQuest(interaction.guildId, {
+          title:       field('title').trim(),
+          description: field('description').trim(),
+          target:      parseInt(field('target'), 10) || 0,
+          reward:      field('reward').trim(),
+        });
+        return interaction.update(buildQuestsPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'del_pick') {
+        const id = parseInt(field('id'), 10);
+        db.deleteQuest(interaction.guildId, id);
+        return interaction.update(buildQuestsPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── 📬 SONDAGES ───────────────────────────────────────────
+    if (sect === 'polls' && act === 'end_pick') {
+      const id = parseInt(field('id'), 10);
+      db.endPoll(interaction.guildId, id);
+      return interaction.update(buildPollsPanel(cfg, interaction.guild, uid, db));
     }
 
     // ── 🗄️ KV : view / set / del ─────────────────────────────
