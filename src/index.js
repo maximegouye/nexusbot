@@ -113,6 +113,12 @@ client.once('clientReady', async () => {
     console.log('[INVITE] Cache des invitations initialisé');
   } catch (e) { console.error('[INVITE] Erreur init cache:', e.message); }
 
+  // ── Worker des messages programmés (CRON) ────────────
+  try {
+    const { startScheduledWorker } = require('./utils/scheduledWorker');
+    startScheduledWorker(client);
+  } catch (e) { console.error('[ScheduledWorker] Erreur init:', e.message); }
+
   // ── Enregistrer les commandes ──────────────────────────
   const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 

@@ -84,37 +84,73 @@ module.exports = {
     }
 
     // ── Message de bienvenue ──────────────────────────
-    if (!cfg.welcome_channel) return;
-    const channel = guild.channels.cache.get(cfg.welcome_channel);
+    // Priorité : table system_messages(event='welcome') > cfg.welcome_msg > défaut
+    const sysMsg = db.getSystemMessage ? db.getSystemMessage(guild.id, 'welcome') : null;
+    const sysEnabled = sysMsg ? (sysMsg.enabled ?? 1) : 1;
+    if (!sysEnabled) return; // désactivé via le panneau
+
+    const channelId = (sysMsg && sysMsg.channel_id) || cfg.welcome_channel;
+    if (!channelId) return;
+    const channel = guild.channels.cache.get(channelId);
     if (!channel) return;
 
     const memberCount = guild.memberCount;
     const defaultMsg = `🎉 Bienvenue **{username}** sur **{server}** ! Tu es le **{count}ème** membre !\n\n📋 Lis les règles et choisis tes rôles !`;
 
-    const msg = (cfg.welcome_msg || defaultMsg)
-      .replace('{user}',     `<@${user.id}>`)
-      .replace('{username}', user.username)
-      .replace('{server}',   guild.name)
-      .replace('{count}',    memberCount.toLocaleString('fr'));
+    // Texte : system_messages.content > cfg.welcome_msg > défaut
+    const rawText = (sysMsg && sysMsg.content) || cfg.welcome_msg || defaultMsg;
+    const msg = rawText
+      .replace(/\{user\}/g,     `<@${user.id}>`)
+      .replace(/\{username\}/g, user.username)
+      .replace(/\{server\}/g,   guild.name)
+      .replace(/\{count\}/g,    memberCount.toLocaleString('fr'));
+
+    // Si un embed JSON custom est défini dans system_messages, on l'utilise tel quel
+    let customEmbedData = sysMsg && sysMsg.embed_json
+      ? (() => { try { return JSON.parse(sysMsg.embed_json); } catch { return null; } })()
+      : null;
 
     // Tentative d'image de bienvenue canvas
     const cardBuffer = await buildWelcomeCard(member, guild);
 
-    const embed = new EmbedBuilder()
-      .setColor(cfg.color || '#7B2FBE')
-      .setTitle(`👋 Nouveau membre !`)
-      .setDescription(msg)
-      .addFields(
-        { name: '📅 Compte créé', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true },
-        { name: '👥 Membres',     value: `**${memberCount}** au total`, inline: true }
-      )
-      .setFooter({ text: guild.name, iconURL: guild.iconURL() })
-      .setTimestamp();
+    // Construction de l'embed : custom (via system_messages) ou défaut
+    let embed;
+    if (customEmbedData) {
+      try {
+        const { rebuildEmbedFromData, applyVarsToTemplate } = require('../utils/configPanelAdvanced');
+        embed = rebuildEmbedFromData(applyVarsToTemplate(customEmbedData, {
+          userMention: `<@${user.id}>`,
+          username: user.username,
+          serverName: guild.name,
+          memberCount,
+        }));
+      } catch { customEmbedData = null; }
+    }
+    if (!embed) {
+      embed = new EmbedBuilder()
+        .setColor(cfg.color || '#7B2FBE')
+        .setTitle(`👋 Nouveau membre !`)
+        .setDescription(msg)
+        .addFields(
+          { name: '📅 Compte créé', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true },
+          { name: '👥 Membres',     value: `**${memberCount}** au total`, inline: true }
+        )
+        .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+        .setTimestamp();
+    }
 
     if (!cardBuffer) embed.setThumbnail(user.displayAvatarURL({ size: 256 }));
 
-    const payload = { embeds: [embed] };
-    if (cardBuffer) payload.files = [new AttachmentBuilder(cardBuffer, { name: 'welcome.png' })];
+    // Mode 'text' : pas d'embed, juste le texte ; 'both' : les deux ; 'embed' : juste l'embed (défaut)
+    const mode = (sysMsg && sysMsg.mode) || 'embed';
+    const payload = {};
+    if (mode === 'text') {
+      payload.content = msg;
+    } else {
+      payload.embeds = [embed];
+      if (mode === 'both') payload.content = msg;
+    }
+    if (cardBuffer && (mode !== 'text')) payload.files = [new AttachmentBuilder(cardBuffer, { name: 'welcome.png' })];
 
     await channel.send(payload).catch(() => {});
 
