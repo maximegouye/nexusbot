@@ -848,6 +848,12 @@ const migrations = [
   { table: 'custom_commands', column: 'uses',             sql: "ALTER TABLE custom_commands ADD COLUMN uses INTEGER DEFAULT 0" },
   { table: 'custom_commands', column: 'delete_trigger',   sql: "ALTER TABLE custom_commands ADD COLUMN delete_trigger INTEGER DEFAULT 0" },
   { table: 'custom_commands', column: 'updated_at',       sql: "ALTER TABLE custom_commands ADD COLUMN updated_at INTEGER DEFAULT 0" },
+  // autoresponder — enrichissement v3
+  { table: 'autoresponder', column: 'enabled',          sql: "ALTER TABLE autoresponder ADD COLUMN enabled INTEGER DEFAULT 1" },
+  { table: 'autoresponder', column: 'required_role',    sql: "ALTER TABLE autoresponder ADD COLUMN required_role TEXT" },
+  { table: 'autoresponder', column: 'allowed_channels', sql: "ALTER TABLE autoresponder ADD COLUMN allowed_channels TEXT DEFAULT '[]'" },
+  { table: 'autoresponder', column: 'response_type',    sql: "ALTER TABLE autoresponder ADD COLUMN response_type TEXT DEFAULT 'text'" },
+  { table: 'autoresponder', column: 'embed_json',       sql: "ALTER TABLE autoresponder ADD COLUMN embed_json TEXT" },
 ];
 
 for (const m of migrations) {
@@ -1304,19 +1310,32 @@ const helpers = {
   },
 
   upsertAutoresponder(guildId, trigger, data) {
-    // data: { response, exact_match, cooldown }
+    // data enrichi: response, exact_match, cooldown, enabled, required_role,
+    //               allowed_channels[], response_type ('text'|'embed'), embed_json
     db.prepare(`
-      INSERT INTO autoresponder (guild_id, trigger, response, exact_match, cooldown)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO autoresponder
+        (guild_id, trigger, response, exact_match, cooldown, enabled,
+         required_role, allowed_channels, response_type, embed_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(guild_id, trigger) DO UPDATE SET
-        response    = excluded.response,
-        exact_match = excluded.exact_match,
-        cooldown    = excluded.cooldown
+        response         = excluded.response,
+        exact_match      = excluded.exact_match,
+        cooldown         = excluded.cooldown,
+        enabled          = excluded.enabled,
+        required_role    = excluded.required_role,
+        allowed_channels = excluded.allowed_channels,
+        response_type    = excluded.response_type,
+        embed_json       = excluded.embed_json
     `).run(
       guildId, String(trigger).toLowerCase().trim(),
       data.response ?? '',
       data.exact_match ? 1 : 0,
       Math.max(0, parseInt(data.cooldown, 10) || 0),
+      data.enabled === 0 ? 0 : 1,
+      data.required_role ?? null,
+      JSON.stringify(data.allowed_channels ?? []),
+      data.response_type ?? 'text',
+      data.embed_json ?? null,
     );
     return helpers.getAutoresponder(guildId, trigger);
   },
@@ -1327,6 +1346,109 @@ const helpers = {
 
   deleteAutoresponderById(guildId, id) {
     return db.prepare('DELETE FROM autoresponder WHERE guild_id = ? AND id = ?').run(guildId, id).changes;
+  },
+
+  incrementAutoresponderUses(guildId, trigger) {
+    try { db.prepare('UPDATE autoresponder SET uses = uses + 1 WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').run(guildId, trigger); } catch {}
+  },
+
+  // ── Shop / Boutique ──
+  getShopItems(guildId) {
+    return db.prepare('SELECT * FROM shop WHERE guild_id = ? ORDER BY id ASC').all(guildId);
+  },
+
+  getShopItem(guildId, id) {
+    return db.prepare('SELECT * FROM shop WHERE guild_id = ? AND id = ?').get(guildId, id);
+  },
+
+  createShopItem(guildId, data) {
+    const info = db.prepare(`
+      INSERT INTO shop (guild_id, name, description, emoji, price, stock, role_id, duration_hours, max_per_user, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      guildId,
+      data.name,
+      data.description ?? null,
+      data.emoji ?? '📦',
+      Math.max(0, parseInt(data.price, 10) || 0),
+      data.stock == null ? -1 : parseInt(data.stock, 10),
+      data.role_id ?? null,
+      data.duration_hours == null ? null : parseInt(data.duration_hours, 10),
+      data.max_per_user == null ? null : parseInt(data.max_per_user, 10),
+      data.active === 0 ? 0 : 1,
+    );
+    return helpers.getShopItem(guildId, info.lastInsertRowid);
+  },
+
+  updateShopItem(guildId, id, patch) {
+    const fields = [];
+    const values = [];
+    for (const k of ['name', 'description', 'emoji', 'price', 'stock', 'role_id', 'duration_hours', 'max_per_user', 'active']) {
+      if (patch[k] !== undefined) { fields.push(`${k} = ?`); values.push(patch[k]); }
+    }
+    if (!fields.length) return null;
+    values.push(guildId, id);
+    db.prepare(`UPDATE shop SET ${fields.join(', ')} WHERE guild_id = ? AND id = ?`).run(...values);
+    return helpers.getShopItem(guildId, id);
+  },
+
+  deleteShopItem(guildId, id) {
+    return db.prepare('DELETE FROM shop WHERE guild_id = ? AND id = ?').run(guildId, id).changes;
+  },
+
+  // ── Reaction roles ──
+  getReactionRoles(guildId) {
+    return db.prepare('SELECT * FROM reaction_roles WHERE guild_id = ?').all(guildId);
+  },
+
+  addReactionRole(guildId, messageId, channelId, emoji, roleId) {
+    db.prepare(`INSERT OR REPLACE INTO reaction_roles (guild_id, message_id, channel_id, emoji, role_id) VALUES (?, ?, ?, ?, ?)`)
+      .run(guildId, messageId, channelId, emoji, roleId);
+  },
+
+  removeReactionRole(guildId, id) {
+    return db.prepare('DELETE FROM reaction_roles WHERE guild_id = ? AND id = ?').run(guildId, id).changes;
+  },
+
+  // ── Role menus (boutons de rôles) ──
+  getRoleMenus(guildId) {
+    return db.prepare('SELECT * FROM role_menus WHERE guild_id = ? ORDER BY id ASC').all(guildId);
+  },
+
+  createRoleMenu(guildId, data) {
+    const info = db.prepare(`
+      INSERT INTO role_menus (guild_id, channel_id, message_id, title, description, roles, max_choices, required_role)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      guildId,
+      data.channel_id ?? null,
+      data.message_id ?? null,
+      data.title,
+      data.description ?? null,
+      JSON.stringify(data.roles ?? []),
+      parseInt(data.max_choices, 10) || 0,
+      data.required_role ?? null,
+    );
+    return db.prepare('SELECT * FROM role_menus WHERE id = ?').get(info.lastInsertRowid);
+  },
+
+  deleteRoleMenu(guildId, id) {
+    return db.prepare('DELETE FROM role_menus WHERE guild_id = ? AND id = ?').run(guildId, id).changes;
+  },
+
+  // ── Introspection guild_config : liste les colonnes + valeurs ──
+  listGuildConfigColumns() {
+    return db.prepare('PRAGMA table_info(guild_config)').all().map(c => ({ name: c.name, type: c.type, notnull: c.notnull }));
+  },
+
+  setGuildConfigColumn(guildId, column, value) {
+    // Sécurité : whitelist stricte sur les colonnes existantes
+    const cols = helpers.listGuildConfigColumns().map(c => c.name);
+    if (!cols.includes(column)) throw new Error(`Colonne inconnue: ${column}`);
+    if (column === 'guild_id') throw new Error('guild_id est read-only');
+    helpers.getConfig(guildId); // ensure row
+    db.prepare(`UPDATE guild_config SET ${column} = ? WHERE guild_id = ?`).run(value, guildId);
+    return helpers.getConfig(guildId);
   },
 
   // ── Level roles (déjà getLevelRoles + checkAndAssignLevelRoles, on ajoute add/remove) ──

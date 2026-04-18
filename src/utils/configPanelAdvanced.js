@@ -54,11 +54,15 @@ function backBtn(userId) {
 // ═══════════════════════════════════════════════════════════════
 const ADVANCED_CATEGORIES = [
   { value: 'ai',           label: '🧠 Intelligence IA',        description: 'Provider, modèle, mention = question, rôle requis' },
+  { value: 'kv',           label: '🗄️ Éditeur libre (KV)',    description: 'Ajoute/modifie N\'IMPORTE quelle clé de config' },
   { value: 'embeds',       label: '🎨 Éditeur d\'embed',      description: 'Créer et gérer des embeds personnalisés' },
   { value: 'cmds_adv',     label: '⚡ Commandes custom',        description: 'Créer des commandes & personnalisées (texte ou embed)' },
   { value: 'sys_msgs',     label: '📢 Messages système',       description: 'Welcome, leave, levelup, boost, daily...' },
   { value: 'autoresp',     label: '🔁 Réponses automatiques',  description: 'Bot répond quand un message contient un mot-clé' },
   { value: 'level_roles',  label: '🏆 Rôles par niveau',        description: 'Attribue un rôle quand un membre atteint un niveau' },
+  { value: 'shop',         label: '🛒 Boutique',               description: 'Items, prix, stock, rôles attribués' },
+  { value: 'reaction_roles', label: '⭐ Reaction roles',         description: 'Réagir sur un message = rôle' },
+  { value: 'role_menus',   label: '📜 Menus de rôles',         description: 'Panneaux interactifs de sélection de rôles' },
   { value: 'cmd_ctrl',     label: '🛠️ Cooldowns & toggles',   description: 'Activer/désactiver et régler les cooldowns par commande' },
   { value: 'aliases',      label: '🔀 Aliases',                description: 'Raccourcis pour vos commandes' },
   { value: 'backup',       label: '💾 Sauvegarde & Import',    description: 'Exporter / importer toute la config du serveur' },
@@ -420,6 +424,11 @@ function packDetail(userId, cmd, embeds) {
     .setLabel('🎭 Rôle requis')
     .setStyle(ButtonStyle.Secondary);
 
+  const chansBtn = new ButtonBuilder()
+    .setCustomId(`adv:cmds_adv:set_chans:${userId}:${encodeURIComponent(cmd.trigger)}`)
+    .setLabel('📣 Salons autorisés')
+    .setStyle(ButtonStyle.Secondary);
+
   const delTrigBtn = new ButtonBuilder()
     .setCustomId(`adv:cmds_adv:toggle_del:${userId}:${encodeURIComponent(cmd.trigger)}`)
     .setLabel(cmd.delete_trigger ? '🗑️ Ne plus supprimer' : '🗑️ Supprimer trigger')
@@ -434,7 +443,7 @@ function packDetail(userId, cmd, embeds) {
     embeds,
     components: [
       new ActionRowBuilder().addComponents(back, editResp, toggleBtn),
-      new ActionRowBuilder().addComponents(cdBtn, roleBtn, delTrigBtn),
+      new ActionRowBuilder().addComponents(cdBtn, roleBtn, chansBtn, delTrigBtn),
       new ActionRowBuilder().addComponents(delBtn),
     ],
   };
@@ -477,10 +486,15 @@ function buildSysMsgsPanel(cfg, guild, userId, db) {
       })),
     );
 
+  const newCustomBtn = new ButtonBuilder()
+    .setCustomId(`adv:sys_msgs:new_custom:${userId}`)
+    .setLabel('➕ Nouvel événement custom')
+    .setStyle(ButtonStyle.Success);
+
   return {
     embeds: [embed],
     components: [
-      new ActionRowBuilder().addComponents(backBtn(userId)),
+      new ActionRowBuilder().addComponents(backBtn(userId), newCustomBtn),
       new ActionRowBuilder().addComponents(select),
     ],
   };
@@ -791,6 +805,20 @@ function buildAutorespPanel(cfg, guild, userId, db, page = 0) {
 
   const rows = [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)];
   if (all.length > perPage) rows.push(new ActionRowBuilder().addComponents(prev, next));
+
+  if (slice.length > 0) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId(`adv_sel:autoresp_pick:${userId}`)
+      .setPlaceholder('🔎 Voir le détail d\'un autoresponder…')
+      .addOptions(
+        slice.map(a => ({
+          label: truncate(a.trigger, 100),
+          value: a.trigger,
+          description: truncate(a.response || '(embed)', 100),
+        })),
+      );
+    rows.push(new ActionRowBuilder().addComponents(select));
+  }
   return { embeds: [embed], components: rows };
 }
 
@@ -862,6 +890,229 @@ function buildBackupPanel(cfg, guild, userId, db) {
   return {
     embeds: [embed],
     components: [new ActionRowBuilder().addComponents(backBtn(userId), exportBtn, importBtn)],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 🗄️ ÉDITEUR LIBRE (KV + guild_config arbitraire)
+// Permet de lire/créer/modifier/supprimer N'IMPORTE QUELLE clé.
+// ═══════════════════════════════════════════════════════════════
+function buildKvPanel(cfg, guild, userId, db, page = 0, source = 'kv') {
+  // source: 'kv' (table guild_kv) ou 'gc' (colonnes guild_config)
+  let entries = [];
+  if (source === 'gc') {
+    const gc = db.getConfig(guild.id) || {};
+    const cols = db.listGuildConfigColumns ? db.listGuildConfigColumns() : [];
+    entries = cols
+      .filter(c => c.name !== 'guild_id')
+      .map(c => ({ key: c.name, value: gc[c.name], type: c.type }));
+  } else {
+    const rows = db.kvList ? db.kvList(guild.id) : [];
+    entries = rows.map(r => ({ key: r.key, value: r.value }));
+  }
+
+  const perPage = 15;
+  const maxPage = Math.max(0, Math.ceil(entries.length / perPage) - 1);
+  const p       = Math.min(Math.max(0, page), maxPage);
+  const slice   = entries.slice(p * perPage, p * perPage + perPage);
+
+  const lines = slice.length === 0
+    ? '*Aucune clé pour l\'instant.*'
+    : slice.map(e => {
+        const v = e.value === null || e.value === undefined
+          ? '*(null)*'
+          : typeof e.value === 'object'
+              ? truncate(JSON.stringify(e.value), 60)
+              : truncate(String(e.value), 60);
+        return `\`${truncate(e.key, 28)}\` = ${v}`;
+      }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🗄️ Éditeur libre')
+    .setDescription(
+      `Modifie **N'IMPORTE QUELLE** clé de configuration — aucun champ n'est verrouillé.\n\n` +
+      `**Source actuelle :** ${source === 'gc' ? '⚙️ Colonnes `guild_config` (typées)' : '📦 Clés libres `guild_kv` (JSON)'}\n\n` +
+      lines,
+    )
+    .addFields(
+      { name: '📊 Total',  value: `**${entries.length}** clé(s)`, inline: true },
+      { name: '📄 Page',   value: `**${p + 1}/${maxPage + 1}**`,    inline: true },
+    )
+    .setFooter({ text: source === 'gc' ? 'Colonnes typées — attention aux types' : 'Clés libres — JSON accepté' });
+
+  const back = backBtn(userId);
+
+  const switchBtn = new ButtonBuilder()
+    .setCustomId(`adv:kv:switch:${userId}:${source === 'gc' ? 'kv' : 'gc'}`)
+    .setLabel(source === 'gc' ? '📦 Voir KV libre' : '⚙️ Voir guild_config')
+    .setStyle(ButtonStyle.Secondary);
+
+  const viewBtn = new ButtonBuilder()
+    .setCustomId(`adv:kv:view:${userId}:${source}`)
+    .setLabel('🔍 Voir une clé')
+    .setStyle(ButtonStyle.Primary);
+
+  const setBtn = new ButtonBuilder()
+    .setCustomId(`adv:kv:set:${userId}:${source}`)
+    .setLabel(source === 'gc' ? '✏️ Modifier une colonne' : '➕ Créer/Modifier')
+    .setStyle(ButtonStyle.Success);
+
+  const delBtn = new ButtonBuilder()
+    .setCustomId(`adv:kv:del:${userId}:${source}`)
+    .setLabel(source === 'gc' ? '↩️ Mettre NULL' : '🗑️ Supprimer')
+    .setStyle(ButtonStyle.Danger);
+
+  const prev = new ButtonBuilder().setCustomId(`adv:kv:page:${userId}:${source}:${Math.max(0, p - 1)}`).setLabel('◀️').setStyle(ButtonStyle.Secondary).setDisabled(p === 0);
+  const next = new ButtonBuilder().setCustomId(`adv:kv:page:${userId}:${source}:${Math.min(maxPage, p + 1)}`).setLabel('▶️').setStyle(ButtonStyle.Secondary).setDisabled(p >= maxPage);
+
+  const rows = [
+    new ActionRowBuilder().addComponents(back, switchBtn, viewBtn),
+    new ActionRowBuilder().addComponents(setBtn, delBtn),
+  ];
+  if (entries.length > perPage) rows.push(new ActionRowBuilder().addComponents(prev, next));
+
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 🛒 BOUTIQUE
+// ═══════════════════════════════════════════════════════════════
+function buildShopPanel(cfg, guild, userId, db, page = 0) {
+  const items = db.getShopItems ? db.getShopItems(guild.id) : [];
+  const coin = cfg.currency_emoji || '🪙';
+  const perPage = 10;
+  const maxPage = Math.max(0, Math.ceil(items.length / perPage) - 1);
+  const p       = Math.min(Math.max(0, page), maxPage);
+  const slice   = items.slice(p * perPage, p * perPage + perPage);
+
+  const lines = slice.length === 0
+    ? '*Aucun item dans la boutique.*\n\nClique sur **➕ Créer** pour ajouter un item achetable.'
+    : slice.map(it => {
+        const stockTxt = it.stock === -1 ? '∞' : `${it.stock}`;
+        const roleTxt  = it.role_id ? ` • 🎭 <@&${it.role_id}>` : '';
+        const active   = it.active === 0 ? '🚫' : '✅';
+        return `${active} **#${it.id}** ${it.emoji || '📦'} **${truncate(it.name, 40)}** — ${it.price} ${coin} • Stock: ${stockTxt}${roleTxt}`;
+      }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🛒 Boutique')
+    .setDescription(lines)
+    .addFields(
+      { name: '📊 Items', value: `**${items.length}**`,                inline: true },
+      { name: '📄 Page',  value: `**${p + 1}/${maxPage + 1}**`,         inline: true },
+    )
+    .setFooter({ text: 'NexusBot — Boutique' });
+
+  const createBtn = new ButtonBuilder().setCustomId(`adv:shop:new:${userId}`).setLabel('➕ Créer').setStyle(ButtonStyle.Success);
+  const editBtn   = new ButtonBuilder().setCustomId(`adv:shop:edit:${userId}`).setLabel('✏️ Modifier').setStyle(ButtonStyle.Primary).setDisabled(items.length === 0);
+  const toggleBtn = new ButtonBuilder().setCustomId(`adv:shop:toggle:${userId}`).setLabel('🔁 Activer/Désact.').setStyle(ButtonStyle.Secondary).setDisabled(items.length === 0);
+  const delBtn    = new ButtonBuilder().setCustomId(`adv:shop:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(items.length === 0);
+
+  const prev = new ButtonBuilder().setCustomId(`adv:shop:page:${userId}:${Math.max(0, p - 1)}`).setLabel('◀️').setStyle(ButtonStyle.Secondary).setDisabled(p === 0);
+  const next = new ButtonBuilder().setCustomId(`adv:shop:page:${userId}:${Math.min(maxPage, p + 1)}`).setLabel('▶️').setStyle(ButtonStyle.Secondary).setDisabled(p >= maxPage);
+
+  const rows = [
+    new ActionRowBuilder().addComponents(backBtn(userId), createBtn, editBtn, toggleBtn, delBtn),
+  ];
+  if (items.length > perPage) rows.push(new ActionRowBuilder().addComponents(prev, next));
+  return { embeds: [embed], components: rows };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : ⭐ REACTION ROLES
+// ═══════════════════════════════════════════════════════════════
+function buildReactionRolesPanel(cfg, guild, userId, db) {
+  const all = db.getReactionRoles ? db.getReactionRoles(guild.id) : [];
+  const desc = all.length === 0
+    ? '*Aucun reaction role.*\n\nUn reaction role attribue un rôle quand un membre réagit avec un emoji sur un message donné.'
+    : all.slice(0, 20).map(r => `**#${r.id}** ${r.emoji} → <@&${r.role_id}> (msg \`${r.message_id}\`)`).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('⭐ Reaction roles')
+    .setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}**`, inline: true })
+    .setFooter({ text: 'NexusBot — Reaction roles' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:reaction_roles:new:${userId}`).setLabel('➕ Ajouter').setStyle(ButtonStyle.Success);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:reaction_roles:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION : 📜 ROLE MENUS (panneaux interactifs)
+// ═══════════════════════════════════════════════════════════════
+function buildRoleMenusPanel(cfg, guild, userId, db) {
+  const all = db.getRoleMenus ? db.getRoleMenus(guild.id) : [];
+  const desc = all.length === 0
+    ? '*Aucun menu de rôles.*\n\nUn menu de rôles est un message avec des boutons pour permettre aux membres de s\'auto-attribuer des rôles.'
+    : all.slice(0, 10).map(m => `**#${m.id}** ${truncate(m.title, 40)} — ${safeJsonParse(m.roles, []).length} rôle(s)`).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('📜 Menus de rôles')
+    .setDescription(desc)
+    .addFields({ name: '📊 Total', value: `**${all.length}**`, inline: true })
+    .setFooter({ text: 'NexusBot — Role menus' });
+
+  const addBtn = new ButtonBuilder().setCustomId(`adv:role_menus:new:${userId}`).setLabel('➕ Créer').setStyle(ButtonStyle.Success);
+  const delBtn = new ButtonBuilder().setCustomId(`adv:role_menus:del:${userId}`).setLabel('🗑️ Supprimer').setStyle(ButtonStyle.Danger).setDisabled(all.length === 0);
+
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(backBtn(userId), addBtn, delBtn)] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DÉTAIL ENRICHI AUTORESPONDER
+// ═══════════════════════════════════════════════════════════════
+function buildAutorespDetailPanel(cfg, guild, userId, db, trigger) {
+  const a = db.getAutoresponder(guild.id, trigger);
+  if (!a) return buildAutorespPanel(cfg, guild, userId, db, 0);
+
+  const allowedChans = safeJsonParse(a.allowed_channels, []);
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle(`🔁 ${a.trigger}`)
+    .addFields(
+      { name: '⚡ Statut',      value: onOff(a.enabled ?? 1),                             inline: true },
+      { name: '🎯 Match',       value: a.exact_match ? 'exact' : 'contient',              inline: true },
+      { name: '⏱️ Cooldown',    value: a.cooldown > 0 ? `**${a.cooldown}**s` : '*Aucun*', inline: true },
+      { name: '📝 Type',        value: a.response_type === 'embed' ? '🎨 Embed' : '💬 Texte', inline: true },
+      { name: '🎭 Rôle requis',  value: a.required_role ? `<@&${a.required_role}>` : '*Aucun*', inline: true },
+      { name: '🔁 Utilisations', value: String(a.uses ?? 0),                              inline: true },
+      { name: '📣 Salons autorisés', value: allowedChans.length ? allowedChans.map(id => `<#${id}>`).join(', ') : '*Tous les salons*', inline: false },
+    );
+  if (a.response_type === 'embed' && a.embed_json) {
+    const data = safeJsonParse(a.embed_json, {});
+    const preview = rebuildEmbedFromData(data);
+    return _packAutoresp(userId, a, [embed, preview]);
+  }
+  embed.addFields({ name: '💬 Réponse', value: truncate(a.response, 1024) || '*(vide)*', inline: false });
+  return _packAutoresp(userId, a, [embed]);
+}
+
+function _packAutoresp(userId, a, embeds) {
+  const id = encodeURIComponent(a.trigger);
+  return {
+    embeds,
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`adv:autoresp:list:${userId}`).setLabel('← Liste').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`adv:autoresp:edit_resp:${userId}:${id}`).setLabel('✏️ Modifier réponse').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`adv:autoresp:toggle_one:${userId}:${id}`).setLabel((a.enabled ?? 1) ? '⏸️ Désactiver' : '▶️ Activer').setStyle((a.enabled ?? 1) ? ButtonStyle.Secondary : ButtonStyle.Success),
+      ),
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`adv:autoresp:set_cd:${userId}:${id}`).setLabel('⏱️ Cooldown').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`adv:autoresp:set_role:${userId}:${id}`).setLabel('🎭 Rôle requis').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`adv:autoresp:set_chans:${userId}:${id}`).setLabel('📣 Salons autorisés').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`adv:autoresp:toggle_match:${userId}:${id}`).setLabel(a.exact_match ? '🔎 Match exact → contient' : '🎯 Contient → exact').setStyle(ButtonStyle.Secondary),
+      ),
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`adv:autoresp:del_one:${userId}:${id}`).setLabel('💥 Supprimer').setStyle(ButtonStyle.Danger),
+      ),
+    ],
   };
 }
 
@@ -974,16 +1225,20 @@ function buildAIPanel(cfg, guild, userId, db) {
 // ═══════════════════════════════════════════════════════════════
 function buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client) {
   switch (category) {
-    case 'ai':          return buildAIPanel(cfg, guild, userId, db);
-    case 'embeds':      return buildEmbedsPanel(cfg, guild, userId, db);
-    case 'cmds_adv':    return buildCmdsAdvPanel(cfg, guild, userId, db, 0);
-    case 'sys_msgs':    return buildSysMsgsPanel(cfg, guild, userId, db);
-    case 'autoresp':    return buildAutorespPanel(cfg, guild, userId, db, 0);
-    case 'level_roles': return buildLevelRolesPanel(cfg, guild, userId, db);
-    case 'cmd_ctrl':    return buildCmdCtrlPanel(cfg, guild, userId, db, client, 0);
-    case 'aliases':     return buildAliasesPanel(cfg, guild, userId, db);
-    case 'backup':      return buildBackupPanel(cfg, guild, userId, db);
-    default:            return null;
+    case 'ai':             return buildAIPanel(cfg, guild, userId, db);
+    case 'kv':             return buildKvPanel(cfg, guild, userId, db, 0, 'kv');
+    case 'embeds':         return buildEmbedsPanel(cfg, guild, userId, db);
+    case 'cmds_adv':       return buildCmdsAdvPanel(cfg, guild, userId, db, 0);
+    case 'sys_msgs':       return buildSysMsgsPanel(cfg, guild, userId, db);
+    case 'autoresp':       return buildAutorespPanel(cfg, guild, userId, db, 0);
+    case 'level_roles':    return buildLevelRolesPanel(cfg, guild, userId, db);
+    case 'shop':           return buildShopPanel(cfg, guild, userId, db, 0);
+    case 'reaction_roles': return buildReactionRolesPanel(cfg, guild, userId, db);
+    case 'role_menus':     return buildRoleMenusPanel(cfg, guild, userId, db);
+    case 'cmd_ctrl':       return buildCmdCtrlPanel(cfg, guild, userId, db, client, 0);
+    case 'aliases':        return buildAliasesPanel(cfg, guild, userId, db);
+    case 'backup':         return buildBackupPanel(cfg, guild, userId, db);
+    default:               return null;
   }
 }
 
@@ -1274,6 +1529,195 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
     }
 
+    // ── 🗄️ ÉDITEUR LIBRE (KV + guild_config) ─────────────────
+    if (section === 'kv') {
+      const argSrc = parts[4] || 'kv';
+      if (action === 'list') {
+        return interaction.update(buildKvPanel(cfg, interaction.guild, userId, db, 0, argSrc));
+      }
+      if (action === 'switch') {
+        return interaction.update(buildKvPanel(cfg, interaction.guild, userId, db, 0, argSrc));
+      }
+      if (action === 'page') {
+        const page = parseInt(parts[5], 10) || 0;
+        return interaction.update(buildKvPanel(cfg, interaction.guild, userId, db, page, argSrc));
+      }
+      if (action === 'view') {
+        const modal = buildSimpleModal(`adv_modal:kv:do_view:${userId}:${argSrc}`, `🔍 Voir une clé (${argSrc})`, [
+          { id: 'key', label: 'Nom de la clé', style: TextInputStyle.Short, maxLength: 80 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set') {
+        const modal = buildSimpleModal(`adv_modal:kv:do_set:${userId}:${argSrc}`,
+          argSrc === 'gc' ? '✏️ Modifier une colonne guild_config' : '➕ Créer/Modifier une clé',
+          [
+            { id: 'key',   label: argSrc === 'gc' ? 'Nom de la colonne (ex: color)' : 'Nom de la clé (libre)', style: TextInputStyle.Short, maxLength: 80 },
+            { id: 'value', label: 'Nouvelle valeur (texte, nombre, JSON…)',                                     style: TextInputStyle.Paragraph, required: false, maxLength: 4000 },
+          ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:kv:do_del:${userId}:${argSrc}`,
+          argSrc === 'gc' ? '↩️ Mettre NULL une colonne' : '🗑️ Supprimer une clé',
+          [{ id: 'key', label: 'Nom de la clé', style: TextInputStyle.Short, maxLength: 80 }]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 🛒 BOUTIQUE ──────────────────────────────────────────
+    if (section === 'shop') {
+      if (action === 'list') return interaction.update(buildShopPanel(cfg, interaction.guild, userId, db, 0));
+      if (action === 'page') return interaction.update(buildShopPanel(cfg, interaction.guild, userId, db, parseInt(arg, 10) || 0));
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:shop:create:${userId}`, '➕ Nouvel item', [
+          { id: 'name',        label: 'Nom',                 style: TextInputStyle.Short,     maxLength: 100 },
+          { id: 'description', label: 'Description',          style: TextInputStyle.Paragraph, required: false, maxLength: 500 },
+          { id: 'price',       label: 'Prix (en coins)',      style: TextInputStyle.Short,     maxLength: 10, placeholder: '100' },
+          { id: 'emoji',       label: 'Emoji',                style: TextInputStyle.Short,     required: false, maxLength: 10, placeholder: '📦' },
+          { id: 'stock',       label: 'Stock (-1 = illimité)', style: TextInputStyle.Short,     required: false, maxLength: 10, placeholder: '-1' },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'edit' || action === 'toggle' || action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:shop:${action}_pick:${userId}`,
+          action === 'del' ? '🗑️ Supprimer' : action === 'toggle' ? '🔁 Activer/Désact.' : '✏️ Modifier',
+          [{ id: 'id', label: 'ID de l\'item', style: TextInputStyle.Short, maxLength: 10 }]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── ⭐ REACTION ROLES ────────────────────────────────────
+    if (section === 'reaction_roles') {
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:reaction_roles:create:${userId}`, '➕ Nouveau reaction role', [
+          { id: 'message_id', label: 'ID du message (clic droit → Copier l\'ID)', style: TextInputStyle.Short, maxLength: 30 },
+          { id: 'channel_id', label: 'ID du salon du message',                     style: TextInputStyle.Short, maxLength: 30 },
+          { id: 'emoji',      label: 'Emoji (unicode ou <:nom:id>)',                style: TextInputStyle.Short, maxLength: 80 },
+          { id: 'role_id',    label: 'ID du rôle à attribuer',                      style: TextInputStyle.Short, maxLength: 30 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:reaction_roles:del_pick:${userId}`, '🗑️ Supprimer un reaction role', [
+          { id: 'id', label: 'ID du reaction role', style: TextInputStyle.Short, maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 📜 ROLE MENUS ────────────────────────────────────────
+    if (section === 'role_menus') {
+      if (action === 'new') {
+        const modal = buildSimpleModal(`adv_modal:role_menus:create:${userId}`, '➕ Nouveau menu de rôles', [
+          { id: 'title',       label: 'Titre du menu',                        style: TextInputStyle.Short,     maxLength: 100 },
+          { id: 'description', label: 'Description',                           style: TextInputStyle.Paragraph, required: false, maxLength: 500 },
+          { id: 'role_ids',    label: 'IDs des rôles (séparés par virgule)',   style: TextInputStyle.Paragraph, maxLength: 1000 },
+          { id: 'max_choices', label: 'Choix max par membre (0 = illimité)',   style: TextInputStyle.Short,     required: false, maxLength: 3, placeholder: '0' },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'del') {
+        const modal = buildSimpleModal(`adv_modal:role_menus:del_pick:${userId}`, '🗑️ Supprimer un menu', [
+          { id: 'id', label: 'ID du menu', style: TextInputStyle.Short, maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+    }
+
+    // ── 🔁 AUTORESPONDER — détail + enrichissements ──────────
+    if (section === 'autoresp') {
+      if (action === 'detail' && arg) {
+        return interaction.update(buildAutorespDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'toggle_one' && arg) {
+        const a = db.getAutoresponder(interaction.guildId, arg);
+        if (a) {
+          db.upsertAutoresponder(interaction.guildId, arg, {
+            ...a,
+            allowed_channels: safeJsonParse(a.allowed_channels, []),
+            enabled: a.enabled ? 0 : 1,
+          });
+        }
+        return interaction.update(buildAutorespDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'toggle_match' && arg) {
+        const a = db.getAutoresponder(interaction.guildId, arg);
+        if (a) {
+          db.upsertAutoresponder(interaction.guildId, arg, {
+            ...a,
+            allowed_channels: safeJsonParse(a.allowed_channels, []),
+            exact_match: a.exact_match ? 0 : 1,
+          });
+        }
+        return interaction.update(buildAutorespDetailPanel(cfg, interaction.guild, userId, db, arg));
+      }
+      if (action === 'del_one' && arg) {
+        db.deleteAutoresponder(interaction.guildId, arg);
+        return interaction.update(buildAutorespPanel(cfg, interaction.guild, userId, db, 0));
+      }
+      if (action === 'edit_resp' && arg) {
+        const a = db.getAutoresponder(interaction.guildId, arg);
+        const modal = buildSimpleModal(`adv_modal:autoresp:save_resp:${userId}:${encodeURIComponent(arg)}`, '✏️ Modifier la réponse', [
+          { id: 'response', label: 'Nouvelle réponse', value: a?.response || '', style: TextInputStyle.Paragraph, maxLength: 2000 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_cd' && arg) {
+        const a = db.getAutoresponder(interaction.guildId, arg);
+        const modal = buildSimpleModal(`adv_modal:autoresp:save_cd:${userId}:${encodeURIComponent(arg)}`, '⏱️ Cooldown', [
+          { id: 'seconds', label: 'Cooldown (secondes, 0 = aucun)', value: String(a?.cooldown ?? 0), style: TextInputStyle.Short, maxLength: 6 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_role' && arg) {
+        const sel = new RoleSelectMenuBuilder()
+          .setCustomId(`adv_role:autoresp_role:${userId}:${encodeURIComponent(arg)}`)
+          .setPlaceholder(`🎭 Rôle requis pour "${arg}" (vide = aucun)`)
+          .setMinValues(0).setMaxValues(1);
+        const back = new ButtonBuilder().setCustomId(`adv:autoresp:detail:${userId}:${encodeURIComponent(arg)}`).setLabel('← Retour').setStyle(ButtonStyle.Secondary);
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`🎭 Rôle requis — ${arg}`)],
+          components: [new ActionRowBuilder().addComponents(back), new ActionRowBuilder().addComponents(sel)],
+        });
+      }
+      if (action === 'set_chans' && arg) {
+        const sel = new ChannelSelectMenuBuilder()
+          .setCustomId(`adv_chan:autoresp_chans:${userId}:${encodeURIComponent(arg)}`)
+          .setPlaceholder(`📣 Salons autorisés pour "${arg}" (vide = tous)`)
+          .setChannelTypes(ChannelType.GuildText)
+          .setMinValues(0).setMaxValues(25);
+        const back = new ButtonBuilder().setCustomId(`adv:autoresp:detail:${userId}:${encodeURIComponent(arg)}`).setLabel('← Retour').setStyle(ButtonStyle.Secondary);
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`📣 Salons — ${arg}`)],
+          components: [new ActionRowBuilder().addComponents(back), new ActionRowBuilder().addComponents(sel)],
+        });
+      }
+    }
+
+    // ── ⚡ COMMANDES CUSTOM — allowed_channels multi ─────────
+    if (section === 'cmds_adv' && action === 'set_chans' && arg) {
+      const sel = new ChannelSelectMenuBuilder()
+        .setCustomId(`adv_chan:cmds_chans:${userId}:${encodeURIComponent(arg)}`)
+        .setPlaceholder(`📣 Salons autorisés pour &${arg} (vide = tous)`)
+        .setChannelTypes(ChannelType.GuildText)
+        .setMinValues(0).setMaxValues(25);
+      const back = new ButtonBuilder().setCustomId(`adv:cmds_adv:detail_btn:${userId}:${encodeURIComponent(arg)}`).setLabel('← Retour').setStyle(ButtonStyle.Secondary);
+      return interaction.update({
+        embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`📣 Salons — &${arg}`).setDescription('Choisis les salons où cette commande peut être utilisée. Laisse vide pour autoriser partout.')],
+        components: [new ActionRowBuilder().addComponents(back), new ActionRowBuilder().addComponents(sel)],
+      });
+    }
+
+    // ── 📢 MESSAGES SYSTÈME CUSTOM ───────────────────────────
+    if (section === 'sys_msgs' && action === 'new_custom') {
+      const modal = buildSimpleModal(`adv_modal:sys_msgs:create_custom:${userId}`, '➕ Nouvel événement custom', [
+        { id: 'event',   label: 'Nom de l\'événement (libre, ex: jackpot)',  style: TextInputStyle.Short,     maxLength: 50 },
+        { id: 'content', label: 'Message texte (variables autorisées)',     style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
+      ]);
+      return interaction.showModal(modal);
+    }
+
     // ── 🧠 IA ─────────────────────────────────────────────────
     if (section === 'ai') {
       const aiMod = _getAiModule();
@@ -1532,6 +1976,9 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (which === 'cmd_ctrl_pick') {
       return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, val));
     }
+    if (which === 'autoresp_pick') {
+      return interaction.update(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, val));
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1565,6 +2012,35 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { allowed_channels: ids });
       await interaction.deferUpdate();
       return interaction.editReply(buildAIPanel(cfg, interaction.guild, uid, db));
+    }
+
+    if (which === 'cmds_chans') {
+      const trigger = parts[3] ? decodeURIComponent(parts[3]) : null;
+      const ids = Array.isArray(interaction.values) ? interaction.values : [];
+      const c = trigger ? db.getCustomCommand(interaction.guildId, trigger) : null;
+      if (c) {
+        db.upsertCustomCommand(interaction.guildId, trigger, {
+          ...c,
+          allowed_channels: ids,
+          created_by: c.created_by,
+        });
+      }
+      await interaction.deferUpdate();
+      return interaction.editReply(buildCmdDetailPanel(cfg, interaction.guild, uid, db, trigger));
+    }
+
+    if (which === 'autoresp_chans') {
+      const trigger = parts[3] ? decodeURIComponent(parts[3]) : null;
+      const ids = Array.isArray(interaction.values) ? interaction.values : [];
+      const a = trigger ? db.getAutoresponder(interaction.guildId, trigger) : null;
+      if (a) {
+        db.upsertAutoresponder(interaction.guildId, trigger, {
+          ...a,
+          allowed_channels: ids,
+        });
+      }
+      await interaction.deferUpdate();
+      return interaction.editReply(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, trigger));
     }
 
     if (which === 'embeds_send') {
@@ -1634,6 +2110,20 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { required_role: roleId });
       await interaction.deferUpdate();
       return interaction.editReply(buildAIPanel(cfg, interaction.guild, uid, db));
+    }
+
+    if (which === 'autoresp_role') {
+      const trigger = parts[3] ? decodeURIComponent(parts[3]) : null;
+      const a = trigger ? db.getAutoresponder(interaction.guildId, trigger) : null;
+      if (a) {
+        db.upsertAutoresponder(interaction.guildId, trigger, {
+          ...a,
+          allowed_channels: safeJsonParse(a.allowed_channels, []),
+          required_role: roleId,
+        });
+      }
+      await interaction.deferUpdate();
+      return interaction.editReply(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, trigger));
     }
   }
 
@@ -1809,6 +2299,194 @@ async function handleAdvancedInteraction(interaction, db, client) {
         }
         return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, extra));
       }
+    }
+
+    // ── 🗄️ KV : view / set / del ─────────────────────────────
+    if (sect === 'kv') {
+      const source = extra || 'kv'; // 'kv' ou 'gc'
+      const key = field('key', '').trim();
+      if (!key) return interaction.reply({ content: '❌ Clé requise.', ephemeral: true });
+
+      if (act === 'do_view') {
+        let val;
+        if (source === 'gc') {
+          const gc = db.getConfig(interaction.guildId);
+          if (!(key in gc)) return interaction.reply({ content: `❌ Colonne \`${key}\` inexistante.`, ephemeral: true });
+          val = gc[key];
+        } else {
+          val = db.kvGet(interaction.guildId, key);
+          if (val === null || val === undefined) return interaction.reply({ content: `❌ Clé \`${key}\` inexistante.`, ephemeral: true });
+        }
+        const display = typeof val === 'object' ? JSON.stringify(val, null, 2) : String(val);
+        return interaction.reply({
+          embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`🔍 ${key}`)
+            .setDescription('```' + truncate(display, 3800) + '```')
+            .setFooter({ text: `Source: ${source === 'gc' ? 'guild_config' : 'guild_kv'}` })],
+          ephemeral: true,
+        });
+      }
+
+      if (act === 'do_set') {
+        const rawValue = field('value', '').trim();
+        try {
+          if (source === 'gc') {
+            // Tenter typage int / null
+            let typed = rawValue;
+            if (typed === '' || typed.toUpperCase() === 'NULL') typed = null;
+            else if (/^-?\d+$/.test(typed)) typed = parseInt(typed, 10);
+            else if (/^-?\d*\.\d+$/.test(typed)) typed = parseFloat(typed);
+            db.setGuildConfigColumn(interaction.guildId, key, typed);
+          } else {
+            const parsed = safeJsonParse(rawValue, rawValue);
+            db.kvSet(interaction.guildId, key, parsed);
+          }
+          return interaction.update(buildKvPanel(cfg, interaction.guild, uid, db, 0, source));
+        } catch (e) {
+          return interaction.reply({ content: `❌ ${e.message}`, ephemeral: true });
+        }
+      }
+
+      if (act === 'do_del') {
+        try {
+          if (source === 'gc') {
+            db.setGuildConfigColumn(interaction.guildId, key, null);
+          } else {
+            db.kvDelete(interaction.guildId, key);
+          }
+          return interaction.update(buildKvPanel(cfg, interaction.guild, uid, db, 0, source));
+        } catch (e) {
+          return interaction.reply({ content: `❌ ${e.message}`, ephemeral: true });
+        }
+      }
+    }
+
+    // ── 🛒 SHOP ───────────────────────────────────────────────
+    if (sect === 'shop') {
+      if (act === 'create') {
+        const price = parseInt(field('price'), 10);
+        if (isNaN(price) || price < 0) return interaction.reply({ content: '❌ Prix invalide.', ephemeral: true });
+        const item = db.createShopItem(interaction.guildId, {
+          name: field('name').trim(),
+          description: field('description').trim() || null,
+          emoji: field('emoji').trim() || '📦',
+          price,
+          stock: parseInt(field('stock', '-1'), 10),
+        });
+        return interaction.update(buildShopPanel(cfg, interaction.guild, uid, db, 0));
+      }
+      if (act === 'del_pick') {
+        const id = parseInt(field('id'), 10);
+        const n = isNaN(id) ? 0 : db.deleteShopItem(interaction.guildId, id);
+        if (!n) return interaction.reply({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
+        return interaction.update(buildShopPanel(cfg, interaction.guild, uid, db, 0));
+      }
+      if (act === 'toggle_pick') {
+        const id = parseInt(field('id'), 10);
+        const it = isNaN(id) ? null : db.getShopItem(interaction.guildId, id);
+        if (!it) return interaction.reply({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
+        db.updateShopItem(interaction.guildId, id, { active: it.active ? 0 : 1 });
+        return interaction.update(buildShopPanel(cfg, interaction.guild, uid, db, 0));
+      }
+      if (act === 'edit_pick') {
+        const id = parseInt(field('id'), 10);
+        const it = isNaN(id) ? null : db.getShopItem(interaction.guildId, id);
+        if (!it) return interaction.reply({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
+        const modal = buildSimpleModal(`adv_modal:shop:save_edit:${userId}:${id}`, `✏️ Modifier #${id}`, [
+          { id: 'name',        label: 'Nom',          value: it.name,            style: TextInputStyle.Short,     maxLength: 100 },
+          { id: 'description', label: 'Description',  value: it.description || '', style: TextInputStyle.Paragraph, required: false, maxLength: 500 },
+          { id: 'price',       label: 'Prix',          value: String(it.price),  style: TextInputStyle.Short,     maxLength: 10 },
+          { id: 'emoji',       label: 'Emoji',         value: it.emoji || '',     style: TextInputStyle.Short,     required: false, maxLength: 10 },
+          { id: 'stock',       label: 'Stock',         value: String(it.stock),   style: TextInputStyle.Short,     maxLength: 10 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (act === 'save_edit' && extra) {
+        const id = parseInt(extra, 10);
+        db.updateShopItem(interaction.guildId, id, {
+          name:        field('name').trim(),
+          description: field('description').trim() || null,
+          price:       parseInt(field('price'), 10),
+          emoji:       field('emoji').trim() || '📦',
+          stock:       parseInt(field('stock'), 10),
+        });
+        return interaction.update(buildShopPanel(cfg, interaction.guild, uid, db, 0));
+      }
+    }
+
+    // ── ⭐ REACTION ROLES ────────────────────────────────────
+    if (sect === 'reaction_roles') {
+      if (act === 'create') {
+        const mid = field('message_id').trim();
+        const cid = field('channel_id').trim();
+        const emoji = field('emoji').trim();
+        const rid = field('role_id').trim();
+        if (!mid || !cid || !emoji || !rid) return interaction.reply({ content: '❌ Tous les champs requis.', ephemeral: true });
+        db.addReactionRole(interaction.guildId, mid, cid, emoji, rid);
+        return interaction.update(buildReactionRolesPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'del_pick') {
+        const id = parseInt(field('id'), 10);
+        const n = isNaN(id) ? 0 : db.removeReactionRole(interaction.guildId, id);
+        if (!n) return interaction.reply({ content: `❌ Reaction role #${id} introuvable.`, ephemeral: true });
+        return interaction.update(buildReactionRolesPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── 📜 ROLE MENUS ────────────────────────────────────────
+    if (sect === 'role_menus') {
+      if (act === 'create') {
+        const ids = field('role_ids').split(',').map(s => s.trim()).filter(Boolean);
+        if (!ids.length) return interaction.reply({ content: '❌ Au moins un rôle requis.', ephemeral: true });
+        db.createRoleMenu(interaction.guildId, {
+          title: field('title').trim(),
+          description: field('description').trim() || null,
+          roles: ids,
+          max_choices: parseInt(field('max_choices', '0'), 10) || 0,
+        });
+        return interaction.update(buildRoleMenusPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'del_pick') {
+        const id = parseInt(field('id'), 10);
+        const n = isNaN(id) ? 0 : db.deleteRoleMenu(interaction.guildId, id);
+        if (!n) return interaction.reply({ content: `❌ Menu #${id} introuvable.`, ephemeral: true });
+        return interaction.update(buildRoleMenusPanel(cfg, interaction.guild, uid, db));
+      }
+    }
+
+    // ── 🔁 AUTORESP : save_resp + save_cd ───────────────────
+    if (sect === 'autoresp') {
+      if (act === 'save_resp' && extra) {
+        const a = db.getAutoresponder(interaction.guildId, extra);
+        if (!a) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        db.upsertAutoresponder(interaction.guildId, extra, {
+          ...a,
+          allowed_channels: safeJsonParse(a.allowed_channels, []),
+          response: field('response').trim(),
+        });
+        return interaction.update(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, extra));
+      }
+      if (act === 'save_cd' && extra) {
+        const a = db.getAutoresponder(interaction.guildId, extra);
+        if (!a) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        const cd = Math.max(0, parseInt(field('seconds', '0'), 10) || 0);
+        db.upsertAutoresponder(interaction.guildId, extra, {
+          ...a,
+          allowed_channels: safeJsonParse(a.allowed_channels, []),
+          cooldown: cd,
+        });
+        return interaction.update(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, extra));
+      }
+    }
+
+    // ── 📢 SYS MSGS CUSTOM ───────────────────────────────────
+    if (sect === 'sys_msgs' && act === 'create_custom') {
+      const ev = field('event').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      if (!ev) return interaction.reply({ content: '❌ Nom d\'événement invalide.', ephemeral: true });
+      const content = field('content').trim() || null;
+      db.upsertSystemMessage(interaction.guildId, ev, {
+        enabled: 1, mode: 'text', content, embed_json: null, channel_id: null,
+      });
+      return interaction.update(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, ev));
     }
 
     // ── 🧠 IA : save model / tokens / prompt ─────────────────

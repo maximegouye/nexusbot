@@ -95,14 +95,24 @@ function buildMainMenu(cfg, guild, userId) {
     .setFooter({ text: `NexusBot — Configuration • ${guild.name}` })
     .setTimestamp();
 
-  const select = new StringSelectMenuBuilder()
+  // Deux selects séparés pour contourner la limite 25 options/select de Discord
+  // → toutes les catégories restent accessibles, rien n'est coupé.
+  const selectBase = new StringSelectMenuBuilder()
     .setCustomId(`cfg:cat:${userId}`)
-    .setPlaceholder('📋 Choisir une catégorie à configurer...')
-    .addOptions(CATEGORIES);
+    .setPlaceholder('📋 BASE : économie, XP, logs, tickets, rôles…')
+    .addOptions(BASE_CATEGORIES.slice(0, 25));
+
+  const selectAdv = new StringSelectMenuBuilder()
+    .setCustomId(`cfg:cat:${userId}`)
+    .setPlaceholder('⚡ AVANCÉ : IA, commandes custom, embed, boutique…')
+    .addOptions(ADVANCED_CATEGORIES.slice(0, 25));
 
   return {
     embeds: [embed],
-    components: [new ActionRowBuilder().addComponents(select)],
+    components: [
+      new ActionRowBuilder().addComponents(selectBase),
+      new ActionRowBuilder().addComponents(selectAdv),
+    ],
   };
 }
 
