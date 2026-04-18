@@ -53,6 +53,7 @@ function backBtn(userId) {
 // CATÉGORIES AVANCÉES (exportées pour être fusionnées dans CATEGORIES)
 // ═══════════════════════════════════════════════════════════════
 const ADVANCED_CATEGORIES = [
+  { value: 'ai',           label: '🧠 Intelligence IA',        description: 'Provider, modèle, mention = question, rôle requis' },
   { value: 'embeds',       label: '🎨 Éditeur d\'embed',      description: 'Créer et gérer des embeds personnalisés' },
   { value: 'cmds_adv',     label: '⚡ Commandes custom',        description: 'Créer des commandes & personnalisées (texte ou embed)' },
   { value: 'sys_msgs',     label: '📢 Messages système',       description: 'Welcome, leave, levelup, boost, daily...' },
@@ -865,10 +866,115 @@ function buildBackupPanel(cfg, guild, userId, db) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SECTION : 🧠 IA
+// ═══════════════════════════════════════════════════════════════
+function _getAiModule() {
+  try { return require('./aiService'); } catch { return null; }
+}
+
+function buildAIPanel(cfg, guild, userId, db) {
+  const aiMod = _getAiModule();
+  const aiCfg = aiMod ? aiMod.getAIConfig(guild.id, db) : null;
+  const hasKeyAnthropic = !!process.env.ANTHROPIC_API_KEY;
+  const hasKeyOpenAI    = !!process.env.OPENAI_API_KEY;
+
+  const providerShown = aiCfg?.provider === 'auto'
+    ? (hasKeyAnthropic ? 'auto → anthropic' : hasKeyOpenAI ? 'auto → openai' : 'auto (aucune clé)')
+    : (aiCfg?.provider || 'auto');
+
+  const status = aiCfg?.enabled ? '✅ Activé' : '❌ Désactivé';
+  const keyStatus = (hasKeyAnthropic || hasKeyOpenAI)
+    ? `✅ ${hasKeyAnthropic ? 'Anthropic' : ''}${hasKeyAnthropic && hasKeyOpenAI ? ' + ' : ''}${hasKeyOpenAI ? 'OpenAI' : ''}`
+    : '❌ Aucune clé API (ajoute `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` sur Railway)';
+
+  const allowedCh = Array.isArray(aiCfg?.allowed_channels) ? aiCfg.allowed_channels : [];
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.color || '#7B2FBE')
+    .setTitle('🧠 Intelligence Artificielle')
+    .setDescription(
+      'Active l\'IA pour que NexusBot réponde aux questions, résume les conversations, traduise, et réponde quand il est mentionné.\n\n' +
+      '**Comment ça marche :**\n' +
+      '• `&ia <question>` ou `/ia <question>` → réponse intelligente\n' +
+      '• `&resume [N]` ou `/resume` → résumé des N derniers messages\n' +
+      '• `&traduis <langue> <texte>` ou `/traduis` → traduction\n' +
+      '• @NexusBot <question> (si activé ci-dessous) → réponse directe',
+    )
+    .addFields(
+      { name: '⚡ Statut',             value: status,                                 inline: true },
+      { name: '🔑 Clés API détectées',  value: keyStatus,                             inline: true },
+      { name: '🛰️ Provider',           value: `\`${providerShown}\``,                inline: true },
+      { name: '🤖 Modèle',              value: `\`${aiCfg?.model || '—'}\``,          inline: true },
+      { name: '📏 Max tokens',          value: `\`${aiCfg?.max_tokens ?? 512}\``,     inline: true },
+      { name: '💬 Mention = question',  value: aiCfg?.mention_reply ? '✅ Oui' : '❌ Non', inline: true },
+      { name: '🎭 Rôle requis',         value: aiCfg?.required_role ? `<@&${aiCfg.required_role}>` : '*Aucun (tout le monde)*', inline: true },
+      { name: '📣 Salons autorisés',    value: allowedCh.length ? allowedCh.map(id => `<#${id}>`).join(', ') : '*Tous les salons*', inline: false },
+    )
+    .setFooter({ text: 'NexusBot — IA' });
+
+  const toggleBtn = new ButtonBuilder()
+    .setCustomId(`adv:ai:toggle:${userId}`)
+    .setLabel(aiCfg?.enabled ? '⏸️ Désactiver l\'IA' : '▶️ Activer l\'IA')
+    .setStyle(aiCfg?.enabled ? ButtonStyle.Secondary : ButtonStyle.Success);
+
+  const toggleMention = new ButtonBuilder()
+    .setCustomId(`adv:ai:toggle_mention:${userId}`)
+    .setLabel(aiCfg?.mention_reply ? '🙊 Ne plus répondre aux mentions' : '💬 Répondre aux mentions')
+    .setStyle(aiCfg?.mention_reply ? ButtonStyle.Secondary : ButtonStyle.Primary);
+
+  const providerBtn = new ButtonBuilder()
+    .setCustomId(`adv:ai:cycle_provider:${userId}`)
+    .setLabel('🛰️ Changer provider')
+    .setStyle(ButtonStyle.Primary);
+
+  const modelBtn = new ButtonBuilder()
+    .setCustomId(`adv:ai:set_model:${userId}`)
+    .setLabel('🤖 Modifier modèle')
+    .setStyle(ButtonStyle.Primary);
+
+  const tokensBtn = new ButtonBuilder()
+    .setCustomId(`adv:ai:set_tokens:${userId}`)
+    .setLabel('📏 Max tokens')
+    .setStyle(ButtonStyle.Primary);
+
+  const promptBtn = new ButtonBuilder()
+    .setCustomId(`adv:ai:set_prompt:${userId}`)
+    .setLabel('🎭 Personnalité (system)')
+    .setStyle(ButtonStyle.Primary);
+
+  const testBtn = new ButtonBuilder()
+    .setCustomId(`adv:ai:test:${userId}`)
+    .setLabel('🧪 Tester l\'IA')
+    .setStyle(ButtonStyle.Success);
+
+  const roleSelect = new RoleSelectMenuBuilder()
+    .setCustomId(`adv_role:ai_required:${userId}`)
+    .setPlaceholder('🎭 Rôle requis pour utiliser l\'IA (vide = tout le monde)')
+    .setMinValues(0).setMaxValues(1);
+
+  const chanSelect = new ChannelSelectMenuBuilder()
+    .setCustomId(`adv_chan:ai_channels:${userId}`)
+    .setPlaceholder(`📣 Salons autorisés (vide = tous) — actuellement ${allowedCh.length}`)
+    .setChannelTypes(ChannelType.GuildText)
+    .setMinValues(0).setMaxValues(25);
+
+  return {
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(backBtn(userId), toggleBtn, toggleMention),
+      new ActionRowBuilder().addComponents(providerBtn, modelBtn, tokensBtn, promptBtn, testBtn),
+      new ActionRowBuilder().addComponents(roleSelect),
+      new ActionRowBuilder().addComponents(chanSelect),
+    ],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // DISPATCHER DES CATÉGORIES AVANCÉES
 // ═══════════════════════════════════════════════════════════════
 function buildAdvancedCategoryPanel(category, cfg, guild, userId, db, client) {
   switch (category) {
+    case 'ai':          return buildAIPanel(cfg, guild, userId, db);
     case 'embeds':      return buildEmbedsPanel(cfg, guild, userId, db);
     case 'cmds_adv':    return buildCmdsAdvPanel(cfg, guild, userId, db, 0);
     case 'sys_msgs':    return buildSysMsgsPanel(cfg, guild, userId, db);
@@ -1168,6 +1274,77 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
     }
 
+    // ── 🧠 IA ─────────────────────────────────────────────────
+    if (section === 'ai') {
+      const aiMod = _getAiModule();
+      if (!aiMod) return interaction.reply({ content: '❌ Module IA non chargé.', ephemeral: true });
+      if (action === 'toggle') {
+        const current = aiMod.getAIConfig(interaction.guildId, db);
+        aiMod.setAIConfig(interaction.guildId, db, { enabled: current.enabled ? 0 : 1 });
+        return interaction.update(buildAIPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'toggle_mention') {
+        const current = aiMod.getAIConfig(interaction.guildId, db);
+        aiMod.setAIConfig(interaction.guildId, db, { mention_reply: current.mention_reply ? 0 : 1 });
+        return interaction.update(buildAIPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'cycle_provider') {
+        const current = aiMod.getAIConfig(interaction.guildId, db);
+        const cycle = ['auto', 'anthropic', 'openai'];
+        const idx = cycle.indexOf(current.provider || 'auto');
+        const next = cycle[(idx + 1) % cycle.length];
+        aiMod.setAIConfig(interaction.guildId, db, { provider: next });
+        return interaction.update(buildAIPanel(cfg, interaction.guild, userId, db));
+      }
+      if (action === 'set_model') {
+        const current = aiMod.getAIConfig(interaction.guildId, db);
+        const modal = buildSimpleModal(`adv_modal:ai:save_model:${userId}`, '🤖 Modèle IA', [
+          { id: 'model', label: 'Nom exact du modèle',
+            value: current.model,
+            placeholder: 'claude-3-5-sonnet-20241022 | claude-3-5-haiku-20241022 | gpt-4o-mini | gpt-4o',
+            style: TextInputStyle.Short, maxLength: 100 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_tokens') {
+        const current = aiMod.getAIConfig(interaction.guildId, db);
+        const modal = buildSimpleModal(`adv_modal:ai:save_tokens:${userId}`, '📏 Max tokens réponse', [
+          { id: 'max_tokens', label: 'Max tokens (64-2048, défaut 512)',
+            value: String(current.max_tokens ?? 512),
+            placeholder: '512', style: TextInputStyle.Short, maxLength: 5 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'set_prompt') {
+        const current = aiMod.getAIConfig(interaction.guildId, db);
+        const modal = buildSimpleModal(`adv_modal:ai:save_prompt:${userId}`, '🎭 Personnalité (prompt système)', [
+          { id: 'system_prompt', label: 'Instruction système (vide = défaut)',
+            value: current.system_prompt || '',
+            placeholder: 'Tu es l\'assistant du serveur Zone Entraide, chaleureux et concis…',
+            style: TextInputStyle.Paragraph, required: false, maxLength: 2000 },
+        ]);
+        return interaction.showModal(modal);
+      }
+      if (action === 'test') {
+        const current = aiMod.getAIConfig(interaction.guildId, db);
+        if (!aiMod.isAvailable()) return interaction.reply({ content: '❌ Aucune clé API IA configurée côté Railway.', ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
+        try {
+          const res = await aiMod.askAI({
+            prompt: 'En UNE seule phrase, présente-toi et dis que tu es prêt à aider.',
+            guildId: interaction.guildId, userId: interaction.user.id, cfg: current,
+          });
+          return interaction.editReply({
+            embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('🧪 Test IA')
+              .setDescription(res.text || '*(vide)*')
+              .setFooter({ text: `${res.provider} • ${res.model} • ${res.usage?.output_tokens || res.usage?.completion_tokens || '?'} tokens` })],
+          });
+        } catch (e) {
+          return interaction.editReply({ content: `❌ ${e.message}` });
+        }
+      }
+    }
+
     // ── ÉDITEUR EMBED : handlers pour le mode complet ─────────
     if (section === 'embeds') {
       if (action === 'preview' && arg) {
@@ -1382,6 +1559,14 @@ async function handleAdvancedInteraction(interaction, db, client) {
       return interaction.editReply(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey));
     }
 
+    if (which === 'ai_channels') {
+      const aiMod = _getAiModule();
+      const ids = Array.isArray(interaction.values) ? interaction.values : [];
+      if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { allowed_channels: ids });
+      await interaction.deferUpdate();
+      return interaction.editReply(buildAIPanel(cfg, interaction.guild, uid, db));
+    }
+
     if (which === 'embeds_send') {
       const name = parts[3] ? decodeURIComponent(parts[3]) : null;
       const tpl = name ? db.getEmbedTemplate(interaction.guildId, name) : null;
@@ -1442,6 +1627,13 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       await interaction.deferUpdate();
       return interaction.editReply(buildLevelRolesPanel(cfg, interaction.guild, uid, db));
+    }
+
+    if (which === 'ai_required') {
+      const aiMod = _getAiModule();
+      if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { required_role: roleId });
+      await interaction.deferUpdate();
+      return interaction.editReply(buildAIPanel(cfg, interaction.guild, uid, db));
     }
   }
 
@@ -1616,6 +1808,28 @@ async function handleAdvancedInteraction(interaction, db, client) {
           db.setCooldownOverride(interaction.guildId, extra, cd);
         }
         return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, extra));
+      }
+    }
+
+    // ── 🧠 IA : save model / tokens / prompt ─────────────────
+    if (sect === 'ai') {
+      const aiMod = _getAiModule();
+      if (!aiMod) return interaction.reply({ content: '❌ Module IA introuvable.', ephemeral: true });
+      if (act === 'save_model') {
+        const v = field('model').trim() || 'claude-3-5-haiku-20241022';
+        aiMod.setAIConfig(interaction.guildId, db, { model: v });
+        return interaction.update(buildAIPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_tokens') {
+        const n = parseInt(field('max_tokens'), 10);
+        if (isNaN(n) || n < 64 || n > 2048) return interaction.reply({ content: '❌ Valeur invalide (64-2048).', ephemeral: true });
+        aiMod.setAIConfig(interaction.guildId, db, { max_tokens: n });
+        return interaction.update(buildAIPanel(cfg, interaction.guild, uid, db));
+      }
+      if (act === 'save_prompt') {
+        const v = field('system_prompt').trim() || null;
+        aiMod.setAIConfig(interaction.guildId, db, { system_prompt: v });
+        return interaction.update(buildAIPanel(cfg, interaction.guild, uid, db));
       }
     }
 

@@ -84,6 +84,51 @@ module.exports = {
       if (handled) return;
     } catch (e) { console.error('[PREFIX] Erreur handler:', e.message); }
 
+    // ── Mention du bot = question IA (si activé) ────────────────────
+    try {
+      const botId = client.user?.id;
+      if (botId && message.mentions.users.has(botId)) {
+        const ai = require('../utils/aiService');
+        const aiCfg = ai.getAIConfig(message.guild.id, db);
+        if (aiCfg.enabled && aiCfg.mention_reply && ai.isAvailable()) {
+          // Vérif rôle/salon
+          const roleOk = !aiCfg.required_role || message.member.roles.cache.has(aiCfg.required_role);
+          const chanOk = !Array.isArray(aiCfg.allowed_channels) || aiCfg.allowed_channels.length === 0
+                      || aiCfg.allowed_channels.includes(message.channel.id);
+          if (roleOk && chanOk) {
+            // Extraire le texte sans la mention
+            const text = message.content
+              .replace(new RegExp(`<@!?${botId}>`, 'g'), '')
+              .trim();
+            if (text.length > 0 && text.length <= 2000) {
+              try { await message.channel.sendTyping(); } catch {}
+              try {
+                const res = await ai.askAI({
+                  prompt: text,
+                  guildId: message.guild.id,
+                  userId:  message.author.id,
+                  cfg: aiCfg,
+                });
+                await message.reply({
+                  embeds: [new EmbedBuilder()
+                    .setColor(db.getConfig(message.guild.id).color || '#7B2FBE')
+                    .setAuthor({ name: `🧠 NexusBot IA`, iconURL: client.user.displayAvatarURL() })
+                    .setDescription(res.text.slice(0, 4000) || '*(vide)*')
+                    .setFooter({ text: `${res.provider} • ${res.model}` })
+                    .setTimestamp()],
+                  allowedMentions: { repliedUser: false },
+                });
+              } catch (e) {
+                if (e.code !== 'RATE_LIMIT') console.error('[AI mention]', e.message);
+                // silencieux si rate-limit pour éviter le spam
+              }
+              return; // on a répondu, on n'enchaîne pas sur XP/afk etc.
+            }
+          }
+        }
+      }
+    } catch (e) { console.error('[AI mention] erreur:', e.message); }
+
     const { guild, author, channel } = message;
     const cfg = db.getConfig(guild.id);
 
