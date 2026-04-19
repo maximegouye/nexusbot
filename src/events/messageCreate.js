@@ -88,6 +88,11 @@ module.exports = {
       const handled = await handlePrefixMessage(message, client);
       if (handled) return;
     } catch (e) { console.error('[PREFIX] Erreur handler:', e.message); }
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+        interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+      } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+        interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.' }).catch(() => {});
+      }
 
     // ── Mention du bot = question IA (si activé) ────────────────────
     try {

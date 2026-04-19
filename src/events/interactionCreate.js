@@ -1518,6 +1518,11 @@ async function _handleInteraction(interaction, client) {
       try {
         await command.execute(interaction, client);
       } catch (error) {
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.' }).catch(() => {});
+        }
         console.error(`[CMD] Erreur /${interaction.commandName}:`, error);
         const errEmbed = new EmbedBuilder()
           .setColor('#FF6B6B')
