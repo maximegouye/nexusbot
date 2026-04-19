@@ -992,6 +992,48 @@ for (const m of migrations) {
   } catch (e) { /* ignore */ }
 }
 
+
+// ── Migration : crypto_portfolio (ancien schéma) → crypto_wallet (nouveau schéma) ──
+// L'ancienne version du bot stockait les portefeuilles dans `crypto_portfolio`
+// (colonnes: symbol, quantite, cout_moyen). La nouvelle version utilise
+// `crypto_wallet` (colonnes: crypto, amount, avg_buy). Cette migration copie
+// les lignes de l'ancien format vers le nouveau, sans écraser (INSERT OR IGNORE)
+// les entrées déjà présentes, et en excluant les cryptos obsolètes
+// (NEXUS/NEX/PEPE) qui seraient sinon re-remboursées par cleanupObsoleteCrypto.
+try {
+  const hasOld = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='crypto_portfolio'"
+  ).get();
+  if (hasOld) {
+    const OBSOLETE = new Set(['NEXUS', 'NEX', 'PEPE']);
+    const oldRows = db.prepare(
+      'SELECT user_id, guild_id, symbol, quantite, cout_moyen FROM crypto_portfolio WHERE quantite > 0'
+    ).all();
+    const insert = db.prepare(
+      `INSERT OR IGNORE INTO crypto_wallet (user_id, guild_id, crypto, amount, avg_buy)
+       VALUES (?, ?, ?, ?, ?)`
+    );
+    let migrated = 0;
+    let skippedObsolete = 0;
+    for (const r of oldRows) {
+      const sym = String(r.symbol || '').toUpperCase();
+      if (!sym) continue;
+      if (OBSOLETE.has(sym)) { skippedObsolete++; continue; }
+      const info = insert.run(r.user_id, r.guild_id, sym, r.quantite, r.cout_moyen);
+      if (info.changes > 0) migrated++;
+    }
+    if (migrated > 0 || skippedObsolete > 0) {
+      console.log(
+        `[DB] Migration crypto_portfolio → crypto_wallet : ${migrated} ligne(s) copiée(s)` +
+        (skippedObsolete > 0 ? `, ${skippedObsolete} ignorée(s) (obsolète)` : '') +
+        ` · total ancien = ${oldRows.length}.`
+      );
+    }
+  }
+} catch (e) {
+  console.error('[DB] Migration crypto_portfolio → crypto_wallet échouée:', e.message);
+}
+
 // ================================
 // HELPERS
 // ================================
