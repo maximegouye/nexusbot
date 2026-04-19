@@ -278,15 +278,111 @@ async function _handleInteraction(interaction, client) {
         }
 
         if (action === 'buy' || action === 'sell') {
+          // Ouvre un menu déroulant avec les 12 cryptos + leur prix actuel
+          const { _build } = require('../commands/economy/crypto');
           return interaction.reply({
-            content: action === 'buy'
-              ? '💡 **Acheter :** tape `&crypto acheter <SYMBOLE> <montant>` ou `/crypto acheter`. Symboles : BTC, ETH, SOL, DOGE, NEX, PEPE.\nExemples : `&crypto acheter BTC 1000` · `&crypto acheter NEX all` · `&crypto acheter DOGE 25%`'
-              : '💡 **Vendre :** tape `&crypto vendre <SYMBOLE> <quantité>` ou `/crypto vendre`.\nExemples : `&crypto vendre BTC 0.001` · `&crypto vendre DOGE all` · `&crypto vendre NEX 50%`',
+            embeds: [new EmbedBuilder().setColor(action === 'buy' ? '#2ECC71' : '#E74C3C')
+              .setTitle(action === 'buy' ? '🟢 Acheter une crypto' : '🔴 Vendre une crypto')
+              .setDescription(action === 'buy'
+                ? `Sélectionne la crypto à acheter dans le menu ci-dessous.\n\n**Ton solde :** ${user.balance.toLocaleString('fr-FR')}${symbol}`
+                : `Sélectionne la crypto à vendre dans le menu ci-dessous.`
+              )
+              .setFooter({ text: 'Les prix viennent de CoinGecko · mis à jour toutes les 5 min' })
+            ],
+            components: [_build.buildCryptoSelect(uid, action)],
             ephemeral: true,
           });
         }
         return;
       } catch (e) { console.error('[CRYPTO handler]', e); }
+    }
+
+    // ── CRYPTO : sélection dans le menu déroulant → ouvre modal montant ─
+    if (interaction.isStringSelectMenu && interaction.isStringSelectMenu() && _cfgId.startsWith('crypto_pick:')) {
+      try {
+        const parts = _cfgId.split(':');
+        const mode = parts[1]; // 'buy' ou 'sell'
+        const uid = parts[2];
+        if (interaction.user.id !== uid) {
+          return interaction.reply({ content: '❌ Ce menu n\'est pas le tien.', ephemeral: true });
+        }
+        const sym = interaction.values[0];
+        const modal = new ModalBuilder()
+          .setCustomId(`crypto_modal:${mode}:${sym}:${uid}`)
+          .setTitle(mode === 'buy' ? `🟢 Acheter ${sym}` : `🔴 Vendre ${sym}`);
+        const input = new TextInputBuilder()
+          .setCustomId('amount')
+          .setLabel(mode === 'buy' ? 'Montant en coins (ou all, 50 %, moitié)' : 'Quantité à vendre (ou all, 50 %, moitié)')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(30)
+          .setPlaceholder(mode === 'buy' ? 'Ex : 1000, all, 25%' : 'Ex : 0.5, all, 50%');
+        modal.addComponents(new ActionRowBuilder().addComponents(input));
+        return interaction.showModal(modal);
+      } catch (e) { console.error('[CRYPTO pick]', e); }
+    }
+
+    // ── CRYPTO : modal submit → exécute achat/vente ─────────────────
+    if (interaction.isModalSubmit && interaction.isModalSubmit() && _cfgId.startsWith('crypto_modal:')) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const parts = _cfgId.split(':');
+        const mode = parts[1];
+        const sym = parts[2];
+        const uid = parts[3];
+        const raw = interaction.fields.getTextInputValue('amount').trim().toLowerCase();
+        const user = db2.getUser(uid, interaction.guildId);
+        const market = db2.getCryptoPrice(sym);
+        if (!market) return interaction.reply({ content: `❌ Crypto ${sym} introuvable.`, ephemeral: true });
+
+        // Parse raw amount avec support all/tout/50%/moitié
+        const parseBet = (raw, base) => {
+          const s = String(raw).replace(/[\s_,]/g, '').toLowerCase();
+          if (s === 'all' || s === 'tout' || s === 'max') return Number(base || 0);
+          if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Number(base || 0) / 2;
+          const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+          if (!m) return NaN;
+          const n = parseFloat(m[1]);
+          if (m[2] === '%') return (n / 100) * Number(base || 0);
+          return n;
+        };
+
+        if (mode === 'buy') {
+          const coins = parseBet(raw, user.balance);
+          if (!Number.isFinite(coins) || coins < 1) return interaction.reply({ content: '❌ Montant invalide (min 1).', ephemeral: true });
+          if (coins > user.balance) return interaction.reply({ content: `❌ Solde insuffisant (${user.balance.toLocaleString('fr-FR')}${symbol}).`, ephemeral: true });
+          const res = db2.buyCrypto(uid, interaction.guildId, sym, Math.floor(coins));
+          return interaction.reply({
+            embeds: [new EmbedBuilder().setColor('#2ECC71')
+              .setTitle('✅ Achat effectué')
+              .setDescription(`Tu as acheté **${res.qty.toFixed(6)} ${res.symbol}** au prix de **${res.price.toFixed(4)}${symbol}** pour **${Math.floor(coins).toLocaleString('fr-FR')}${symbol}**.`)
+              .setFooter({ text: 'Vois /crypto portefeuille pour tes positions' })
+            ],
+            ephemeral: true,
+          });
+        } else {
+          // sell
+          const item = db2.getWalletItem(uid, interaction.guildId, sym);
+          if (!item || item.amount <= 0) return interaction.reply({ content: `❌ Tu ne possèdes pas de ${sym}.`, ephemeral: true });
+          const qty = parseBet(raw, item.amount);
+          if (!Number.isFinite(qty) || qty <= 0) return interaction.reply({ content: '❌ Quantité invalide.', ephemeral: true });
+          if (qty > item.amount + 0.00001) return interaction.reply({ content: `❌ Tu n'as que ${item.amount.toFixed(6)} ${sym}.`, ephemeral: true });
+          const res = db2.sellCrypto(uid, interaction.guildId, sym, qty);
+          return interaction.reply({
+            embeds: [new EmbedBuilder().setColor('#E67E22')
+              .setTitle('✅ Vente effectuée')
+              .setDescription(`Tu as vendu **${res.qtySold.toFixed(6)} ${sym}** à **${res.price.toFixed(4)}${symbol}** = **+${res.coins.toLocaleString('fr-FR')}${symbol}** dans ton solde.`)
+              .setFooter({ text: 'Vois /banque pour ton solde total' })
+            ],
+            ephemeral: true,
+          });
+        }
+      } catch (e) {
+        console.error('[CRYPTO modal]', e);
+        return interaction.reply({ content: `❌ Erreur : ${e.message}`, ephemeral: true }).catch(() => {});
+      }
     }
 
     // ── POKER : boutons hold / draw (persistés en BDD) ──────────────

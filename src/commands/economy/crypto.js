@@ -10,6 +10,28 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const db = require('../../database/db');
 
+// Menu déroulant qui liste toutes les cryptos avec leur prix réel en direct
+function buildCryptoSelect(userId, mode /* 'buy' | 'sell' */) {
+  const market = db.getCryptoMarket();
+  const options = market.slice(0, 25).map(c => {
+    const delta = Number.isFinite(c.change_24h) ? c.change_24h : 0;
+    const arrow = delta > 0.5 ? '🟢' : delta < -0.5 ? '🔴' : '⚪';
+    return {
+      label: `${c.symbol} · ${c.name}`,
+      value: c.symbol,
+      description: `${fmtPrice(c.price)} $ ${arrow} ${delta >= 0 ? '+' : ''}${delta.toFixed(2)} % (24 h)`,
+      emoji: c.emoji || '🪙',
+    };
+  });
+  const placeholder = mode === 'buy' ? '🟢 Choisis la crypto à acheter' : '🔴 Choisis la crypto à vendre';
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`crypto_pick:${mode}:${userId}`)
+      .setPlaceholder(placeholder)
+      .addOptions(options)
+  );
+}
+
 function fmtPrice(p) {
   if (p >= 1000)   return p.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
   if (p >= 1)      return p.toFixed(2);
@@ -85,6 +107,7 @@ function buildButtons(userId) {
 }
 
 module.exports = {
+  _build: { buildMarketEmbed, buildWalletEmbed, buildButtons, buildCryptoSelect, fmtPrice },
   data: new SlashCommandBuilder()
     .setName('crypto')
     .setDescription('💰 Marché crypto · portefeuille · trading')
