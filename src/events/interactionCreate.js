@@ -342,6 +342,11 @@ async function _handleInteraction(interaction, client) {
         modal.addComponents(new ActionRowBuilder().addComponents(input));
         return interaction.showModal(modal);
       } catch (e) { console.error('[CRYPTO pick]', e); }
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ── CRYPTO : modal submit → exécute achat/vente ─────────────────
@@ -604,6 +609,11 @@ async function _handleInteraction(interaction, client) {
         }).catch(() => {});
         return;
       } catch (e) { console.error('[CRASH handler]', e); }
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ── BLACKJACK : boutons persistés (BDD, survit aux redémarrages) ─
@@ -747,6 +757,11 @@ async function _handleInteraction(interaction, client) {
         }).catch(() => {});
         return;
       } catch (e) { console.error('[DÉS] Erreur handler:', e); }
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ── ROUE DE LA FORTUNE : Rejouer / ×2 ─────────────────────────
@@ -803,6 +818,11 @@ async function _handleInteraction(interaction, client) {
         }).catch(() => {});
         return;
       } catch (e) { console.error('[ROUE] Erreur handler:', e); }
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ── SLOTS : boutons Rejouer / ×2 / moitié ────────────────────────
@@ -845,6 +865,9 @@ async function _handleInteraction(interaction, client) {
         }).catch(() => {});
         return;
       } catch (e) { console.error('[SLOTS] Erreur handler:', e); }
+        if (interaction.isRepliable() && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -1186,6 +1209,11 @@ async function _handleInteraction(interaction, client) {
           components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
         });
       } catch (e) { console.error('[CSLOT MODAL]:', e); }
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ── PROFIL : boutons interactifs (stats / crypto / historique / badges / refresh)
@@ -1294,6 +1322,11 @@ async function _handleInteraction(interaction, client) {
           });
         }
       } catch (e) { console.error('[PROFIL] Erreur handler:', e); }
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ── HISTORIQUE : navigation pages ────────────────────────────────
@@ -1328,6 +1361,11 @@ async function _handleInteraction(interaction, client) {
           components: [_build.buildButtons(targetId, newPage, pages)],
         });
       } catch (e) { console.error('[HIST] Erreur handler:', e); }
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+        }
     }
 
     // ── ROULETTE : bouton REJOUER et menu de choix de pari ───────────
@@ -2033,6 +2071,11 @@ async function _handleInteraction(interaction, client) {
           await handleButton(interaction);
         } catch (e) { console.error('[MORPION]', e.message); }
         return;
+          if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+          } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+            interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+          }
       }
 
       // ── Tournoi (bouton inscription tournoi_join_id) ───────────────────────────
@@ -2064,6 +2107,11 @@ async function _handleInteraction(interaction, client) {
           await handleButton(interaction);
         } catch (e) { console.error('[PENDU]', e.message); }
         return;
+          if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+          } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+            interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.', }).catch(() => {});
+          }
       }
 
       // ── Pets — abandon confirmation ───────────────────────────────────────────
