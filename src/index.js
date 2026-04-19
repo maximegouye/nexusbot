@@ -134,6 +134,8 @@ client.once('clientReady', async () => {
     // 3. Démarre le worker qui fetch les vrais prix toutes les 5 min
     const { startCryptoPriceWorker } = require('./utils/cryptoPriceWorker');
     startCryptoPriceWorker();
+  const { startAutoBumpWorker } = require('./utils/autoBumpWorker');
+  startAutoBumpWorker(client);
   } catch (e) { console.error('[Crypto] Erreur init:', e.message); }
 
   // ── Enregistrer les commandes ──────────────────────────
