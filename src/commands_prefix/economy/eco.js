@@ -220,13 +220,13 @@ const commands = [
       db.db.prepare('UPDATE users SET last_daily=?, streak=? WHERE user_id=? AND guild_id=?').run(now, streak, userId, guildId);
       const embed = new EmbedBuilder()
         .setColor('#2ECC71')
-        .setTitle('🎁 Récompense Quotidienne !')
+        .setTitle('🎁 Récompense quotidienne')
         .addFields(
-          { name: '💰 Gagné',    value: `**+${fmt(amount)} ${coin}**`,       inline: true },
-          { name: '🔥 Streak',  value: `**${streak}** jours`,                inline: true },
-          { name: '👛 Solde',   value: `**${fmt(db.getUser(userId, guildId).balance)} ${coin}**`, inline: true },
+          { name: '💰 Gagné',  value: `**+${fmt(amount)} ${coin}**`, inline: true },
+          { name: '🔥 Série',  value: `**${streak}** jour${streak > 1 ? 's' : ''}`, inline: true },
+          { name: '👛 Solde',  value: `**${fmt(db.getUser(userId, guildId).balance)} ${coin}**`, inline: true },
         );
-      if (bonus > 0) embed.setDescription(`🎉 **Bonus de palier ×${streak} jours ! +${fmt(bonus)} ${coin}**`);
+      if (bonus > 0) embed.setDescription(`🎉 **Bonus de palier ×${streak} jour${streak > 1 ? 's' : ''} : +${fmt(bonus)} ${coin}**`);
       message.channel.send({ embeds: [embed] });
     }
   },
