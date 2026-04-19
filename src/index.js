@@ -119,13 +119,19 @@ client.once('clientReady', async () => {
     startScheduledWorker(client);
   } catch (e) { console.error('[ScheduledWorker] Erreur init:', e.message); }
 
-  // ── Crypto : seed du marché + fetch VRAIS prix CoinGecko toutes les 5 min ───
+  // ── Crypto : cleanup + seed du marché + fetch VRAIS prix CoinGecko toutes les 5 min ───
   try {
     const dbMod = require('./database/db');
+    // 1. Nettoie les anciennes cryptos fictives (NEXUS, PEPE) en remboursant les détenteurs
+    if (dbMod.cleanupObsoleteCrypto) {
+      dbMod.cleanupObsoleteCrypto();
+    }
+    // 2. Seed les 12 vraies cryptos (idempotent grâce à INSERT OR IGNORE)
     if (dbMod.seedCryptoMarket) {
       dbMod.seedCryptoMarket();
       console.log('[Crypto] Marché initialisé (12 cryptos réelles)');
     }
+    // 3. Démarre le worker qui fetch les vrais prix toutes les 5 min
     const { startCryptoPriceWorker } = require('./utils/cryptoPriceWorker');
     startCryptoPriceWorker();
   } catch (e) { console.error('[Crypto] Erreur init:', e.message); }

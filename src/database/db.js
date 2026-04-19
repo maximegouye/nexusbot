@@ -1905,6 +1905,42 @@ const helpers = {
   },
 
   // ── Crypto : marché + portefeuille (PRIX RÉELS via CoinGecko) ──
+  /**
+   * Nettoyage des cryptos obsolètes (NEXUS, PEPE, etc. — anciennes cryptos
+   * fictives qui ne sont pas sur CoinGecko). Les utilisateurs sont
+   * remboursés automatiquement en coins au dernier prix connu, puis
+   * les entrées du marché sont supprimées.
+   */
+  cleanupObsoleteCrypto() {
+    const OBSOLETE = ['NEXUS', 'NEX', 'PEPE'];
+    const tx = db.transaction(() => {
+      for (const sym of OBSOLETE) {
+        const market = db.prepare('SELECT price FROM crypto_market WHERE symbol = ?').get(sym);
+        if (market) {
+          // Récupère tous les utilisateurs qui détiennent cette crypto
+          const holders = db.prepare('SELECT user_id, guild_id, amount FROM crypto_wallet WHERE crypto = ? AND amount > 0').all(sym);
+          for (const h of holders) {
+            const coinsBack = Math.floor(h.amount * market.price);
+            if (coinsBack > 0) {
+              try {
+                helpers.addCoins(h.user_id, h.guild_id, coinsBack, {
+                  type: 'admin',
+                  note: `Remboursement crypto obsolète ${sym} (${h.amount.toFixed(6)} @ ${market.price.toFixed(4)})`,
+                  meta: { crypto: sym, qty: h.amount, price: market.price },
+                });
+              } catch {}
+            }
+          }
+          // Supprime du wallet et du marché
+          db.prepare('DELETE FROM crypto_wallet WHERE crypto = ?').run(sym);
+          db.prepare('DELETE FROM crypto_market WHERE symbol = ?').run(sym);
+          console.log(`[cleanupCrypto] ${sym} retiré du marché, ${holders.length} détenteur(s) remboursé(s).`);
+        }
+      }
+    });
+    tx();
+  },
+
   seedCryptoMarket() {
     // Seeds avec de VRAIS identifiants CoinGecko.
     // Les prix ici ne sont qu'un fallback avant le premier fetch API.
