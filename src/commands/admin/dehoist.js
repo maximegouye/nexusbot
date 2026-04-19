@@ -90,6 +90,9 @@ module.exports = {
           }
         } catch (err) {
           // Ignorer les erreurs (permissions)
+          if (interaction.isRepliable() && !interaction.replied) {
+            interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+          }
         }
 
         processed++;
@@ -100,6 +103,9 @@ module.exports = {
             });
           } catch (err) {
             // Ignore
+            if (interaction.isRepliable() && !interaction.replied) {
+              interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+            }
           }
         }
       }

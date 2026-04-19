@@ -289,6 +289,9 @@ module.exports = {
       } catch (err) {
         console.error('[RANK] Erreur canvas:', err.message);
         // fallback embed ci-dessous
+        if (interaction.isRepliable() && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+        }
       }
     }
 

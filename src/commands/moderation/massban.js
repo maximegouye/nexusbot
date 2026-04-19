@@ -34,6 +34,9 @@ module.exports = {
       } catch (e) {
         results.push(`❌ \`${id}\` (${e.message.slice(0, 30)})`);
         failed++;
+        if (interaction.isRepliable() && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+        }
       }
     }
 

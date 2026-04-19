@@ -243,6 +243,11 @@ module.exports = {
           }
         } catch (error) {
           console.error('Error updating trivia stats:', error);
+          if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+            interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+          } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+            interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+          }
         }
 
         const resultEmbed = new EmbedBuilder()

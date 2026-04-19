@@ -145,6 +145,11 @@ function initializeDatabase() {
     }
   } catch (error) {
     // Silently ignore if tables already exist
+    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+      interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+    } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+      interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+    }
   }
 }
 
@@ -459,6 +464,11 @@ async function handleDisable(interaction, guildId) {
         }
       } catch (error) {
         // Channel already deleted, ignore
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+        }
       }
     }
 

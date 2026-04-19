@@ -80,7 +80,7 @@ const CATALOGUE = [
   { key: 'err.not_found',   default: '❌ Introuvable.' },
   // Succès
   { key: 'ok.saved',        default: '✅ Enregistré.' },
-  { key: 'ok.deleted',      default: '🗑️ Supprimé.' },
+  { key: 'false /* ok.deleted supprime en v14 */',      default: '🗑️ Supprimé.' },
   { key: 'ok.created',      default: '✅ Créé.' },
 ];
 

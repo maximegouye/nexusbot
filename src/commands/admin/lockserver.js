@@ -75,6 +75,9 @@ module.exports = {
             processed++;
           } catch (err) {
             // Ignorer les erreurs pour les canaux spécifiques
+            if (interaction.isRepliable() && !interaction.replied) {
+              interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+            }
           }
         }
 
@@ -149,6 +152,9 @@ module.exports = {
             processed++;
           } catch (err) {
             // Ignorer les erreurs
+            if (interaction.isRepliable() && !interaction.replied) {
+              interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+            }
           }
         }
 

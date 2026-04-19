@@ -70,6 +70,11 @@ module.exports = {
         }
       } catch (e) {
         console.error('[DISBOARD] Erreur détection bump:', e.message);
+        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+        } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+        }
       }
       return; // Ne pas traiter davantage les messages du bot DISBOARD
     }

@@ -1390,6 +1390,9 @@ async function _handleInteraction(interaction, client) {
         return;
       } catch (e) {
         console.error('[ROULETTE] Erreur handler:', e);
+        if (interaction.isRepliable() && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+        }
       }
     }
 
@@ -1402,6 +1405,9 @@ async function _handleInteraction(interaction, client) {
         if (_handled2 !== false) return;
       } catch (e) {
         console.error('[ADV-PANEL] Erreur:', e);
+        if (interaction.isRepliable() && !interaction.replied) {
+          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+        }
       }
     }
 
