@@ -1057,6 +1057,40 @@ async function _handleInteraction(interaction, client) {
       } catch (e) { console.error('[CSLOT MODAL]:', e); }
     }
 
+    // ── HISTORIQUE : navigation pages ────────────────────────────────
+    if (_cfgId.startsWith('hist_')) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const color  = cfg.color || '#7C3AED';
+        const { _build } = require('../commands/economy/historique');
+        const parts = _cfgId.split(':');
+        const action = parts[0].replace('hist_', '');
+        const targetId = parts[1];
+        const currentPage = parseInt(parts[2] || '1', 10);
+
+        const target = await interaction.client.users.fetch(targetId).catch(() => interaction.user);
+        const total = db2.countTransactions(targetId, interaction.guildId);
+        const pages = Math.max(1, Math.ceil(total / _build.PAGE_SIZE));
+
+        let newPage = currentPage;
+        if (action === 'first')   newPage = 1;
+        if (action === 'prev')    newPage = Math.max(1, currentPage - 1);
+        if (action === 'next')    newPage = Math.min(pages, currentPage + 1);
+        if (action === 'last')    newPage = pages;
+        if (action === 'refresh') newPage = currentPage;
+
+        const offset = (newPage - 1) * _build.PAGE_SIZE;
+        const rows = db2.getTransactions(targetId, interaction.guildId, _build.PAGE_SIZE, offset);
+
+        return interaction.update({
+          embeds: [_build.buildEmbed({ user: target, guild: interaction.guild, page: newPage, total, rows, symbol, color })],
+          components: [_build.buildButtons(targetId, newPage, pages)],
+        });
+      } catch (e) { console.error('[HIST] Erreur handler:', e); }
+    }
+
     // ── ROULETTE : bouton REJOUER et menu de choix de pari ───────────
     if (_cfgId.startsWith('roulette_replay:') || _cfgId.startsWith('roulette_double:') || _cfgId.startsWith('roulette_pick:')) {
       try {

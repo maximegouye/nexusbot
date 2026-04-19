@@ -473,8 +473,25 @@ db.exec(`
     price      REAL NOT NULL,
     prev_price REAL NOT NULL,
     volatility REAL DEFAULT 0.02,
+    cg_id      TEXT,
+    change_24h REAL DEFAULT 0,
     updated_at INTEGER DEFAULT (strftime('%s','now'))
   );
+
+  -- Historique des transactions (liquide, banque, crypto, jeux, etc.)
+  CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id   TEXT NOT NULL,
+    guild_id  TEXT NOT NULL,
+    type      TEXT NOT NULL,      -- earn, spend, transfer_in, transfer_out, game_win, game_loss, buy_crypto, sell_crypto, deposit, withdraw, admin
+    amount    INTEGER NOT NULL,   -- en coins (peut être négatif)
+    balance_after INTEGER,        -- snapshot solde après l'opération
+    note      TEXT,               -- description humaine
+    related_user TEXT,            -- destinataire / source si applicable
+    meta_json TEXT,               -- JSON libre pour métadonnées
+    created_at INTEGER DEFAULT (strftime('%s','now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(user_id, guild_id, created_at DESC);
 
   -- Statistiques de jeux par user
   CREATE TABLE IF NOT EXISTS game_stats (
@@ -827,6 +844,9 @@ const migrations = [
   { table: 'guild_config', column: 'stats_channels_ch',sql:"ALTER TABLE guild_config ADD COLUMN stats_channels_ch TEXT" },
   // users
   { table: 'users', column: 'last_message', sql: "ALTER TABLE users ADD COLUMN last_message INTEGER DEFAULT 0" },
+  // crypto_market : colonnes ajoutées pour prix réels CoinGecko
+  { table: 'crypto_market', column: 'cg_id',      sql: "ALTER TABLE crypto_market ADD COLUMN cg_id TEXT" },
+  { table: 'crypto_market', column: 'change_24h', sql: "ALTER TABLE crypto_market ADD COLUMN change_24h REAL DEFAULT 0" },
   // shop (active peut manquer sur des DBs anciennes)
   { table: 'shop', column: 'active', sql: "ALTER TABLE shop ADD COLUMN active INTEGER DEFAULT 1" },
   { table: 'shop', column: 'max_per_user', sql: "ALTER TABLE shop ADD COLUMN max_per_user INTEGER" },
@@ -1010,16 +1030,57 @@ const helpers = {
   },
 
   // ── Économie ──
-  addCoins(userId, guildId, amount) {
+  // Crédite des coins et log la transaction. Amount négatif = débit.
+  addCoins(userId, guildId, amount, opts = {}) {
     helpers.getUser(userId, guildId);
-    db.prepare('UPDATE users SET balance = balance + ?, total_earned = total_earned + ? WHERE user_id = ? AND guild_id = ?')
-      .run(Math.max(0, amount), amount > 0 ? amount : 0, userId, guildId);
+    const amt = Math.floor(Number(amount) || 0);
+    if (amt === 0) return;
+    if (amt > 0) {
+      db.prepare('UPDATE users SET balance = balance + ?, total_earned = total_earned + ? WHERE user_id = ? AND guild_id = ?')
+        .run(amt, amt, userId, guildId);
+    } else {
+      // Traite comme un retrait pour éviter solde négatif
+      db.prepare('UPDATE users SET balance = MAX(0, balance - ?) WHERE user_id = ? AND guild_id = ?')
+        .run(Math.abs(amt), userId, guildId);
+    }
+    // Historique (non bloquant si echec)
+    try {
+      if (opts.skipLog !== true) {
+        helpers.logTransaction({
+          userId, guildId,
+          type: opts.type || (amt > 0 ? 'earn' : 'spend'),
+          amount: amt,
+          note: opts.note || null,
+          relatedUser: opts.relatedUser || null,
+          meta: opts.meta || null,
+        });
+      }
+    } catch {}
   },
 
-  removeCoins(userId, guildId, amount) {
+  // Débite des coins et log. Retourne le montant réellement débité (ne descend pas sous 0).
+  removeCoins(userId, guildId, amount, opts = {}) {
     helpers.getUser(userId, guildId);
+    const amt = Math.max(0, Math.floor(Number(amount) || 0));
+    if (amt === 0) return 0;
+    // Récupère solde avant pour savoir ce qui est réellement pris
+    const before = db.prepare('SELECT balance FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+    const realDeduct = Math.min(amt, before?.balance || 0);
     db.prepare('UPDATE users SET balance = MAX(0, balance - ?) WHERE user_id = ? AND guild_id = ?')
-      .run(amount, userId, guildId);
+      .run(amt, userId, guildId);
+    try {
+      if (opts.skipLog !== true && realDeduct > 0) {
+        helpers.logTransaction({
+          userId, guildId,
+          type: opts.type || 'spend',
+          amount: -realDeduct,
+          note: opts.note || null,
+          relatedUser: opts.relatedUser || null,
+          meta: opts.meta || null,
+        });
+      }
+    } catch {}
+    return realDeduct;
   },
 
   // ── XP ──
@@ -1842,22 +1903,33 @@ const helpers = {
     tx();
   },
 
-  // ── Crypto : marché + portefeuille ──
+  // ── Crypto : marché + portefeuille (PRIX RÉELS via CoinGecko) ──
   seedCryptoMarket() {
+    // Seeds avec de VRAIS identifiants CoinGecko.
+    // Les prix ici ne sont qu'un fallback avant le premier fetch API.
     const seeds = [
-      { symbol: 'BTC', name: 'Bitcoin',    emoji: '₿',  price: 65000, volatility: 0.02 },
-      { symbol: 'ETH', name: 'Ethereum',   emoji: '♦️', price: 3500,  volatility: 0.025 },
-      { symbol: 'SOL', name: 'Solana',     emoji: '☀️', price: 150,   volatility: 0.04 },
-      { symbol: 'DOGE', name: 'Dogecoin',  emoji: '🐕', price: 0.15,  volatility: 0.06 },
-      { symbol: 'NEX', name: 'NexusCoin',  emoji: '💎', price: 42,    volatility: 0.08 },
-      { symbol: 'PEPE', name: 'Pepe',      emoji: '🐸', price: 0.00001, volatility: 0.12 },
+      { symbol: 'BTC',  name: 'Bitcoin',   cg_id: 'bitcoin',     emoji: '₿',  price: 65000,   volatility: 0.02 },
+      { symbol: 'ETH',  name: 'Ethereum',  cg_id: 'ethereum',    emoji: '♦️', price: 3500,    volatility: 0.025 },
+      { symbol: 'SOL',  name: 'Solana',    cg_id: 'solana',      emoji: '☀️', price: 150,     volatility: 0.04 },
+      { symbol: 'BNB',  name: 'BNB',       cg_id: 'binancecoin', emoji: '🟡', price: 600,     volatility: 0.03 },
+      { symbol: 'XRP',  name: 'Ripple',    cg_id: 'ripple',      emoji: '💧', price: 0.55,    volatility: 0.035 },
+      { symbol: 'DOGE', name: 'Dogecoin',  cg_id: 'dogecoin',    emoji: '🐕', price: 0.15,    volatility: 0.06 },
+      { symbol: 'ADA',  name: 'Cardano',   cg_id: 'cardano',     emoji: '🔷', price: 0.45,    volatility: 0.04 },
+      { symbol: 'LINK', name: 'Chainlink', cg_id: 'chainlink',   emoji: '🔗', price: 15,      volatility: 0.045 },
+      { symbol: 'AVAX', name: 'Avalanche', cg_id: 'avalanche-2', emoji: '🏔️', price: 35,      volatility: 0.05 },
+      { symbol: 'DOT',  name: 'Polkadot',  cg_id: 'polkadot',    emoji: '🔴', price: 7,       volatility: 0.04 },
+      { symbol: 'MATIC',name: 'Polygon',   cg_id: 'matic-network', emoji: '🟣', price: 0.8,   volatility: 0.05 },
+      { symbol: 'SHIB', name: 'Shiba Inu', cg_id: 'shiba-inu',   emoji: '🦴', price: 0.00002, volatility: 0.08 },
     ];
     for (const s of seeds) {
       try {
-        db.prepare(`INSERT OR IGNORE INTO crypto_market (symbol, name, emoji, price, prev_price, volatility)
-                    VALUES (?, ?, ?, ?, ?, ?)`)
-          .run(s.symbol, s.name, s.emoji, s.price, s.price, s.volatility);
-      } catch {}
+        // On INSERT OR IGNORE (les prix ne sont pas écrasés si déjà présents)
+        db.prepare(`INSERT OR IGNORE INTO crypto_market (symbol, name, cg_id, emoji, price, prev_price, volatility)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)`)
+          .run(s.symbol, s.name, s.cg_id, s.emoji, s.price, s.price, s.volatility);
+        // Si cg_id manque (migration d'une vieille DB), on l'ajoute
+        db.prepare(`UPDATE crypto_market SET cg_id = COALESCE(cg_id, ?) WHERE symbol = ?`).run(s.cg_id, s.symbol);
+      } catch (e) { console.error('[seedCrypto]', e.message); }
     }
   },
 
@@ -1869,7 +1941,53 @@ const helpers = {
     return db.prepare('SELECT * FROM crypto_market WHERE symbol = ?').get(symbol.toUpperCase());
   },
 
-  // Simulation de fluctuation — appelée par un worker cron
+  /**
+   * Fetch les VRAIS prix depuis CoinGecko (API publique gratuite, pas de clé).
+   * Met à jour price, prev_price et change_24h.
+   * À appeler toutes les 5 min via cron (voir cryptoPriceWorker.js).
+   */
+  async fetchRealCryptoPrices() {
+    const rows = db.prepare('SELECT symbol, cg_id, price FROM crypto_market WHERE cg_id IS NOT NULL').all();
+    if (!rows.length) return { ok: false, reason: 'empty' };
+
+    const ids = rows.map(r => r.cg_id).join(',');
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
+
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const https = require('https');
+        https.get(url, { headers: { 'User-Agent': 'NexusBot/2.0' } }, (res) => {
+          if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+          let body = '';
+          res.on('data', c => body += c);
+          res.on('end', () => { try { resolve(JSON.parse(body)); } catch (e) { reject(e); } });
+        }).on('error', reject);
+      });
+
+      let updated = 0;
+      const tx = db.transaction(() => {
+        for (const r of rows) {
+          const info = data[r.cg_id];
+          if (!info || typeof info.usd !== 'number') continue;
+          db.prepare(`UPDATE crypto_market
+                      SET prev_price = price,
+                          price = ?,
+                          change_24h = ?,
+                          updated_at = strftime('%s','now')
+                      WHERE symbol = ?`)
+            .run(info.usd, info.usd_24h_change ?? 0, r.symbol);
+          updated++;
+        }
+      });
+      tx();
+      return { ok: true, updated };
+    } catch (e) {
+      console.error('[fetchRealCryptoPrices]', e.message);
+      return { ok: false, reason: e.message };
+    }
+  },
+
+  // Fallback : fluctuation simulée (si CoinGecko down). Conservé pour compat.
   tickCryptoPrices() {
     const rows = helpers.getCryptoMarket();
     const tx = db.transaction(() => {
@@ -1881,6 +1999,31 @@ const helpers = {
       }
     });
     tx();
+  },
+
+  // ── Historique des transactions ──
+  logTransaction({ userId, guildId, type, amount, note, relatedUser, meta }) {
+    try {
+      const u = helpers.getUser(userId, guildId);
+      const balanceAfter = (u?.balance ?? 0) + (u?.bank ?? 0);
+      db.prepare(`INSERT INTO transactions (user_id, guild_id, type, amount, balance_after, note, related_user, meta_json)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(userId, guildId, type, Math.floor(amount), balanceAfter, note || null, relatedUser || null,
+             meta ? JSON.stringify(meta) : null);
+    } catch (e) { console.error('[logTransaction]', e.message); }
+  },
+
+  getTransactions(userId, guildId, limit = 20, offset = 0) {
+    return db.prepare(`SELECT * FROM transactions
+                       WHERE user_id = ? AND guild_id = ?
+                       ORDER BY created_at DESC
+                       LIMIT ? OFFSET ?`)
+      .all(userId, guildId, limit, offset);
+  },
+
+  countTransactions(userId, guildId) {
+    return db.prepare('SELECT COUNT(*) as c FROM transactions WHERE user_id = ? AND guild_id = ?')
+      .get(userId, guildId).c;
   },
 
   getWallet(userId, guildId) {
@@ -1908,7 +2051,11 @@ const helpers = {
       db.prepare(`INSERT INTO crypto_wallet (user_id, guild_id, crypto, amount, avg_buy) VALUES (?, ?, ?, ?, ?)`)
         .run(userId, guildId, symbol.toUpperCase(), qty, market.price);
     }
-    helpers.removeCoins(userId, guildId, amountCoins);
+    helpers.removeCoins(userId, guildId, amountCoins, {
+      type: 'buy_crypto',
+      note: `Achat ${qty.toFixed(6)} ${market.symbol} @ ${market.price.toFixed(4)}`,
+      meta: { symbol: market.symbol, qty, price: market.price },
+    });
     return { qty, price: market.price, symbol: market.symbol };
   },
 
@@ -1925,7 +2072,11 @@ const helpers = {
       db.prepare(`UPDATE crypto_wallet SET amount = ?, updated_at = strftime('%s','now') WHERE user_id = ? AND guild_id = ? AND crypto = ?`)
         .run(newQty, userId, guildId, symbol.toUpperCase());
     }
-    helpers.addCoins(userId, guildId, coins);
+    helpers.addCoins(userId, guildId, coins, {
+      type: 'sell_crypto',
+      note: `Vente ${quantity.toFixed(6)} ${market.symbol} @ ${market.price.toFixed(4)}`,
+      meta: { symbol: market.symbol, qty: quantity, price: market.price },
+    });
     return { coins, price: market.price, qtySold: quantity };
   },
 

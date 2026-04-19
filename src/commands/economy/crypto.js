@@ -1,10 +1,11 @@
 /**
- * /crypto — Marché crypto · portefeuille · trading.
+ * /crypto — Marché crypto RÉEL · portefeuille · trading.
  *
- * 6 cryptos avec prix fluctuants (simulation) :
- *   ₿ BTC · ♦️ ETH · ☀️ SOL · 🐕 DOGE · 💎 NEX (NexusCoin) · 🐸 PEPE
+ * 12 vraies cryptos avec prix en direct depuis CoinGecko :
+ *   BTC, ETH, SOL, BNB, XRP, DOGE, ADA, LINK, AVAX, DOT, MATIC, SHIB
  *
- * Les prix évoluent toutes les 5 minutes (volatilité configurée par crypto).
+ * Les prix sont mis à jour toutes les 5 minutes via l'API publique CoinGecko
+ * (voir src/utils/cryptoPriceWorker.js).
  */
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const db = require('../../database/db');
@@ -20,17 +21,25 @@ function buildMarketEmbed(cfg, userId, guildId) {
   const market = db.getCryptoMarket();
   const symbol = cfg.currency_emoji || '€';
 
+  // Les prix CoinGecko sont en USD. On convertit en currency du serveur (1 USD = 1 coin).
   const lines = market.map(c => {
-    const delta = c.prev_price > 0 ? ((c.price - c.prev_price) / c.prev_price) * 100 : 0;
-    const arrow = delta > 0.5 ? '🟢📈' : delta < -0.5 ? '🔴📉' : '⚪';
-    return `${c.emoji} **${c.symbol}** · ${c.name}\n${arrow} **${fmtPrice(c.price)} ${symbol}** (${delta >= 0 ? '+' : ''}${delta.toFixed(2)}%)`;
+    const delta24 = Number.isFinite(c.change_24h) ? c.change_24h : 0;
+    const delta   = c.prev_price > 0 ? ((c.price - c.prev_price) / c.prev_price) * 100 : 0;
+    const arrow24 = delta24 > 0.5 ? '🟢' : delta24 < -0.5 ? '🔴' : '⚪';
+    const arrow5m = delta > 0.1 ? '📈' : delta < -0.1 ? '📉' : '';
+    const change24Txt = `${arrow24} 24 h : **${delta24 >= 0 ? '+' : ''}${delta24.toFixed(2)} %**`;
+    return `${c.emoji} **${c.symbol}** · ${c.name}\n**${fmtPrice(c.price)} ${symbol}** ${arrow5m}  ·  ${change24Txt}`;
   }).join('\n\n');
+
+  // Date de mise à jour (prend la plus récente du marché)
+  const lastUpd = Math.max(...market.map(c => c.updated_at || 0), 0);
+  const ts = lastUpd ? `<t:${lastUpd}:R>` : 'à l\'instant';
 
   return new EmbedBuilder()
     .setColor(cfg.color || '#F39C12')
-    .setTitle('💰 Marché Crypto · NexusExchange')
+    .setTitle('💰 Marché Crypto — Prix réels (CoinGecko)')
     .setDescription(lines || '*Marché vide.*')
-    .setFooter({ text: '📊 Prix fluctuants · mis à jour toutes les 5 min · /crypto acheter / vendre' })
+    .setFooter({ text: `📊 Prix réels · dernière maj : ${new Date(lastUpd * 1000).toLocaleTimeString('fr-FR')} · 1 coin = 1 USD` })
     .setTimestamp();
 }
 
@@ -57,7 +66,7 @@ function buildWalletEmbed(cfg, userId, guildId, user) {
     .setDescription(lines || '*Aucune crypto.*\n\nUtilise **Acheter** pour commencer à trader.')
     .addFields(
       { name: `💰 Valeur totale`,     value: `**${Math.floor(totalValue).toLocaleString('fr-FR')}${symbol}**`,     inline: true },
-      { name: `${symbol} Solde libre`, value: `**${(user.balance || 0).toLocaleString('fr-FR')}${symbol}**`,     inline: true },
+      { name: `${symbol} Solde disponible`, value: `**${(user.balance || 0).toLocaleString('fr-FR')}${symbol}**`,     inline: true },
       { name: `🏦 Banque`,             value: `**${(user.bank || 0).toLocaleString('fr-FR')}${symbol}**`,         inline: true },
     )
     .setFooter({ text: '💼 Portefeuille · NexusBot' })
@@ -82,7 +91,7 @@ module.exports = {
     .addSubcommand(s => s.setName('marche').setDescription('Voir le marché crypto'))
     .addSubcommand(s => s.setName('portefeuille').setDescription('Voir ton portefeuille'))
     .addSubcommand(s => s.setName('acheter').setDescription('Acheter une crypto')
-      .addStringOption(o => o.setName('crypto').setDescription('Symbole (BTC, ETH, SOL, DOGE, NEX, PEPE)').setRequired(true).setMaxLength(10))
+      .addStringOption(o => o.setName('crypto').setDescription('Symbole (BTC, ETH, SOL, BNB, XRP, DOGE, ADA, LINK, AVAX, DOT, MATIC, SHIB)').setRequired(true).setMaxLength(10))
       .addStringOption(o => o.setName('montant').setDescription('Montant en coins (ex: 500, all, 25%)').setRequired(true).setMaxLength(20)))
     .addSubcommand(s => s.setName('vendre').setDescription('Vendre une crypto')
       .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).setMaxLength(10))
