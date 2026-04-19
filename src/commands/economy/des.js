@@ -64,12 +64,27 @@ module.exports = {
     const mise = Number(bet);
     db.removeCoins(interaction.user.id, interaction.guildId, mise);
 
-    // Suspense
+    // Suspense : 2 frames avec dés qui changent rapidement
     const color = cfg.color || '#F39C12';
+    const rollFrame = () => {
+      const a = DICE_EMOJI[1 + Math.floor(Math.random() * 6)];
+      const b = DICE_EMOJI[1 + Math.floor(Math.random() * 6)];
+      return `# ${a}    ${b}`;
+    };
     await interaction.reply({
-      embeds: [new EmbedBuilder().setColor(color).setTitle('🎲 Les dés roulent…').setDescription('⚃ ⚁  ?  ⚅ ⚂')],
+      embeds: [new EmbedBuilder().setColor(color)
+        .setTitle('🎲 Les dés roulent…')
+        .setDescription(['```', rollFrame(), '```', '🌪️ Les dés tournent dans le gobelet…'].join('\n'))
+      ],
     });
-    await new Promise(r => setTimeout(r, 1400));
+    await new Promise(r => setTimeout(r, 700));
+    await interaction.editReply({
+      embeds: [new EmbedBuilder().setColor(color)
+        .setTitle('🎲 Les dés roulent…')
+        .setDescription(['```', rollFrame(), '```', '⚡ Ils ralentissent…'].join('\n'))
+      ],
+    }).catch(() => {});
+    await new Promise(r => setTimeout(r, 700));
 
     const d1 = 1 + Math.floor(Math.random() * 6);
     const d2 = 1 + Math.floor(Math.random() * 6);

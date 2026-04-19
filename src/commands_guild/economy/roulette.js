@@ -93,16 +93,20 @@ async function spinAndResolve(interaction, bet, mise, cfg, symbol, user) {
   // Prélèvement de la mise
   db.removeCoins(interaction.user.id, interaction.guildId, miseNum);
 
-  // Phase de suspense (animation)
-  const spinEmbed = r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color });
+  // Phase de suspense : animation 3 frames avec ralentissement progressif
+  const spinEmbed0 = r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 0 });
   let replyMsg;
   if (interaction.replied || interaction.deferred) {
-    replyMsg = await interaction.editReply({ embeds: [spinEmbed], components: [] }).catch(() => null);
+    replyMsg = await interaction.editReply({ embeds: [spinEmbed0], components: [] }).catch(() => null);
   } else {
-    replyMsg = await interaction.reply({ embeds: [spinEmbed], components: [], fetchReply: true }).catch(() => null);
+    replyMsg = await interaction.reply({ embeds: [spinEmbed0], components: [], fetchReply: true }).catch(() => null);
   }
 
-  await new Promise(res => setTimeout(res, 2000));
+  await new Promise(res => setTimeout(res, 900));
+  await interaction.editReply({ embeds: [r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 1 })] }).catch(() => {});
+  await new Promise(res => setTimeout(res, 900));
+  await interaction.editReply({ embeds: [r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 2 })] }).catch(() => {});
+  await new Promise(res => setTimeout(res, 700));
 
   // Tirage + résolution
   const result = r.spin();

@@ -64,11 +64,25 @@ const PARI_LABELS = {
   numero:     '🟢 Numéro plein',
 };
 
-function buildSpinningEmbed({ userName, bet, mise, symbol, color }) {
+function buildSpinningEmbed({ userName, bet, mise, symbol, color, frame = 0 }) {
+  // 3 frames distincts — la bille passe sur des numéros différents avant de s'arrêter
+  const frames = [
+    '🎡  🔴  ⚫  🟢  🔴  ⚫  🔴  ⚫  🎡\n         ⚫  🔴  ⚫  🔴  ⚫  🔴',
+    '⚫  🔴  🎡  ⚫  🔴  🟢  ⚫  🔴  ⚫\n    🔴  ⚫  🎡  🔴  ⚫  🔴  ⚫',
+    '🔴  ⚫  🔴  ⚫  🎡  🔴  ⚫  🔴  🟢\n⚫  🔴  ⚫  🔴  ⚫  🎡  🔴  ⚫  🔴',
+  ];
+  const speeds = ['🌪️ La bille file à toute vitesse…', '⚡ La bille ralentit…', '🐌 La bille hésite sur les derniers numéros…'];
   return new EmbedBuilder()
     .setColor(color || '#9B59B6')
     .setTitle('🎡 La roulette tourne…')
-    .setDescription(`🔄 La bille roule…\n\n**${userName}** mise **${mise.toLocaleString('fr-FR')}${symbol}** sur **${labelFor(bet)}**`)
+    .setDescription([
+      '```',
+      frames[Math.min(frame, frames.length - 1)],
+      '```',
+      speeds[Math.min(frame, speeds.length - 1)],
+      '',
+      `**${userName}** mise **${mise.toLocaleString('fr-FR')}${symbol}** sur **${labelFor(bet)}**`,
+    ].join('\n'))
     .setFooter({ text: 'Résultat dans un instant…' });
 }
 

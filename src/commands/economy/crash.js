@@ -65,14 +65,26 @@ module.exports = {
 
     const color = cfg.color || '#E67E22';
 
-    // Animation suspense
-    await interaction.reply({
-      embeds: [new EmbedBuilder().setColor(color).setTitle('📈 Le multiplicateur grimpe…')
-        .setDescription(`🚀 ×1.00 — 1.50 — 2.00 …\n\n**${interaction.user.username}** mise **${miseNum.toLocaleString('fr-FR')}${symbol}** avec cashout auto à **×${cashout}**`)
-      ],
-    });
+    // Animation suspense : 3 frames avec multiplicateur qui monte progressivement
+    const buildClimb = (mult, label) => new EmbedBuilder().setColor(color)
+      .setTitle('📈 Le multiplicateur grimpe…')
+      .setDescription([
+        '```',
+        `  ×${mult.toFixed(2)}`,
+        '',
+        ('▁'.repeat(Math.max(1, Math.min(20, Math.floor(mult * 2))))) + '🚀',
+        '```',
+        label,
+        '',
+        `**${interaction.user.username}** mise **${miseNum.toLocaleString('fr-FR')}${symbol}** · cashout auto à **×${cashout}**`,
+      ].join('\n'));
 
-    await new Promise(r => setTimeout(r, 2200));
+    await interaction.reply({ embeds: [buildClimb(1.10, '🚀 Décollage…')] });
+    await new Promise(r => setTimeout(r, 800));
+    await interaction.editReply({ embeds: [buildClimb(1.85, '⚡ Ça monte vite !')] }).catch(() => {});
+    await new Promise(r => setTimeout(r, 800));
+    await interaction.editReply({ embeds: [buildClimb(3.20, '🔥 Le multi explose !')] }).catch(() => {});
+    await new Promise(r => setTimeout(r, 700));
 
     const crashPoint = drawCrashPoint();
     const won = crashPoint >= cashout;
@@ -100,7 +112,7 @@ module.exports = {
           : { name: '💸 Perte',    value: `**-${miseNum.toLocaleString('fr-FR')}${symbol}**`,          inline: true },
         { name: `${symbol} Solde`, value: `**${balanceAfter.toLocaleString('fr-FR')}${symbol}**`,      inline: true },
       )
-      .setFooter({ text: '📈 Crash · NexusBot — plus le cashout est élevé, plus c\'est risqué' })
+      .setFooter({ text: '📈 Crash · plus le cashout est élevé, plus c\'est risqué' })
       .setTimestamp();
 
     const encoded = encodeURIComponent(`${miseNum}:${cashout}`);
