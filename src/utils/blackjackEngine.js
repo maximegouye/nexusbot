@@ -257,6 +257,6 @@ function deserialize(data) {
 module.exports = {
   startGame, buildEmbed, buildButtons,
   playerHit, playerStand, playerDouble, playerSurrender, playerInsure,
-  handValue, isBlackjack,
+  handValue, isBlackjack, formatCard, drawCard,
   serialize, deserialize,
 };

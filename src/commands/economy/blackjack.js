@@ -41,21 +41,60 @@ module.exports = {
     if (bet < 1n)                   return interaction.reply({ content: '❌ La mise doit être d\'au moins **1**.', ephemeral: true });
     if (bet > BigInt(user.balance)) return interaction.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
 
-    db.removeCoins(interaction.user.id, interaction.guildId, Number(bet));
+    db.removeCoins(interaction.user.id, interaction.guildId, Number(bet), {
+      type: 'game_loss',
+      note: `Mise blackjack ${Number(bet).toLocaleString('fr-FR')}${symbol}`,
+      meta: { game: 'blackjack', bet: Number(bet) },
+    });
     const balanceAfter = BigInt(user.balance) - bet;
 
     const { game, immediateFinish } = bj.startGame({ bet, balance: balanceAfter });
     const embedOpts = { symbol, color: cfg.color || '#FFD700', userName: interaction.user.username };
 
+    // ── Animation de distribution : révèle les cartes progressivement ──
+    // 1. Écran initial : aucune carte
+    const { EmbedBuilder } = require('discord.js');
+    const dealEmbed = (step, hide = []) => new EmbedBuilder()
+      .setColor(cfg.color || '#FFD700')
+      .setTitle('♠️ Blackjack — Distribution…')
+      .setDescription([
+        '```',
+        '╔══════════════════════════════╗',
+        `║  Le croupier distribue…      ║`,
+        '╚══════════════════════════════╝',
+        '```',
+        `🎰 **${interaction.user.username}** · mise : **${Number(bet).toLocaleString('fr-FR')}${symbol}**`,
+        '',
+        step >= 1 ? `🂠 **Toi** : ${bj.formatCard(game.playerHands[0].cards[0])}` : '🂠 **Toi** : …',
+        step >= 2 ? `🂠 **Croupier** : ${bj.formatCard(game.dealer[0])}` : '🂠 **Croupier** : …',
+        step >= 3 ? `🂠 **Toi** : ${bj.formatCard(game.playerHands[0].cards[0])} ${bj.formatCard(game.playerHands[0].cards[1])}` : '',
+        step >= 4 ? `🂠 **Croupier** : ${bj.formatCard(game.dealer[0])} 🂠` : '',
+      ].filter(Boolean).join('\n'))
+      .setFooter({ text: 'Distribution des cartes…' });
+
+    await interaction.reply({ embeds: [dealEmbed(0)], fetchReply: true });
+    await new Promise(r => setTimeout(r, 350));
+    await interaction.editReply({ embeds: [dealEmbed(1)] }).catch(() => {});
+    await new Promise(r => setTimeout(r, 380));
+    await interaction.editReply({ embeds: [dealEmbed(2)] }).catch(() => {});
+    await new Promise(r => setTimeout(r, 380));
+    await interaction.editReply({ embeds: [dealEmbed(3)] }).catch(() => {});
+    await new Promise(r => setTimeout(r, 380));
+    await interaction.editReply({ embeds: [dealEmbed(4)] }).catch(() => {});
+    await new Promise(r => setTimeout(r, 450));
+
     if (immediateFinish) {
-      if (game.payout > 0n) db.addCoins(interaction.user.id, interaction.guildId, Number(game.payout));
-      return interaction.reply({ embeds: [bj.buildEmbed(game, embedOpts)] });
+      if (game.payout > 0n) db.addCoins(interaction.user.id, interaction.guildId, Number(game.payout), {
+        type: 'game_win',
+        note: `Blackjack naturel · gain ${Number(game.payout).toLocaleString('fr-FR')}${symbol}`,
+        meta: { game: 'blackjack', payout: Number(game.payout) },
+      });
+      return interaction.editReply({ embeds: [bj.buildEmbed(game, embedOpts)], components: [] }).catch(() => {});
     }
 
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       embeds: [bj.buildEmbed(game, embedOpts)],
       components: [bj.buildButtons(game)],
-      fetchReply: true,
     });
 
     // Persiste la session en BDD (TTL 30 min) → survit au redémarrage

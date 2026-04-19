@@ -35,6 +35,7 @@ function buildButtons(userId) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`banque_refresh:${userId}`).setLabel('🔄 Actualiser').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`banque_crypto:${userId}`).setLabel('💹 Mon crypto').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`banque_history:${userId}`).setLabel('📜 Historique').setStyle(ButtonStyle.Secondary),
     ),
   ];
 }

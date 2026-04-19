@@ -106,6 +106,19 @@ async function _handleInteraction(interaction, client) {
             ephemeral: true,
           });
         }
+
+        if (action === 'history') {
+          // Ouvre l'historique inline en ephemeral
+          const { _build } = require('../commands/economy/historique');
+          const total = db2.countTransactions(uid, interaction.guildId);
+          const rows  = db2.getTransactions(uid, interaction.guildId, _build.PAGE_SIZE, 0);
+          const pages = Math.max(1, Math.ceil(total / _build.PAGE_SIZE));
+          return interaction.reply({
+            embeds: [_build.buildEmbed({ user: interaction.user, guild: interaction.guild, page: 1, total, rows, symbol, color: cfg.color || '#7C3AED' })],
+            components: [_build.buildButtons(uid, 1, pages)],
+            ephemeral: true,
+          });
+        }
         return;
       } catch (e) { console.error('[BANQUE handler]', e); }
     }
@@ -1055,6 +1068,114 @@ async function _handleInteraction(interaction, client) {
           components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
         });
       } catch (e) { console.error('[CSLOT MODAL]:', e); }
+    }
+
+    // ── PROFIL : boutons interactifs (stats / crypto / historique / badges / refresh)
+    if (_cfgId.startsWith('profil_')) {
+      try {
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const color  = cfg.color || '#FFD700';
+        const parts = _cfgId.split(':');
+        const action = parts[0].replace('profil_', '');
+        const ownerId = parts[1];
+        const targetId = parts[2];
+
+        // Seul le propriétaire du profil peut interagir
+        if (interaction.user.id !== ownerId) {
+          return interaction.reply({ content: '❌ Ce profil n\'est pas le tien. Tape `/profil` pour voir le tien.', ephemeral: true });
+        }
+
+        const target = await interaction.client.users.fetch(targetId).catch(() => interaction.user);
+
+        if (action === 'refresh') {
+          const { _build } = require('../commands/social/profil');
+          const member = interaction.guild.members.cache.get(targetId) || await interaction.guild.members.fetch(targetId).catch(() => null);
+          const user = db2.getUser(targetId, interaction.guildId);
+          return interaction.update({
+            embeds: [_build.buildMainEmbed(target, member, user, cfg, interaction.guild)],
+            components: _build.buildButtons(ownerId, targetId),
+          });
+        }
+
+        if (action === 'history') {
+          const { _build } = require('../commands/economy/historique');
+          const total = db2.countTransactions(targetId, interaction.guildId);
+          const rows  = db2.getTransactions(targetId, interaction.guildId, _build.PAGE_SIZE, 0);
+          const pages = Math.max(1, Math.ceil(total / _build.PAGE_SIZE));
+          return interaction.reply({
+            embeds: [_build.buildEmbed({ user: target, guild: interaction.guild, page: 1, total, rows, symbol, color: cfg.color || '#7C3AED' })],
+            components: [_build.buildButtons(targetId, 1, pages)],
+            ephemeral: true,
+          });
+        }
+
+        if (action === 'stats') {
+          const stats = db2.getGameStats(targetId, interaction.guildId);
+          const totalPlayed = stats.reduce((s, g) => s + g.played, 0);
+          const totalWon    = stats.reduce((s, g) => s + g.won, 0);
+          const totalLost   = stats.reduce((s, g) => s + g.lost, 0);
+          const totalBet    = stats.reduce((s, g) => s + (g.total_bet || 0), 0);
+          const totalWin    = stats.reduce((s, g) => s + (g.total_won || 0), 0);
+          const biggestWin  = Math.max(0, ...stats.map(g => g.biggest_win || 0));
+          const winrate     = totalPlayed > 0 ? (totalWon / totalPlayed * 100).toFixed(1) : '0.0';
+          const lines = stats.length
+            ? stats.map(g => `🎮 **${g.game}** · ${g.played} parties · ${g.won} gagnées · ${g.lost} perdues · biggest win : ${(g.biggest_win||0).toLocaleString('fr-FR')}${symbol}`).join('\n')
+            : '*Aucune partie jouée pour le moment.*';
+          return interaction.reply({
+            embeds: [new EmbedBuilder().setColor(color)
+              .setTitle(`📊 Statistiques de jeu — ${target.username}`)
+              .setDescription(lines)
+              .addFields(
+                { name: '🎲 Total parties',  value: `${totalPlayed.toLocaleString('fr-FR')}`, inline: true },
+                { name: '🏆 Winrate',        value: `${winrate} %`,                          inline: true },
+                { name: '💸 Total misé',     value: `${totalBet.toLocaleString('fr-FR')}${symbol}`, inline: true },
+                { name: '💰 Total gagné',    value: `${totalWin.toLocaleString('fr-FR')}${symbol}`, inline: true },
+                { name: '📈 Bénéfice net',   value: `${(totalWin - totalBet).toLocaleString('fr-FR')}${symbol}`, inline: true },
+                { name: '🎯 Meilleur coup',  value: `${biggestWin.toLocaleString('fr-FR')}${symbol}`, inline: true },
+              )
+              .setThumbnail(target.displayAvatarURL({ size: 128 }))
+            ],
+            ephemeral: true,
+          });
+        }
+
+        if (action === 'crypto') {
+          const wallet = db2.getWallet(targetId, interaction.guildId);
+          const market = new Map((db2.getCryptoMarket() || []).map(c => [c.symbol, c]));
+          let total = 0;
+          const lines = wallet.map(w => {
+            const m = market.get(w.crypto); if (!m) return null;
+            const v = w.amount * m.price;
+            total += v;
+            const profit = (m.price - w.avg_buy) * w.amount;
+            const profitPct = w.avg_buy > 0 ? ((m.price - w.avg_buy) / w.avg_buy) * 100 : 0;
+            const arrow = profit >= 0 ? '🟢' : '🔴';
+            return `${m.emoji} **${w.crypto}** — ${w.amount.toFixed(6)} × ${m.price.toFixed(4)}${symbol}\n${arrow} Valeur : **${Math.floor(v).toLocaleString('fr-FR')}${symbol}** · PnL : ${profit >= 0 ? '+' : ''}${Math.floor(profit).toLocaleString('fr-FR')}${symbol} (${profitPct.toFixed(2)} %)`;
+          }).filter(Boolean).join('\n\n') || '*Aucune crypto détenue.*';
+          return interaction.reply({
+            embeds: [new EmbedBuilder().setColor('#2ECC71')
+              .setTitle(`💹 Portefeuille crypto — ${target.username}`)
+              .setDescription(lines)
+              .addFields({ name: '💰 Valeur totale', value: `**${Math.floor(total).toLocaleString('fr-FR')}${symbol}**`, inline: true })
+              .setThumbnail(target.displayAvatarURL({ size: 128 }))
+            ],
+            ephemeral: true,
+          });
+        }
+
+        if (action === 'badges') {
+          return interaction.reply({
+            embeds: [new EmbedBuilder().setColor('#F1C40F')
+              .setTitle(`🏅 Badges — ${target.username}`)
+              .setDescription('*Système de badges en cours de construction.*\n\nReviens bientôt pour voir les badges débloqués !')
+              .setThumbnail(target.displayAvatarURL({ size: 128 }))
+            ],
+            ephemeral: true,
+          });
+        }
+      } catch (e) { console.error('[PROFIL] Erreur handler:', e); }
     }
 
     // ── HISTORIQUE : navigation pages ────────────────────────────────

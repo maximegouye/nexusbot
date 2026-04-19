@@ -64,8 +64,11 @@ function buildMainEmbed(target, member, user, cfg, guild) {
 function buildButtons(userId, targetId) {
   return [
     new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`profil_stats:${userId}:${targetId}`).setLabel('📊 Stats jeux').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId(`profil_crypto:${userId}:${targetId}`).setLabel('💹 Crypto').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`profil_stats:${userId}:${targetId}`).setLabel('📊 Statistiques de jeu').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`profil_crypto:${userId}:${targetId}`).setLabel('💹 Portefeuille crypto').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`profil_history:${userId}:${targetId}`).setLabel('📜 Historique').setStyle(ButtonStyle.Primary),
+    ),
+    new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`profil_badges:${userId}:${targetId}`).setLabel('🏅 Badges').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId(`profil_refresh:${userId}:${targetId}`).setLabel('🔄 Actualiser').setStyle(ButtonStyle.Secondary),
     ),
