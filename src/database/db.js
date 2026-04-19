@@ -478,8 +478,9 @@ db.exec(`
     updated_at INTEGER DEFAULT (strftime('%s','now'))
   );
 
-  -- Historique des transactions (liquide, banque, crypto, jeux, etc.)
-  CREATE TABLE IF NOT EXISTS transactions (
+  -- Historique économique détaillé par utilisateur (liquide, banque, crypto, jeux, etc.)
+  -- Table séparée de l'ancienne 'transactions' (qui loggait seulement les virements entre users).
+  CREATE TABLE IF NOT EXISTS tx_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id   TEXT NOT NULL,
     guild_id  TEXT NOT NULL,
@@ -491,7 +492,7 @@ db.exec(`
     meta_json TEXT,               -- JSON libre pour métadonnées
     created_at INTEGER DEFAULT (strftime('%s','now'))
   );
-  CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(user_id, guild_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_tx_history_user ON tx_history(user_id, guild_id, created_at DESC);
 
   -- Statistiques de jeux par user
   CREATE TABLE IF NOT EXISTS game_stats (
@@ -2006,7 +2007,7 @@ const helpers = {
     try {
       const u = helpers.getUser(userId, guildId);
       const balanceAfter = (u?.balance ?? 0) + (u?.bank ?? 0);
-      db.prepare(`INSERT INTO transactions (user_id, guild_id, type, amount, balance_after, note, related_user, meta_json)
+      db.prepare(`INSERT INTO tx_history (user_id, guild_id, type, amount, balance_after, note, related_user, meta_json)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(userId, guildId, type, Math.floor(amount), balanceAfter, note || null, relatedUser || null,
              meta ? JSON.stringify(meta) : null);
@@ -2014,16 +2015,20 @@ const helpers = {
   },
 
   getTransactions(userId, guildId, limit = 20, offset = 0) {
-    return db.prepare(`SELECT * FROM transactions
-                       WHERE user_id = ? AND guild_id = ?
-                       ORDER BY created_at DESC
-                       LIMIT ? OFFSET ?`)
-      .all(userId, guildId, limit, offset);
+    try {
+      return db.prepare(`SELECT * FROM tx_history
+                         WHERE user_id = ? AND guild_id = ?
+                         ORDER BY created_at DESC
+                         LIMIT ? OFFSET ?`)
+        .all(userId, guildId, limit, offset);
+    } catch { return []; }
   },
 
   countTransactions(userId, guildId) {
-    return db.prepare('SELECT COUNT(*) as c FROM transactions WHERE user_id = ? AND guild_id = ?')
-      .get(userId, guildId).c;
+    try {
+      return db.prepare('SELECT COUNT(*) as c FROM tx_history WHERE user_id = ? AND guild_id = ?')
+        .get(userId, guildId).c;
+    } catch { return 0; }
   },
 
   getWallet(userId, guildId) {
