@@ -178,8 +178,8 @@ async function buildCard(target, userData, rank, theme, W = 934, H = 282) {
   }
 
   // XP textes
-  const xpCur = Math.max(0, xp - xpStart).toLocaleString('fr');
-  const xpMax = Math.max(1, xpNeeded - xpStart).toLocaleString('fr');
+  const xpCur = Math.max(0, xp - xpStart).toLocaleString('fr-FR');
+  const xpMax = Math.max(1, xpNeeded - xpStart).toLocaleString('fr-FR');
   ctx.fillStyle = '#cccccc';
   ctx.font = '14px sans-serif';
   ctx.fillText(`${xpCur} / ${xpMax} XP`, bx, by - 6);
@@ -191,10 +191,10 @@ async function buildCard(target, userData, rank, theme, W = 934, H = 282) {
 
   // ─── Stats inférieures ──────────────────────────────────
   const stats = [
-    { label: 'XP TOTAL',   val: xp.toLocaleString('fr') },
-    { label: 'MESSAGES',   val: (userData.message_count || 0).toLocaleString('fr') },
-    { label: 'VOCAL (MIN)', val: (userData.voice_minutes || 0).toLocaleString('fr') },
-    { label: 'MONNAIE',    val: `${(userData.balance || 0).toLocaleString('fr')} 🪙` },
+    { label: 'XP TOTAL',   val: xp.toLocaleString('fr-FR') },
+    { label: 'MESSAGES',   val: (userData.message_count || 0).toLocaleString('fr-FR') },
+    { label: 'VOCAL (MIN)', val: (userData.voice_minutes || 0).toLocaleString('fr-FR') },
+    { label: 'MONNAIE',    val: `${(userData.balance || 0).toLocaleString('fr-FR')} 🪙` },
   ];
 
   const statW = bw / stats.length;
@@ -308,12 +308,12 @@ module.exports = {
       .addFields(
         { name: '🏆 Niveau',   value: `**${level}**`, inline: true },
         { name: '🥇 Rang',     value: `**#${rank + 1}**`, inline: true },
-        { name: '⭐ XP Total', value: `**${xp.toLocaleString('fr')}**`, inline: true },
+        { name: '⭐ XP Total', value: `**${xp.toLocaleString('fr-FR')}**`, inline: true },
         { name: `📊 Progression (${Math.round(progress * 100)}%)`,
-          value: `\`${bar}\`\n${Math.max(0, xp - xpStart).toLocaleString('fr')} / ${Math.max(1, xpNeeded - xpStart).toLocaleString('fr')} XP` },
-        { name: '💬 Messages', value: `${(userData.message_count || 0).toLocaleString('fr')}`, inline: true },
+          value: `\`${bar}\`\n${Math.max(0, xp - xpStart).toLocaleString('fr-FR')} / ${Math.max(1, xpNeeded - xpStart).toLocaleString('fr-FR')} XP` },
+        { name: '💬 Messages', value: `${(userData.message_count || 0).toLocaleString('fr-FR')}`, inline: true },
         { name: '🎙️ Vocal',   value: `${(userData.voice_minutes || 0)} min`, inline: true },
-        { name: '🪙 Monnaie', value: `${(userData.balance || 0).toLocaleString('fr')}`, inline: true },
+        { name: '🪙 Monnaie', value: `${(userData.balance || 0).toLocaleString('fr-FR')}`, inline: true },
       )
       .setFooter({ text: 'NexusBot v2 • Installe canvas pour les cartes visuelles' });
 

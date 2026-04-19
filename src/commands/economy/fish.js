@@ -51,7 +51,7 @@ module.exports = {
       .setColor(value > 200 ? '#F39C12' : value > 50 ? '#3498DB' : '#888888')
       .setTitle('🎣 Résultat de la pêche')
       .setDescription(value > 0
-        ? `${caught.emoji} Tu as attrapé **${caught.name}** ! Tu gagnes **${value.toLocaleString('fr')} ${name}** ${emoji}`
+        ? `${caught.emoji} Tu as attrapé **${caught.name}** ! Tu gagnes **${value.toLocaleString('fr-FR')} ${name}** ${emoji}`
         : `${caught.emoji} **${caught.name}**... Meilleure chance la prochaine fois !`)
       .setFooter({ text: 'Prochaine pêche dans 20 minutes' });
 

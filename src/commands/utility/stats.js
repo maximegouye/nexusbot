@@ -35,9 +35,9 @@ module.exports = {
       .setThumbnail(interaction.client.user.displayAvatarURL())
       .addFields(
         // Global
-        { name: '🌍 Serveurs',      value: `**${guilds.toLocaleString('fr')}**`,   inline: true },
-        { name: '👥 Utilisateurs',  value: `**${users.toLocaleString('fr')}**`,    inline: true },
-        { name: '📁 Salons',        value: `**${channels.toLocaleString('fr')}**`, inline: true },
+        { name: '🌍 Serveurs',      value: `**${guilds.toLocaleString('fr-FR')}**`,   inline: true },
+        { name: '👥 Utilisateurs',  value: `**${users.toLocaleString('fr-FR')}**`,    inline: true },
+        { name: '📁 Salons',        value: `**${channels.toLocaleString('fr-FR')}**`, inline: true },
         { name: '⚡ Ping',          value: `**${ping}ms**`,                        inline: true },
         { name: '💾 Mémoire',       value: `**${mem} MB** / ${totalMem} GB`,       inline: true },
         { name: '⏱️ Uptime',        value: `**${d}j ${h}h ${m}m ${s}s**`,          inline: true },
@@ -46,9 +46,9 @@ module.exports = {
         { name: '👤 Membres suivis', value: `**${totalCmds}**`,  inline: true },
         { name: '🎉 Giveaways',     value: `**${giveaways}**`,   inline: true },
         { name: '🎫 Tickets',       value: `**${tickets}**`,     inline: true },
-        { name: '📨 Messages totaux', value: `**${(gStats?.total_messages || 0).toLocaleString('fr')}**`, inline: true },
-        { name: '👋 Arrivées',      value: `**${(gStats?.joined_members || 0).toLocaleString('fr')}**`, inline: true },
-        { name: '🚪 Départs',       value: `**${(gStats?.left_members || 0).toLocaleString('fr')}**`,  inline: true },
+        { name: '📨 Messages totaux', value: `**${(gStats?.total_messages || 0).toLocaleString('fr-FR')}**`, inline: true },
+        { name: '👋 Arrivées',      value: `**${(gStats?.joined_members || 0).toLocaleString('fr-FR')}**`, inline: true },
+        { name: '🚪 Départs',       value: `**${(gStats?.left_members || 0).toLocaleString('fr-FR')}**`,  inline: true },
       )
       .setFooter({ text: `Node.js ${process.version} • discord.js v14` })
       .setTimestamp();

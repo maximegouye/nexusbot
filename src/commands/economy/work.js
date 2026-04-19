@@ -94,13 +94,13 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(cfg.color || '#7B2FBE')
       .setTitle(`${job.emoji} Tu as travaillé !`)
-      .setDescription(`${phrase} **${total.toLocaleString('fr')}${symbol}** ${streakBonus > 0 ? `(+${streakBonus}€ bonus streak 🔥)` : ''}`)
+      .setDescription(`${phrase} **${total.toLocaleString('fr-FR')}${symbol}** ${streakBonus > 0 ? `(+${streakBonus}€ bonus streak 🔥)` : ''}`)
       .addFields(
         { name: '💼 Métier',        value: `${job.emoji} **${job.name}**`,         inline: true },
-        { name: `${symbol} Gagné`,  value: `**+${total.toLocaleString('fr')}${symbol}**`, inline: true },
+        { name: `${symbol} Gagné`,  value: `**+${total.toLocaleString('fr-FR')}${symbol}**`, inline: true },
         { name: '🔥 Streak',        value: `${workStreak} jour${workStreak > 1 ? 's' : ''}`, inline: true },
       )
-      .setFooter({ text: `Prochain travail disponible dans 1h • Solde: ${(user.balance + total).toLocaleString('fr')}${symbol}` });
+      .setFooter({ text: `Prochain travail disponible dans 1h • Solde: ${(user.balance + total).toLocaleString('fr-FR')}${symbol}` });
 
     await interaction.reply({ embeds: [embed] });
   }

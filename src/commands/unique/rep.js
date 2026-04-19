@@ -91,7 +91,7 @@ async function handleDonner(interaction) {
   let bonusMsg = '';
   if (milestones[newRep]) {
     db.addCoins(target.id, interaction.guildId, milestones[newRep]);
-    bonusMsg = `\n🎁 **Milestone ${newRep} rep !** +${milestones[newRep].toLocaleString('fr')} ${cfg.currency_name || 'coins'} bonus !`;
+    bonusMsg = `\n🎁 **Milestone ${newRep} rep !** +${milestones[newRep].toLocaleString('fr-FR')} ${cfg.currency_name || 'coins'} bonus !`;
   }
 
   const embed = new EmbedBuilder()

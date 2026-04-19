@@ -7,10 +7,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('coinflip')
     .setDescription('🪙 Lancer un défi pile ou face contre un autre membre')
-    .addStringOption(o => o.setName('mise').setDescription('Montant à miser (all, tout, 50% acceptés) — ILLIMITÉ').setRequired(true).setMaxLength(30))
-    .addStringOption(o => o.setName('choix').setDescription('Ton choix').setRequired(true)
-      .addChoices({ name: '🦅 Face', value: 'face' }, { name: '🐍 Pile', value: 'pile' }))
-    .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier (vide = open)').setRequired(false)),
+    .addStringOption(o => o.setName('mise').setDescription('Montant à miser (nombre, tout, 50 %, moitié) — aucune limite').setRequired(true).setMaxLength(30))
+    .addStringOption(o => o.setName('choix').setDescription('Pile ou face ?').setRequired(true)
+      .addChoices({ name: '👑 Face', value: 'face' }, { name: '🪙 Pile', value: 'pile' }))
+    .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier (laisse vide pour un défi ouvert)').setRequired(false)),
 
   async execute(interaction) {
     const miseRaw = interaction.options.get('mise')?.value;
@@ -36,17 +36,17 @@ module.exports = {
     if (adversaire?.id === userId) return interaction.reply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
 
     const challenger = db.getUser(userId, interaction.guildId);
-    if ((challenger.balance || 0) < mise) return interaction.reply({ content: `❌ Solde insuffisant (${(challenger.balance ?? 0).toLocaleString('fr-FR')} 🪙 / besoin: ${mise.toLocaleString('fr-FR')} 🪙).`, ephemeral: true });
+    if ((challenger.balance || 0) < mise) return interaction.reply({ content: `❌ Solde insuffisant : **${(challenger.balance ?? 0).toLocaleString('fr-FR')}** 🪙 · il te faut **${mise.toLocaleString('fr-FR')}** 🪙.`, ephemeral: true });
 
     // Réserver la mise
     db.db.prepare('UPDATE users SET balance=balance-? WHERE user_id=? AND guild_id=?').run(mise, userId, interaction.guildId);
 
     const choixOpposé = choix === 'face' ? 'pile' : 'face';
-    const choixEmoji  = choix === 'face' ? '🦅' : '🐍';
+    const choixEmoji  = choix === 'face' ? '👑' : '🪙';
     const embed = new EmbedBuilder()
       .setColor('#FFD700')
       .setTitle('🪙 Défi Pile ou Face !')
-      .setDescription(`**${interaction.user.username}** mise **${mise} 🪙** sur **${choixEmoji} ${choix.toUpperCase()}**\n\n${adversaire ? `<@${adversaire.id}> tu es défié !` : 'Qui accepte le défi ?'}\n\nL\'adversaire joue sur **${choixOpposé === 'face' ? '🦅' : '🐍'} ${choixOpposé.toUpperCase()}**`)
+      .setDescription(`**${interaction.user.username}** mise **${mise} 🪙** sur **${choixEmoji} ${choix.toUpperCase()}**\n\n${adversaire ? `<@${adversaire.id}> tu es défié !` : 'Qui accepte le défi ?'}\n\nL\'adversaire joue sur **${choixOpposé === 'face' ? '👑' : '🪙'} ${choixOpposé.toUpperCase()}**`)
       .setFooter({ text: 'Expire dans 2 minutes' });
 
     const row = new ActionRowBuilder().addComponents(
@@ -91,7 +91,7 @@ module.exports = {
 
         // Résultat
         const result = Math.random() < 0.5 ? 'face' : 'pile';
-        const resultEmoji = result === 'face' ? '🦅' : '🐍';
+        const resultEmoji = result === 'face' ? '👑' : '🪙';
         const winnerId = result === ch.choix ? ch.challengerId : i.user.id;
         const winnerName = result === ch.choix ? ch.challengerName : i.user.username;
         const gain = ch.mise * 2;
@@ -103,8 +103,8 @@ module.exports = {
           .setTitle('🪙 Résultat du Pile ou Face !')
           .setDescription(`La pièce tombe sur **${resultEmoji} ${result.toUpperCase()}** !\n\n🏆 **${winnerName}** remporte **${gain} 🪙** !`)
           .addFields(
-            { name: '🎯 Lanceur', value: `${ch.choix === result ? '✅' : '❌'} <@${ch.challengerId}> jouait ${ch.choix === 'face' ? '🦅' : '🐍'}`, inline: true },
-            { name: '🎯 Adversaire', value: `${ch.choix !== result ? '✅' : '❌'} <@${i.user.id}> jouait ${ch.choix !== result ? (ch.choix === 'face' ? '🐍' : '🦅') : (ch.choix === 'face' ? '🐍' : '🦅')}`, inline: true },
+            { name: '🎯 Lanceur', value: `${ch.choix === result ? '✅' : '❌'} <@${ch.challengerId}> jouait ${ch.choix === 'face' ? '👑' : '🪙'}`, inline: true },
+            { name: '🎯 Adversaire', value: `${ch.choix !== result ? '✅' : '❌'} <@${i.user.id}> jouait ${ch.choix !== result ? (ch.choix === 'face' ? '🪙' : '👑') : (ch.choix === 'face' ? '🪙' : '👑')}`, inline: true },
           )], components: [] });
       }
     });

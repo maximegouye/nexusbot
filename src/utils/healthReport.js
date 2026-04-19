@@ -33,7 +33,7 @@ module.exports = async (client) => {
           { name: '👥 Membres',           value: `**${guild.memberCount}** (${humans} 👤)`,                     inline: true },
           { name: '📥 Nouvelles arrivées', value: `**${stats.joined_members || 0}**`,                           inline: true },
           { name: '🚪 Départs',           value: `**${stats.left_members || 0}**`,                             inline: true },
-          { name: '💬 Messages',          value: `**${(stats.total_messages || 0).toLocaleString('fr')}**`,    inline: true },
+          { name: '💬 Messages',          value: `**${(stats.total_messages || 0).toLocaleString('fr-FR')}**`,    inline: true },
           { name: '🔥 Membres actifs',    value: `**${activeUsers}** (${actRate}%) ${bar}`,                    inline: false },
         )
         .setFooter({ text: `Rapport auto. NexusBot • ${new Date().toLocaleDateString('fr')}` })

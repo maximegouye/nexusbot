@@ -97,7 +97,7 @@ module.exports = {
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant')
-          .setDescription(`Tu as **${user.balance.toLocaleString('fr')}${symbol}** mais veux miser **${mise.toLocaleString('fr')}${symbol}**.`)
+          .setDescription(`Tu as **${user.balance.toLocaleString('fr-FR')}${symbol}** mais veux miser **${mise.toLocaleString('fr-FR')}${symbol}**.`)
         ], ephemeral: true
       });
     }
@@ -117,7 +117,7 @@ module.exports = {
         .setTitle('🃏 Video Poker — Jacks or Better')
         .setDescription(`**Ta main :**\n${handStr}\n\n> Clique sur les cartes à **garder**, puis **Tirer** !`)
         .addFields(
-          { name: '💰 Mise',       value: `${mise.toLocaleString('fr')}${symbol}`,                  inline: true },
+          { name: '💰 Mise',       value: `${mise.toLocaleString('fr-FR')}${symbol}`,                  inline: true },
           { name: '🃏 Main actuelle', value: handName,                                              inline: true },
         )
         .setFooter({ text: 'Gardez les bonnes cartes !' });
@@ -176,7 +176,7 @@ module.exports = {
         sessions.delete(interaction.id);
         collector.stop('fold');
         return i.update({
-          embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('❌ Couché').setDescription(`Tu t'es couché. La mise de **${mise.toLocaleString('fr')}${symbol}** est perdue.`)],
+          embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('❌ Couché').setDescription(`Tu t'es couché. La mise de **${mise.toLocaleString('fr-FR')}${symbol}** est perdue.`)],
           components: [],
         });
       }
@@ -210,8 +210,8 @@ module.exports = {
             .addFields(
               { name: '🃏 Combinaison',    value: `**${result.name}**`,                                     inline: true },
               { name: '✖️ Multiplicateur', value: `×${result.mult}`,                                        inline: true },
-              { name: gain > 0 ? '💵 Gain' : '💸 Perte', value: `**${gain > 0 ? '+' + gain.toLocaleString('fr') : '-' + mise.toLocaleString('fr')}${symbol}**`, inline: true },
-              { name: `${symbol} Solde`,   value: `**${userNow.balance.toLocaleString('fr')}${symbol}**`,   inline: true },
+              { name: gain > 0 ? '💵 Gain' : '💸 Perte', value: `**${gain > 0 ? '+' + gain.toLocaleString('fr-FR') : '-' + mise.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+              { name: `${symbol} Solde`,   value: `**${userNow.balance.toLocaleString('fr-FR')}${symbol}**`,   inline: true },
             )
             .setFooter({ text: 'Jacks or Better • Quinte Flush Royale = ×800' })
             .setTimestamp()

@@ -20,14 +20,14 @@ module.exports = {
     const endsAt = Math.floor(Date.now() / 1000) + 120; // 2 min pour recruter
 
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('heist_join').setLabel(`Rejoindre (${joinCost.toLocaleString('fr')} ${name})`).setEmoji('🔫').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('heist_join').setLabel(`Rejoindre (${joinCost.toLocaleString('fr-FR')} ${name})`).setEmoji('🔫').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('heist_start').setLabel('🚨 Lancer le braquage !').setStyle(ButtonStyle.Danger),
     );
 
     const buildEmbed = () => new EmbedBuilder()
       .setColor('#E74C3C')
       .setTitle('🏦 BRAQUAGE EN COURS DE PRÉPARATION')
-      .setDescription(`**Organisateur :** ${interaction.user.username}\n🎯 **Cible :** **${target.toLocaleString('fr')} ${name}**\n💼 **Mise d'entrée :** ${joinCost.toLocaleString('fr')} ${name}\n\n👥 **Équipe :** ${[...participants.keys()].map(id => `<@${id}>`).join(', ')}\n\nClique **Rejoindre** pour participer ou **Lancer** pour démarrer !`)
+      .setDescription(`**Organisateur :** ${interaction.user.username}\n🎯 **Cible :** **${target.toLocaleString('fr-FR')} ${name}**\n💼 **Mise d'entrée :** ${joinCost.toLocaleString('fr-FR')} ${name}\n\n👥 **Équipe :** ${[...participants.keys()].map(id => `<@${id}>`).join(', ')}\n\nClique **Rejoindre** pour participer ou **Lancer** pour démarrer !`)
       .setFooter({ text: `Fin du recrutement <t:${endsAt}:R>` });
 
     const msg = await interaction.reply({ embeds: [buildEmbed()], components: [row], fetchReply: true });
@@ -38,7 +38,7 @@ module.exports = {
       if (i.customId === 'heist_join') {
         if (participants.has(i.user.id)) return i.reply({ content: '⚠️ Tu es déjà dans l\'équipe !', ephemeral: true });
         const u = db.getUser(i.user.id, interaction.guildId);
-        if (u.balance < joinCost) return i.reply({ content: `❌ Tu as besoin de **${joinCost.toLocaleString('fr')} ${name}** pour rejoindre.`, ephemeral: true });
+        if (u.balance < joinCost) return i.reply({ content: `❌ Tu as besoin de **${joinCost.toLocaleString('fr-FR')} ${name}** pour rejoindre.`, ephemeral: true });
         db.removeCoins(i.user.id, interaction.guildId, joinCost);
         participants.set(i.user.id, { user: i.user });
         await i.update({ embeds: [buildEmbed()], components: [row] });
@@ -72,7 +72,7 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('🏦 BRAQUAGE RÉUSSI ! 🎉')
-          .setDescription(`L'équipe a réussi à voler **${target.toLocaleString('fr')} ${name}** !\n\n💰 Chaque membre reçoit **${perPerson.toLocaleString('fr')} ${name}** ${emoji}`)
+          .setDescription(`L'équipe a réussi à voler **${target.toLocaleString('fr-FR')} ${name}** !\n\n💰 Chaque membre reçoit **${perPerson.toLocaleString('fr-FR')} ${name}** ${emoji}`)
           .addFields({ name: '👥 Équipe', value: [...participants.keys()].map(id => `<@${id}>`).join(', ') });
 
         if (i) await i.update({ embeds: [embed], components: [] });
@@ -84,7 +84,7 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('🚨 BRAQUAGE ÉCHOUÉ ! 🚔')
-          .setDescription(`La police a intercepté l'équipe ! Chaque membre paie **${finePerPerson.toLocaleString('fr')} ${name}** d'amende.`)
+          .setDescription(`La police a intercepté l'équipe ! Chaque membre paie **${finePerPerson.toLocaleString('fr-FR')} ${name}** d'amende.`)
           .addFields({ name: '👮 Arrêtés', value: [...participants.keys()].map(id => `<@${id}>`).join(', ') });
 
         if (i) await i.update({ embeds: [embed], components: [] });

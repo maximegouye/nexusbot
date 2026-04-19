@@ -48,7 +48,7 @@ module.exports = {
         const seller = await interaction.client.users.fetch(l.seller_id).catch(() => ({ username: 'Inconnu' }));
         embed.addFields({
           name: `#${l.id} ${l.item_emoji || '📦'} ${l.item_name} ×${l.quantity}`,
-          value: `💰 **${l.price.toLocaleString('fr')} ${name}** — Vendeur: **${seller.username}**`,
+          value: `💰 **${l.price.toLocaleString('fr-FR')} ${name}** — Vendeur: **${seller.username}**`,
           inline: false,
         });
       }
@@ -83,7 +83,7 @@ module.exports = {
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('📤 Annonce publiée !')
-          .setDescription(`**${qty}x ${invItem.emoji || '📦'} ${invItem.name}** mis en vente pour **${price.toLocaleString('fr')} ${name}** ${emoji}`)
+          .setDescription(`**${qty}x ${invItem.emoji || '📦'} ${invItem.name}** mis en vente pour **${price.toLocaleString('fr-FR')} ${name}** ${emoji}`)
           .setFooter({ text: 'Les acheteurs voient ton annonce avec /market voir' })
         ]
       });
@@ -103,7 +103,7 @@ module.exports = {
 
       const buyer = db.getUser(interaction.user.id, interaction.guildId);
       if (buyer.balance < listing.price) {
-        return interaction.reply({ content: `❌ Solde insuffisant. Il te faut **${listing.price.toLocaleString('fr')} ${name}**.`, ephemeral: true });
+        return interaction.reply({ content: `❌ Solde insuffisant. Il te faut **${listing.price.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
       }
 
       const fee        = Math.ceil(listing.price * 0.05); // 5% de frais de marché
@@ -117,15 +117,15 @@ module.exports = {
       // DM au vendeur
       const seller = await interaction.client.users.fetch(listing.seller_id).catch(() => null);
       if (seller) {
-        seller.send(`🏪 Ton annonce **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** a été vendue pour **${sellerGain.toLocaleString('fr')} ${name}** sur le marché de **${interaction.guild.name}** !`).catch(() => {});
+        seller.send(`🏪 Ton annonce **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** a été vendue pour **${sellerGain.toLocaleString('fr-FR')} ${name}** sur le marché de **${interaction.guild.name}** !`).catch(() => {});
       }
 
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('📥 Achat réussi !')
-          .setDescription(`Tu as acheté **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** pour **${listing.price.toLocaleString('fr')} ${name}** ${emoji}`)
-          .setFooter({ text: `Frais de marché (5%) : ${fee.toLocaleString('fr')} ${name}` })
+          .setDescription(`Tu as acheté **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** pour **${listing.price.toLocaleString('fr-FR')} ${name}** ${emoji}`)
+          .setFooter({ text: `Frais de marché (5%) : ${fee.toLocaleString('fr-FR')} ${name}` })
         ]
       });
     }

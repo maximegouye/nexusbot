@@ -34,7 +34,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor(cfg.color || '#7B2FBE')
         .setTitle(`🛒 Boutique — ${guild?.name || 'Serveur'}`)
-        .setDescription(`Ton solde : **${user.balance.toLocaleString('fr')} ${name}** ${emoji}\nUtilise **/buy <id>** pour acheter.`)
+        .setDescription(`Ton solde : **${user.balance.toLocaleString('fr-FR')} ${name}** ${emoji}\nUtilise **/buy <id>** pour acheter.`)
         .setFooter({ text: `Page ${p + 1}/${pages} • ${items.length} article${items.length > 1 ? 's' : ''}` });
 
       for (const item of slice) {
@@ -42,7 +42,7 @@ module.exports = {
         const duration = item.duration_hours ? ` *(${item.duration_hours}h)*` : '';
         embed.addFields({
           name: `#${item.id} ${item.emoji || '📦'} ${item.name}`,
-          value: `${item.description || '*Pas de description*'}\n💰 **${item.price.toLocaleString('fr')} ${name}**${roleTag}${duration}`,
+          value: `${item.description || '*Pas de description*'}\n💰 **${item.price.toLocaleString('fr-FR')} ${name}**${roleTag}${duration}`,
           inline: false,
         });
       }

@@ -43,8 +43,8 @@ module.exports = {
     const challenger = db.getUser(interaction.user.id, interaction.guildId);
     const defender   = db.getUser(opponent.id, interaction.guildId);
 
-    if (challenger.balance < mise) return interaction.reply({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr')} ${name}**.`, ephemeral: true });
-    if (defender.balance < mise) return interaction.reply({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr')} ${name}**. Mise trop élevée.`, ephemeral: true });
+    if (challenger.balance < mise) return interaction.reply({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
+    if (defender.balance < mise) return interaction.reply({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr-FR')} ${name}**. Mise trop élevée.`, ephemeral: true });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('duel_accept').setLabel('⚔️ Accepter le duel').setStyle(ButtonStyle.Danger),
@@ -56,7 +56,7 @@ module.exports = {
       embeds: [new EmbedBuilder()
         .setColor('#E74C3C')
         .setTitle('⚔️ Duel lancé !')
-        .setDescription(`**${interaction.user.username}** défie **${opponent.username}** en combat !\n\n💰 Mise : **${mise.toLocaleString('fr')} ${name}** chacun\n🏆 Le gagnant emporte **${(mise * 2).toLocaleString('fr')} ${name}**`)
+        .setDescription(`**${interaction.user.username}** défie **${opponent.username}** en combat !\n\n💰 Mise : **${mise.toLocaleString('fr-FR')} ${name}** chacun\n🏆 Le gagnant emporte **${(mise * 2).toLocaleString('fr-FR')} ${name}**`)
         .setFooter({ text: `${opponent.username} a 60 secondes pour accepter` })
       ],
       components: [row],
@@ -109,7 +109,7 @@ module.exports = {
           .addFields(
             { name: `❤️ PV ${interaction.user.username}`, value: `${Math.max(0, cHP)}`, inline: true },
             { name: `❤️ PV ${opponent.username}`,         value: `${Math.max(0, dHP)}`, inline: true },
-            { name: '💰 Gains',                            value: `+**${(mise * 2).toLocaleString('fr')} ${name}**`, inline: true },
+            { name: '💰 Gains',                            value: `+**${(mise * 2).toLocaleString('fr-FR')} ${name}**`, inline: true },
           )
           .setFooter({ text: `${loser.username} perd sa mise !` })
         ],

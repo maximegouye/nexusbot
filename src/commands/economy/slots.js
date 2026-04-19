@@ -23,8 +23,8 @@ function parseBet(raw, balance) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('slots')
-    .setDescription('🎰 Machine à sous Vegas Royale — interactive avec HOLD, Auto-spin, Gamble')
-    .addStringOption(o => o.setName('mise').setDescription('Mise initiale (défaut: 100) — ILLIMITÉE').setMaxLength(30)),
+    .setDescription('🎰 Machine à sous Vegas Royale — rouleaux à bloquer, re-spin, auto-spin, double ou rien')
+    .addStringOption(o => o.setName('mise').setDescription('Mise initiale (par défaut : 100) — aucune limite').setMaxLength(30)),
   cooldown: 2,
 
   async execute(interaction) {

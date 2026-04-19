@@ -8,7 +8,7 @@ function trackMission(userId, guildId, type, amount = 1) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('daily')
-    .setDescription('📅 Récupère ta récompense quotidienne (bonus de streak !)'),
+    .setDescription('📅 Récupère ta récompense quotidienne (bonus de fidélité croissant)'),
   cooldown: 3,
 
   async execute(interaction) {
@@ -28,9 +28,9 @@ module.exports = {
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setTitle('⏳ Déjà récupéré !')
-          .setDescription(`Reviens dans **${h}h ${m}min** pour ton prochain daily.`)
-          .setFooter({ text: '🔥 Reviens chaque jour pour maintenir ton streak !' })
+          .setTitle('⏳ Récompense déjà récupérée')
+          .setDescription(`Reviens dans **${h} h ${m} min** pour ta prochaine récompense quotidienne.`)
+          .setFooter({ text: '🔥 Passe chaque jour pour conserver ta série de récompenses !' })
         ], ephemeral: true
       });
     }
@@ -55,26 +55,27 @@ module.exports = {
     trackMission(interaction.user.id, interaction.guildId, 'earn_coins', total);
 
     let specialMsg = '';
-    if (newStreak === 7)   specialMsg = '\n🎖️ **1 semaine de streak !** Bonus de 50€ !';
-    if (newStreak === 14)  specialMsg = '\n🥇 **2 semaines !** Bonus de 100€ !';
-    if (newStreak === 30)  specialMsg = '\n🏆 **1 mois de streak !** Incroyable ! Bonus de 250€ !';
-    if (newStreak === 100) specialMsg = '\n💎 **100 jours !!** Légendaire ! Bonus de 1 000€ !';
+    if (newStreak === 7)   specialMsg = `\n🎖️ **1 semaine de fidélité !** Bonus exceptionnel de ${milestones[7].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 14)  specialMsg = `\n🥇 **2 semaines de fidélité !** Bonus exceptionnel de ${milestones[14].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 30)  specialMsg = `\n🏆 **1 mois de fidélité !** Incroyable ! Bonus de ${milestones[30].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 60)  specialMsg = `\n👑 **2 mois de fidélité !** Bonus majestueux de ${milestones[60].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 100) specialMsg = `\n💎 **100 jours d'affilée !** Légendaire ! Bonus de ${milestones[100].toLocaleString('fr-FR')}${symbol}.`;
 
     const flames = '🔥'.repeat(Math.min(newStreak, 7));
 
     const embed = new EmbedBuilder()
       .setColor(cfg.color || '#7B2FBE')
-      .setTitle(`${symbol} Daily récupéré !`)
+      .setTitle(`${symbol} Récompense quotidienne récupérée !`)
       .setThumbnail(interaction.user.displayAvatarURL({ size: 128 }))
-      .setDescription(`Tu as reçu **${total.toLocaleString('fr')}${symbol}** !${specialMsg}`)
+      .setDescription(`Tu as reçu **${total.toLocaleString('fr-FR')}${symbol}**.${specialMsg}`)
       .addFields(
-        { name: `${symbol} Base`,          value: `**+${base}${symbol}**`,                 inline: true },
-        { name: '🔥 Bonus streak',         value: `**+${streakBonus}${symbol}**`,           inline: true },
-        ...(milestone ? [{ name: '🎉 Milestone', value: `**+${milestone}${symbol}**`,      inline: true }] : []),
-        { name: `${flames} Streak`,        value: `**${newStreak} jour${newStreak > 1 ? 's' : ''}** consécutif${newStreak > 1 ? 's' : ''}`, inline: true },
-        { name: `${symbol} Nouveau solde`, value: `**${(user.balance + total).toLocaleString('fr')}${symbol}**`, inline: true },
+        { name: `${symbol} Base`,           value: `**+${base.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+        { name: '🔥 Bonus de fidélité',     value: `**+${streakBonus.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+        ...(milestone ? [{ name: '🎉 Palier',    value: `**+${milestone.toLocaleString('fr-FR')}${symbol}**`, inline: true }] : []),
+        { name: `${flames} Série`,          value: `**${newStreak} jour${newStreak > 1 ? 's' : ''}** consécutif${newStreak > 1 ? 's' : ''}`, inline: true },
+        { name: `${symbol} Nouveau solde`,  value: `**${(user.balance + total).toLocaleString('fr-FR')}${symbol}**`, inline: true },
       )
-      .setFooter({ text: 'Reviens demain pour maintenir ton streak !' });
+      .setFooter({ text: 'Reviens demain pour conserver ta série !' });
 
     await interaction.reply({ embeds: [embed] });
   }

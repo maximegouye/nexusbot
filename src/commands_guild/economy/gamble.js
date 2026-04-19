@@ -89,7 +89,7 @@ module.exports = {
     }
 
     if (user.balance < mise) {
-      return interaction.reply({ content: `❌ Mise insuffisante ! Tu n'as que **${user.balance.toLocaleString('fr')} ${name}**.`, ephemeral: true });
+      return interaction.reply({ content: `❌ Mise insuffisante ! Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
     }
 
     // ── SLOTS ──
@@ -116,9 +116,9 @@ module.exports = {
         .setTitle(`🎰 Machine à sous — ${result}`)
         .setDescription(`# ${reels.join(' | ')}`)
         .addFields(
-          { name: '💵 Mise',     value: `**${mise.toLocaleString('fr')}** ${name}`,                      inline: true },
+          { name: '💵 Mise',     value: `**${mise.toLocaleString('fr-FR')}** ${name}`,                      inline: true },
           { name: '✖️ Multiplicateur', value: `**×${multi}**`,                                           inline: true },
-          { name: won ? '🤑 Gain net' : '💸 Perte', value: `**${Math.abs(net).toLocaleString('fr')}** ${name}`, inline: true },
+          { name: won ? '🤑 Gain net' : '💸 Perte', value: `**${Math.abs(net).toLocaleString('fr-FR')}** ${name}`, inline: true },
         );
 
       return interaction.reply({ embeds: [embed] });
@@ -139,7 +139,7 @@ module.exports = {
         .addFields(
           { name: 'Résultat', value: result === 'pile' ? '🪙 Pile' : '🎖️ Face', inline: true },
           { name: 'Ton choix', value: choix === 'pile' ? '🪙 Pile' : '🎖️ Face', inline: true },
-          { name: won ? '🤑 Gain' : '💸 Perte', value: `**${mise.toLocaleString('fr')}** ${name}`, inline: true },
+          { name: won ? '🤑 Gain' : '💸 Perte', value: `**${mise.toLocaleString('fr-FR')}** ${name}`, inline: true },
         );
 
       return interaction.reply({ embeds: [embed] });
@@ -164,7 +164,7 @@ module.exports = {
           embeds: [new EmbedBuilder()
             .setColor('#F39C12')
             .setTitle('🃏 BLACKJACK ! 🎉')
-            .setDescription(`**Ta main :** ${handStr(playerHand)} (21)\n**Croupier :** ${cardStr(dealerHand[0])} + 🂠\n\n🤑 Tu gagnes **${gain.toLocaleString('fr')} ${name}** (×2.5) !`)
+            .setDescription(`**Ta main :** ${handStr(playerHand)} (21)\n**Croupier :** ${cardStr(dealerHand[0])} + 🂠\n\n🤑 Tu gagnes **${gain.toLocaleString('fr-FR')} ${name}** (×2.5) !`)
           ]
         });
       }
@@ -186,7 +186,7 @@ module.exports = {
           .setColor(outcome?.includes('gagn') ? '#2ECC71' : outcome ? '#FF6B6B' : cfg.color || '#7B2FBE')
           .setTitle('🃏 Blackjack')
           .setDescription(desc)
-          .setFooter({ text: `Mise : ${state.mise.toLocaleString('fr')} ${name}` });
+          .setFooter({ text: `Mise : ${state.mise.toLocaleString('fr-FR')} ${name}` });
       };
 
       const row = new ActionRowBuilder().addComponents(
@@ -206,7 +206,7 @@ module.exports = {
           const pt = handTotal(bjState.playerHand);
           if (pt > 21) {
             collector.stop('bust');
-            return i.update({ embeds: [buildBJEmbed(bjState, true, `💥 Bust ! Tu as dépassé 21. Tu perds **${bjState.mise.toLocaleString('fr')} ${name}**.`)], components: [] });
+            return i.update({ embeds: [buildBJEmbed(bjState, true, `💥 Bust ! Tu as dépassé 21. Tu perds **${bjState.mise.toLocaleString('fr-FR')} ${name}**.`)], components: [] });
           }
           if (pt === 21) {
             // Auto-stand
@@ -227,7 +227,7 @@ module.exports = {
           const pt = handTotal(bjState.playerHand);
           if (pt > 21) {
             collector.stop('bust');
-            return i.update({ embeds: [buildBJEmbed(bjState, true, `💥 Bust ! Tu perds **${bjState.mise.toLocaleString('fr')} ${name}**.`)], components: [] });
+            return i.update({ embeds: [buildBJEmbed(bjState, true, `💥 Bust ! Tu perds **${bjState.mise.toLocaleString('fr-FR')} ${name}**.`)], components: [] });
           }
           await resolveDealer(i);
         }
@@ -242,7 +242,7 @@ module.exports = {
         if (dt > 21 || pt > dt) {
           gain = bjState.mise * 2;
           db.addCoins(bjState.userId, bjState.guildId, gain);
-          outcome = `🎉 Gagné ! Tu remportes **${bjState.mise.toLocaleString('fr')} ${name}** !`;
+          outcome = `🎉 Gagné ! Tu remportes **${bjState.mise.toLocaleString('fr-FR')} ${name}** !`;
         } else if (pt === dt) {
           db.addCoins(bjState.userId, bjState.guildId, bjState.mise);
           outcome = `🤝 Égalité ! Ta mise te revient.`;

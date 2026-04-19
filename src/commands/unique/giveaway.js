@@ -52,7 +52,7 @@ module.exports = {
 
       const requirements = [];
       if (minLevel > 0) requirements.push(`⭐ Niveau minimum : **${minLevel}**`);
-      if (minBal > 0) requirements.push(`💰 Solde minimum : **${minBal.toLocaleString('fr')}** ${cfg.currency_name || 'coins'}`);
+      if (minBal > 0) requirements.push(`💰 Solde minimum : **${minBal.toLocaleString('fr-FR')}** ${cfg.currency_name || 'coins'}`);
       if (roleBonus) requirements.push(`🎟️ **${roleBonus.name}** → entrées bonus`);
 
       const embed = new EmbedBuilder()

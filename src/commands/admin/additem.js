@@ -37,7 +37,7 @@ module.exports = {
         .setTitle(`✅ Article ajouté — ${emoji || '📦'} ${nom}`)
         .addFields(
           { name: '🆔 ID',           value: `**#${result.lastInsertRowid}**`,                       inline: true },
-          { name: '💰 Prix',         value: `**${prix.toLocaleString('fr')}** ${cfg.currency_name || 'Coins'}`, inline: true },
+          { name: '💰 Prix',         value: `**${prix.toLocaleString('fr-FR')}** ${cfg.currency_name || 'Coins'}`, inline: true },
           ...(role ? [{ name: '🎭 Rôle', value: `<@&${role.id}>`, inline: true }] : []),
           ...(duree ? [{ name: '⏱️ Durée', value: `${duree}h`, inline: true }] : []),
         )

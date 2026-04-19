@@ -29,7 +29,7 @@ module.exports = {
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setDescription(`❌ Tu n'as que **${user.balance.toLocaleString('fr')} ${name}** en portefeuille.`)
+          .setDescription(`❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}** en portefeuille.`)
         ], ephemeral: true
       });
     }
@@ -43,9 +43,9 @@ module.exports = {
       .setColor('#2ECC71')
       .setTitle(`🏦 Dépôt bancaire`)
       .addFields(
-        { name: `${emoji} Déposé`,     value: `**+${amount.toLocaleString('fr')}** ${name}`, inline: true },
-        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr')}** ${name}`, inline: true },
-        { name: '🏦 Banque',           value: `**${updated.bank.toLocaleString('fr')}** ${name}`, inline: true },
+        { name: `${emoji} Déposé`,     value: `**+${amount.toLocaleString('fr-FR')}** ${name}`, inline: true },
+        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr-FR')}** ${name}`, inline: true },
+        { name: '🏦 Banque',           value: `**${updated.bank.toLocaleString('fr-FR')}** ${name}`, inline: true },
       )
       .setFooter({ text: 'Les coins en banque sont protégés du vol !' });
 

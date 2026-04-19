@@ -805,11 +805,12 @@ async function _handleInteraction(interaction, client) {
         // ── Quitter ──────────────────────────────────────────
         if (action === 'quit') {
           db2.kvDelete(interaction.guildId, sessionKey);
+          const net = state.session.totalWon - state.session.totalBet;
           return interaction.update({
             embeds: [new EmbedBuilder().setColor('#95A5A6')
-              .setTitle('🎰 Machine fermée')
-              .setDescription(`Merci **${interaction.user.username}** !\n\n🌀 ${state.session.spins} tours · 💸 ${state.session.totalBet.toLocaleString('fr-FR')}${symbol} misé · 🏆 ${state.session.totalWon.toLocaleString('fr-FR')}${symbol} gagné\n\nNet : **${(state.session.totalWon - state.session.totalBet).toLocaleString('fr-FR')}${symbol}**`)
-              .setFooter({ text: 'Reviens quand tu veux avec /slots' })
+              .setTitle('🎰 Fin de session — Vegas Royale')
+              .setDescription(`Merci d'avoir joué, **${interaction.user.username}** !\n\n**Récapitulatif de ta session :**\n🌀 Tours joués : **${state.session.spins}**\n💸 Total misé : **${state.session.totalBet.toLocaleString('fr-FR')}${symbol}**\n🏆 Total gagné : **${state.session.totalWon.toLocaleString('fr-FR')}${symbol}**\n${net >= 0 ? '📈' : '📉'} Bénéfice net : **${net > 0 ? '+' : ''}${net.toLocaleString('fr-FR')}${symbol}**`)
+              .setFooter({ text: 'À bientôt ! Relance /slots ou &slots quand tu veux.' })
             ],
             components: [],
           });
@@ -955,16 +956,16 @@ async function _handleInteraction(interaction, client) {
           });
         }
 
-        // ── GAMBLE feature (double-up) ────────────────────────
+        // ── Double ou rien (fonction gamble) ────────────────────────
         if (action === 'gamble') {
           if (!state.lastGain || state.lastGain <= 0) {
-            return interaction.reply({ content: '❌ Rien à doubler — pas de gain au dernier spin.', ephemeral: true });
+            return interaction.reply({ content: '❌ Rien à doubler : aucun gain lors du dernier tour.', ephemeral: true });
           }
           return interaction.update({
             embeds: [new EmbedBuilder().setColor('#9B59B6')
-              .setTitle('🎴 DOUBLE OR NOTHING')
-              .setDescription(`Ton gain : **${state.lastGain.toLocaleString('fr-FR')}${symbol}**\n\nTire une carte :\n🟥 **Rouge** → ×2 (gagne ${(state.lastGain * 2).toLocaleString('fr-FR')}${symbol})\n⬛ **Noir** → ×2 (gagne ${(state.lastGain * 2).toLocaleString('fr-FR')}${symbol})\n\nMauvais choix = tu perds ton gain. **50/50**.`)
-              .setFooter({ text: 'Ou encaisse pour garder ton gain' })
+              .setTitle('🎴 Double ou rien')
+              .setDescription(`Ton gain actuel : **${state.lastGain.toLocaleString('fr-FR')}${symbol}**\n\nTire une carte :\n🟥 **Rouge** → tu gagnes ${(state.lastGain * 2).toLocaleString('fr-FR')}${symbol}\n⬛ **Noir** → tu gagnes ${(state.lastGain * 2).toLocaleString('fr-FR')}${symbol}\n\nMauvais choix = tu perds ton gain (50 / 50).`)
+              .setFooter({ text: 'Astuce : tu peux aussi encaisser ton gain tel quel.' })
             ],
             components: cm.buildGambleButtons(userId),
           });
@@ -988,10 +989,10 @@ async function _handleInteraction(interaction, client) {
           const after = db2.getUser(userId, interaction.guildId);
           return interaction.update({
             embeds: [new EmbedBuilder().setColor(won ? '#2ECC71' : '#E74C3C')
-              .setTitle(won ? `🎴 ${actual === 'red' ? '🟥 ROUGE' : '⬛ NOIR'} — GAGNÉ !` : `🎴 ${actual === 'red' ? '🟥 ROUGE' : '⬛ NOIR'} — Perdu…`)
+              .setTitle(won ? `🎴 ${actual === 'red' ? '🟥 Rouge' : '⬛ Noir'} — gagné !` : `🎴 ${actual === 'red' ? '🟥 Rouge' : '⬛ Noir'} — perdu…`)
               .setDescription(won
-                ? `🎉 Tu doubles : **+${gain.toLocaleString('fr-FR')}${symbol}** supplémentaires !\n\nRe-double ou encaisse ?`
-                : `Tu perds **${gain.toLocaleString('fr-FR')}${symbol}**.`)
+                ? `🎉 Tu doubles ton gain : **+${gain.toLocaleString('fr-FR')}${symbol}** !\n\nRe-double ou encaisse ton gain total ?`
+                : `Tu perds **${gain.toLocaleString('fr-FR')}${symbol}**. Pas de chance !`)
               .addFields({ name: '👛 Solde', value: `${after.balance.toLocaleString('fr-FR')}${symbol}`, inline: true })
             ],
             components: won ? cm.buildGambleButtons(userId) : cm.buildMenuButtons(userId, state.mise, state.freeSpins),
@@ -1538,7 +1539,7 @@ async function _handleInteraction(interaction, client) {
           return interaction.reply({ content: `❌ Niveau minimum : **${gw.min_level}** (tu as niveau **${user.level}**).`, ephemeral: true });
         }
         if (gw.min_balance > 0 && user.balance < gw.min_balance) {
-          return interaction.reply({ content: `❌ Solde minimum : **${gw.min_balance.toLocaleString('fr')}** coins.`, ephemeral: true });
+          return interaction.reply({ content: `❌ Solde minimum : **${gw.min_balance.toLocaleString('fr-FR')}** coins.`, ephemeral: true });
         }
 
         // Déjà inscrit ?

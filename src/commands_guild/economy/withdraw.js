@@ -29,7 +29,7 @@ module.exports = {
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setDescription(`❌ Tu n'as que **${user.bank.toLocaleString('fr')} ${name}** en banque.`)
+          .setDescription(`❌ Tu n'as que **${user.bank.toLocaleString('fr-FR')} ${name}** en banque.`)
         ], ephemeral: true
       });
     }
@@ -43,9 +43,9 @@ module.exports = {
       .setColor('#3498DB')
       .setTitle(`💸 Retrait bancaire`)
       .addFields(
-        { name: `${emoji} Retiré`,       value: `**${amount.toLocaleString('fr')}** ${name}`, inline: true },
-        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr')}** ${name}`, inline: true },
-        { name: '🏦 Banque',             value: `**${updated.bank.toLocaleString('fr')}** ${name}`, inline: true },
+        { name: `${emoji} Retiré`,       value: `**${amount.toLocaleString('fr-FR')}** ${name}`, inline: true },
+        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr-FR')}** ${name}`, inline: true },
+        { name: '🏦 Banque',             value: `**${updated.bank.toLocaleString('fr-FR')}** ${name}`, inline: true },
       );
 
     await interaction.reply({ embeds: [embed] });

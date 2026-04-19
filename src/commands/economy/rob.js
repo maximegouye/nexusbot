@@ -61,9 +61,9 @@ module.exports = {
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('🥷 Vol réussi !')
-          .setDescription(`Tu as volé **${stolen.toLocaleString('fr')}${symbol}** à **${target.username}** !`)
+          .setDescription(`Tu as volé **${stolen.toLocaleString('fr-FR')}${symbol}** à **${target.username}** !`)
           .addFields(
-            { name: '💰 Volé',        value: `**+${stolen.toLocaleString('fr')}${symbol}**`,               inline: true },
+            { name: '💰 Volé',        value: `**+${stolen.toLocaleString('fr-FR')}${symbol}**`,               inline: true },
             { name: '📊 % Volé',      value: `**${Math.round(pct*100)}%** du portefeuille`,                inline: true },
             ...(hasKit ? [{ name: '🔓 Kit utilisé', value: 'Bonus de réussite appliqué',                  inline: true }] : []),
           )
@@ -85,8 +85,8 @@ module.exports = {
           .setTitle('🚔 Pris en flagrant délit !')
           .setDescription(`**${target.username}** t'a vu et a appelé la police ! Tu paies une amende.`)
           .addFields(
-            { name: '💸 Amende',      value: `**-${fine.toLocaleString('fr')}${symbol}**`,                 inline: true },
-            { name: '💰 Victime',     value: `a récupéré **+${Math.floor(fine*0.5).toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: '💸 Amende',      value: `**-${fine.toLocaleString('fr-FR')}${symbol}**`,                 inline: true },
+            { name: '💰 Victime',     value: `a récupéré **+${Math.floor(fine*0.5).toLocaleString('fr-FR')}${symbol}**`, inline: true },
           )
           .setFooter({ text: 'Prochain vol dans 12h' })
         ]

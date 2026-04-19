@@ -83,10 +83,10 @@ module.exports = {
           .setTitle(`${crime.emoji} ${crime.name} — Réussi !`)
           .setDescription(`> *${msg}*`)
           .addFields(
-            { name: '💰 Butin',          value: `**+${earned.toLocaleString('fr')}${symbol}**`,            inline: true },
+            { name: '💰 Butin',          value: `**+${earned.toLocaleString('fr-FR')}${symbol}**`,            inline: true },
             { name: '🎲 Crime',          value: crime.name,                                                inline: true },
             { name: '📊 Risque pris',    value: `${Math.round(crime.risk * 100)}%`,                        inline: true },
-            { name: `${symbol} Solde`,   value: `**${(user.balance + earned).toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: `${symbol} Solde`,   value: `**${(user.balance + earned).toLocaleString('fr-FR')}${symbol}**`, inline: true },
           )
           .setFooter({ text: `Prochain crime dans 6h • Joue avec modération !` })
           .setTimestamp()
@@ -103,10 +103,10 @@ module.exports = {
           .setTitle(`🚔 ${crime.name} — Arrêté !`)
           .setDescription(`> *${msg}*`)
           .addFields(
-            { name: '💸 Amende',         value: `**-${fine.toLocaleString('fr')}${symbol}**`,              inline: true },
+            { name: '💸 Amende',         value: `**-${fine.toLocaleString('fr-FR')}${symbol}**`,              inline: true },
             { name: '🎲 Crime',          value: crime.name,                                                inline: true },
             { name: '📊 Risque',         value: `${Math.round(crime.risk * 100)}%`,                        inline: true },
-            { name: `${symbol} Solde`,   value: `**${Math.max(0, user.balance - fine).toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: `${symbol} Solde`,   value: `**${Math.max(0, user.balance - fine).toLocaleString('fr-FR')}${symbol}**`, inline: true },
           )
           .setFooter({ text: `Prochain crime dans 6h` })
           .setTimestamp()

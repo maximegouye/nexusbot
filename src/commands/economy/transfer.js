@@ -29,7 +29,7 @@ module.exports = {
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setDescription(`❌ Solde insuffisant. Tu as **${sender.balance.toLocaleString('fr')} ${name}** mais il te faut **${total.toLocaleString('fr')}** (frais inclus).`)
+          .setDescription(`❌ Solde insuffisant. Tu as **${sender.balance.toLocaleString('fr-FR')} ${name}** mais il te faut **${total.toLocaleString('fr-FR')}** (frais inclus).`)
         ], ephemeral: true
       });
     }
@@ -40,13 +40,13 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor('#2ECC71')
       .setTitle('💸 Transfert effectué !')
-      .setDescription(`Tu as envoyé **${amount.toLocaleString('fr')} ${name}** ${emoji} à **${target.username}**.`)
+      .setDescription(`Tu as envoyé **${amount.toLocaleString('fr-FR')} ${name}** ${emoji} à **${target.username}**.`)
       .addFields(
-        { name: '📤 Envoyé',    value: `**${amount.toLocaleString('fr')}** ${name}`, inline: true },
-        { name: '💼 Frais (2%)', value: `**${fee.toLocaleString('fr')}** ${name}`,   inline: true },
-        { name: '📥 Reçu',      value: `**${amount.toLocaleString('fr')}** ${name}`, inline: true },
+        { name: '📤 Envoyé',    value: `**${amount.toLocaleString('fr-FR')}** ${name}`, inline: true },
+        { name: '💼 Frais (2%)', value: `**${fee.toLocaleString('fr-FR')}** ${name}`,   inline: true },
+        { name: '📥 Reçu',      value: `**${amount.toLocaleString('fr-FR')}** ${name}`, inline: true },
       )
-      .setFooter({ text: `Solde restant : ${(sender.balance - total).toLocaleString('fr')} ${name}` });
+      .setFooter({ text: `Solde restant : ${(sender.balance - total).toLocaleString('fr-FR')} ${name}` });
 
     await interaction.reply({ embeds: [embed] });
   }

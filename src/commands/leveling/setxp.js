@@ -37,7 +37,7 @@ module.exports = {
     await interaction.reply({
       embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
-        .setDescription(`✅ **${target.username}** : **${newXP.toLocaleString('fr')} XP** → Niveau **${newLevel}**.`)
+        .setDescription(`✅ **${target.username}** : **${newXP.toLocaleString('fr-FR')} XP** → Niveau **${newLevel}**.`)
       ]
     });
   }

@@ -46,7 +46,7 @@ module.exports = {
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant')
-          .setDescription(`Tu as **${sender.balance.toLocaleString('fr')}${symbol}** mais tu veux envoyer **${amount.toLocaleString('fr')}${symbol}**.`)
+          .setDescription(`Tu as **${sender.balance.toLocaleString('fr-FR')}${symbol}** mais tu veux envoyer **${amount.toLocaleString('fr-FR')}${symbol}**.`)
         ], ephemeral: true
       });
     }
@@ -60,7 +60,7 @@ module.exports = {
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant (frais inclus)')
-          .setDescription(`Transaction : **${amount}${symbol}** + frais **${fee}${symbol}** = **${totalCost}${symbol}** requis\nTon solde : **${sender.balance.toLocaleString('fr')}${symbol}**`)
+          .setDescription(`Transaction : **${amount}${symbol}** + frais **${fee}${symbol}** = **${totalCost}${symbol}** requis\nTon solde : **${sender.balance.toLocaleString('fr-FR')}${symbol}**`)
         ], ephemeral: true
       });
     }
@@ -76,9 +76,9 @@ module.exports = {
       .setTitle('💸 Confirmer le virement')
       .setDescription(`Tu vas envoyer de l'argent à <@${target.id}>.`)
       .addFields(
-        { name: '💵 Montant',         value: `**${amount.toLocaleString('fr')}${symbol}**`,     inline: true },
-        { name: '💳 Frais (2%)',      value: `**${fee.toLocaleString('fr')}${symbol}**`,         inline: true },
-        { name: '💸 Coût total',      value: `**${totalCost.toLocaleString('fr')}${symbol}**`,   inline: true },
+        { name: '💵 Montant',         value: `**${amount.toLocaleString('fr-FR')}${symbol}**`,     inline: true },
+        { name: '💳 Frais (2%)',      value: `**${fee.toLocaleString('fr-FR')}${symbol}**`,         inline: true },
+        { name: '💸 Coût total',      value: `**${totalCost.toLocaleString('fr-FR')}${symbol}**`,   inline: true },
         ...(note ? [{ name: '📝 Note', value: note, inline: false }] : []),
       )
       .setFooter({ text: 'Confirme dans 30 secondes sinon annulé auto.' });
@@ -110,8 +110,8 @@ module.exports = {
             .addFields(
               { name: '👤 Expéditeur',    value: `<@${interaction.user.id}>`,                   inline: true },
               { name: '👤 Destinataire',  value: `<@${target.id}>`,                             inline: true },
-              { name: '💵 Montant reçu',  value: `**${amount.toLocaleString('fr')}${symbol}**`, inline: true },
-              { name: '💳 Frais payés',   value: `**${fee.toLocaleString('fr')}${symbol}**`,    inline: true },
+              { name: '💵 Montant reçu',  value: `**${amount.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+              { name: '💳 Frais payés',   value: `**${fee.toLocaleString('fr-FR')}${symbol}**`,    inline: true },
               ...(note ? [{ name: '📝 Note', value: note, inline: false }] : []),
             )
             .setTimestamp()

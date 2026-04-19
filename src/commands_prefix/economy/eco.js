@@ -8,7 +8,7 @@
 const { EmbedBuilder } = require('discord.js');
 
 // ─── Helpers locaux ────────────────────────────────────────
-const fmt = n => (n || 0).toLocaleString('fr');
+const fmt = n => (n || 0).toLocaleString('fr-FR');
 
 function cooldownLeft(lastTs, seconds) {
   const now = Math.floor(Date.now() / 1000);

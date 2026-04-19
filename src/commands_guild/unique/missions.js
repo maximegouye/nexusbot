@@ -194,7 +194,7 @@ module.exports.execute = async function execute(interaction) {
       .addFields(
         { name: '📅 Jours de missions',     value: `**${totalDays}**`,                     inline: true },
         { name: '🏆 Jours complets',        value: `**${fullDays}**`,                      inline: true },
-        { name: `💰 Bonus bonus gagnés`,    value: `**${bonusTotal.toLocaleString('fr')} ${coin}**`, inline: true },
+        { name: `💰 Bonus bonus gagnés`,    value: `**${bonusTotal.toLocaleString('fr-FR')} ${coin}**`, inline: true },
         { name: '📈 Taux de complétion',    value: totalDays > 0 ? `**${Math.round(fullDays / totalDays * 100)}%**` : 'N/A', inline: true },
       );
 

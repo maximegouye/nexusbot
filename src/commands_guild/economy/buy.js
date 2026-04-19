@@ -28,7 +28,7 @@ module.exports = {
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setDescription(`❌ Solde insuffisant ! Il te faut **${total.toLocaleString('fr')} ${name}** mais tu n'as que **${user.balance.toLocaleString('fr')}**.`)
+          .setDescription(`❌ Solde insuffisant ! Il te faut **${total.toLocaleString('fr-FR')} ${name}** mais tu n'as que **${user.balance.toLocaleString('fr-FR')}**.`)
         ], ephemeral: true
       });
     }
@@ -64,10 +64,10 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor('#2ECC71')
       .setTitle(`🛍️ Achat réussi !`)
-      .setDescription(`Tu as acheté **${qty}x ${item.emoji || '📦'} ${item.name}** pour **${total.toLocaleString('fr')} ${name}** ${emoji}`)
+      .setDescription(`Tu as acheté **${qty}x ${item.emoji || '📦'} ${item.name}** pour **${total.toLocaleString('fr-FR')} ${name}** ${emoji}`)
       .addFields(
-        { name: '💰 Dépensé',        value: `**${total.toLocaleString('fr')}** ${name}`,               inline: true },
-        { name: `${emoji} Restant`,  value: `**${(user.balance - total).toLocaleString('fr')}** ${name}`, inline: true },
+        { name: '💰 Dépensé',        value: `**${total.toLocaleString('fr-FR')}** ${name}`,               inline: true },
+        { name: `${emoji} Restant`,  value: `**${(user.balance - total).toLocaleString('fr-FR')}** ${name}`, inline: true },
         ...(item.role_id ? [{ name: '🎭 Rôle attribué', value: `<@&${item.role_id}>`, inline: true }] : []),
         ...(item.duration_hours ? [{ name: '⏱️ Durée', value: `${item.duration_hours}h`, inline: true }] : []),
       );

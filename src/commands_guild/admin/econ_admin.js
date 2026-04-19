@@ -84,8 +84,8 @@ module.exports = {
           .setTitle('💸 Don effectué')
           .addFields(
             { name: '👤 Membre',        value: `<@${target.id}>`,                            inline: true },
-            { name: '💰 Montant donné', value: `**+${amount.toLocaleString('fr')}${symbol}**`, inline: true },
-            { name: '💎 Nouveau solde', value: `**${newUser.balance.toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: '💰 Montant donné', value: `**+${amount.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+            { name: '💎 Nouveau solde', value: `**${newUser.balance.toLocaleString('fr-FR')}${symbol}**`, inline: true },
             { name: '📝 Raison',        value: raison,                                        inline: false },
           )
           .setFooter({ text: `Effectué par ${interaction.user.tag}` })
@@ -110,8 +110,8 @@ module.exports = {
           .setTitle('💰 Retrait effectué')
           .addFields(
             { name: '👤 Membre',        value: `<@${target.id}>`,                               inline: true },
-            { name: '💸 Retiré',        value: `**-${actualRemoved.toLocaleString('fr')}${symbol}**`, inline: true },
-            { name: '💎 Nouveau solde', value: `**${newUser.balance.toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: '💸 Retiré',        value: `**-${actualRemoved.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+            { name: '💎 Nouveau solde', value: `**${newUser.balance.toLocaleString('fr-FR')}${symbol}**`, inline: true },
             { name: '📝 Raison',        value: raison,                                           inline: false },
           )
           .setFooter({ text: `Effectué par ${interaction.user.tag}` })
@@ -155,9 +155,9 @@ module.exports = {
           .setTitle(`🔍 Compte de ${target.username}`)
           .setThumbnail(target.displayAvatarURL())
           .addFields(
-            { name: '👛 Portefeuille', value: `**${u.balance.toLocaleString('fr')}${symbol}**`, inline: true },
-            { name: '🏦 Banque',       value: `**${u.bank.toLocaleString('fr')}${symbol}**`,    inline: true },
-            { name: '💎 Total gagné',  value: `**${u.total_earned.toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: '👛 Portefeuille', value: `**${u.balance.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+            { name: '🏦 Banque',       value: `**${u.bank.toLocaleString('fr-FR')}${symbol}**`,    inline: true },
+            { name: '💎 Total gagné',  value: `**${u.total_earned.toLocaleString('fr-FR')}${symbol}**`, inline: true },
           )
         ], ephemeral: true
       });
@@ -171,7 +171,7 @@ module.exports = {
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle('✏️ Solde défini')
-          .setDescription(`Le solde de <@${target.id}> est maintenant **${amount.toLocaleString('fr')}${symbol}**.`)
+          .setDescription(`Le solde de <@${target.id}> est maintenant **${amount.toLocaleString('fr-FR')}${symbol}**.`)
           .setFooter({ text: `Effectué par ${interaction.user.tag}` })
         ], ephemeral: true
       });
@@ -223,8 +223,8 @@ module.exports = {
           .addFields(
             { name: '👥 Rôle',          value: `<@&${role.id}>`,                              inline: true },
             { name: '👤 Membres',       value: `**${count}**`,                                inline: true },
-            { name: '💰 Par membre',    value: `**+${amount.toLocaleString('fr')}${symbol}**`, inline: true },
-            { name: '💸 Total distribué', value: `**${(count * amount).toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: '💰 Par membre',    value: `**+${amount.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+            { name: '💸 Total distribué', value: `**${(count * amount).toLocaleString('fr-FR')}${symbol}**`, inline: true },
           )
           .setFooter({ text: `Effectué par ${interaction.user.tag}` })
           .setTimestamp()
@@ -245,10 +245,10 @@ module.exports = {
           .setTitle('📊 Économie du serveur')
           .addFields(
             { name: '👤 Membres',        value: `**${totalUsers}**`,                              inline: true },
-            { name: '💰 En circulation', value: `**${totalMoney.toLocaleString('fr')}${symbol}**`, inline: true },
-            { name: '📊 Moyenne',        value: `**${avgBalance.toLocaleString('fr')}${symbol}**`, inline: true },
+            { name: '💰 En circulation', value: `**${totalMoney.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+            { name: '📊 Moyenne',        value: `**${avgBalance.toLocaleString('fr-FR')}${symbol}**`, inline: true },
             { name: '💸 À sec',          value: `**${broke}** membre(s)`,                          inline: true },
-            { name: '🏆 Plus riche',     value: richest ? `<@${richest.user_id}> — ${richest.total.toLocaleString('fr')}${symbol}` : 'N/A', inline: false },
+            { name: '🏆 Plus riche',     value: richest ? `<@${richest.user_id}> — ${richest.total.toLocaleString('fr-FR')}${symbol}` : 'N/A', inline: false },
           )
           .setTimestamp()
         ], ephemeral: true

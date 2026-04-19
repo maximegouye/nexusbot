@@ -53,7 +53,7 @@ async function buildWelcomeCard(member, guild) {
 
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '18px Arial, sans-serif';
-    ctx.fillText(`Tu es le ${guild.memberCount.toLocaleString('fr')}ème membre de ${guild.name}`, 230, 162);
+    ctx.fillText(`Tu es le ${guild.memberCount.toLocaleString('fr-FR')}ème membre de ${guild.name}`, 230, 162);
 
     ctx.fillStyle = '#666666';
     ctx.font = '13px sans-serif';
@@ -95,7 +95,7 @@ module.exports = {
     if (!channel) return;
 
     const memberCount = guild.memberCount;
-    const defaultMsg = `🎉 Bienvenue **{username}** sur **{server}** ! Tu es le **{count}ème** membre !\n\n📋 Lis les règles et choisis tes rôles !`;
+    const defaultMsg = `🎉 Bienvenue **{username}** sur **{server}** ! Tu es le **{count}ᵉ** membre !\n\n📋 Prends le temps de lire les règles et n'hésite pas à choisir tes rôles.`;
 
     // Texte : system_messages.content > cfg.welcome_msg > défaut
     const rawText = (sysMsg && sysMsg.content) || cfg.welcome_msg || defaultMsg;
@@ -103,7 +103,7 @@ module.exports = {
       .replace(/\{user\}/g,     `<@${user.id}>`)
       .replace(/\{username\}/g, user.username)
       .replace(/\{server\}/g,   guild.name)
-      .replace(/\{count\}/g,    memberCount.toLocaleString('fr'));
+      .replace(/\{count\}/g,    memberCount.toLocaleString('fr-FR'));
 
     // Si un embed JSON custom est défini dans system_messages, on l'utilise tel quel
     let customEmbedData = sysMsg && sysMsg.embed_json
@@ -129,11 +129,11 @@ module.exports = {
     if (!embed) {
       embed = new EmbedBuilder()
         .setColor(cfg.color || '#7B2FBE')
-        .setTitle(`👋 Nouveau membre !`)
+        .setTitle(`👋 Un nouveau membre nous rejoint !`)
         .setDescription(msg)
         .addFields(
           { name: '📅 Compte créé', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true },
-          { name: '👥 Membres',     value: `**${memberCount}** au total`, inline: true }
+          { name: '👥 Membres',     value: `**${memberCount.toLocaleString('fr-FR')}** au total`, inline: true }
         )
         .setFooter({ text: guild.name, iconURL: guild.iconURL() })
         .setTimestamp();
@@ -159,16 +159,16 @@ module.exports = {
       .setColor(cfg.color || '#7B2FBE')
       .setTitle(`👋 Bienvenue sur ${guild.name} !`)
       .setDescription(
-        `Salut **${user.username}** ! On est super contents de t'avoir parmi nous 🎉\n\n` +
-        `Voici quelques infos pour bien démarrer :`
+        `Salut **${user.username}**, on est ravis de t'accueillir 🎉\n\n` +
+        `Voici quelques informations pour bien démarrer :`
       )
       .addFields(
-        { name: '📋 Les règles', value: 'Lis les règles du serveur pour une bonne ambiance.', inline: false },
-        { name: '🎫 Besoin d\'aide ?', value: 'Ouvre un ticket depuis le salon support — notre équipe est là pour toi.', inline: false },
-        { name: '🏆 Système de niveaux', value: 'Plus tu participes, plus tu montes en grade et tu gagnes des coins !', inline: false },
+        { name: '📋 Règles du serveur',    value: 'Pense à lire les règles pour profiter d\'une ambiance agréable.', inline: false },
+        { name: '🎫 Besoin d\'aide ?',      value: 'Ouvre un ticket depuis le salon support — notre équipe est là pour toi.', inline: false },
+        { name: '🏆 Système de niveaux',    value: 'Plus tu participes, plus tu montes en grade et tu gagnes de la monnaie virtuelle !', inline: false },
       )
       .setThumbnail(guild.iconURL())
-      .setFooter({ text: `${guild.name} • On espère te voir souvent !` })
+      .setFooter({ text: `${guild.name} · On espère te voir souvent !` })
       .setTimestamp();
 
     user.send({ embeds: [dmEmbed] }).catch(() => {}); // Ignore si DM bloqués

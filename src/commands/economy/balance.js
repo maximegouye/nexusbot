@@ -50,11 +50,11 @@ module.exports = {
       .setTitle(`💶 Portefeuille — ${target.username}`)
       .setThumbnail(target.displayAvatarURL({ size: 256 }))
       .addFields(
-        { name: '👛 Liquide',           value: `**${user.balance.toLocaleString('fr')}${symbol}**`,  inline: true },
-        { name: '🏦 Banque',            value: `**${user.bank.toLocaleString('fr')}${symbol}**`,     inline: true },
-        { name: '💹 Crypto',            value: `**${cryptoValue.toLocaleString('fr')}${symbol}**`,   inline: true },
-        { name: '💎 Fortune totale',    value: `**${netWorth.toLocaleString('fr')}${symbol}**`,      inline: false },
-        { name: '📈 Total gagné',       value: `**${user.total_earned.toLocaleString('fr')}${symbol}**`, inline: true },
+        { name: '👛 Liquide',           value: `**${user.balance.toLocaleString('fr-FR')}${symbol}**`,  inline: true },
+        { name: '🏦 Banque',            value: `**${user.bank.toLocaleString('fr-FR')}${symbol}**`,     inline: true },
+        { name: '💹 Crypto',            value: `**${cryptoValue.toLocaleString('fr-FR')}${symbol}**`,   inline: true },
+        { name: '💎 Fortune totale',    value: `**${netWorth.toLocaleString('fr-FR')}${symbol}**`,      inline: false },
+        { name: '📈 Total gagné',       value: `**${user.total_earned.toLocaleString('fr-FR')}${symbol}**`, inline: true },
         { name: '🏆 Classement',        value: `**#${rank}** sur ${totalMembers} membres`,           inline: true },
         { name: '📊 Percentile',        value: `**Top ${100 - percentile + 1}%**`,                   inline: true },
       );

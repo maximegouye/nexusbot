@@ -58,7 +58,7 @@ module.exports = {
       .setColor(color)
       .setTitle(`⛏️ Résultat du creusage`)
       .setDescription(value > 0
-        ? `Tu as trouvé **${found.emoji} ${found.name}** et tu gagnes **${value.toLocaleString('fr')} ${name}** ${emoji} !`
+        ? `Tu as trouvé **${found.emoji} ${found.name}** et tu gagnes **${value.toLocaleString('fr-FR')} ${name}** ${emoji} !`
         : `Tu n'as trouvé que de la terre... Mieux vaut creuser ailleurs la prochaine fois.`)
       .setFooter({ text: found.rarity ? `Rareté : ${found.rarity}` : 'Raté !' });
 

@@ -23,9 +23,9 @@ module.exports = {
       .setTitle(`💰 Économie — ${target.displayName}`)
       .setThumbnail(target.user.displayAvatarURL())
       .addFields(
-        { name: '👛 Portefeuille', value: `**${u.balance.toLocaleString('fr')}** ${emoji}`, inline: true },
-        { name: '🏦 Banque', value: `**${u.bank.toLocaleString('fr')}** ${emoji}`, inline: true },
-        { name: '💎 Total', value: `**${(u.balance + u.bank).toLocaleString('fr')}** ${emoji}`, inline: true },
+        { name: '👛 Portefeuille', value: `**${u.balance.toLocaleString('fr-FR')}** ${emoji}`, inline: true },
+        { name: '🏦 Banque', value: `**${u.bank.toLocaleString('fr-FR')}** ${emoji}`, inline: true },
+        { name: '💎 Total', value: `**${(u.balance + u.bank).toLocaleString('fr-FR')}** ${emoji}`, inline: true },
         { name: '🏆 Classement', value: `**#${rank + 1}**`, inline: true },
       )
       .setFooter({ text: `Monnaie: ${currency}` })

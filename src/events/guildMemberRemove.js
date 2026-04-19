@@ -19,13 +19,13 @@ module.exports = {
     const channel = guild.channels.cache.get(channelId);
     if (!channel) return;
 
-    const defaultMsg = `**{username}** a quitté le serveur. On te souhaite bonne continuation ! 👋`;
+    const defaultMsg = `👋 **{username}** a quitté **{server}**. On te souhaite bonne continuation !`;
     const rawText = (sysMsg && sysMsg.content) || cfg.leave_msg || defaultMsg;
     const msg = rawText
       .replace(/\{user\}/g,     `<@${user.id}>`)
       .replace(/\{username\}/g, user.username)
       .replace(/\{server\}/g,   guild.name)
-      .replace(/\{count\}/g,    guild.memberCount.toLocaleString('fr'));
+      .replace(/\{count\}/g,    guild.memberCount.toLocaleString('fr-FR'));
 
     // Embed custom ?
     let customEmbedData = sysMsg && sysMsg.embed_json
@@ -47,10 +47,10 @@ module.exports = {
     if (!embed) {
       embed = new EmbedBuilder()
         .setColor(cfg.color || '#FF6B6B')
-        .setTitle('👋 Au revoir !')
+        .setTitle('👋 Départ d\'un membre')
         .setDescription(msg)
         .setThumbnail(user.displayAvatarURL({ size: 128 }))
-        .addFields({ name: '👥 Membres restants', value: `**${guild.memberCount}**`, inline: true })
+        .addFields({ name: '👥 Membres restants', value: `**${guild.memberCount.toLocaleString('fr-FR')}**`, inline: true })
         .setFooter({ text: guild.name })
         .setTimestamp();
     }

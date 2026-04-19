@@ -29,7 +29,7 @@ module.exports = {
         .setTitle('🎟️ Loterie Hebdomadaire')
         .setDescription('Achète des tickets et tente de gagner la cagnotte ! Tirage chaque lundi à minuit.')
         .addFields(
-          { name: '💰 Cagnotte actuelle', value: `**${(pot * 0.9).toLocaleString('fr')} ${name}** (90% du pot)`, inline: true },
+          { name: '💰 Cagnotte actuelle', value: `**${(pot * 0.9).toLocaleString('fr-FR')} ${name}** (90% du pot)`, inline: true },
           { name: '🎟️ Tickets vendus',   value: `**${count}**`, inline: true },
           { name: '🎫 Tes tickets',       value: `**${myTickets}**`, inline: true },
         )
@@ -37,7 +37,7 @@ module.exports = {
       return interaction.reply({ embeds: [embed] });
     }
 
-    if (user.balance < total) return interaction.reply({ content: `❌ Tu as besoin de **${total.toLocaleString('fr')} ${name}** pour ${qty} ticket(s).`, ephemeral: true });
+    if (user.balance < total) return interaction.reply({ content: `❌ Tu as besoin de **${total.toLocaleString('fr-FR')} ${name}** pour ${qty} ticket(s).`, ephemeral: true });
 
     db.removeCoins(interaction.user.id, interaction.guildId, total);
 
@@ -52,10 +52,10 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor('#F39C12')
       .setTitle('🎟️ Tickets achetés !')
-      .setDescription(`Tu as acheté **${qty} ticket(s)** pour **${total.toLocaleString('fr')} ${name}** ${emoji} !`)
+      .setDescription(`Tu as acheté **${qty} ticket(s)** pour **${total.toLocaleString('fr-FR')} ${name}** ${emoji} !`)
       .addFields(
         { name: '🎫 Total tes tickets', value: `**${myTickets + qty}** cette semaine`, inline: true },
-        { name: '💰 Cagnotte actuelle', value: `**${(newPot * 0.9).toLocaleString('fr')} ${name}**`, inline: true },
+        { name: '💰 Cagnotte actuelle', value: `**${(newPot * 0.9).toLocaleString('fr-FR')} ${name}**`, inline: true },
         { name: '⏰ Tirage',           value: `Lundi à minuit`, inline: true },
       )
       .setFooter({ text: 'Plus tu as de tickets, plus tu as de chances de gagner !' });

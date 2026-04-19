@@ -30,11 +30,11 @@ module.exports = {
       if (t === 'xp') {
         rows    = getLeaderboard(interaction.guildId, 'xp', 10);
         title   = '⭐ Classement XP';
-        valueFn = (u) => `Niv. **${u.level}** — **${(u.xp || 0).toLocaleString('fr')} XP**`;
+        valueFn = (u) => `Niv. **${u.level}** — **${(u.xp || 0).toLocaleString('fr-FR')} XP**`;
       } else if (t === 'coins') {
         rows    = getLeaderboard(interaction.guildId, 'coins', 10);
         title   = `${emoji} Classement Richesse`;
-        valueFn = (u) => `**${((u.balance || 0) + (u.bank || 0)).toLocaleString('fr')} ${name}**`;
+        valueFn = (u) => `**${((u.balance || 0) + (u.bank || 0)).toLocaleString('fr-FR')} ${name}**`;
       } else if (t === 'voice') {
         rows    = getLeaderboard(interaction.guildId, 'voice', 10);
         title   = '🎤 Classement Vocal';
@@ -46,7 +46,7 @@ module.exports = {
       } else if (t === 'messages') {
         rows    = getLeaderboard(interaction.guildId, 'messages', 10);
         title   = '💬 Classement Messages';
-        valueFn = (u) => `**${(u.message_count || 0).toLocaleString('fr')} messages**`;
+        valueFn = (u) => `**${(u.message_count || 0).toLocaleString('fr-FR')} messages**`;
       } else if (t === 'rep') {
         rows    = db.db.prepare('SELECT user_id, reputation FROM users WHERE guild_id = ? ORDER BY reputation DESC LIMIT 10').all(interaction.guildId);
         title   = '⭐ Classement Réputation';

@@ -53,9 +53,9 @@ module.exports = {
       .setColor(rawVal > 500 ? '#F39C12' : rawVal > 0 ? '#2ECC71' : rawVal < 0 ? '#FF6B6B' : '#888888')
       .setTitle('🏹 Résultat de la chasse')
       .setDescription(rawVal > 0
-        ? `${prey.emoji} Tu as chassé un **${prey.name}** ! +**${value.toLocaleString('fr')} ${name}** ${emoji}`
+        ? `${prey.emoji} Tu as chassé un **${prey.name}** ! +**${value.toLocaleString('fr-FR')} ${name}** ${emoji}`
         : rawVal < 0
-        ? `${prey.emoji} Aïe ! Tu t'es blessé pendant la chasse. -**${value.toLocaleString('fr')} ${name}** en frais médicaux !`
+        ? `${prey.emoji} Aïe ! Tu t'es blessé pendant la chasse. -**${value.toLocaleString('fr-FR')} ${name}** en frais médicaux !`
         : `${prey.emoji} **${prey.name}**... La forêt était vide aujourd'hui.`)
       .setFooter({ text: 'Prochaine chasse dans 45 minutes' });
 

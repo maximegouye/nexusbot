@@ -196,30 +196,30 @@ function buildMenuEmbed({ userName, mise, balance, symbol, color, freeSpins = 0,
   const bg = cfgBg || '╔════════════════════╗\n║  🎰 MACHINE VEGAS  ║\n╚════════════════════╝';
   return new EmbedBuilder()
     .setColor(color || '#FFD700')
-    .setTitle('🎰 Machine à sous — VEGAS ROYALE')
+    .setTitle('🎰 Machine à sous — Vegas Royale')
     .setDescription([
       '```',
       bg,
       '```',
       '## 🎯 Mise actuelle',
       `### **${mise.toLocaleString('fr-FR')}${symbol}**`,
-      freeSpins > 0 ? `### 🎁 **${freeSpins} free spins restants !**` : '',
+      freeSpins > 0 ? `### 🎁 **${freeSpins} tours gratuits restants !**` : '',
       '',
-      `**👛 Solde :** ${balance.toLocaleString('fr-FR')}${symbol}`,
+      `**👛 Solde disponible :** ${balance.toLocaleString('fr-FR')}${symbol}`,
       '',
-      '> 🎯 Ajuste ta mise avec les boutons `−` et `+`',
-      '> 🎰 Appuie sur **TIRER LE LEVIER** pour lancer',
-      '> 📊 Voir la **Table des gains** pour tout savoir',
+      '> 🎯 Ajuste ta mise avec les boutons **−** et **+**',
+      '> 🎰 Appuie sur **Tirer le levier** pour lancer',
+      '> 📊 Consulte la **Table des gains** pour voir les combinaisons',
     ].filter(Boolean).join('\n'))
     .addFields(
-      { name: '🌀 Tours', value: `${sessionStats.spins}`, inline: true },
-      { name: '💸 Misé', value: `${sessionStats.totalBet.toLocaleString('fr-FR')}${symbol}`, inline: true },
-      { name: '🏆 Gagné', value: `${sessionStats.totalWon.toLocaleString('fr-FR')}${symbol}`, inline: true },
-      { name: '🎯 Meilleur coup', value: `${sessionStats.biggest.toLocaleString('fr-FR')}${symbol}`, inline: true },
-      { name: '📈 Solde net', value: `${(sessionStats.totalWon - sessionStats.totalBet).toLocaleString('fr-FR')}${symbol}`, inline: true },
-      { name: '🎰 Machine', value: `**${SYMBOLS.length} symboles · 20 lignes**`, inline: true },
+      { name: '🌀 Tours joués',    value: `${sessionStats.spins.toLocaleString('fr-FR')}`, inline: true },
+      { name: '💸 Total misé',     value: `${sessionStats.totalBet.toLocaleString('fr-FR')}${symbol}`, inline: true },
+      { name: '🏆 Total gagné',    value: `${sessionStats.totalWon.toLocaleString('fr-FR')}${symbol}`, inline: true },
+      { name: '🎯 Meilleur coup',  value: `${sessionStats.biggest.toLocaleString('fr-FR')}${symbol}`, inline: true },
+      { name: '📈 Bénéfice net',   value: `${(sessionStats.totalWon - sessionStats.totalBet).toLocaleString('fr-FR')}${symbol}`, inline: true },
+      { name: '🎰 Caractéristiques', value: `**${SYMBOLS.length} symboles · 20 lignes**`, inline: true },
     )
-    .setFooter({ text: `${userName} · Casino Royale · 2025` });
+    .setFooter({ text: `${userName} · Casino Vegas Royale` });
 }
 
 /**
@@ -228,18 +228,18 @@ function buildMenuEmbed({ userName, mise, balance, symbol, color, freeSpins = 0,
 function buildSpinningEmbed({ userName, mise, symbol, color, locked }) {
   return new EmbedBuilder()
     .setColor(color || '#9B59B6')
-    .setTitle('🎰 LES ROULEAUX TOURNENT…')
+    .setTitle('🎰 Les rouleaux tournent…')
     .setDescription([
       '```',
       '╔══════════════════════════════╗',
       renderGridSpinning(locked).split('\n').map(l => `║ ${l.padEnd(28)} ║`).join('\n').replace(/\n/g, '\n'),
       '╚══════════════════════════════╝',
       '```',
-      `Mise : **${mise.toLocaleString('fr-FR')}${symbol}**`,
+      `**Mise :** ${mise.toLocaleString('fr-FR')}${symbol}`,
       '',
-      `> 🌀 ${locked.filter(Boolean).length}/5 rouleaux verrouillés`,
+      `> 🌀 Rouleaux verrouillés : **${locked.filter(Boolean).length} / 5**`,
     ].join('\n'))
-    .setFooter({ text: `${userName} · En cours…` });
+    .setFooter({ text: `${userName} · Tirage en cours…` });
 }
 
 /**
@@ -255,16 +255,16 @@ function buildResultEmbed({ userName, mise, result, grid, balance, symbol, color
                    :                          '#E74C3C';
 
   let title = '🎰 ';
-  if (bigType === 'JACKPOT') title += '🏆🎊 JACKPOT !!! 🎊🏆';
-  else if (bigType === 'MEGA') title += '💥 MEGA WIN !';
-  else if (bigType === 'BIG')  title += '🔥 BIG WIN !';
+  if (bigType === 'JACKPOT')   title += '🏆🎊 JACKPOT !!! 🎊🏆';
+  else if (bigType === 'MEGA') title += '💥 Méga-gain !';
+  else if (bigType === 'BIG')  title += '🔥 Gros gain !';
   else if (won)                title += 'Gagné !';
   else                         title += 'Perdu…';
 
   // Détails des lignes gagnantes (max 5)
   const linesText = payouts.slice(0, 5).map(p => {
     if (p.line === -1) {
-      return `🎁 **${p.length} scatters** → +${p.amount.toLocaleString('fr-FR')}${symbol} + **${p.freeSpins} free spins**`;
+      return `🎁 **${p.length} scatters** → +${p.amount.toLocaleString('fr-FR')}${symbol} et **${p.freeSpins} tours gratuits**`;
     }
     const sym = byId[p.symbolId];
     return `Ligne **${p.line + 1}** · ${p.length}× ${sym.emoji} → **+${p.amount.toLocaleString('fr-FR')}${symbol}**`;
@@ -279,19 +279,19 @@ function buildResultEmbed({ userName, mise, result, grid, balance, symbol, color
       ...renderGrid(grid).split('\n').map(l => `║ ${l.padEnd(28)} ║`),
       '╚══════════════════════════════╝',
       '```',
-      freeSpin ? '### 🎁 Free spin — mise gratuite !' : '',
-      linesText ? `\n**💫 Lignes gagnantes :**\n${linesText}` : '\n*Aucune combinaison gagnante.*',
-      payouts.length > 5 ? `\n*…et ${payouts.length - 5} autre(s) ligne(s)*` : '',
+      freeSpin ? '### 🎁 Tour gratuit — aucune mise déduite !' : '',
+      linesText ? `\n**💫 Lignes gagnantes :**\n${linesText}` : '\n*Aucune combinaison gagnante sur ce tirage.*',
+      payouts.length > 5 ? `\n*…et ${payouts.length - 5} autre${payouts.length - 5 > 1 ? 's' : ''} ligne${payouts.length - 5 > 1 ? 's' : ''}*` : '',
     ].filter(Boolean).join('\n'))
     .addFields(
-      { name: '💰 Mise',         value: `${mise.toLocaleString('fr-FR')}${symbol}`, inline: true },
-      { name: '🏆 Gain',         value: `**${totalWin.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+      { name: '💰 Mise',    value: `${mise.toLocaleString('fr-FR')}${symbol}`, inline: true },
+      { name: '🏆 Gain',    value: `**${totalWin.toLocaleString('fr-FR')}${symbol}**`, inline: true },
       { name: won ? '📈 Bénéfice' : '📉 Perte', value: `**${totalWin - (freeSpin ? 0 : mise) > 0 ? '+' : ''}${(totalWin - (freeSpin ? 0 : mise)).toLocaleString('fr-FR')}${symbol}**`, inline: true },
-      { name: '👛 Solde', value: `${balance.toLocaleString('fr-FR')}${symbol}`, inline: true },
+      { name: '👛 Solde',   value: `${balance.toLocaleString('fr-FR')}${symbol}`, inline: true },
       { name: '🎁 Scatters', value: `${scatterCount}`, inline: true },
-      { name: '🔥 Type', value: bigType || (won ? 'Normal' : '—'), inline: true },
+      { name: '🔥 Niveau',  value: bigType === 'JACKPOT' ? 'JACKPOT' : bigType === 'MEGA' ? 'Méga-gain' : bigType === 'BIG' ? 'Gros gain' : (won ? 'Gain normal' : '—'), inline: true },
     )
-    .setFooter({ text: `${userName} · Casino Royale` })
+    .setFooter({ text: `${userName} · Casino Vegas Royale` })
     .setTimestamp();
 }
 
@@ -299,8 +299,13 @@ function buildResultEmbed({ userName, mise, result, grid, balance, symbol, color
  * Paytable (modal d'info)
  */
 function buildPaytableEmbed(symbol, color) {
+  const names = {
+    CERISE: 'Cerise', CITRON: 'Citron', ORANGE: 'Orange', RAISIN: 'Raisin',
+    CLOCHE: 'Cloche', ETOILE: 'Étoile', DIAMANT: 'Diamant', SEVEN: 'Seven',
+    WILD: 'Joker', SCATTER: 'Scatter',
+  };
   const fields = SYMBOLS.map(s => ({
-    name: `${s.emoji} ${s.id}`,
+    name: `${s.emoji} ${names[s.id] || s.id}`,
     value: `3× : ×${s.pay[3]}\n4× : ×${s.pay[4]}\n5× : ×${s.pay[5]}`,
     inline: true,
   }));
@@ -308,13 +313,14 @@ function buildPaytableEmbed(symbol, color) {
     .setColor(color || '#3498DB')
     .setTitle('📊 Table des gains — Vegas Royale')
     .setDescription([
-      '**🃏 WILD** remplace tous les symboles sauf 🎁 Scatter.',
-      '**🎁 SCATTER** : 3+ n\'importe où = **10 free spins + gain scatter**.',
+      '**🃏 Joker (Wild)** — remplace n\'importe quel symbole sauf le Scatter.',
+      '**🎁 Scatter** — 3 symboles ou plus n\'importe où déclenchent **10 tours gratuits** et un gain bonus.',
       '',
-      '**Multiplicateur** appliqué à `mise × multi / 20 paylines`',
-      '**20 lignes** actives à chaque spin.',
+      '> Le multiplicateur affiché s\'applique à : `mise × multiplicateur ÷ 20 lignes`.',
+      '> **20 lignes de paiement** sont actives à chaque tour.',
     ].join('\n'))
-    .addFields(fields);
+    .addFields(fields)
+    .setFooter({ text: 'Astuce : les gains de plusieurs lignes se cumulent !' });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -339,14 +345,14 @@ function buildMenuButtons(userId, mise, freeSpins) {
   );
   // Row 3 : action principale
   const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`cslot_spin:${userId}`).setLabel(freeSpins > 0 ? `🎁 Free Spin (${freeSpins})` : '🎰 TIRER LE LEVIER').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`cslot_auto:${userId}:5`).setLabel('▶ Auto ×5').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`cslot_auto:${userId}:25`).setLabel('▶▶ Auto ×25').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`cslot_spin:${userId}`).setLabel(freeSpins > 0 ? `🎁 Tour gratuit (${freeSpins})` : '🎰 Tirer le levier').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`cslot_auto:${userId}:5`).setLabel('▶ Auto × 5').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`cslot_auto:${userId}:25`).setLabel('▶▶ Auto × 25').setStyle(ButtonStyle.Primary),
   );
   // Row 4 : infos & quitter
   const row4 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`cslot_paytable:${userId}`).setLabel('📊 Table des gains').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`cslot_reset:${userId}`).setLabel('🔄 Reset mise').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`cslot_reset:${userId}`).setLabel('🔄 Réinitialiser').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`cslot_quit:${userId}`).setLabel('🚪 Quitter').setStyle(ButtonStyle.Danger),
   );
   return [row1, row2, row3, row4];
@@ -365,21 +371,21 @@ function buildAfterSpinButtons(userId, held, canRespin) {
     )
   );
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`cslot_respin:${userId}`).setLabel('🔄 Re-spin (−50%)').setStyle(ButtonStyle.Primary).setDisabled(!canRespin),
-    new ButtonBuilder().setCustomId(`cslot_gamble:${userId}`).setLabel('🎴 Double or nothing').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`cslot_respin:${userId}`).setLabel('🔄 Re-tirer (−50 %)').setStyle(ButtonStyle.Primary).setDisabled(!canRespin),
+    new ButtonBuilder().setCustomId(`cslot_gamble:${userId}`).setLabel('🎴 Double ou rien').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId(`cslot_continue:${userId}`).setLabel('✅ Continuer').setStyle(ButtonStyle.Success),
   );
   return [row1, row2];
 }
 
 /**
- * Boutons gamble (double up) — rouge ou noir
+ * Boutons pour la fonction « double ou rien » — choisir rouge ou noir
  */
 function buildGambleButtons(userId) {
   return [new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`cslot_gamble_pick:${userId}:red`).setLabel('🟥 Rouge').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId(`cslot_gamble_pick:${userId}:black`).setLabel('⬛ Noir').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`cslot_gamble_cancel:${userId}`).setLabel('❌ Encaisser').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`cslot_gamble_cancel:${userId}`).setLabel('💰 Encaisser').setStyle(ButtonStyle.Success),
   )];
 }
 

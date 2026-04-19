@@ -50,7 +50,7 @@ module.exports = {
         const endsAt  = q.ends_at ? `⏰ Fin <t:${q.ends_at}:R>` : '';
         embed.addFields({
           name: `#${q.id} 🗺️ ${q.title}`,
-          value: `${q.description}\n${bar} **${pct}%** (${q.current.toLocaleString('fr')}/${q.target.toLocaleString('fr')} ${name})\n🏆 **Récompense :** ${q.reward}\n${endsAt}`,
+          value: `${q.description}\n${bar} **${pct}%** (${q.current.toLocaleString('fr-FR')}/${q.target.toLocaleString('fr-FR')} ${name})\n🏆 **Récompense :** ${q.reward}\n${endsAt}`,
           inline: false,
         });
       }
@@ -67,7 +67,7 @@ module.exports = {
       if (!quest) return interaction.reply({ content: `❌ Quête **#${questId}** introuvable.`, ephemeral: true });
 
       const user = db.getUser(interaction.user.id, interaction.guildId);
-      if (user.balance < amount) return interaction.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr')} ${name}**.`, ephemeral: true });
+      if (user.balance < amount) return interaction.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
 
       db.removeCoins(interaction.user.id, interaction.guildId, amount);
       db.db.prepare('UPDATE quests SET current = current + ? WHERE id = ?').run(amount, questId);
@@ -97,10 +97,10 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#2ECC71')
         .setTitle(`🗺️ Contribution à "${quest.title}"`)
-        .setDescription(`Tu as contribué **${amount.toLocaleString('fr')} ${name}** ${emoji}${completionMsg}`)
+        .setDescription(`Tu as contribué **${amount.toLocaleString('fr-FR')} ${name}** ${emoji}${completionMsg}`)
         .addFields(
           { name: '📊 Progression', value: `${bar} **${pct}%**`, inline: false },
-          { name: `${emoji} Restant`, value: `**${Math.max(0, updated.target - updated.current).toLocaleString('fr')}** ${name}`, inline: true },
+          { name: `${emoji} Restant`, value: `**${Math.max(0, updated.target - updated.current).toLocaleString('fr-FR')}** ${name}`, inline: true },
         );
 
       return interaction.reply({ embeds: [embed] });
@@ -129,7 +129,7 @@ module.exports = {
           .setTitle('✅ Quête créée !')
           .addFields(
             { name: '🗺️ Titre',       value: titre,                                      inline: true },
-            { name: `${emoji} Objectif`, value: `${objectif.toLocaleString('fr')} ${name}`, inline: true },
+            { name: `${emoji} Objectif`, value: `${objectif.toLocaleString('fr-FR')} ${name}`, inline: true },
             { name: '🏆 Récompense',   value: reward,                                    inline: false },
             ...(endsAt ? [{ name: '⏰ Fin', value: `<t:${endsAt}:D>`, inline: true }] : []),
           )

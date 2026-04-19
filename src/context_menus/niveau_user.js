@@ -27,9 +27,9 @@ module.exports = {
         .setThumbnail(target.user.displayAvatarURL())
         .addFields(
           { name: '🏆 Niveau', value: `**${level}**`, inline: true },
-          { name: '⭐ XP total', value: `**${u.xp.toLocaleString('fr')}**`, inline: true },
+          { name: '⭐ XP total', value: `**${u.xp.toLocaleString('fr-FR')}**`, inline: true },
           { name: '🎯 Classement', value: `**#${rank + 1}**`, inline: true },
-          { name: `Progression → Niv. ${level + 1}`, value: `\`[${bar}]\`\n${(u.xp - currXP).toLocaleString('fr')} / ${(nextXP - currXP).toLocaleString('fr')} XP`, inline: false },
+          { name: `Progression → Niv. ${level + 1}`, value: `\`[${bar}]\`\n${(u.xp - currXP).toLocaleString('fr-FR')} / ${(nextXP - currXP).toLocaleString('fr-FR')} XP`, inline: false },
         )
         .setTimestamp()
     ]});

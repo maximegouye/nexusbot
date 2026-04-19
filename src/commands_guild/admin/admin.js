@@ -184,7 +184,7 @@ module.exports = {
               { name: '📅 Rejoint',        value: `<t:${Math.floor(member.joinedTimestamp/1000)}:R> (${joinedAgo}j)`, inline: true },
               { name: '📅 Compte créé',   value: `<t:${Math.floor(target.createdTimestamp/1000)}:R>`, inline: true },
               { name: '⚠️ Warnings',      value: `**${warnings}**`,                      inline: true },
-              { name: `${sym} Solde`,     value: `**${user.balance.toLocaleString('fr')}${sym}**`, inline: true },
+              { name: `${sym} Solde`,     value: `**${user.balance.toLocaleString('fr-FR')}${sym}**`, inline: true },
               { name: '⭐ Niveau',        value: `**${user.level}** (${user.xp} XP)`,   inline: true },
               { name: '🎭 Rôles',         value: roles || 'Aucun',                       inline: false },
             )
