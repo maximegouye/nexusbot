@@ -716,6 +716,346 @@ async function _handleInteraction(interaction, client) {
       } catch (e) { console.error('[SLOTS] Erreur handler:', e); }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // ── MACHINE CASINO VEGAS ROYALE (cslot_*) ──────────────────────
+    // ════════════════════════════════════════════════════════════════
+    if (_cfgId.startsWith('cslot_')) {
+      try {
+        const cm = require('../utils/casinoMachine');
+        const db2 = require('../database/db');
+        const { ModalBuilder: MB, TextInputBuilder: TI, TextInputStyle: TS } = require('discord.js');
+        const cfg = db2.getConfig(interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const color  = cfg.color || '#FFD700';
+        const userId = interaction.user.id;
+
+        const parts = _cfgId.split(':');
+        const action = parts[0].replace('cslot_', '');
+        const ownerId = parts[1];
+
+        // Only owner can interact
+        if (ownerId && ownerId !== userId) {
+          return interaction.reply({ content: '❌ Ce n\'est pas ta machine ! Lance `/slots` pour la tienne.', ephemeral: true });
+        }
+
+        const sessionKey = `cslot:${userId}`;
+        let state = db2.kvGet(interaction.guildId, sessionKey);
+        if (!state) {
+          return interaction.reply({ content: '❌ Session expirée. Relance `/slots`.', ephemeral: true });
+        }
+        const user0 = db2.getUser(userId, interaction.guildId);
+
+        // ── Modal mise personnalisée ──────────────────────────
+        if (action === 'bet' && parts[2] === 'custom') {
+          const modal = new MB()
+            .setCustomId(`cslot_modal:${userId}`)
+            .setTitle('✍️ Mise personnalisée')
+            .addComponents(new ActionRowBuilder().addComponents(
+              new TI()
+                .setCustomId('mise_value')
+                .setLabel('Mise (nombre, all, 50%, moitié)')
+                .setStyle(TS.Short)
+                .setPlaceholder(`Solde: ${user0.balance.toLocaleString('fr-FR')}`)
+                .setRequired(true)
+                .setMaxLength(30)
+            ));
+          return interaction.showModal(modal);
+        }
+
+        // ── Ajustement de mise ────────────────────────────────
+        if (action === 'bet') {
+          const op = parts[2];
+          let newMise = state.mise;
+          if (op === 'max')  newMise = user0.balance;
+          else if (op === 'half') newMise = Math.max(1, Math.floor(user0.balance / 2));
+          else if (op.startsWith('+')) newMise += parseInt(op.slice(1), 10) || 0;
+          else if (op.startsWith('-')) newMise -= parseInt(op.slice(1), 10) || 0;
+          newMise = Math.max(1, Math.min(newMise, user0.balance));
+          state.mise = newMise;
+          db2.kvSet(interaction.guildId, sessionKey, state);
+          return interaction.update({
+            embeds: [cm.buildMenuEmbed({
+              userName: interaction.user.username,
+              mise: state.mise, balance: user0.balance, symbol, color,
+              freeSpins: state.freeSpins, session: state.session,
+            })],
+            components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+          });
+        }
+
+        // ── Reset mise ────────────────────────────────────────
+        if (action === 'reset') {
+          state.mise = 100;
+          db2.kvSet(interaction.guildId, sessionKey, state);
+          return interaction.update({
+            embeds: [cm.buildMenuEmbed({
+              userName: interaction.user.username,
+              mise: state.mise, balance: user0.balance, symbol, color,
+              freeSpins: state.freeSpins, session: state.session,
+            })],
+            components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+          });
+        }
+
+        // ── Paytable ──────────────────────────────────────────
+        if (action === 'paytable') {
+          return interaction.reply({ embeds: [cm.buildPaytableEmbed(symbol, color)], ephemeral: true });
+        }
+
+        // ── Quitter ──────────────────────────────────────────
+        if (action === 'quit') {
+          db2.kvDelete(interaction.guildId, sessionKey);
+          return interaction.update({
+            embeds: [new EmbedBuilder().setColor('#95A5A6')
+              .setTitle('🎰 Machine fermée')
+              .setDescription(`Merci **${interaction.user.username}** !\n\n🌀 ${state.session.spins} tours · 💸 ${state.session.totalBet.toLocaleString('fr-FR')}${symbol} misé · 🏆 ${state.session.totalWon.toLocaleString('fr-FR')}${symbol} gagné\n\nNet : **${(state.session.totalWon - state.session.totalBet).toLocaleString('fr-FR')}${symbol}**`)
+              .setFooter({ text: 'Reviens quand tu veux avec /slots' })
+            ],
+            components: [],
+          });
+        }
+
+        // ── SPIN (tirer le levier) ────────────────────────────
+        if (action === 'spin' || action === 'auto') {
+          const autoCount = action === 'auto' ? (parseInt(parts[2], 10) || 1) : 1;
+          await interaction.deferUpdate();
+          for (let spin = 0; spin < autoCount; spin++) {
+            const freshUser = db2.getUser(userId, interaction.guildId);
+            const isFree = state.freeSpins > 0;
+            if (!isFree && freshUser.balance < state.mise) {
+              await interaction.editReply({
+                embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Solde insuffisant').setDescription(`Il te faut **${state.mise.toLocaleString('fr-FR')}${symbol}** mais tu as **${freshUser.balance.toLocaleString('fr-FR')}${symbol}**.`)],
+                components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+              });
+              break;
+            }
+            if (!isFree) {
+              db2.removeCoins(userId, interaction.guildId, state.mise);
+              state.session.totalBet += state.mise;
+            } else {
+              state.freeSpins--;
+            }
+            state.session.spins++;
+
+            // Animation spin : 3 rouleaux qui se fixent un à un
+            const locked = [false, false, false, false, false];
+            await interaction.editReply({
+              embeds: [cm.buildSpinningEmbed({ userName: interaction.user.username, mise: state.mise, symbol, color, locked })],
+              components: [],
+            }).catch(() => {});
+            for (let i = 0; i < 5; i++) {
+              await new Promise(r => setTimeout(r, 280));
+              locked[i] = true;
+              await interaction.editReply({
+                embeds: [cm.buildSpinningEmbed({ userName: interaction.user.username, mise: state.mise, symbol, color, locked })],
+              }).catch(() => {});
+            }
+
+            // Calcul
+            const grid = cm.spinGrid();
+            const result = cm.evaluate(grid, state.mise);
+            state.lastGrid = grid.map(col => col.map(s => s.id));
+            state.lastResult = result;
+            state.lastGain = result.totalWin;
+            state.canRespin = true;
+            state.held = [false, false, false, false, false];
+            if (result.totalWin > 0) {
+              db2.addCoins(userId, interaction.guildId, result.totalWin);
+              state.session.totalWon += result.totalWin;
+              if (result.totalWin > state.session.biggest) state.session.biggest = result.totalWin;
+            }
+            if (result.payouts.find(p => p.line === -1)) {
+              state.freeSpins += 10;
+            }
+            db2.kvSet(interaction.guildId, sessionKey, state);
+
+            const after = db2.getUser(userId, interaction.guildId);
+            await interaction.editReply({
+              embeds: [cm.buildResultEmbed({
+                userName: interaction.user.username,
+                mise: state.mise, result, grid, balance: after.balance, symbol, color, freeSpin: isFree,
+              })],
+              components: autoCount === 1 ? cm.buildAfterSpinButtons(userId, state.held, after.balance >= Math.floor(state.mise / 2)) : [],
+            }).catch(() => {});
+
+            if (autoCount > 1) await new Promise(r => setTimeout(r, 1500));
+          }
+          // Après auto-spin : retour au menu
+          if (autoCount > 1) {
+            const after = db2.getUser(userId, interaction.guildId);
+            await interaction.editReply({
+              embeds: [cm.buildMenuEmbed({
+                userName: interaction.user.username,
+                mise: state.mise, balance: after.balance, symbol, color,
+                freeSpins: state.freeSpins, session: state.session,
+              })],
+              components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+            }).catch(() => {});
+          }
+          return;
+        }
+
+        // ── HOLD sur un rouleau ──────────────────────────────
+        if (action === 'hold') {
+          const idx = parseInt(parts[2], 10);
+          state.held[idx] = !state.held[idx];
+          db2.kvSet(interaction.guildId, sessionKey, state);
+          return interaction.update({
+            components: cm.buildAfterSpinButtons(userId, state.held, user0.balance >= Math.floor(state.mise / 2)),
+          });
+        }
+
+        // ── RESPIN ciblé (coûte 50% de la mise) ──────────────
+        if (action === 'respin') {
+          const respinCost = Math.floor(state.mise / 2);
+          if (user0.balance < respinCost) {
+            return interaction.reply({ content: `❌ Il te faut **${respinCost.toLocaleString('fr-FR')}${symbol}** pour respin.`, ephemeral: true });
+          }
+          await interaction.deferUpdate();
+          db2.removeCoins(userId, interaction.guildId, respinCost);
+          state.session.totalBet += respinCost;
+          // Re-spin
+          const oldGrid = state.lastGrid.map(col => col.map(id => cm.byId[id]));
+          const grid = cm.respinGrid(oldGrid, state.held);
+          // Animation flash
+          await new Promise(r => setTimeout(r, 600));
+          const result = cm.evaluate(grid, state.mise);
+          state.lastGrid = grid.map(col => col.map(s => s.id));
+          state.lastResult = result;
+          state.canRespin = false;
+          if (result.totalWin > 0) {
+            db2.addCoins(userId, interaction.guildId, result.totalWin);
+            state.session.totalWon += result.totalWin;
+            if (result.totalWin > state.session.biggest) state.session.biggest = result.totalWin;
+          }
+          db2.kvSet(interaction.guildId, sessionKey, state);
+          const after = db2.getUser(userId, interaction.guildId);
+          return interaction.editReply({
+            embeds: [cm.buildResultEmbed({
+              userName: interaction.user.username,
+              mise: state.mise, result, grid, balance: after.balance, symbol, color,
+            })],
+            components: cm.buildAfterSpinButtons(userId, state.held, false),
+          });
+        }
+
+        // ── Continuer → retour au menu ────────────────────────
+        if (action === 'continue') {
+          const after = db2.getUser(userId, interaction.guildId);
+          state.canRespin = false;
+          state.held = [false, false, false, false, false];
+          db2.kvSet(interaction.guildId, sessionKey, state);
+          return interaction.update({
+            embeds: [cm.buildMenuEmbed({
+              userName: interaction.user.username,
+              mise: state.mise, balance: after.balance, symbol, color,
+              freeSpins: state.freeSpins, session: state.session,
+            })],
+            components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+          });
+        }
+
+        // ── GAMBLE feature (double-up) ────────────────────────
+        if (action === 'gamble') {
+          if (!state.lastGain || state.lastGain <= 0) {
+            return interaction.reply({ content: '❌ Rien à doubler — pas de gain au dernier spin.', ephemeral: true });
+          }
+          return interaction.update({
+            embeds: [new EmbedBuilder().setColor('#9B59B6')
+              .setTitle('🎴 DOUBLE OR NOTHING')
+              .setDescription(`Ton gain : **${state.lastGain.toLocaleString('fr-FR')}${symbol}**\n\nTire une carte :\n🟥 **Rouge** → ×2 (gagne ${(state.lastGain * 2).toLocaleString('fr-FR')}${symbol})\n⬛ **Noir** → ×2 (gagne ${(state.lastGain * 2).toLocaleString('fr-FR')}${symbol})\n\nMauvais choix = tu perds ton gain. **50/50**.`)
+              .setFooter({ text: 'Ou encaisse pour garder ton gain' })
+            ],
+            components: cm.buildGambleButtons(userId),
+          });
+        }
+
+        if (action === 'gamble_pick') {
+          const pick = parts[2];
+          const actual = Math.random() < 0.5 ? 'red' : 'black';
+          const won = pick === actual;
+          const gain = state.lastGain;
+          if (won) {
+            db2.addCoins(userId, interaction.guildId, gain); // Double (on a déjà le gain initial)
+            state.session.totalWon += gain;
+            state.lastGain = gain * 2;
+          } else {
+            db2.removeCoins(userId, interaction.guildId, gain);
+            state.session.totalWon -= gain;
+            state.lastGain = 0;
+          }
+          db2.kvSet(interaction.guildId, sessionKey, state);
+          const after = db2.getUser(userId, interaction.guildId);
+          return interaction.update({
+            embeds: [new EmbedBuilder().setColor(won ? '#2ECC71' : '#E74C3C')
+              .setTitle(won ? `🎴 ${actual === 'red' ? '🟥 ROUGE' : '⬛ NOIR'} — GAGNÉ !` : `🎴 ${actual === 'red' ? '🟥 ROUGE' : '⬛ NOIR'} — Perdu…`)
+              .setDescription(won
+                ? `🎉 Tu doubles : **+${gain.toLocaleString('fr-FR')}${symbol}** supplémentaires !\n\nRe-double ou encaisse ?`
+                : `Tu perds **${gain.toLocaleString('fr-FR')}${symbol}**.`)
+              .addFields({ name: '👛 Solde', value: `${after.balance.toLocaleString('fr-FR')}${symbol}`, inline: true })
+            ],
+            components: won ? cm.buildGambleButtons(userId) : cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+          });
+        }
+
+        if (action === 'gamble_cancel') {
+          const after = db2.getUser(userId, interaction.guildId);
+          return interaction.update({
+            embeds: [cm.buildMenuEmbed({
+              userName: interaction.user.username,
+              mise: state.mise, balance: after.balance, symbol, color,
+              freeSpins: state.freeSpins, session: state.session,
+            })],
+            components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+          });
+        }
+
+      } catch (e) {
+        console.error('[CSLOT] Erreur handler:', e);
+        if (!interaction.replied && !interaction.deferred) {
+          return interaction.reply({ content: `❌ Erreur : ${e.message}`, ephemeral: true }).catch(() => {});
+        }
+      }
+    }
+
+    // ── Modal mise perso casino slots ───────────────────────────
+    if (interaction.isModalSubmit && interaction.isModalSubmit() && _cfgId.startsWith('cslot_modal:')) {
+      try {
+        const cm = require('../utils/casinoMachine');
+        const db2 = require('../database/db');
+        const cfg = db2.getConfig(interaction.guildId);
+        const symbol = cfg.currency_emoji || '€';
+        const color  = cfg.color || '#FFD700';
+        const userId = interaction.user.id;
+        const sessionKey = `cslot:${userId}`;
+        const state = db2.kvGet(interaction.guildId, sessionKey);
+        if (!state) return interaction.reply({ content: '❌ Session expirée.', ephemeral: true });
+        const user0 = db2.getUser(userId, interaction.guildId);
+        const raw = interaction.fields.getTextInputValue('mise_value');
+        const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
+        let newMise;
+        if (s === 'all' || s === 'tout' || s === 'max') newMise = user0.balance;
+        else if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') newMise = Math.floor(user0.balance / 2);
+        else {
+          const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+          if (!m) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
+          const n = parseFloat(m[1]);
+          newMise = m[2] === '%' ? Math.floor(user0.balance * n / 100) : Math.floor(n);
+        }
+        newMise = Math.max(1, Math.min(newMise, user0.balance));
+        state.mise = newMise;
+        db2.kvSet(interaction.guildId, sessionKey, state);
+        return interaction.update({
+          embeds: [cm.buildMenuEmbed({
+            userName: interaction.user.username,
+            mise: state.mise, balance: user0.balance, symbol, color,
+            freeSpins: state.freeSpins, session: state.session,
+          })],
+          components: cm.buildMenuButtons(userId, state.mise, state.freeSpins),
+        });
+      } catch (e) { console.error('[CSLOT MODAL]:', e); }
+    }
+
     // ── ROULETTE : bouton REJOUER et menu de choix de pari ───────────
     if (_cfgId.startsWith('roulette_replay:') || _cfgId.startsWith('roulette_double:') || _cfgId.startsWith('roulette_pick:')) {
       try {
