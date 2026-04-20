@@ -318,3 +318,7 @@ process.on('uncaughtException', err => {
 });
 
 client.login(process.env.TOKEN);
+
+// PrefixHandler casino
+const { setupPrefixHandler } = require('./handlers/prefixHandler');
+setupPrefixHandler(client);
