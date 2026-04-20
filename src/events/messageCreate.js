@@ -98,6 +98,11 @@ module.exports = {
       } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
         interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.' }).catch(() => {});
       }
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+        interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+      } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+        interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.' }).catch(() => {});
+      }
 
     // ── Mention du bot = question IA (si activé) ────────────────────
     try {
