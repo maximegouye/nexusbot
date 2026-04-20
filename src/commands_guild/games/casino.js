@@ -28,7 +28,7 @@ module.exports = {
     .addSubcommand(s => s.setName('top').setDescription('👑 Classement des plus grands gagnants')),
 
   async execute(interaction) {
-    const sub = interaction.options.getSubcommand();
+    const sub = interaction.options.getSubcommand(false) ?? 'jeux';
     await handleCasino(interaction, interaction.user.id, interaction.guildId, sub);
   },
 
