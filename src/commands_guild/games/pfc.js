@@ -105,7 +105,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('pile-ou-face')
     .setDescription('🪙 Pile ou Face — 50/50, ×2 si tu gagnes !')
-    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser').setRequired(true).setMinValue(1))
+    .addStringOption(o => o.setName('mise').setDescription('Montant à miser').setRequired(true).setMinValue(1))
     .addStringOption(o => o.setName('choix').setDescription('pile ou face (optionnel)').addChoices(
       { name: '🟡 Pile', value: 'pile' },
       { name: '⚪ Face', value: 'face' },
@@ -116,7 +116,7 @@ module.exports = {
       interaction,
       interaction.user.id,
       interaction.guildId,
-      interaction.options.getInteger('mise'),
+      parseInt(interaction.options.getString('mise')),
       interaction.options.getString('choix'),
     );
   },

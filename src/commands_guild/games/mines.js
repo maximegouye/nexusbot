@@ -269,18 +269,18 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('mines')
     .setDescription('💣 Mines — révèle les cases sans toucher les bombes !')
-    .addIntegerOption(o => o
-      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true).setMinValue(10))
-    .addIntegerOption(o => o
-      .setName('mines').setDescription('Nombre de mines 1-24 (défaut 3)').setMinValue(1).setMaxValue(24)),
+    .addStringOption(o => o
+      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true))
+    .addStringOption(o => o
+      .setName('mines').setDescription('Nombre de mines 1-24 (défaut 3)')),
 
   async execute(interaction) {
     await playMines(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      interaction.options.getInteger('mise'),
-      interaction.options.getInteger('mines') || 3,
+      parseInt(interaction.options.getString('mise')),
+      parseInt(interaction.options.getString('mines')) || 3,
     );
   },
 

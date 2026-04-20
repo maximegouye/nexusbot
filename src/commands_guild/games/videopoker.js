@@ -201,10 +201,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('videopoker')
     .setDescription('🃏 Video Poker — Jacks or Better, gardez vos meilleures cartes !')
-    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10)),
+    .addStringOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true)),
 
   async execute(interaction) {
-    await playVideoPoker(interaction, interaction.user.id, interaction.guildId, interaction.options.getInteger('mise'));
+    await playVideoPoker(interaction, interaction.user.id, interaction.guildId, parseInt(interaction.options.getString('mise')));
   },
 
   name: 'videopoker',

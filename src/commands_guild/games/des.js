@@ -131,18 +131,18 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('des')
     .setDescription('🎲 Lancez les dés et pariez sur le résultat !')
-    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 5)').setRequired(true).setMinValue(5))
+    .addStringOption(o => o.setName('mise').setDescription('Mise (min 5)').setRequired(true))
     .addStringOption(o => o.setName('pari').setDescription('haut/bas/pair/impair/1-6/somme7').setRequired(true))
-    .addIntegerOption(o => o.setName('des').setDescription('Nombre de dés (1 ou 2)').setMinValue(1).setMaxValue(2)),
+    .addStringOption(o => o.setName('des').setDescription('Nombre de dés (1 ou 2)')),
 
   async execute(interaction) {
     await playDice(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      interaction.options.getInteger('mise'),
+      parseInt(interaction.options.getString('mise')),
       interaction.options.getString('pari'),
-      interaction.options.getInteger('des') || 1,
+      parseInt(interaction.options.getString('des')) || 1,
     );
   },
 

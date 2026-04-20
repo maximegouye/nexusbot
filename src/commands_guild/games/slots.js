@@ -346,13 +346,13 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('slots')
     .setDescription('🎰 Machine à sous — 5 rouleaux, jackpot progressif !')
-    .addIntegerOption(o => o
+    .addStringOption(o => o
       .setName('mise').setDescription('Mise par ligne (min 5)').setRequired(true).setMinValue(5))
-    .addIntegerOption(o => o
+    .addStringOption(o => o
       .setName('lignes').setDescription('Nombre de lignes (1-3, défaut 1)').setMinValue(1).setMaxValue(3)),
 
   async execute(interaction) {
-    const mise   = interaction.options.getInteger('mise');
+    const mise   = parseInt(interaction.options.getString('mise'));
     const lignes = interaction.options.getInteger('lignes') || 1;
     await playSlots(interaction, interaction.user.id, interaction.guildId, mise, lignes);
   },

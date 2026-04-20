@@ -235,17 +235,17 @@ module.exports = {
     .setName('crash')
     .setDescription('🚀 Crash — regardez le multiplicateur monter et cashoutez avant le crash !')
     .addIntegerOption(o => o
-      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true).setMinValue(10))
+      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true)getNumber('cashout'))
     .addNumberOption(o => o
-      .setName('auto').setDescription('Cash-out automatique à ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
+      .setName('cashout').setDescription('Cash-out automatique à ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
 
   async execute(interaction) {
     await playCrash(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      interaction.options.getInteger('mise'),
-      interaction.options.getNumber('auto') || null,
+      parseInt(interaction.options.getString('mise')),
+      interaction.options.getNumber('cashout') || null,
     );
   },
 

@@ -156,7 +156,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('plinko')
     .setDescription('🎯 Plinko — lâchez la bille et regardez où elle tombe !')
-    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10))
+    .addStringOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true))
     .addStringOption(o => o.setName('risque').setDescription('Niveau de risque').addChoices(
       { name: '🟢 Faible (multiplicateurs modérés)', value: 'low' },
       { name: '🟡 Moyen (recommandé)', value: 'medium' },
@@ -168,7 +168,7 @@ module.exports = {
       interaction,
       interaction.user.id,
       interaction.guildId,
-      interaction.options.getInteger('mise'),
+      parseInt(interaction.options.getString('mise')),
       interaction.options.getString('risque') || 'medium',
     );
   },

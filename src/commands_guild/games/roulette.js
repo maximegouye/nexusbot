@@ -199,7 +199,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('roulette')
     .setDescription('🎡 Roulette européenne — misez et tentez votre chance !')
-    .addIntegerOption(o => o
+    .addStringOption(o => o
       .setName('mise').setDescription('Montant à miser (min 5)').setRequired(true).setMinValue(5))
     .addStringOption(o => o
       .setName('pari')
@@ -212,7 +212,7 @@ module.exports = {
       interaction,
       interaction.user.id,
       interaction.guildId,
-      interaction.options.getInteger('mise'),
+      parseInt(interaction.options.getString('mise')),
       interaction.options.getString('pari'),
     );
   },
