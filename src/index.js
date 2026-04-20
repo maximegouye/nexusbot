@@ -162,14 +162,17 @@ client.once('clientReady', async () => {
     console.error('[CMD] Erreur global:', e.message);
   }
 
-  // 2. Commandes guild-only (HOME_GUILD_ID) — slot supplémentaire de 100
+  // 2. Commandes guild-only — enregistrées sur HOME_GUILD_ID ou tous les serveurs
   const homeGuild = process.env.HOME_GUILD_ID;
-  if (homeGuild && guildOnlyCommands.length) {
-    try {
-      await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, homeGuild), { body: guildOnlyCommands });
-      console.log(`[CMD] ${guildOnlyCommands.length} commandes guild-only → ${homeGuild}`);
-    } catch (e) {
-      console.error('[CMD] Erreur guild:', e.message);
+  if (guildOnlyCommands.length) {
+    const targetGuilds = homeGuild ? [homeGuild] : [...client.guilds.cache.keys()];
+    for (const guildId of targetGuilds) {
+      try {
+        await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId), { body: guildOnlyCommands });
+        console.log(`[CMD] ${guildOnlyCommands.length} commandes guild-only → ${guildId}`);
+      } catch (e) {
+        console.error(`[CMD] Erreur guild ${guildId}:`, e.message);
+      }
     }
   }
 
