@@ -120,14 +120,7 @@ async function _handleInteraction(interaction, client) {
           });
         }
         return;
-      } catch (e) {
-      console.error('[BANQUE handler]', e);
-      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-        interaction.reply({ content: '❌ Erreur banque. Réessaie dans quelques secondes.', ephemeral: true }).catch(() => {});
-      } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
-        interaction.editReply({ content: '❌ Erreur banque. Réessaie dans quelques secondes.' }).catch(() => {});
-      }
-    }
+      } catch (e) { console.error('[BANQUE handler]', e); }
     }
 
     // ── BANQUE MODAL : dépôt/retrait avec montant ───────────────────
@@ -165,12 +158,7 @@ async function _handleInteraction(interaction, client) {
         const user2 = db2.getUser(uid, interaction.guildId);
         const { _build } = require('../commands/economy/banque');
         return interaction.update({ embeds: [_build.buildEmbed(user2, cfg)], components: _build.buildButtons(uid) });
-      } catch (e) {
-      console.error('[BANQUE modal]', e);
-      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-        interaction.reply({ content: '❌ Erreur lors de la transaction. Réessaie.', ephemeral: true }).catch(() => {});
-      }
-    }
+      } catch (e) { console.error('[BANQUE modal]', e); }
     }
 
     // ── CASINO MENU : boutons jeu + stats + top ────────────────────
@@ -230,12 +218,7 @@ async function _handleInteraction(interaction, client) {
           return interaction.reply({ content: `💡 **${action.toUpperCase()}** — ${shortcuts[action]}`, ephemeral: true });
         }
         return;
-      } catch (e) {
-      console.error('[CASINO handler]', e);
-      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-        interaction.reply({ content: '❌ Erreur casino. Réessaie dans quelques secondes.', ephemeral: true }).catch(() => {});
-      }
-    }
+      } catch (e) { console.error('[CASINO handler]', e); }
     }
 
     // ── CRYPTO : boutons marché/wallet/buy/sell ────────────────────
@@ -311,12 +294,7 @@ async function _handleInteraction(interaction, client) {
           });
         }
         return;
-      } catch (e) {
-      console.error('[CRYPTO handler]', e);
-      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-        interaction.reply({ content: '❌ Erreur crypto. Réessaie dans quelques secondes.', ephemeral: true }).catch(() => {});
-      }
-    }
+      } catch (e) { console.error('[CRYPTO handler]', e); }
     }
 
     // ── CRYPTO : sélection dans le menu déroulant → ouvre modal montant ─
@@ -1406,19 +1384,7 @@ async function _handleInteraction(interaction, client) {
     }
 
     // ── SLASH COMMANDS ───────────────────────────────────
-    // ── Routing partenariat (boutons, selects, modals) ──────
-if (interaction.customId && interaction.customId.startsWith('part_')) {
-  try {
-    const partCmd = client.commands?.get('partenariat')
-      || require('./commands_guild/unique/partenariat');
-    if (partCmd && partCmd.handleComponent) {
-      return await partCmd.handleComponent(interaction);
-    }
-  } catch (e) { console.error('[PARTENARIAT] Erreur composant:', e.message); }
-  return;
-}
-// ────────────────────────────────────────────────────────
-if (interaction.isChatInputCommand()) {
+    if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
 
