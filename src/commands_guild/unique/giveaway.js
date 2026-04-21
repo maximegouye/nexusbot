@@ -78,22 +78,22 @@ async function endGiveaway(giveaway, client) {
   } catch (err) { console.error('[Giveaway] Erreur fin #' + giveaway.id + ':', err); }
 }
 
-async function handleGiveawayButton(interaction) { await interaction.deferReply({ ephemeral: true });
+async function handleGiveawayButton(interaction) {
   const parts = interaction.customId.split('_');
   const giveawayId = parseInt(parts[2]);
-  if (isNaN(giveawayId)) return interaction.editReply({ content: '❌ Giveaway invalide.', ephemeral: true });
+  if (isNaN(giveawayId)) return interaction.reply({ content: '❌ Giveaway invalide.', ephemeral: true });
   const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE id = ? AND guild_id = ?').get(giveawayId, interaction.guildId);
-  if (!giveaway) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
-  if (giveaway.status !== 'active') return interaction.editReply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
-  if (giveaway.ends_at < Math.floor(Date.now() / 1000)) return interaction.editReply({ content: '❌ Ce giveaway est expiré.', ephemeral: true });
+  if (!giveaway) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+  if (giveaway.status !== 'active') return interaction.reply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
+  if (giveaway.ends_at < Math.floor(Date.now() / 1000)) return interaction.reply({ content: '❌ Ce giveaway est expiré.', ephemeral: true });
   if (giveaway.min_level > 0 || giveaway.min_balance > 0) {
     const user = db.db.prepare('SELECT * FROM users WHERE user_id = ? AND guild_id = ?').get(interaction.user.id, interaction.guildId);
     if (giveaway.min_level > 0 && (!user || user.level < giveaway.min_level))
-      return interaction.editReply({ content: `❌ Niveau minimum requis : **${giveaway.min_level}**. Ton niveau : **${user ? user.level : 0}**.`, ephemeral: true });
+      return interaction.reply({ content: `❌ Niveau minimum requis : **${giveaway.min_level}**. Ton niveau : **${user ? user.level : 0}**.`, ephemeral: true });
     if (giveaway.min_balance > 0) {
       const balance = user ? ((user.balance || 0) + (user.bank || 0)) : 0;
       if (balance < giveaway.min_balance)
-        return interaction.editReply({ content: `❌ Balance minimum requise : **${giveaway.min_balance}**. Ta balance : **${balance}**.`, ephemeral: true });
+        return interaction.reply({ content: `❌ Balance minimum requise : **${giveaway.min_balance}**. Ta balance : **${balance}**.`, ephemeral: true });
     }
   }
   const entries = JSON.parse(giveaway.entries || '[]');
@@ -102,13 +102,13 @@ async function handleGiveawayButton(interaction) { await interaction.deferReply(
     const newEntries = entries.filter(id => id !== interaction.user.id);
     db.db.prepare('UPDATE giveaways SET entries = ? WHERE id = ?').run(JSON.stringify(newEntries), giveawayId);
     try { await interaction.message.edit({ embeds: [buildEmbed({ ...giveaway, entries: JSON.stringify(newEntries) }, newEntries)] }); } catch {}
-    return interaction.editReply({ content: '👋 Tu as quitté le giveaway.', ephemeral: true });
+    return interaction.reply({ content: '👋 Tu as quitté le giveaway.', ephemeral: true });
   }
   let newEntries = [...entries, interaction.user.id];
   if (giveaway.bonus_role_id && interaction.member && interaction.member.roles.cache.has(giveaway.bonus_role_id)) newEntries.push(interaction.user.id);
   db.db.prepare('UPDATE giveaways SET entries = ? WHERE id = ?').run(JSON.stringify(newEntries), giveawayId);
   try { await interaction.message.edit({ embeds: [buildEmbed({ ...giveaway, entries: JSON.stringify(newEntries) }, newEntries)] }); } catch {}
-  await interaction.editReply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** ! (${new Set(newEntries).size} participant(s))`, ephemeral: true });
+  await interaction.reply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** ! (${new Set(newEntries).size} participant(s))`, ephemeral: true });
 }
 
 module.exports = {
@@ -139,7 +139,7 @@ module.exports = {
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    if (sub === 'creer') {
+    if (sub === 'creer' || sub === 'start') {
       const prize = interaction.options.getString('prix');
       const dureeStr = interaction.options.getString('duree');
       const gagnants = Math.min(20, Math.max(1, parseInt(interaction.options.getString('gagnants') || '1') || 1));
@@ -161,7 +161,7 @@ module.exports = {
       const msg = await channel.send({ embeds: [embed], components: [row] });
       db.db.prepare('UPDATE giveaways SET message_id = ? WHERE id = ?').run(msg.id, giveawayId);
       await interaction.reply({ content: `✅ Giveaway **${prize}** créé dans <#${channel.id}> ! (ID: \`${giveawayId}\`)`, ephemeral: true });
-    } else if (sub === 'terminer') {
+    } else if (sub === 'terminer' || sub === 'end') {
       const idRaw = interaction.options.getString('id');
       const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE (id = ? OR message_id = ?) AND guild_id = ?').get(idRaw, idRaw, interaction.guildId);
       if (!giveaway) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
