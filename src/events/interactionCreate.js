@@ -123,6 +123,20 @@ async function _handleInteraction(interaction, client) {
       } catch (e) { console.error('[BANQUE handler]', e); }
     }
 
+    // === GIVEAWAY : bouton participer ===
+    if (interaction.isButton() && _cfgId.startsWith('giveaway_join_')) {
+      try {
+        const { handleGiveawayButton } = require('../commands_guild/unique/giveaway');
+        await handleGiveawayButton(interaction);
+        return;
+      } catch (err) {
+        console.error('[GIVEAWAY BUTTON]', err);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: '\u274C Erreur lors du traitement.', ephemeral: true });
+        }
+      }
+    }
+
     // ── BANQUE MODAL : dépôt/retrait avec montant ───────────────────
     if (interaction.isModalSubmit() && (_cfgId.startsWith('banque_dep_modal:') || _cfgId.startsWith('banque_ret_modal:'))) {
       try {
