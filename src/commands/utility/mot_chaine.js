@@ -43,7 +43,7 @@ module.exports = {
       }
 
       const theme   = interaction.options.getString('theme') || 'libre';
-      const temps   = interaction.options.getInteger('temps') || 30;
+      const temps   = parseInt(interaction.options.getString('temps')) || 30;
       const debutOpt = interaction.options.getString('mot_debut');
       const motDebut = (debutOpt || getRandomWord(theme) || 'DRAGON').toUpperCase().trim();
 

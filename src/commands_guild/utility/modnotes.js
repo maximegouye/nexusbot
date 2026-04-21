@@ -74,7 +74,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const noteId = interaction.options.getInteger('id');
+      const noteId = parseInt(interaction.options.getString('id'));
       const note   = db.db.prepare('SELECT * FROM mod_notes WHERE id=? AND guild_id=?').get(noteId, guildId);
       if (!note) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`❌ Note #${noteId} introuvable.`)] });
       db.db.prepare('DELETE FROM mod_notes WHERE id=?').run(noteId);

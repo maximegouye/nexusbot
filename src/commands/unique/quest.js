@@ -56,8 +56,8 @@ module.exports = {
 
     // ── CONTRIBUER ──
     if (sub === 'contribuer') {
-      const questId = interaction.options.getInteger('quest_id');
-      const amount  = interaction.options.getInteger('montant');
+      const questId = parseInt(interaction.options.getString('quest_id'));
+      const amount  = parseInt(interaction.options.getString('montant'));
       const quest   = db.db.prepare('SELECT * FROM quests WHERE id = ? AND guild_id = ? AND status = "active"').get(questId, interaction.guildId);
 
       if (!quest) return interaction.reply({ content: `❌ Quête **#${questId}** introuvable.`, ephemeral: true });
@@ -110,9 +110,9 @@ module.exports = {
 
       const titre    = interaction.options.getString('titre');
       const desc     = interaction.options.getString('description');
-      const objectif = interaction.options.getInteger('objectif');
+      const objectif = parseInt(interaction.options.getString('objectif'));
       const reward   = interaction.options.getString('recompense');
-      const days     = interaction.options.getInteger('jours') || null;
+      const days     = parseInt(interaction.options.getString('jours')) || null;
       const endsAt   = days ? Math.floor(Date.now() / 1000) + days * 86400 : null;
 
       const result = db.db.prepare(`INSERT INTO quests (guild_id, title, description, target, current, reward, status, ends_at, created_at)

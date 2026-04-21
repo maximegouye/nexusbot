@@ -82,7 +82,7 @@ module.exports = {
 
     if (sub === 'start') {
       if (activeSessions.has(channel.id)) return interaction.reply({ content: '⚠️ Une partie est déjà en cours !', ephemeral: true });
-      const duree = interaction.options.getInteger('duree') || 10;
+      const duree = parseInt(interaction.options.getString('duree')) || 10;
       const sess = {
         scores: {},
         used: new Set(),
@@ -114,7 +114,7 @@ module.exports = {
       }
 
       const cat  = interaction.options.getString('categorie');
-      const val  = interaction.options.getInteger('valeur');
+      const val  = parseInt(interaction.options.getString('valeur'));
       const key  = `${cat}-${val}`;
 
       if (sess.used.has(key)) return interaction.reply({ content: `❌ Cette question a déjà été utilisée !`, ephemeral: true });

@@ -124,9 +124,9 @@ module.exports = {
     if (sub === 'creer') {
       const titre  = interaction.options.getString('titre');
       const type   = interaction.options.getString('type');
-      const target = interaction.options.getInteger('objectif');
+      const target = parseInt(interaction.options.getString('objectif'));
       const desc   = interaction.options.getString('description');
-      const coins  = interaction.options.getInteger('recompense_coins') || 0;
+      const coins  = parseInt(interaction.options.getString('recompense_coins')) || 0;
       const role   = interaction.options.getRole('recompense_role');
       const msg    = interaction.options.getString('message');
 
@@ -152,8 +152,8 @@ module.exports = {
     }
 
     if (sub === 'maj') {
-      const id  = interaction.options.getInteger('id');
-      const val = interaction.options.getInteger('valeur');
+      const id  = parseInt(interaction.options.getString('id'));
+      const val = parseInt(interaction.options.getString('valeur'));
       const g   = db.db.prepare("SELECT * FROM server_goals WHERE id=? AND guild_id=? AND status='active'").get(id, guildId);
       if (!g) return interaction.editReply({ content: `❌ Objectif #${id} introuvable.` });
       db.db.prepare('UPDATE server_goals SET current=? WHERE id=?').run(val, id);
@@ -168,7 +168,7 @@ module.exports = {
     }
 
     if (sub === 'terminer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const g  = db.db.prepare("SELECT * FROM server_goals WHERE id=? AND guild_id=?").get(id, guildId);
       if (!g) return interaction.editReply({ content: `❌ Objectif #${id} introuvable.` });
       db.db.prepare("UPDATE server_goals SET status='completed', completed_at=strftime('%s','now') WHERE id=?").run(id);
@@ -176,7 +176,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       db.db.prepare('DELETE FROM server_goals WHERE id=? AND guild_id=?').run(id, guildId);
       return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Objectif **#${id}** supprimé.`)] });
     }

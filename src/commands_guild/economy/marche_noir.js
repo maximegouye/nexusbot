@@ -94,7 +94,7 @@ module.exports = {
     }
 
     if (sub === 'acheter') {
-      const num = interaction.options.getInteger('numero') - 1;
+      const num = parseInt(interaction.options.getString('numero')) - 1;
       const items = getOrGenerateMarket(guildId);
       if (num < 0 || num >= items.length) return interaction.reply({ content: '❌ Numéro d\'offre invalide.', ephemeral: true });
 

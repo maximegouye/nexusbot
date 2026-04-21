@@ -31,7 +31,7 @@ module.exports = {
       const trigger  = interaction.options.getString('declencheur').toLowerCase();
       const response = interaction.options.getString('reponse');
       const exact    = interaction.options.getBoolean('exact') ?? false;
-      const cooldown = interaction.options.getInteger('cooldown') ?? 0;
+      const cooldown = parseInt(interaction.options.getString('cooldown')) ?? 0;
 
       const count = db.db.prepare('SELECT COUNT(*) as c FROM autoresponder WHERE guild_id=?').get(interaction.guildId)?.c ?? 0;
       const max   = (db.isPremium && db.isPremium(interaction.guildId)) ? 100 : 25;
@@ -51,7 +51,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const r  = db.db.prepare('DELETE FROM autoresponder WHERE id=? AND guild_id=?').run(id, interaction.guildId);
       if (!r.changes) return interaction.reply({ content: '❌ Réponse introuvable.', ephemeral: true });
       return interaction.reply({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Réponse #${id} supprimée.`)], ephemeral: true });

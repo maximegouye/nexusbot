@@ -35,10 +35,10 @@ module.exports = {
     // ── START ──
     if (sub === 'start') {
       const durStr   = interaction.options.getString('duree');
-      const winners  = interaction.options.getInteger('gagnants');
+      const winners  = parseInt(interaction.options.getString('gagnants'));
       const prize    = interaction.options.getString('prix');
-      const minLevel = interaction.options.getInteger('min_niveau') || 0;
-      const minBal   = interaction.options.getInteger('min_balance') || 0;
+      const minLevel = parseInt(interaction.options.getString('min_niveau')) || 0;
+      const minBal   = parseInt(interaction.options.getString('min_balance')) || 0;
       const roleBonus = interaction.options.getRole('role_bonus');
 
       const durSec = parseDuration(durStr);

@@ -155,8 +155,8 @@ module.exports = {
     // SET SUBCOMMAND
     // ─────────────────────────────────────────────────────────────────────────────
     if (sub === 'set') {
-      const jour = interaction.options.getInteger('jour');
-      const mois = interaction.options.getInteger('mois');
+      const jour = parseInt(interaction.options.getString('jour'));
+      const mois = parseInt(interaction.options.getString('mois'));
 
       if (!isValidDate(jour, mois)) {
         return interaction.reply({

@@ -35,7 +35,7 @@ module.exports = {
     if (sub === 'creer') {
       const question = interaction.options.getString('question');
       const optionsRaw = interaction.options.getString('options');
-      const duree = interaction.options.getInteger('duree') || 0;
+      const duree = parseInt(interaction.options.getString('duree')) || 0;
       const anonymous = interaction.options.getBoolean('anonyme') || false;
 
       const options = optionsRaw.split('|').map(o => o.trim()).filter(o => o.length > 0);

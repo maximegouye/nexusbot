@@ -88,7 +88,7 @@ module.exports = {
     }
 
     if (sub === 'planter') {
-      const slot = interaction.options.getInteger('slot');
+      const slot = parseInt(interaction.options.getString('slot'));
       const culture = interaction.options.getString('culture');
       const crop = CROPS[culture];
 

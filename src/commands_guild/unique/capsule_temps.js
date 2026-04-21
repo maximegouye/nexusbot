@@ -89,7 +89,7 @@ module.exports = {
     }
 
     if (sub === 'annuler') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const cap = db.db.prepare('SELECT * FROM time_capsules WHERE id=? AND guild_id=? AND user_id=? AND delivered=0').get(id, guildId, userId);
       if (!cap) return interaction.editReply({ content: `❌ Capsule #${id} introuvable ou déjà livrée.` });
       db.db.prepare('DELETE FROM time_capsules WHERE id=?').run(id);

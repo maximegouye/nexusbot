@@ -53,9 +53,9 @@ module.exports = {
 
     // ── VENDRE ──
     if (sub === 'vendre') {
-      const itemId = interaction.options.getInteger('item_id');
-      const price  = interaction.options.getInteger('prix');
-      const qty    = interaction.options.getInteger('quantite') || 1;
+      const itemId = parseInt(interaction.options.getString('item_id'));
+      const price  = parseInt(interaction.options.getString('prix'));
+      const qty    = parseInt(interaction.options.getString('quantite')) || 1;
 
       const invItem = db.db.prepare(`
         SELECT i.*, s.name, s.emoji FROM inventory i
@@ -86,7 +86,7 @@ module.exports = {
 
     // ── ACHETER ──
     if (sub === 'acheter') {
-      const listingId = interaction.options.getInteger('annonce_id');
+      const listingId = parseInt(interaction.options.getString('annonce_id'));
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id
@@ -127,7 +127,7 @@ module.exports = {
 
     // ── RETIRER ──
     if (sub === 'retirer') {
-      const listingId = interaction.options.getInteger('annonce_id');
+      const listingId = parseInt(interaction.options.getString('annonce_id'));
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id

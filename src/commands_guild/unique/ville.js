@@ -167,7 +167,7 @@ module.exports = {
     if (sub === 'taxer') {
       const ville = db.db.prepare('SELECT * FROM villes WHERE guild_id=? AND mayor_id=?').get(guildId, userId);
       if (!ville) return interaction.reply({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
-      const taux = interaction.options.getInteger('taux');
+      const taux = parseInt(interaction.options.getString('taux'));
       const newIncome = Math.floor(ville.population * taux / 100);
       db.db.prepare('UPDATE villes SET tax_rate=?, income_per_hour=?, happiness=? WHERE guild_id=? AND mayor_id=?')
         .run(taux, newIncome, Math.max(0, Math.min(100, 80 - taux * 2)), guildId, userId);

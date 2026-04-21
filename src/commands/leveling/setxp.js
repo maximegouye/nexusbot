@@ -17,7 +17,7 @@ module.exports = {
 
   async execute(interaction) {
     const target = interaction.options.getUser('membre');
-    const xpVal  = interaction.options.getInteger('xp');
+    const xpVal  = parseInt(interaction.options.getString('xp'));
     const action = interaction.options.getString('action') || 'set';
     const user   = db.getUser(target.id, interaction.guildId);
 

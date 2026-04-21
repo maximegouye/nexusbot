@@ -71,9 +71,9 @@ module.exports = {
     }
 
     if (sub === 'rgb') {
-      const r = interaction.options.getInteger('rouge');
-      const g = interaction.options.getInteger('vert');
-      const b = interaction.options.getInteger('bleu');
+      const r = parseInt(interaction.options.getString('rouge'));
+      const g = parseInt(interaction.options.getString('vert'));
+      const b = parseInt(interaction.options.getString('bleu'));
       return sendColor(rgbToHex(r,g,b));
     }
 

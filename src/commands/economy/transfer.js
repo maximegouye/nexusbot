@@ -13,7 +13,7 @@ module.exports = {
     const emoji  = cfg.currency_emoji || '€';
     const name   = cfg.currency_name  || 'Euros';
     const target = interaction.options.getUser('membre');
-    const amount = interaction.options.getInteger('montant');
+    const amount = parseInt(interaction.options.getString('montant'));
 
     if (target.bot) return interaction.reply({ content: '❌ Tu ne peux pas envoyer de coins à un bot.', ephemeral: true });
     if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas t\'envoyer des coins à toi-même.', ephemeral: true });

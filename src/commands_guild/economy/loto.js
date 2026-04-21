@@ -39,7 +39,7 @@ module.exports = {
     }
 
     if (sub === 'acheter') {
-      const qte = interaction.options.getInteger('quantite');
+      const qte = parseInt(interaction.options.getString('quantite'));
       const prix = (lotoCfg.ticket_price || 100) * qte;
       const u = db.getUser(userId, guildId);
 

@@ -166,7 +166,7 @@ module.exports = {
     }
 
     if (sub === 'lire') {
-      const limit = interaction.options.getInteger('nombre') || 10;
+      const limit = parseInt(interaction.options.getString('nombre')) || 10;
       await interaction.deferReply({ ephemeral: true });
 
       const messages = await interaction.channel.messages.fetch({ limit });

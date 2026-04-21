@@ -244,7 +244,7 @@ module.exports = {
       interaction.user.id,
       interaction.guildId,
       parseInt(interaction.options.getString('mise')),
-      interaction.options.getNumber('cashout') || null,
+      parseFloat(interaction.options.getString('cashout')) || null,
     );
   },
 

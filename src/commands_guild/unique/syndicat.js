@@ -175,7 +175,7 @@ module.exports = {
       const m = db.db.prepare('SELECT * FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
       if (!m) return interaction.reply({ content: '❌ Vous n\'êtes dans aucune guilde.', ephemeral: true });
 
-      const montant = interaction.options.getInteger('montant');
+      const montant = parseInt(interaction.options.getString('montant'));
       const u = db.getUser(userId, guildId);
       if ((u.balance || 0) < montant) return interaction.reply({ content: `❌ Solde insuffisant.`, ephemeral: true });
 

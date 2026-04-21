@@ -11,7 +11,7 @@ module.exports = {
 
   async execute(interaction) {
     const target = interaction.options.getUser('membre');
-    const level  = interaction.options.getInteger('niveau');
+    const level  = parseInt(interaction.options.getString('niveau'));
     const xp     = Math.floor(100 * Math.pow(1.35, level - 1));
 
     db.db.prepare('UPDATE users SET level = ?, xp = ? WHERE user_id = ? AND guild_id = ?')

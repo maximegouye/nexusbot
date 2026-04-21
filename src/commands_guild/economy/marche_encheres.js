@@ -59,10 +59,10 @@ module.exports = {
 
     if (sub === 'vendre') {
       const item     = interaction.options.getString('objet');
-      const start    = interaction.options.getInteger('prix_depart');
-      const duree    = interaction.options.getInteger('duree');
+      const start    = parseInt(interaction.options.getString('prix_depart'));
+      const duree    = parseInt(interaction.options.getString('duree'));
       const desc     = interaction.options.getString('description');
-      const buyout   = interaction.options.getInteger('achat_immediat');
+      const buyout   = parseInt(interaction.options.getString('achat_immediat'));
       const endsAt   = now + duree * 60;
 
       if (buyout && buyout <= start) return interaction.editReply({ content: '❌ Le prix d\'achat immédiat doit être supérieur au prix de départ.' });
@@ -115,8 +115,8 @@ module.exports = {
     }
 
     if (sub === 'miser') {
-      const id     = interaction.options.getInteger('id');
-      const amount = interaction.options.getInteger('montant');
+      const id     = parseInt(interaction.options.getString('id'));
+      const amount = parseInt(interaction.options.getString('montant'));
       const enc    = db.db.prepare("SELECT * FROM encheres_v2 WHERE id=? AND guild_id=? AND status='active'").get(id, guildId);
 
       if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable ou terminée.` });
@@ -166,7 +166,7 @@ module.exports = {
     }
 
     if (sub === 'voir') {
-      const id  = interaction.options.getInteger('id');
+      const id  = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres_v2 WHERE id=? AND guild_id=?').get(id, guildId);
       if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable.` });
 

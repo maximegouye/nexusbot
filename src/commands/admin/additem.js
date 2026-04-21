@@ -14,12 +14,12 @@ module.exports = {
 
   async execute(interaction) {
     const nom      = interaction.options.getString('nom');
-    const prix     = interaction.options.getInteger('prix');
+    const prix     = parseInt(interaction.options.getString('prix'));
     const desc     = interaction.options.getString('description') || null;
     const emoji    = interaction.options.getString('emoji') || null;
     const role     = interaction.options.getRole('role');
-    const duree    = interaction.options.getInteger('duree_heures') || null;
-    const maxUser  = interaction.options.getInteger('max_par_user') || null;
+    const duree    = parseInt(interaction.options.getString('duree_heures')) || null;
+    const maxUser  = parseInt(interaction.options.getString('max_par_user')) || null;
 
     const result = db.db.prepare(`
       INSERT INTO shop (guild_id, name, description, price, emoji, role_id, duration_hours, max_per_user, active)

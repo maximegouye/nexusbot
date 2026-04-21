@@ -14,7 +14,7 @@ module.exports = {
     const cfg=db.getConfig(guildId); const coin=cfg.currency_emoji||'€';
     if(sub==='creer'){
       if(eng.getActiveTournament(guildId)) return interaction.reply({content:'❌ Tournoi déjà en cours.',ephemeral:true});
-      const nom=interaction.options.getString('nom'); const fee=interaction.options.getInteger('mise')||0; const max=interaction.options.getInteger('max')||8;
+      const nom=interaction.options.getString('nom'); const fee=parseInt(interaction.options.getString('mise'))||0; const max=parseInt(interaction.options.getString('max'))||8;
       const tId=eng.createTournament({guildId,name:nom,entryFee:fee,maxPlayers:max,hostId:userId});
       eng.joinTournament(tId,userId,guildId);
       return interaction.reply({embeds:[new EmbedBuilder().setColor('#F1C40F').setTitle(`🏆 Tournoi "${nom}" créé !`).setDescription('Ouvert aux inscriptions ! `/tournoi rejoindre`').addFields({name:'💰 Mise',value:fee>0?`**${fee} ${coin}**`:'Gratuit',inline:true},{name:'👥 Max',value:`**${max}**`,inline:true},{name:'👑 Hôte',value:`${interaction.user}`,inline:true}).setFooter({text:'/tournoi demarrer pour lancer'})]});

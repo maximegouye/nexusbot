@@ -35,7 +35,7 @@ module.exports = {
       const titre  = interaction.options.getString('titre');
       const desc   = interaction.options.getString('description') || 'Clique sur un bouton pour obtenir/retirer le rôle correspondant.';
       const salon  = interaction.options.getChannel('salon') || interaction.channel;
-      const maxC   = interaction.options.getInteger('max') ?? 0;
+      const maxC   = parseInt(interaction.options.getString('max')) ?? 0;
 
       const roles = [];
       for (let i = 1; i <= 5; i++) {
@@ -72,7 +72,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const menu = db.db.prepare('SELECT * FROM role_menus WHERE id=? AND guild_id=?').get(id, interaction.guildId);
       if (!menu) return interaction.reply({ content: '❌ Menu introuvable.', ephemeral: true });
       try {

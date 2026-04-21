@@ -220,7 +220,7 @@ module.exports = {
 
       if (sub === 'niveau') {
         const target = interaction.options.getUser('membre');
-        const level  = interaction.options.getInteger('niveau');
+        const level  = parseInt(interaction.options.getString('niveau'));
         const xp = db.getXPForLevel ? db.getXPForLevel(level) : Math.floor(100 * Math.pow(1.35, level - 1));
         db.db.prepare('UPDATE users SET level=?, xp=? WHERE user_id=? AND guild_id=?').run(level, xp, target.id, interaction.guildId);
         return interaction.editReply({
@@ -323,7 +323,7 @@ module.exports = {
       }
 
       if (sub === 'slowmode') {
-        const delay   = interaction.options.getInteger('secondes');
+        const delay   = parseInt(interaction.options.getString('secondes'));
         const channel = interaction.options.getChannel('salon') || interaction.channel;
         await channel.setRateLimitPerUser(delay);
         return interaction.editReply({
@@ -333,7 +333,7 @@ module.exports = {
       }
 
       if (sub === 'purge') {
-        const count  = interaction.options.getInteger('nombre');
+        const count  = parseInt(interaction.options.getString('nombre'));
         const member = interaction.options.getUser('membre');
         const channel = interaction.channel;
 

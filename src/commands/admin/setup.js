@@ -93,7 +93,7 @@ module.exports = {
 
     if (sub === 'xp') {
       const actif = interaction.options.getBoolean('actif');
-      const multi = interaction.options.getInteger('multiplicateur');
+      const multi = parseInt(interaction.options.getString('multiplicateur'));
       db.setConfig(interaction.guildId, 'xp_enabled', actif ? 1 : 0);
       if (multi) db.setConfig(interaction.guildId, 'xp_multiplier', multi);
       return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ XP ${actif ? 'activé' : 'désactivé'}${multi ? ` — Multiplicateur ×${multi}` : ''}.`)], ephemeral: true });

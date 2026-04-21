@@ -13,7 +13,7 @@ module.exports = {
   async execute(interaction) {
     const target  = interaction.options.getMember('membre');
     const raison  = interaction.options.getString('raison') || 'Aucune raison fournie';
-    const days    = interaction.options.getInteger('jours') || 0;
+    const days    = parseInt(interaction.options.getString('jours')) || 0;
 
     if (!target) return interaction.reply({ content: '❌ Membre introuvable.', ephemeral: true });
     if (!target.bannable) return interaction.reply({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });

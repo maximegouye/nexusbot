@@ -11,7 +11,7 @@ module.exports = {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
       return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
-    const nbMessages = interaction.options.getInteger('messages');
+    const nbMessages = parseInt(interaction.options.getString('messages'));
 
     if (nbMessages) {
       // Suppression de N messages (bulk delete)

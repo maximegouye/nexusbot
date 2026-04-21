@@ -80,7 +80,7 @@ module.exports = {
     }
 
     if (sub === 'lire') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const article = db.db.prepare('SELECT * FROM journal_articles WHERE id=? AND guild_id=?').get(id, guildId);
       if (!article) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (!article.published && !interaction.member.permissions.has(0x20n)) {
@@ -122,7 +122,7 @@ module.exports = {
     }
 
     if (sub === 'liker') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const article = db.db.prepare('SELECT * FROM journal_articles WHERE id=? AND guild_id=?').get(id, guildId);
       if (!article) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (article.author_id === userId) return interaction.reply({ content: '❌ Vous ne pouvez pas liker votre propre article.', ephemeral: true });
@@ -141,7 +141,7 @@ module.exports = {
       if (!interaction.member.permissions.has(0x8n) && !interaction.member.permissions.has(0x20n)) {
         return interaction.reply({ content: '❌ Seuls les modérateurs peuvent publier des articles.', ephemeral: true });
       }
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const article = db.db.prepare('SELECT * FROM journal_articles WHERE id=? AND guild_id=?').get(id, guildId);
       if (!article) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (article.published) return interaction.reply({ content: '❌ Cet article est déjà publié.', ephemeral: true });

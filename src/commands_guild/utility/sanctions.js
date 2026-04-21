@@ -146,7 +146,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const casId = interaction.options.getInteger('cas_id');
+      const casId = parseInt(interaction.options.getString('cas_id'));
       const raison = interaction.options.getString('raison') || 'Suppression manuelle';
       const cas = db.db.prepare('SELECT * FROM sanctions WHERE id=? AND guild_id=?').get(casId, guildId);
       if (!cas) return interaction.reply({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
@@ -167,7 +167,7 @@ module.exports = {
     }
 
     if (sub === 'cas') {
-      const casId = interaction.options.getInteger('cas_id');
+      const casId = parseInt(interaction.options.getString('cas_id'));
       const cas = db.db.prepare('SELECT * FROM sanctions WHERE id=? AND guild_id=?').get(casId, guildId);
       if (!cas) return interaction.reply({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
       const typeEmoji = { warn:'⚠️', mute:'🔇', kick:'👢', ban:'🔨', note:'📝' };
@@ -203,9 +203,9 @@ module.exports = {
     }
 
     if (sub === 'seuils') {
-      const n    = interaction.options.getInteger('nb_warn');
+      const n    = parseInt(interaction.options.getString('nb_warn'));
       const act  = interaction.options.getString('action');
-      const dur  = interaction.options.getInteger('duree_minutes') || 60;
+      const dur  = parseInt(interaction.options.getString('duree_minutes')) || 60;
       db.db.prepare(`INSERT INTO warn_config (guild_id) VALUES(?) ON CONFLICT(guild_id) DO NOTHING`).run(guildId);
       const col  = `warn${n}_action`;
       const durCol = `warn${n}_duration`;

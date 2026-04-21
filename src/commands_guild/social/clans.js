@@ -176,7 +176,7 @@ module.exports = {
       const m = db.db.prepare('SELECT cm.clan_id FROM clan_members cm WHERE cm.guild_id=? AND cm.user_id=?').get(guildId, userId);
       if (!m) return interaction.reply({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
 
-      const montant = interaction.options.getInteger('montant');
+      const montant = parseInt(interaction.options.getString('montant'));
       const u = db.getUser(userId, guildId);
       if (u.balance < montant) return interaction.reply({ content: `❌ Solde insuffisant.`, ephemeral: true });
 

@@ -130,7 +130,7 @@ module.exports = {
 
     if (sub === 'calculer') {
       const cat = interaction.options.getString('categorie');
-      const valeur = interaction.options.getNumber('valeur');
+      const valeur = parseFloat(interaction.options.getString('valeur'));
       const de = interaction.options.getString('de').toLowerCase();
       const vers = interaction.options.getString('vers').toLowerCase();
       const conv = CONVERSIONS[cat];

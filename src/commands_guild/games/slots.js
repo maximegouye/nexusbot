@@ -353,7 +353,7 @@ module.exports = {
 
   async execute(interaction) {
     const mise   = parseInt(interaction.options.getString('mise'));
-    const lignes = interaction.options.getInteger('lignes') || 1;
+    const lignes = parseInt(interaction.options.getString('lignes')) || 1;
     await playSlots(interaction, interaction.user.id, interaction.guildId, mise, lignes);
   },
 

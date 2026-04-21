@@ -83,7 +83,7 @@ module.exports = {
     }
 
     const diff  = interaction.options.getString('difficulte') || 'moyen';
-    const temps = interaction.options.getInteger('temps') || 60;
+    const temps = parseInt(interaction.options.getString('temps')) || 60;
     const phrases = PHRASES[diff];
     const phrase  = phrases[Math.floor(Math.random() * phrases.length)];
 

@@ -73,7 +73,7 @@ module.exports = {
 
     let param = null;
     if (pariType === 'numero') {
-      param = interaction.options.getInteger('numero');
+      param = parseInt(interaction.options.getString('numero'));
       if (param == null) return interaction.reply({ content: '❌ Pour un numéro plein, précise aussi `numero:<0-36>`.', ephemeral: true });
     }
 

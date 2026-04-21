@@ -50,7 +50,7 @@ module.exports = {
     const userId  = interaction.user.id;
 
     if (sub === 'noter') {
-      const moodVal = interaction.options.getInteger('humeur');
+      const moodVal = parseInt(interaction.options.getString('humeur'));
       const note    = interaction.options.getString('note');
       const mood    = getMoodInfo(moodVal);
 

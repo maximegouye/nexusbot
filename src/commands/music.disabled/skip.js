@@ -45,7 +45,7 @@ module.exports = {
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
 
-      const skipCount = interaction.options.getInteger('nombre') || 1;
+      const skipCount = parseInt(interaction.options.getString('nombre')) || 1;
 
       // Vérifier s'il y assez de pistes à sauter
       if (skipCount > queue.songs.length) {

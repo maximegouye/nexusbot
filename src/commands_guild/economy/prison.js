@@ -37,9 +37,9 @@ module.exports = {
         return interaction.reply({ content: '❌ Permission refusée.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
-      const duree = interaction.options.getInteger('duree');
+      const duree = parseInt(interaction.options.getString('duree'));
       const motif = interaction.options.getString('motif');
-      const caution = interaction.options.getInteger('caution') || 0;
+      const caution = parseInt(interaction.options.getString('caution')) || 0;
 
       if (target.bot) return interaction.reply({ content: '❌ Tu ne peux pas emprisonner un bot.', ephemeral: true });
 

@@ -323,7 +323,7 @@ module.exports = {
         });
       }
 
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const commentaire = interaction.options.getString('commentaire');
       const suggestion = db.db.prepare('SELECT * FROM suggestions WHERE id=? AND guild_id=?')
         .get(id, interaction.guildId);
@@ -389,7 +389,7 @@ module.exports = {
         });
       }
 
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
       const suggestion = db.db.prepare('SELECT * FROM suggestions WHERE id=? AND guild_id=?')
         .get(id, interaction.guildId);
@@ -455,7 +455,7 @@ module.exports = {
         });
       }
 
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const commentaire = interaction.options.getString('commentaire');
       const suggestion = db.db.prepare('SELECT * FROM suggestions WHERE id=? AND guild_id=?')
         .get(id, interaction.guildId);
@@ -547,7 +547,7 @@ module.exports = {
 
     // ══════════════════════════════ VOIR ══════════════════════
     if (sub === 'voir') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const suggestion = db.db.prepare('SELECT * FROM suggestions WHERE id=? AND guild_id=?')
         .get(id, interaction.guildId);
 

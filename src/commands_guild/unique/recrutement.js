@@ -82,7 +82,7 @@ module.exports = {
       const description = interaction.options.getString('description');
       const conditions  = interaction.options.getString('conditions');
       const role        = interaction.options.getRole('role');
-      const places      = interaction.options.getInteger('places') || 0;
+      const places      = parseInt(interaction.options.getString('places')) || 0;
       const salon       = interaction.options.getChannel('salon');
 
       const result = db.db.prepare('INSERT INTO recrutement_posts (guild_id, creator_id, title, description, requirements, role_id, channel_id, slots) VALUES (?,?,?,?,?,?,?,?)')
@@ -109,7 +109,7 @@ module.exports = {
     }
 
     if (sub === 'postuler') {
-      const id         = interaction.options.getInteger('id');
+      const id         = parseInt(interaction.options.getString('id'));
       const motivation = interaction.options.getString('motivation');
       const post       = db.db.prepare('SELECT * FROM recrutement_posts WHERE id=? AND guild_id=?').get(id, guildId);
 
@@ -132,7 +132,7 @@ module.exports = {
 
     if (sub === 'candidatures') {
       if (!isAdmin) return interaction.editReply({ content: '❌ Permission insuffisante.' });
-      const id   = interaction.options.getInteger('id');
+      const id   = parseInt(interaction.options.getString('id'));
       const post = db.db.prepare('SELECT * FROM recrutement_posts WHERE id=? AND guild_id=?').get(id, guildId);
       if (!post) return interaction.editReply({ content: `❌ Poste #${id} introuvable.` });
 
@@ -149,7 +149,7 @@ module.exports = {
 
     if (sub === 'decider') {
       if (!isAdmin) return interaction.editReply({ content: '❌ Permission insuffisante.' });
-      const candId   = interaction.options.getInteger('candidature_id');
+      const candId   = parseInt(interaction.options.getString('candidature_id'));
       const decision = interaction.options.getString('decision');
       const cand     = db.db.prepare('SELECT * FROM recrutement_candidatures WHERE id=? AND guild_id=?').get(candId, guildId);
       if (!cand) return interaction.editReply({ content: `❌ Candidature #${candId} introuvable.` });
@@ -207,7 +207,7 @@ module.exports = {
 
     if (sub === 'fermer') {
       if (!isAdmin) return interaction.editReply({ content: '❌ Permission insuffisante.' });
-      const id   = interaction.options.getInteger('id');
+      const id   = parseInt(interaction.options.getString('id'));
       const post = db.db.prepare('SELECT * FROM recrutement_posts WHERE id=? AND guild_id=?').get(id, guildId);
       if (!post) return interaction.editReply({ content: `❌ Poste #${id} introuvable.` });
       db.db.prepare("UPDATE recrutement_posts SET status='closed' WHERE id=?").run(id);

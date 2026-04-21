@@ -65,7 +65,7 @@ module.exports = {
       const titre = interaction.options.getString('titre');
       const genre = interaction.options.getString('genre');
       const debut = interaction.options.getString('debut');
-      const maxLen = interaction.options.getInteger('longueur_max') || 50;
+      const maxLen = parseInt(interaction.options.getString('longueur_max')) || 50;
       const g = GENRES[genre];
 
       const content = JSON.stringify([{ user_id: userId, text: debut, timestamp: now }]);
@@ -90,7 +90,7 @@ module.exports = {
     }
 
     if (sub === 'ecrire') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const phrase = interaction.options.getString('phrase');
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
       if (!story) return interaction.reply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
@@ -132,8 +132,8 @@ module.exports = {
     }
 
     if (sub === 'lire') {
-      const id = interaction.options.getInteger('id');
-      const page = (interaction.options.getInteger('page') || 1) - 1;
+      const id = parseInt(interaction.options.getString('id'));
+      const page = (parseInt(interaction.options.getString('page')) || 1) - 1;
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
       if (!story) return interaction.reply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
 
@@ -174,7 +174,7 @@ module.exports = {
     }
 
     if (sub === 'terminer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
       if (!story) return interaction.reply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
       if (story.creator_id !== userId && !interaction.member.permissions.has(0x8n)) {
@@ -194,7 +194,7 @@ module.exports = {
     }
 
     if (sub === 'info') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
       if (!story) return interaction.reply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
 

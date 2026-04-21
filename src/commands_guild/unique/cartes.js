@@ -151,7 +151,7 @@ module.exports = {
 
     if (sub === 'vendre') {
       const cardId = interaction.options.getString('carte_id');
-      const prix = interaction.options.getInteger('prix');
+      const prix = parseInt(interaction.options.getString('prix'));
       const owned = db.db.prepare('SELECT * FROM user_cards WHERE guild_id=? AND user_id=? AND card_id=?').get(guildId, userId, cardId);
       if (!owned || owned.quantity < 1) return interaction.reply({ content: `❌ Vous ne possédez pas la carte \`${cardId}\`.`, ephemeral: true });
 
@@ -172,7 +172,7 @@ module.exports = {
     }
 
     if (sub === 'acheter') {
-      const lid = interaction.options.getInteger('id_annonce');
+      const lid = parseInt(interaction.options.getString('id_annonce'));
       const listing = db.db.prepare('SELECT * FROM card_market WHERE id=? AND guild_id=?').get(lid, guildId);
       if (!listing) return interaction.reply({ content: '❌ Annonce introuvable.', ephemeral: true });
       if (listing.seller_id === userId) return interaction.reply({ content: '❌ Vous ne pouvez pas acheter votre propre carte.', ephemeral: true });

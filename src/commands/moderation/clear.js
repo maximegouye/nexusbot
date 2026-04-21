@@ -9,7 +9,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
-    const nb     = interaction.options.getInteger('nombre');
+    const nb     = parseInt(interaction.options.getString('nombre'));
     const filter = interaction.options.getUser('membre');
 
     await interaction.deferReply({ ephemeral: true });

@@ -145,7 +145,7 @@ module.exports = {
     }
 
     if (sub === 'annuler') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const timer = db.db.prepare('SELECT * FROM timers_publics WHERE id=? AND guild_id=?').get(id, guildId);
       if (!timer) return interaction.reply({ content: `❌ Timer #${id} introuvable.`, ephemeral: true });
       if (timer.created_by !== userId && !interaction.member.permissions.has(0x4000n)) {

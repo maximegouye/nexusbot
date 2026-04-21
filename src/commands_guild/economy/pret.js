@@ -59,7 +59,7 @@ module.exports = {
       const active = db.db.prepare("SELECT * FROM prets WHERE guild_id=? AND user_id=? AND repaid=0").get(guildId, userId);
       if (active) return interaction.reply({ content: '❌ Vous avez déjà un prêt actif ! Remboursez-le d\'abord.', ephemeral: true });
 
-      const montant = interaction.options.getInteger('montant');
+      const montant = parseInt(interaction.options.getString('montant'));
       if (montant > tier.max) return interaction.reply({ content: `❌ Maximum **${tier.max} ${coin}** pour votre niveau (${level}).`, ephemeral: true });
 
       const dueAt = now + tier.duration;

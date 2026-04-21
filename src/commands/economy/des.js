@@ -56,7 +56,7 @@ module.exports = {
 
     let numeroVise = null;
     if (pari === 'numero') {
-      numeroVise = interaction.options.getInteger('numero');
+      numeroVise = parseInt(interaction.options.getString('numero'));
       if (numeroVise == null) return interaction.reply({ content: '❌ Précise aussi le numéro (2–12).', ephemeral: true });
     }
 

@@ -218,7 +218,7 @@ module.exports = {
     }
 
     if (subcommand === 'de') {
-      const faces = interaction.options.getInteger('faces') || 6;
+      const faces = parseInt(interaction.options.getString('faces')) || 6;
       const result = Math.floor(Math.random() * faces) + 1;
       const embed = new EmbedBuilder()
         .setTitle('🎲 Lancer de Dé')

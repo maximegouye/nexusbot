@@ -66,7 +66,7 @@ module.exports = {
 
     if (sub === 'donner') {
       const target  = interaction.options.getUser('membre');
-      const amount  = interaction.options.getInteger('montant');
+      const amount  = parseInt(interaction.options.getString('montant'));
       const raison  = interaction.options.getString('raison') || 'Don admin';
 
       db.addCoins(target.id, interaction.guildId, amount);
@@ -90,7 +90,7 @@ module.exports = {
 
     if (sub === 'retirer') {
       const target  = interaction.options.getUser('membre');
-      const amount  = interaction.options.getInteger('montant');
+      const amount  = parseInt(interaction.options.getString('montant'));
       const raison  = interaction.options.getString('raison') || 'Retrait admin';
 
       const userBefore = db.getUser(target.id, interaction.guildId);
@@ -159,7 +159,7 @@ module.exports = {
 
     if (sub === 'definir') {
       const target = interaction.options.getUser('membre');
-      const amount = interaction.options.getInteger('montant');
+      const amount = parseInt(interaction.options.getString('montant'));
       db.db.prepare('UPDATE users SET balance=? WHERE user_id=? AND guild_id=?').run(amount, target.id, interaction.guildId);
       return interaction.reply({
         embeds: [new EmbedBuilder()
@@ -174,8 +174,8 @@ module.exports = {
     if (sub === 'config') {
       const nom    = interaction.options.getString('nom');
       const sym    = interaction.options.getString('symbole');
-      const daily  = interaction.options.getInteger('daily');
-      const perMsg = interaction.options.getInteger('par-message');
+      const daily  = parseInt(interaction.options.getString('daily'));
+      const perMsg = parseInt(interaction.options.getString('par-message'));
 
       if (nom)    db.setConfig(interaction.guildId, 'currency_name',  nom);
       if (sym)    db.setConfig(interaction.guildId, 'currency_emoji', sym);
@@ -200,7 +200,7 @@ module.exports = {
 
     if (sub === 'donner-role') {
       const role   = interaction.options.getRole('role');
-      const amount = interaction.options.getInteger('montant');
+      const amount = parseInt(interaction.options.getString('montant'));
 
       await interaction.guild.members.fetch();
       const members = interaction.guild.members.cache.filter(m => m.roles.cache.has(role.id) && !m.user.bot);

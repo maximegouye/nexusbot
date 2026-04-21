@@ -45,7 +45,7 @@ module.exports = {
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
 
-      const newVolume = interaction.options.getInteger('pourcentage');
+      const newVolume = parseInt(interaction.options.getString('pourcentage'));
 
       // Mettre à jour le volume
       queue.volume = newVolume;

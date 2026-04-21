@@ -65,7 +65,7 @@ module.exports = {
     if (sub === 'creer') {
       const nom      = interaction.options.getString('nom');
       const type     = interaction.options.getString('type');
-      const duree    = interaction.options.getInteger('duree_heures');
+      const duree    = parseInt(interaction.options.getString('duree_heures'));
       const annoncer = interaction.options.getChannel('annoncer_dans');
       const endTime  = now + duree * 3600;
       const info     = typeLabels[type];
@@ -96,7 +96,7 @@ module.exports = {
     }
 
     if (sub === 'terminer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const evt = db.db.prepare('SELECT * FROM eco_events WHERE id=? AND guild_id=?').get(id, guildId);
       if (!evt) return interaction.reply({ content: `❌ Événement #${id} introuvable.`, ephemeral: true });
       db.db.prepare('UPDATE eco_events SET active=0 WHERE id=?').run(id);

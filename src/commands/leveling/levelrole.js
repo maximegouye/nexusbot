@@ -20,7 +20,7 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'ajouter') {
-      const niveau = interaction.options.getInteger('niveau');
+      const niveau = parseInt(interaction.options.getString('niveau'));
       const role   = interaction.options.getRole('role');
 
       if (role.managed) return interaction.reply({ content: '❌ Ce rôle est géré par une intégration externe.', ephemeral: true });
@@ -41,7 +41,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const niveau = interaction.options.getInteger('niveau');
+      const niveau = parseInt(interaction.options.getString('niveau'));
       const lr = db.db.prepare('SELECT * FROM level_roles WHERE guild_id = ? AND level = ?').get(interaction.guildId, niveau);
       if (!lr) return interaction.reply({ content: `❌ Aucun level role configuré pour le niveau ${niveau}.`, ephemeral: true });
 

@@ -63,7 +63,7 @@ module.exports = {
     }
 
     if (sub === 'info') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const c  = db.db.prepare('SELECT * FROM warnings WHERE id=? AND guild_id=?').get(id, interaction.guildId);
       if (!c) return interaction.reply({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
       const icon = Object.entries(TYPE_ICONS).find(([k]) => c.reason?.toLowerCase().includes(k))?.[1] || '📋';
@@ -80,7 +80,7 @@ module.exports = {
     }
 
     if (sub === 'modifier') {
-      const id     = interaction.options.getInteger('id');
+      const id     = parseInt(interaction.options.getString('id'));
       const raison = interaction.options.getString('raison');
       const c      = db.db.prepare('SELECT * FROM warnings WHERE id=? AND guild_id=?').get(id, interaction.guildId);
       if (!c) return interaction.reply({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
@@ -90,7 +90,7 @@ module.exports = {
 
     if (sub === 'supprimer') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.reply({ content: '❌ Admin requis.', ephemeral: true });
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const r  = db.db.prepare('DELETE FROM warnings WHERE id=? AND guild_id=?').run(id, interaction.guildId);
       if (!r.changes) return interaction.reply({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
       return interaction.reply({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Cas **#${id}** supprimé.`)], ephemeral: true });

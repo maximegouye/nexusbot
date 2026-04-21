@@ -63,7 +63,7 @@ module.exports = {
     }
 
     if (sub === 'acheter') {
-      const propId = interaction.options.getInteger('id');
+      const propId = parseInt(interaction.options.getString('id'));
       const prop   = PROPERTIES.find(p => p.id === propId);
       if (!prop) return interaction.editReply({ content: '❌ Propriété introuvable.' });
 
@@ -149,7 +149,7 @@ module.exports = {
     }
 
     if (sub === 'vendre') {
-      const propId = interaction.options.getInteger('id');
+      const propId = parseInt(interaction.options.getString('id'));
       const prop   = PROPERTIES.find(p => p.id === propId);
       if (!prop) return interaction.editReply({ content: '❌ Propriété introuvable.' });
 

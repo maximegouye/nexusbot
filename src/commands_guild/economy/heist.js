@@ -11,7 +11,7 @@ module.exports = {
     const cfg    = db.getConfig(interaction.guildId);
     const emoji  = cfg.currency_emoji || '€';
     const name   = cfg.currency_name  || 'Euros';
-    const target = interaction.options.getInteger('cible');
+    const target = parseInt(interaction.options.getString('cible'));
     const joinCost = Math.floor(target * 0.1); // 10% de la cible pour rejoindre
     const participants = new Map();
     participants.set(interaction.user.id, { user: interaction.user, paid: false });

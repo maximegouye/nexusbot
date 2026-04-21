@@ -579,8 +579,8 @@ module.exports = {
     // ════════════════════════════════════════
     if (group === 'items') {
       const target  = interaction.options.getUser('joueur');
-      const item_id = interaction.options.getInteger('item_id');
-      const qty     = interaction.options.getInteger('quantite') || 1;
+      const item_id = parseInt(interaction.options.getString('item_id'));
+      const qty     = parseInt(interaction.options.getString('quantite')) || 1;
 
       if (sub === 'donner') {
         const shopItem = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(item_id, guildId);

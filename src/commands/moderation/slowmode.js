@@ -8,7 +8,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
-    const sec = interaction.options.getInteger('secondes');
+    const sec = parseInt(interaction.options.getString('secondes'));
     await interaction.channel.setRateLimitPerUser(sec, `Slowmode par ${interaction.user.tag}`);
 
     const embed = new EmbedBuilder()

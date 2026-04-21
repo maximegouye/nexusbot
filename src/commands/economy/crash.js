@@ -53,7 +53,7 @@ module.exports = {
     const symbol  = cfg.currency_emoji || '€';
     const miseRaw = interaction.options.get('mise');
     const raw     = miseRaw ? String(miseRaw.value) : null;
-    const cashout = interaction.options.getNumber('cashout');
+    const cashout = parseFloat(interaction.options.getString('cashout'));
 
     const bet = parseBet(raw, user.balance);
     if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });

@@ -104,7 +104,7 @@ module.exports = {
       if (activeSessions.has(channel.id)) return interaction.reply({ content: '⚠️ Une partie est déjà en cours !', ephemeral: true });
 
       const categorie = interaction.options.getString('categorie') || 'mixte';
-      const nbQ       = interaction.options.getInteger('questions') || 5;
+      const nbQ       = parseInt(interaction.options.getString('questions')) || 5;
 
       // Sélectionner les questions
       let pool = [];

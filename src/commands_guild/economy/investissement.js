@@ -57,7 +57,7 @@ module.exports = {
 
     if (sub === 'placer') {
       const type = interaction.options.getString('type');
-      const montant = interaction.options.getInteger('montant');
+      const montant = parseInt(interaction.options.getString('montant'));
       const inv = INVESTMENTS[type];
       const u = db.getUser(userId, guildId);
 

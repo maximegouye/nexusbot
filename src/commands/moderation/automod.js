@@ -120,8 +120,8 @@ module.exports = {
 
     if (sub === 'antispam') {
       const actif  = interaction.options.getBoolean('actif');
-      const seuil  = interaction.options.getInteger('seuil') ?? cfg.spam_threshold;
-      const fen    = interaction.options.getInteger('fenetre') ?? cfg.spam_window;
+      const seuil  = parseInt(interaction.options.getString('seuil')) ?? cfg.spam_threshold;
+      const fen    = parseInt(interaction.options.getString('fenetre')) ?? cfg.spam_window;
       db.db.prepare('UPDATE automod_config SET anti_spam=?, spam_threshold=?, spam_window=? WHERE guild_id=?')
         .run(actif ? 1 : 0, seuil, fen, interaction.guildId);
       return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
@@ -147,7 +147,7 @@ module.exports = {
 
     if (sub === 'anticaps') {
       const actif = interaction.options.getBoolean('actif');
-      const pct   = interaction.options.getInteger('pourcentage') ?? cfg.caps_threshold;
+      const pct   = parseInt(interaction.options.getString('pourcentage')) ?? cfg.caps_threshold;
       db.db.prepare('UPDATE automod_config SET anti_caps=?, caps_threshold=? WHERE guild_id=?')
         .run(actif ? 1 : 0, pct, interaction.guildId);
       return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
@@ -156,7 +156,7 @@ module.exports = {
 
     if (sub === 'antimentions') {
       const actif   = interaction.options.getBoolean('actif');
-      const limite  = interaction.options.getInteger('limite') ?? cfg.mentions_limit;
+      const limite  = parseInt(interaction.options.getString('limite')) ?? cfg.mentions_limit;
       db.db.prepare('UPDATE automod_config SET anti_mentions=?, mentions_limit=? WHERE guild_id=?')
         .run(actif ? 1 : 0, limite, interaction.guildId);
       return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')

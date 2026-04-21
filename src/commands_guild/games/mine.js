@@ -92,7 +92,7 @@ module.exports = {
     }
 
     if (sub === 'profondeur') {
-      const niveau = interaction.options.getInteger('niveau');
+      const niveau = parseInt(interaction.options.getString('niveau'));
       const depthCosts = [0, 0, 300, 800, 2000, 5000, 12000, 25000, 50000, 100000];
 
       if (niveau <= m.depth) return interaction.reply({ content: `❌ Vous êtes déjà à la profondeur **${m.depth}**. Choisissez un niveau plus élevé.`, ephemeral: true });

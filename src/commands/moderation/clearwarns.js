@@ -11,7 +11,7 @@ module.exports = {
 
   async execute(interaction) {
     const target  = interaction.options.getUser('membre');
-    const warnId  = interaction.options.getInteger('warn_id');
+    const warnId  = parseInt(interaction.options.getString('warn_id'));
 
     if (warnId) {
       const result = db.db.prepare('DELETE FROM warnings WHERE id = ? AND guild_id = ? AND user_id = ?')

@@ -93,9 +93,9 @@ module.exports = {
     }
 
     if (sub === 'miser') {
-      const id     = interaction.options.getInteger('id');
+      const id     = parseInt(interaction.options.getString('id'));
       const choix  = interaction.options.getString('choix');
-      const amount = interaction.options.getInteger('montant');
+      const amount = parseInt(interaction.options.getString('montant'));
 
       const pari = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
       if (!pari) return interaction.editReply({ content: `❌ Pari #${id} introuvable.` });
@@ -126,7 +126,7 @@ module.exports = {
     }
 
     if (sub === 'voir') {
-      const id   = interaction.options.getInteger('id');
+      const id   = parseInt(interaction.options.getString('id'));
       const pari = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
       if (!pari) return interaction.editReply({ content: `❌ Pari #${id} introuvable.` });
 
@@ -167,7 +167,7 @@ module.exports = {
     }
 
     if (sub === 'resoudre') {
-      const id     = interaction.options.getInteger('id');
+      const id     = parseInt(interaction.options.getString('id'));
       const winner = interaction.options.getString('gagnant');
       const pari   = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
 
@@ -205,7 +205,7 @@ module.exports = {
     }
 
     if (sub === 'annuler') {
-      const id   = interaction.options.getInteger('id');
+      const id   = parseInt(interaction.options.getString('id'));
       const pari = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
       if (!pari) return interaction.editReply({ content: `❌ Pari #${id} introuvable.` });
       if (pari.status !== 'open') return interaction.editReply({ content: '❌ Ce pari est déjà fermé.' });

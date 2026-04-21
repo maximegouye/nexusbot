@@ -20,7 +20,7 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
-    const n = interaction.options.getInteger('messages') ?? 50;
+    const n = parseInt(interaction.options.getString('messages')) ?? 50;
     const chan = interaction.options.getChannel('salon') ?? interaction.channel;
     const lang = interaction.options.getString('langue') ?? 'français';
     const cfg = ai.getAIConfig(interaction.guildId, db);

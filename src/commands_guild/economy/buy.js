@@ -11,8 +11,8 @@ module.exports = {
     const cfg   = db.getConfig(interaction.guildId);
     const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Euros';
-    const id    = interaction.options.getInteger('id');
-    const qty   = interaction.options.getInteger('quantite') || 1;
+    const id    = parseInt(interaction.options.getString('id'));
+    const qty   = parseInt(interaction.options.getString('quantite')) || 1;
 
     const item = db.db.prepare('SELECT * FROM shop WHERE id = ? AND guild_id = ? AND active = 1').get(id, interaction.guildId);
     if (!item) {

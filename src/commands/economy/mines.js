@@ -32,7 +32,7 @@ module.exports = {
     const symbol = cfg.currency_emoji || '€';
     const miseRaw = interaction.options.get('mise');
     const raw     = miseRaw ? String(miseRaw.value) : null;
-    const mines  = interaction.options.getInteger('mines') ?? 3;
+    const mines  = parseInt(interaction.options.getString('mines')) ?? 3;
 
     const bet = parseBet(raw, user.balance);
     if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });

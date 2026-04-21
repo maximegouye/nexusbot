@@ -55,10 +55,10 @@ module.exports = {
     if (sub === 'creer') {
       const u = db.getUser(userId, guildId);
       const article = interaction.options.getString('article');
-      const prixDepart = interaction.options.getInteger('prix_depart');
-      const duree = interaction.options.getInteger('duree_heures');
+      const prixDepart = parseInt(interaction.options.getString('prix_depart'));
+      const duree = parseInt(interaction.options.getString('duree_heures'));
       const desc = interaction.options.getString('description') || '';
-      const increment = interaction.options.getInteger('increment_min') || 10;
+      const increment = parseInt(interaction.options.getString('increment_min')) || 10;
       const endTime = now + duree * 3600;
 
       // Coût de mise en vente : 50 coins
@@ -81,8 +81,8 @@ module.exports = {
     }
 
     if (sub === 'encherir') {
-      const id = interaction.options.getInteger('id');
-      const montant = interaction.options.getInteger('montant');
+      const id = parseInt(interaction.options.getString('id'));
+      const montant = parseInt(interaction.options.getString('montant'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=?').get(id, guildId);
       if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
       if (enc.status !== 'active') return interaction.reply({ content: '❌ Cette enchère est terminée.', ephemeral: true });
@@ -116,7 +116,7 @@ module.exports = {
     }
 
     if (sub === 'voir') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=?').get(id, guildId);
       if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
       const bids = db.db.prepare('SELECT COUNT(*) as c FROM enchere_bids WHERE enchere_id=?').get(id);
@@ -160,7 +160,7 @@ module.exports = {
     }
 
     if (sub === 'annuler') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=? AND seller_id=?').get(id, guildId, userId);
       if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable ou vous n\'êtes pas le vendeur.`, ephemeral: true });
       if (enc.highest_bidder) return interaction.reply({ content: '❌ Impossible d\'annuler : quelqu\'un a déjà enchéri. Attendez la fin.', ephemeral: true });
@@ -170,7 +170,7 @@ module.exports = {
     }
 
     if (sub === 'cloturer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=?').get(id, guildId);
       if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
       if (enc.status !== 'active') return interaction.reply({ content: '❌ Cette enchère est déjà clôturée.', ephemeral: true });

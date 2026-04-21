@@ -14,7 +14,7 @@ module.exports = {
 
     const idsRaw  = interaction.options.getString('ids');
     const raison  = interaction.options.getString('raison') || 'Bannissement de masse';
-    const delDays = interaction.options.getInteger('supprimer_messages') ?? 1;
+    const delDays = parseInt(interaction.options.getString('supprimer_messages')) ?? 1;
 
     const ids = idsRaw.split(/[\s,]+/).map(s => s.trim()).filter(s => /^\d{17,19}$/.test(s));
     if (!ids.length) return interaction.editReply({ content: '❌ Aucun ID valide fourni.' });

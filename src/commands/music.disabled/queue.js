@@ -24,7 +24,7 @@ module.exports = {
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
 
-      const pageNum = interaction.options.getInteger('page') || 1;
+      const pageNum = parseInt(interaction.options.getString('page')) || 1;
       const itemsPerPage = 10;
       const totalPages = Math.ceil(queue.songs.length / itemsPerPage);
 

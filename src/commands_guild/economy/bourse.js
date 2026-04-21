@@ -92,7 +92,7 @@ module.exports = {
 
     if (sub === 'acheter') {
       const symbol = interaction.options.getString('action').toUpperCase();
-      const qty = interaction.options.getInteger('quantite');
+      const qty = parseInt(interaction.options.getString('quantite'));
       const stock = stocks.find(s => s.symbol === symbol);
       if (!stock) return interaction.reply({ content: `❌ Action **${symbol}** introuvable. Voir \`/bourse marche\`.`, ephemeral: true });
 
@@ -119,7 +119,7 @@ module.exports = {
 
     if (sub === 'vendre') {
       const symbol = interaction.options.getString('action').toUpperCase();
-      const qty = interaction.options.getInteger('quantite');
+      const qty = parseInt(interaction.options.getString('quantite'));
       const stock = stocks.find(s => s.symbol === symbol);
       if (!stock) return interaction.reply({ content: `❌ Action **${symbol}** introuvable.`, ephemeral: true });
 

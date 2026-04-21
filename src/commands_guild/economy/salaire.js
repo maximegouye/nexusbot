@@ -62,7 +62,7 @@ module.exports = {
         return interaction.reply({ content: '❌ Permission **Gérer le serveur** requise.', ephemeral: true });
 
       const role     = interaction.options.getRole('role');
-      const montant  = interaction.options.getInteger('montant');
+      const montant  = parseInt(interaction.options.getString('montant'));
       const intervalle = interaction.options.getString('intervalle');
 
       db.db.prepare(`INSERT INTO salaires (guild_id,role_id,montant,intervalle) VALUES(?,?,?,?)

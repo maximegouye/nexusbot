@@ -49,7 +49,7 @@ module.exports = {
       }
       const titre = interaction.options.getString('titre');
       const candidatsRaw = interaction.options.getString('candidats');
-      const duree = interaction.options.getInteger('duree_heures');
+      const duree = parseInt(interaction.options.getString('duree_heures'));
       const desc = interaction.options.getString('description') || '';
       const endTime = now + duree * 3600;
       const candidats = candidatsRaw.split(',').map(c => c.trim()).filter(c => c.length > 0);
@@ -71,7 +71,7 @@ module.exports = {
     }
 
     if (sub === 'voter') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const choix = interaction.options.getString('choix');
       const elec = db.db.prepare('SELECT * FROM elections WHERE id=? AND guild_id=?').get(id, guildId);
       if (!elec) return interaction.reply({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
@@ -98,7 +98,7 @@ module.exports = {
     }
 
     if (sub === 'resultats') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const elec = db.db.prepare('SELECT * FROM elections WHERE id=? AND guild_id=?').get(id, guildId);
       if (!elec) return interaction.reply({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
 
@@ -145,7 +145,7 @@ module.exports = {
       if (!interaction.member.permissions.has(0x8n)) {
         return interaction.reply({ content: '❌ Seuls les administrateurs peuvent clôturer.', ephemeral: true });
       }
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const elec = db.db.prepare('SELECT * FROM elections WHERE id=? AND guild_id=?').get(id, guildId);
       if (!elec) return interaction.reply({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
       if (elec.status !== 'active') return interaction.reply({ content: '❌ Cette élection est déjà clôturée.', ephemeral: true });
@@ -170,7 +170,7 @@ module.exports = {
         return interaction.reply({ content: '❌ Seuls les admins/modérateurs peuvent créer des référendums.', ephemeral: true });
       }
       const question = interaction.options.getString('question');
-      const duree = interaction.options.getInteger('duree_heures') || 24;
+      const duree = parseInt(interaction.options.getString('duree_heures')) || 24;
       const endTime = now + duree * 3600;
 
       const result = db.db.prepare('INSERT INTO elections (guild_id,creator_id,title,description,candidates,end_time) VALUES(?,?,?,?,?,?)')

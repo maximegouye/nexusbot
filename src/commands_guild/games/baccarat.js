@@ -207,7 +207,7 @@ module.exports = {
       interaction,
       interaction.user.id,
       interaction.guildId,
-      interaction.options.getInteger('mise'),
+      parseInt(interaction.options.getString('mise')),
       interaction.options.getString('pari'),
     );
   },

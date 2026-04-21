@@ -15,7 +15,7 @@ module.exports = {
       return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const target  = interaction.options.getUser('membre');
-    const duree   = interaction.options.getInteger('duree');
+    const duree   = parseInt(interaction.options.getString('duree'));
     const raison  = interaction.options.getString('raison') || 'Aucune raison fournie';
     const member  = interaction.guild.members.cache.get(target.id);
 

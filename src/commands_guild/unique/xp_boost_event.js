@@ -55,8 +55,8 @@ module.exports = {
 
     if (sub === 'activer') {
       const type   = interaction.options.getString('type');
-      const duree  = interaction.options.getInteger('duree');
-      const multi  = interaction.options.getNumber('multiplicateur') || 2.0;
+      const duree  = parseInt(interaction.options.getString('duree'));
+      const multi  = parseFloat(interaction.options.getString('multiplicateur')) || 2.0;
       const raison = interaction.options.getString('raison') || 'Événement spécial !';
       const endsAt = now + duree * 60;
 
@@ -105,7 +105,7 @@ module.exports = {
     }
 
     if (sub === 'arreter') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const b  = db.db.prepare('SELECT * FROM boost_events WHERE id=? AND guild_id=? AND active=1').get(id, guildId);
       if (!b) return interaction.editReply({ content: `❌ Boost #${id} introuvable ou déjà terminé.` });
       db.db.prepare('UPDATE boost_events SET active=0 WHERE id=?').run(id);

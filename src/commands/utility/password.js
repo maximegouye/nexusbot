@@ -55,12 +55,12 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'generer') {
-      const length  = interaction.options.getInteger('longueur')  ?? 16;
+      const length  = parseInt(interaction.options.getString('longueur'))  ?? 16;
       const upper   = interaction.options.getBoolean('majuscules')  ?? true;
       const digits  = interaction.options.getBoolean('chiffres')    ?? true;
       const symbols = interaction.options.getBoolean('symboles')    ?? false;
       const nosim   = interaction.options.getBoolean('nosimilaires') ?? false;
-      const qty     = interaction.options.getInteger('quantite')    ?? 1;
+      const qty     = parseInt(interaction.options.getString('quantite'))    ?? 1;
 
       const passwords = Array.from({ length: qty }, () => generate(length, { lower: true, upper, digits, symbols, nosimilar: nosim }));
       const { label, color } = strength(passwords[0]);

@@ -56,13 +56,13 @@ module.exports = {
     // ── AJOUTER ──────────────────────────────────────────────────────
     if (sub === 'ajouter') {
       const nom    = interaction.options.getString('nom');
-      const prix   = interaction.options.getInteger('prix');
+      const prix   = parseInt(interaction.options.getString('prix'));
       const desc   = interaction.options.getString('description') || '';
       const emoji  = interaction.options.getString('emoji') || '📦';
       const role   = interaction.options.getRole('role');
-      const stock  = interaction.options.getInteger('stock') ?? -1;
-      const maxPU  = interaction.options.getInteger('max_par_joueur') ?? null;
-      const duree  = interaction.options.getInteger('duree_heures') ?? 0;
+      const stock  = parseInt(interaction.options.getString('stock')) ?? -1;
+      const maxPU  = parseInt(interaction.options.getString('max_par_joueur')) ?? null;
+      const duree  = parseInt(interaction.options.getString('duree_heures')) ?? 0;
 
       const result = db.db.prepare(`
         INSERT INTO shop (guild_id,name,description,emoji,price,stock,role_id,max_per_user,duration_hours,active)
@@ -85,16 +85,16 @@ module.exports = {
 
     // ── MODIFIER ──────────────────────────────────────────────────────
     if (sub === 'modifier') {
-      const id   = interaction.options.getInteger('id');
+      const id   = parseInt(interaction.options.getString('id'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
       if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
 
       const changes = {};
       const nom   = interaction.options.getString('nom');
-      const prix  = interaction.options.getInteger('prix');
+      const prix  = parseInt(interaction.options.getString('prix'));
       const desc  = interaction.options.getString('description');
       const emoji = interaction.options.getString('emoji');
-      const stock = interaction.options.getInteger('stock');
+      const stock = parseInt(interaction.options.getString('stock'));
       const actif = interaction.options.getBoolean('actif');
 
       if (nom   !== null) changes.name        = nom;
@@ -119,7 +119,7 @@ module.exports = {
 
     // ── SUPPRIMER ─────────────────────────────────────────────────────
     if (sub === 'supprimer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
       if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       db.db.prepare('DELETE FROM shop WHERE id=? AND guild_id=?').run(id, guildId);
@@ -149,8 +149,8 @@ module.exports = {
 
     // ── STOCK AJOUTER ─────────────────────────────────────────────────
     if (sub === 'stock_ajouter') {
-      const id  = interaction.options.getInteger('id');
-      const qty = interaction.options.getInteger('quantite');
+      const id  = parseInt(interaction.options.getString('id'));
+      const qty = parseInt(interaction.options.getString('quantite'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
       if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (item.stock === -1) return interaction.reply({ content: '❌ Cet article a un stock illimité.', ephemeral: true });
@@ -194,7 +194,7 @@ module.exports = {
 
     // ── DUPLIQUER ─────────────────────────────────────────────────────
     if (sub === 'dupliquer') {
-      const id = interaction.options.getInteger('id');
+      const id = parseInt(interaction.options.getString('id'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
       if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       const result = db.db.prepare(`
@@ -207,8 +207,8 @@ module.exports = {
 
     // ── PROMO ─────────────────────────────────────────────────────────
     if (sub === 'promo') {
-      const id  = interaction.options.getInteger('id');
-      const pct = interaction.options.getInteger('reduction');
+      const id  = parseInt(interaction.options.getString('id'));
+      const pct = parseInt(interaction.options.getString('reduction'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
       if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       const newPrice = Math.max(1, Math.floor(item.price * (1 - pct / 100)));

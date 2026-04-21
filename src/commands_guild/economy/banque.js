@@ -42,7 +42,7 @@ module.exports = {
       return interaction.reply({embeds:[embed],ephemeral:true});
     }
     if(sub==='deposer'){
-      const m=interaction.options.getInteger('montant');
+      const m=parseInt(interaction.options.getString('montant'));
       if(m>u.balance) return interaction.reply({content:`❌ Solde insuffisant (**${fmt(u.balance)} ${coin}**).`,ephemeral:true});
       const cap=u.balance*tier.maxMult; if(bank>=cap) return interaction.reply({content:`❌ Banque pleine (plafond ${fmt(cap)} ${coin}).`,ephemeral:true});
       const allowed=Math.min(m,cap-bank);
@@ -52,7 +52,7 @@ module.exports = {
       return interaction.reply({embeds:[new EmbedBuilder().setColor('#2ECC71').setTitle('📥 Dépôt effectué').addFields({name:'💰 Déposé',value:`**+${fmt(allowed)} ${coin}**`,inline:true},{name:'🏦 Banque',value:`**${fmt(bank+allowed)} ${coin}**`,inline:true})]});
     }
     if(sub==='retirer'){
-      const m=interaction.options.getInteger('montant');
+      const m=parseInt(interaction.options.getString('montant'));
       if(m>bank) return interaction.reply({content:`❌ Seulement **${fmt(bank)} ${coin}** en banque.`,ephemeral:true});
       db.addCoins(userId,guildId,m);
       db.db.prepare('UPDATE users SET bank=bank-? WHERE user_id=? AND guild_id=?').run(m,userId,guildId);
@@ -76,7 +76,7 @@ module.exports = {
       return interaction.reply({embeds:[new EmbedBuilder().setColor('#3498DB').setTitle('📋 10 dernières transactions').setDescription(lines)],ephemeral:true});
     }
     if(sub==='virer'){
-      const target=interaction.options.getUser('membre'); const m=interaction.options.getInteger('montant');
+      const target=interaction.options.getUser('membre'); const m=parseInt(interaction.options.getString('montant'));
       if(target.id===userId) return interaction.reply({content:'❌ Impossible de vous virer à vous-même.',ephemeral:true});
       if(m>bank) return interaction.reply({content:'❌ Solde bancaire insuffisant.',ephemeral:true});
       db.db.prepare('UPDATE users SET bank=bank-? WHERE user_id=? AND guild_id=?').run(m,userId,guildId);

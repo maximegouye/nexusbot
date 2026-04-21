@@ -38,7 +38,7 @@ module.exports = {
     // ── SETUP ──────────────────────────────────────────────────
     if (sub === 'setup') {
       const ch       = interaction.options.getChannel('salon');
-      const seuil    = interaction.options.getInteger('seuil') ?? 3;
+      const seuil    = parseInt(interaction.options.getString('seuil')) ?? 3;
       const emoji    = interaction.options.getString('emoji') ?? '⭐';
       const selfstar = interaction.options.getBoolean('selfstar') ?? false;
 
@@ -95,7 +95,7 @@ module.exports = {
 
     // ── TOP ────────────────────────────────────────────────────
     if (sub === 'top') {
-      const limite = interaction.options.getInteger('limite') ?? 10;
+      const limite = parseInt(interaction.options.getString('limite')) ?? 10;
       const top = db.db.prepare('SELECT * FROM starboard_messages WHERE guild_id=? ORDER BY stars DESC LIMIT ?').all(guildId, limite);
 
       if (!top.length) return interaction.reply({ content: '❌ Aucun message dans le starboard pour l\'instant.', ephemeral: true });

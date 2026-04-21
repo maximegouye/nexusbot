@@ -138,10 +138,10 @@ module.exports = {
       if (!interaction.member.permissions.has(8n)) return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
       const nom = interaction.options.getString('nom');
       const desc = interaction.options.getString('description');
-      const prix = interaction.options.getInteger('prix');
+      const prix = parseInt(interaction.options.getString('prix'));
       const emoji = interaction.options.getString('emoji') || '🛍️';
       const role = interaction.options.getRole('role');
-      const stock = interaction.options.getInteger('stock') ?? -1;
+      const stock = parseInt(interaction.options.getString('stock')) ?? -1;
 
       try {
         db.db.prepare('INSERT INTO shop_items (guild_id, name, description, price, emoji, role_id, stock) VALUES (?,?,?,?,?,?,?)')

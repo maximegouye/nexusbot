@@ -45,7 +45,7 @@ module.exports = {
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
 
-      const position = interaction.options.getInteger('position');
+      const position = parseInt(interaction.options.getString('position'));
 
       // Vérifier que la position est valide
       if (position > queue.songs.length) {

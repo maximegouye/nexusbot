@@ -297,7 +297,7 @@ module.exports = {
 
       if (sub === 'donner') {
         const target  = interaction.options.getUser('membre');
-        const montant = interaction.options.getInteger('montant');
+        const montant = parseInt(interaction.options.getString('montant'));
         db.addCoins(target.id, guildId, montant);
         auditLog(guildId, userId, 'ECO_DONNER', target.id, `+${montant} coins`);
         return interaction.editReply({ embeds: [
@@ -311,7 +311,7 @@ module.exports = {
 
       if (sub === 'retirer') {
         const target  = interaction.options.getUser('membre');
-        const montant = interaction.options.getInteger('montant');
+        const montant = parseInt(interaction.options.getString('montant'));
         db.addCoins(target.id, guildId, -montant);
         auditLog(guildId, userId, 'ECO_RETIRER', target.id, `-${montant} coins`);
         return interaction.editReply({ embeds: [
@@ -325,7 +325,7 @@ module.exports = {
 
       if (sub === 'definir-solde') {
         const target  = interaction.options.getUser('membre');
-        const montant = interaction.options.getInteger('montant');
+        const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE users SET balance=? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DEFINIR_SOLDE', target.id, `solde → ${montant}`);
         return interaction.editReply({ embeds: [
@@ -339,7 +339,7 @@ module.exports = {
 
       if (sub === 'donner-xp') {
         const target  = interaction.options.getUser('membre');
-        const montant = interaction.options.getInteger('montant');
+        const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE users SET xp=xp+? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DONNER_XP', target.id, `+${montant} XP`);
         return interaction.editReply({ embeds: [
@@ -353,7 +353,7 @@ module.exports = {
 
       if (sub === 'definir-niveau') {
         const target = interaction.options.getUser('membre');
-        const niveau = interaction.options.getInteger('niveau');
+        const niveau = parseInt(interaction.options.getString('niveau'));
         db.db.prepare('UPDATE users SET level=?, xp=0 WHERE user_id=? AND guild_id=?').run(niveau, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DEFINIR_NIVEAU', target.id, `niveau → ${niveau}`);
         return interaction.editReply({ embeds: [
@@ -440,7 +440,7 @@ module.exports = {
       }
 
       if (sub === 'daily') {
-        const montant = interaction.options.getInteger('montant');
+        const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE guild_config SET daily_amount=? WHERE guild_id=?').run(montant, guildId);
         auditLog(guildId, userId, 'CONFIG_DAILY', null, `montant=${montant}`);
         return interaction.editReply({ embeds: [
@@ -450,7 +450,7 @@ module.exports = {
       }
 
       if (sub === 'xp-multiplicateur') {
-        const valeur = interaction.options.getNumber('valeur');
+        const valeur = parseFloat(interaction.options.getString('valeur'));
         db.db.prepare('UPDATE guild_config SET xp_multiplier=? WHERE guild_id=?').run(valeur, guildId);
         auditLog(guildId, userId, 'CONFIG_XP_MULT', null, `multiplicateur=${valeur}`);
         return interaction.editReply({ embeds: [
@@ -460,7 +460,7 @@ module.exports = {
       }
 
       if (sub === 'coins-par-message') {
-        const montant = interaction.options.getInteger('montant');
+        const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE guild_config SET coins_per_msg=? WHERE guild_id=?').run(montant, guildId);
         auditLog(guildId, userId, 'CONFIG_COINS_MSG', null, `coins_per_msg=${montant}`);
         return interaction.editReply({ embeds: [
@@ -536,7 +536,7 @@ module.exports = {
       }
 
       if (sub === 'niveau-role') {
-        const niveau = interaction.options.getInteger('niveau');
+        const niveau = parseInt(interaction.options.getString('niveau'));
         const role   = interaction.options.getRole('role');
         try {
           db.db.prepare('INSERT OR REPLACE INTO level_roles (guild_id, level, role_id) VALUES (?,?,?)').run(guildId, niveau, role.id);
@@ -565,7 +565,7 @@ module.exports = {
 
       if (sub === 'starboard') {
         const canal  = interaction.options.getChannel('canal');
-        const seuil  = interaction.options.getInteger('seuil');
+        const seuil  = parseInt(interaction.options.getString('seuil'));
         db.db.prepare('UPDATE guild_config SET starboard_channel=? WHERE guild_id=?').run(canal.id, guildId);
         if (seuil) db.db.prepare('UPDATE guild_config SET starboard_threshold=? WHERE guild_id=?').run(seuil, guildId);
         auditLog(guildId, userId, 'CONFIG_STARBOARD', canal.id, `seuil=${seuil}`);
@@ -606,12 +606,12 @@ module.exports = {
 
       if (sub === 'ajouter') {
         const nom       = interaction.options.getString('nom');
-        const prix      = interaction.options.getInteger('prix');
+        const prix      = parseInt(interaction.options.getString('prix'));
         const desc      = interaction.options.getString('description');
         const emoji     = interaction.options.getString('emoji') || '📦';
         const role      = interaction.options.getRole('role');
-        const stock     = interaction.options.getInteger('stock') ?? -1;
-        const maxUser   = interaction.options.getInteger('max-par-user');
+        const stock     = parseInt(interaction.options.getString('stock')) ?? -1;
+        const maxUser   = parseInt(interaction.options.getString('max-par-user'));
 
         const result = db.db.prepare(
           'INSERT INTO shop_items (guild_id, name, description, emoji, price, stock, role_id) VALUES (?,?,?,?,?,?,?)'
@@ -631,7 +631,7 @@ module.exports = {
       }
 
       if (sub === 'supprimer') {
-        const id = interaction.options.getInteger('id');
+        const id = parseInt(interaction.options.getString('id'));
         const item = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
         if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('DELETE FROM shop_items WHERE id=?').run(id);
@@ -643,8 +643,8 @@ module.exports = {
       }
 
       if (sub === 'modifier-prix') {
-        const id   = interaction.options.getInteger('id');
-        const prix = interaction.options.getInteger('prix');
+        const id   = parseInt(interaction.options.getString('id'));
+        const prix = parseInt(interaction.options.getString('prix'));
         const item = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
         if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('UPDATE shop_items SET price=? WHERE id=?').run(prix, id);
@@ -659,8 +659,8 @@ module.exports = {
       }
 
       if (sub === 'modifier-stock') {
-        const id    = interaction.options.getInteger('id');
-        const stock = interaction.options.getInteger('stock');
+        const id    = parseInt(interaction.options.getString('id'));
+        const stock = parseInt(interaction.options.getString('stock'));
         const item  = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
         if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('UPDATE shop_items SET stock=? WHERE id=?').run(stock, id);
@@ -675,7 +675,7 @@ module.exports = {
       }
 
       if (sub === 'activer') {
-        const id    = interaction.options.getInteger('id');
+        const id    = parseInt(interaction.options.getString('id'));
         const actif = interaction.options.getBoolean('actif');
         const item  = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
         if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
@@ -717,7 +717,7 @@ module.exports = {
       if (sub === 'creer') {
         const nom    = interaction.options.getString('nom');
         const type   = interaction.options.getString('type');
-        const duree  = interaction.options.getInteger('duree');
+        const duree  = parseInt(interaction.options.getString('duree'));
         const endsAt = now + (duree * 3600);
 
         // Vérification table eco_events
@@ -757,7 +757,7 @@ module.exports = {
       }
 
       if (sub === 'terminer') {
-        const id = interaction.options.getInteger('id');
+        const id = parseInt(interaction.options.getString('id'));
         try {
           const ev = db.db.prepare('SELECT * FROM eco_events WHERE id=? AND guild_id=?').get(id, guildId);
           if (!ev) return interaction.editReply({ content: `❌ Événement #${id} introuvable.` });
@@ -919,7 +919,7 @@ module.exports = {
       }
 
       if (sub === 'purge') {
-        const nombre  = interaction.options.getInteger('nombre');
+        const nombre  = parseInt(interaction.options.getString('nombre'));
         const canalOp = interaction.options.getChannel('canal');
         const channel = canalOp ? interaction.guild.channels.cache.get(canalOp.id) : interaction.channel;
 
@@ -1049,7 +1049,7 @@ module.exports = {
       }
 
       if (sub === 'audit-log') {
-        const limite = interaction.options.getInteger('limite') || 15;
+        const limite = parseInt(interaction.options.getString('limite')) || 15;
         const logs = db.db.prepare('SELECT * FROM nexus_audit_log WHERE guild_id=? ORDER BY created_at DESC LIMIT ?').all(guildId, limite);
         if (!logs.length) return interaction.editReply({ content: '❌ Aucune action enregistrée.' });
         const lines = logs.map(l => {

@@ -14,7 +14,7 @@ module.exports = {
 
   async execute(interaction) {
     const question = interaction.options.getString('question');
-    const duration = (interaction.options.getInteger('duree_heures') || 24) * 3600;
+    const duration = (parseInt(interaction.options.getString('duree_heures')) || 24) * 3600;
     const cfg      = db.getConfig(interaction.guildId);
 
     const choices = [

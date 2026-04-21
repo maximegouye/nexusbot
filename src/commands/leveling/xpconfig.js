@@ -60,8 +60,8 @@ module.exports = {
     }
 
     if (sub === 'taux') {
-      const xpMin = interaction.options.getInteger('xp_min');
-      const coins = interaction.options.getInteger('coins');
+      const xpMin = parseInt(interaction.options.getString('xp_min'));
+      const coins = parseInt(interaction.options.getString('coins'));
       if (xpMin !== null) db.db.prepare('UPDATE guild_config SET xp_rate=? WHERE guild_id=?').run(xpMin, interaction.guildId);
       if (coins !== null) db.db.prepare('UPDATE guild_config SET coins_per_msg=? WHERE guild_id=?').run(coins, interaction.guildId);
       return interaction.reply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Taux XP mis à jour.`)], ephemeral: true });
@@ -93,7 +93,7 @@ module.exports = {
 
     if (sub === 'multiplicateur') {
       const role   = interaction.options.getRole('role');
-      const valeur = interaction.options.getNumber('valeur');
+      const valeur = parseFloat(interaction.options.getString('valeur'));
       if (valeur <= 0) {
         db.db.prepare('DELETE FROM xp_multipliers WHERE guild_id=? AND role_id=?').run(interaction.guildId, role.id);
         return interaction.reply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Multiplicateur de <@&${role.id}> supprimé.`)], ephemeral: true });
