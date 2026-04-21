@@ -26,7 +26,6 @@ module.exports = {
           { name: '🐾 Animaux', value: 'animaux' },
           { name: '🌆 Villes', value: 'villes' },
         ))
-      .addIntegerOption(o => o.setName('temps').setDescription('Temps par tour en secondes (défaut: 30)').setMinValue(10).setMaxValue(120))
       .addStringOption(o => o.setName('mot_debut').setDescription('Mot de départ (optionnel)')))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la partie en cours'))
     .addSubcommand(s => s.setName('status').setDescription('📊 Voir la partie en cours')),

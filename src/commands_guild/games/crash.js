@@ -234,10 +234,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('crash')
     .setDescription('🚀 Crash — regardez le multiplicateur monter et cashoutez avant le crash !')
-    .addIntegerOption(o => o
+    .addStringOption(o => o
       .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true)getNumber('cashout'))
     .addNumberOption(o => o
-      .setName('cashout').setDescription('Cash-out automatique à ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
 
   async execute(interaction) {
     await playCrash(

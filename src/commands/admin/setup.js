@@ -23,7 +23,6 @@ module.exports = {
       .addRoleOption(o => o.setName('role').setDescription('Rôle à donner (aucun = désactiver)').setRequired(false)))
     .addSubcommand(s => s.setName('xp').setDescription('⭐ Paramètres XP')
       .addBooleanOption(o => o.setName('actif').setDescription('Activer/désactiver le gain d\'XP').setRequired(true))
-      .addIntegerOption(o => o.setName('multiplicateur').setDescription('Multiplicateur XP (défaut: 1)').setRequired(false).setMinValue(1).setMaxValue(5))),
   cooldown: 5,
 
   async execute(interaction) {

@@ -94,11 +94,9 @@ module.exports = {
     .addSubcommand(sub =>
       sub.setName('de')
         .setDescription('Lance un dé')
-        .addIntegerOption(opt =>
+        .addStringOption(opt =>
           opt.setName('faces')
             .setDescription('Nombre de faces (2-100)')
-            .setMinValue(2)
-            .setMaxValue(100)
         )
     )
     .addSubcommand(sub =>

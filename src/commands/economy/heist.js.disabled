@@ -5,7 +5,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('braquage')
     .setDescription('🏦 Organise un braquage de banque avec d\'autres membres !')
-    .addIntegerOption(o => o.setName('cible').setDescription('Montant visé à voler').setRequired(true).setMinValue(500)),
   cooldown: 5,
 
   async execute(interaction) {

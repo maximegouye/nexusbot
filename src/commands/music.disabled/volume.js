@@ -5,11 +5,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('volume')
     .setDescription('Ajuste le volume (0-100%)')
-    .addIntegerOption(option =>
+    .addStringOption(option =>
       option.setName('pourcentage')
         .setDescription('Nouveau volume en pourcentage (0-100)')
-        .setMinValue(0)
-        .setMaxValue(100)
         .setRequired(true)
     ),
 

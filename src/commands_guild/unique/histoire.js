@@ -39,18 +39,16 @@ module.exports = {
       .addStringOption(o => o.setName('genre').setDescription('Genre de l\'histoire').setRequired(true)
         .addChoices(...Object.entries(GENRES).map(([k, v]) => ({ name: `${v.emoji} ${k} — ${v.description}`, value: k }))))
       .addStringOption(o => o.setName('debut').setDescription('La première phrase de l\'histoire').setRequired(true).setMaxLength(300))
-      .addIntegerOption(o => o.setName('longueur_max').setDescription('Nombre max de phrases (défaut: 50)').setMinValue(5).setMaxValue(200)))
     .addSubcommand(s => s.setName('ecrire').setDescription('✏️ Ajouter une phrase à une histoire')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))
       .addStringOption(o => o.setName('phrase').setDescription('Votre contribution (max 300 caractères)').setRequired(true).setMaxLength(300)))
     .addSubcommand(s => s.setName('lire').setDescription('📖 Lire une histoire')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))
-      .addIntegerOption(o => o.setName('page').setDescription('Numéro de page (10 phrases par page)').setMinValue(1)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))
     .addSubcommand(s => s.setName('liste').setDescription('📚 Voir les histoires actives'))
     .addSubcommand(s => s.setName('terminer').setDescription('🔒 Terminer une histoire (créateur seulement)')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true)))
     .addSubcommand(s => s.setName('info').setDescription('ℹ️ Infos sur une histoire')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

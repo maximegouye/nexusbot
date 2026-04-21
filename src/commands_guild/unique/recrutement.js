@@ -44,18 +44,17 @@ module.exports = {
       .addStringOption(o => o.setName('description').setDescription('Description du poste').setRequired(true).setMaxLength(1000))
       .addStringOption(o => o.setName('conditions').setDescription('Conditions requises').setMaxLength(500))
       .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer si accepté'))
-      .addIntegerOption(o => o.setName('places').setDescription('Nombre de places (0 = illimité)').setMinValue(0).setMaxValue(100))
       .addChannelOption(o => o.setName('salon').setDescription('Salon pour l\'annonce')))
     .addSubcommand(s => s.setName('postuler')
       .setDescription('📝 Postuler à un recrutement')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du poste').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID du poste').setRequired(true))
       .addStringOption(o => o.setName('motivation').setDescription('Votre lettre de motivation').setRequired(true).setMaxLength(600)))
     .addSubcommand(s => s.setName('candidatures')
       .setDescription('👥 Voir les candidatures d\'un poste (admin)')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du poste').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID du poste').setRequired(true)))
     .addSubcommand(s => s.setName('decider')
       .setDescription('✅ Accepter ou refuser une candidature')
-      .addIntegerOption(o => o.setName('candidature_id').setDescription('ID de la candidature').setRequired(true))
+      .addStringOption(o => o.setName('candidature_id').setDescription('ID de la candidature').setRequired(true))
       .addStringOption(o => o.setName('decision').setDescription('Decision').setRequired(true)
         .addChoices(
           { name: '✅ Accepter', value: 'accepted' },
@@ -64,7 +63,7 @@ module.exports = {
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les postes ouverts'))
     .addSubcommand(s => s.setName('fermer')
       .setDescription('🔒 Fermer un poste')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du poste').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID du poste').setRequired(true))),
 
   cooldown: 5,
 

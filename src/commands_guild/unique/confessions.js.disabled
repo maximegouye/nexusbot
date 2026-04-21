@@ -37,7 +37,6 @@ module.exports = {
       .setDescription('⚙️ Configurer le système (admin)')
       .addChannelOption(o => o.setName('salon').setDescription('Salon des confessions').setRequired(true))
       .addBooleanOption(o => o.setName('moderation').setDescription('Activer la modération avant publication'))
-      .addIntegerOption(o => o.setName('cooldown').setDescription('Cooldown entre confessions (minutes)').setMinValue(1).setMaxValue(1440)))
     .addSubcommand(s => s.setName('voir')
       .setDescription('📋 Voir les dernières confessions')),
 

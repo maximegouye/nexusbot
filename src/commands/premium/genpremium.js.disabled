@@ -9,18 +9,14 @@ module.exports = {
       subcommand
         .setName('create')
         .setDescription('Crée un ou plusieurs codes premium')
-        .addIntegerOption(option =>
+        .addStringOption(option =>
           option.setName('count')
             .setDescription('Nombre de codes à générer (1-100)')
-            .setMinValue(1)
-            .setMaxValue(100)
             .setRequired(true)
         )
-        .addIntegerOption(option =>
+        .addStringOption(option =>
           option.setName('duration_days')
             .setDescription('Durée en jours (par défaut 30)')
-            .setMinValue(1)
-            .setMaxValue(3650)
             .setRequired(false)
         )
         .addStringOption(option =>

@@ -70,7 +70,6 @@ module.exports = {
           { name: '🎵 Chansons', value: 'chanson' },
           { name: '🎲 Mixte',    value: 'mixte'   },
         ))
-      .addIntegerOption(o => o.setName('questions').setDescription('Nombre de questions (défaut: 5)').setMinValue(3).setMaxValue(15)))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la partie en cours'))
     .addSubcommand(s => s.setName('scores').setDescription('🏆 Voir les scores de la partie')),
 

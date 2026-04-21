@@ -46,8 +46,6 @@ module.exports = {
       .setName('antispam')
       .setDescription('Activer/désactiver l\'anti-spam')
       .addBooleanOption(o => o.setName('actif').setDescription('Activer').setRequired(true))
-      .addIntegerOption(o => o.setName('seuil').setDescription('Nb de messages avant action (défaut: 5)').setMinValue(2).setMaxValue(20))
-      .addIntegerOption(o => o.setName('fenetre').setDescription('Secondes sur lesquelles compter (défaut: 5)').setMinValue(1).setMaxValue(30))
     )
     .addSubcommand(s => s
       .setName('antiliens')
@@ -64,13 +62,11 @@ module.exports = {
       .setName('anticaps')
       .setDescription('Bloquer les messages en MAJUSCULES')
       .addBooleanOption(o => o.setName('actif').setDescription('Activer').setRequired(true))
-      .addIntegerOption(o => o.setName('pourcentage').setDescription('% de majuscules toléré (défaut: 70)').setMinValue(30).setMaxValue(95))
     )
     .addSubcommand(s => s
       .setName('antimentions')
       .setDescription('Limiter les mentions en masse')
       .addBooleanOption(o => o.setName('actif').setDescription('Activer').setRequired(true))
-      .addIntegerOption(o => o.setName('limite').setDescription('Nb de mentions max par message (défaut: 5)').setMinValue(2).setMaxValue(20))
     )
     .addSubcommand(s => s
       .setName('mauvaismots')

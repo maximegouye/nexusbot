@@ -7,14 +7,10 @@ module.exports = {
     .setDescription('🗺️ Quêtes communautaires — progressez ensemble !')
     .addSubcommand(s => s.setName('voir').setDescription('📋 Voir les quêtes actives'))
     .addSubcommand(s => s.setName('contribuer').setDescription('🙋 Contribuer à une quête')
-      .addIntegerOption(o => o.setName('quest_id').setDescription('ID de la quête').setRequired(true).setMinValue(1))
-      .addIntegerOption(o => o.setName('montant').setDescription('Montant à contribuer (coins)').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s.setName('creer').setDescription('➕ Créer une quête (Admin)')
       .addStringOption(o => o.setName('titre').setDescription('Titre').setRequired(true).setMaxLength(100))
       .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(500))
-      .addIntegerOption(o => o.setName('objectif').setDescription('Objectif en coins').setRequired(true).setMinValue(100))
       .addStringOption(o => o.setName('recompense').setDescription('Récompense à distribuer').setRequired(true))
-      .addIntegerOption(o => o.setName('jours').setDescription('Durée en jours').setRequired(false).setMinValue(1).setMaxValue(30))),
   cooldown: 5,
 
   async execute(interaction) {

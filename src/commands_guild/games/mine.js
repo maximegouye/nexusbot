@@ -34,7 +34,6 @@ module.exports = {
     .setDescription('⛏️ Creusez des mines pour trouver des minerais précieux !')
     .addSubcommand(s => s.setName('creuser').setDescription('⛏️ Creuser pour trouver des minerais'))
     .addSubcommand(s => s.setName('profondeur').setDescription('⬇️ Descendre plus profond dans la mine')
-      .addIntegerOption(o => o.setName('niveau').setDescription('Profondeur cible (1-10)').setRequired(true).setMinValue(1).setMaxValue(10)))
     .addSubcommand(s => s.setName('pioche').setDescription('⛏️ Améliorer votre pioche')
       .addStringOption(o => o.setName('action').setDescription('Action').setRequired(true)
         .addChoices(

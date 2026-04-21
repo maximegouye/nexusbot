@@ -4,7 +4,6 @@ const db = require('../../database/db');
 const eng = require('../../utils/tournamentEngine');
 module.exports = {
   data: new SlashCommandBuilder().setName('tournoi').setDescription('🏆 Tournois par élimination')
-    .addSubcommand(s=>s.setName('creer').setDescription('🎯 Créer un tournoi').addStringOption(o=>o.setName('nom').setDescription('Nom').setRequired(true)).addIntegerOption(o=>o.setName('mise').setDescription('Frais d\'entrée').setMinValue(0)).addIntegerOption(o=>o.setName('max').setDescription('Max joueurs (2-16)').setMinValue(2).setMaxValue(16)))
     .addSubcommand(s=>s.setName('rejoindre').setDescription('✅ Rejoindre le tournoi'))
     .addSubcommand(s=>s.setName('demarrer').setDescription('▶️ Démarrer (hôte)'))
     .addSubcommand(s=>s.setName('jouer').setDescription('⚔️ Résoudre les matchs (hôte)'))

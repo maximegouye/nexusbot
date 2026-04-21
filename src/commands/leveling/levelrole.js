@@ -6,10 +6,9 @@ module.exports = {
     .setName('levelrole')
     .setDescription('🎭 Gérer les rôles automatiques par niveau')
     .addSubcommand(s => s.setName('ajouter').setDescription('➕ Assigner un rôle à un niveau')
-      .addIntegerOption(o => o.setName('niveau').setDescription('Niveau requis').setRequired(true).setMinValue(1).setMaxValue(500))
       .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer').setRequired(true)))
     .addSubcommand(s => s.setName('supprimer').setDescription('➖ Supprimer un level role')
-      .addIntegerOption(o => o.setName('niveau').setDescription('Niveau du rôle à supprimer').setRequired(true)))
+      .addStringOption(o => o.setName('niveau').setDescription('Niveau du rôle à supprimer').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir tous les level roles'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   cooldown: 3,

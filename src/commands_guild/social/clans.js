@@ -41,7 +41,6 @@ module.exports = {
       .addStringOption(o => o.setName('rang').setDescription('Nouveau rang').setRequired(true)
         .addChoices({ name: '⭐ Officier', value: 'officier' }, { name: '👑 Chef', value: 'chef' })))
     .addSubcommand(s => s.setName('don').setDescription('💰 Faire un don à la trésorerie du clan')
-      .addIntegerOption(o => o.setName('montant').setDescription('Montant en coins').setRequired(true).setMinValue(1))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

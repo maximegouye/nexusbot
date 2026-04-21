@@ -5,11 +5,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('skip')
     .setDescription('Saute la piste actuelle')
-    .addIntegerOption(option =>
+    .addStringOption(option =>
       option.setName('nombre')
         .setDescription('Nombre de pistes à sauter (par défaut 1)')
-        .setMinValue(1)
-        .setMaxValue(100)
         .setRequired(false)
     ),
 

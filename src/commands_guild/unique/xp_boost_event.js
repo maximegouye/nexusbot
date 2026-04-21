@@ -37,13 +37,11 @@ module.exports = {
           { name: '🪙 Double Coins', value: 'coins' },
           { name: '⚡ Double XP + Coins', value: 'both' },
         ))
-      .addIntegerOption(o => o.setName('duree').setDescription('Durée en minutes').setRequired(true).setMinValue(5).setMaxValue(1440))
-      .addNumberOption(o => o.setName('multiplicateur').setDescription('Multiplicateur (défaut: 2)').setMinValue(1.5).setMaxValue(5))
       .addStringOption(o => o.setName('raison').setDescription('Raison de l\'événement').setMaxLength(200)))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir les boosts actifs'))
     .addSubcommand(s => s.setName('arreter')
       .setDescription('⏹️ Arrêter un boost actif')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du boost').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID du boost').setRequired(true)))
     .addSubcommand(s => s.setName('historique').setDescription('📜 Voir l\'historique des boosts')),
 
   cooldown: 5,

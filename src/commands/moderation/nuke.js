@@ -4,7 +4,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('nuke')
     .setDescription('💥 Supprimer tous les messages d\'un salon (clone + suppression)')
-    .addIntegerOption(o => o.setName('messages').setDescription('Supprimer uniquement les N derniers messages (sans cloner)').setMinValue(1).setMaxValue(100).setRequired(false))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
   cooldown: 30,
 

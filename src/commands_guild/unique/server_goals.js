@@ -48,21 +48,19 @@ module.exports = {
           { name: '🚀 Boosts', value: 'boosts' },
           { name: '⭐ Manuel', value: 'manual' },
         ))
-      .addIntegerOption(o => o.setName('objectif').setDescription('Valeur cible').setRequired(true).setMinValue(1))
       .addStringOption(o => o.setName('description').setDescription('Description').setMaxLength(300))
-      .addIntegerOption(o => o.setName('recompense_coins').setDescription('Coins donnés à tous quand l\'objectif est atteint'))
+      .addStringOption(o => o.setName('recompense_coins').setDescription('Coins donnés à tous quand l\'objectif est atteint'))
       .addRoleOption(o => o.setName('recompense_role').setDescription('Rôle donné à tous quand atteint'))
       .addStringOption(o => o.setName('message').setDescription('Message d\'annonce quand l\'objectif est atteint')))
     .addSubcommand(s => s.setName('maj')
       .setDescription('🔄 Mettre à jour la progression d\'un objectif manuel [Admin]')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true))
-      .addIntegerOption(o => o.setName('valeur').setDescription('Nouvelle valeur de progression').setRequired(true).setMinValue(0)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true))
     .addSubcommand(s => s.setName('terminer')
       .setDescription('✅ Marquer un objectif comme terminé [Admin]')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
     .addSubcommand(s => s.setName('supprimer')
       .setDescription('🗑️ Supprimer un objectif [Admin]')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
     .addSubcommand(s => s.setName('historique').setDescription('📜 Voir les objectifs accomplis')),
 
   cooldown: 5,

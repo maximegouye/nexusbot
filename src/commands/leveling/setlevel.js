@@ -7,7 +7,6 @@ module.exports = {
     .setDescription('🛠️ Définir le niveau d\'un membre')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
-    .addIntegerOption(o => o.setName('niveau').setDescription('Niveau à définir').setRequired(true).setMinValue(1).setMaxValue(500)),
   cooldown: 3,
 
   async execute(interaction) {

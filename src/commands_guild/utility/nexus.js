@@ -69,23 +69,18 @@ module.exports = {
 
       .addSubcommand(s => s.setName('donner').setDescription('Donner des coins à un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Montant à donner').setRequired(true).setMinValue(1)))
 
       .addSubcommand(s => s.setName('retirer').setDescription('Retirer des coins à un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Montant à retirer').setRequired(true).setMinValue(1)))
 
       .addSubcommand(s => s.setName('definir-solde').setDescription('Définir précisément le solde d\'un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Nouveau solde').setRequired(true).setMinValue(0)))
 
       .addSubcommand(s => s.setName('donner-xp').setDescription('Donner de l\'XP à un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
-        .addIntegerOption(o => o.setName('montant').setDescription('Montant d\'XP').setRequired(true).setMinValue(1)))
 
       .addSubcommand(s => s.setName('definir-niveau').setDescription('Définir le niveau d\'un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
-        .addIntegerOption(o => o.setName('niveau').setDescription('Nouveau niveau').setRequired(true).setMinValue(0).setMaxValue(1000)))
 
       .addSubcommand(s => s.setName('reset-user').setDescription('Réinitialiser le profil économique d\'un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre à réinitialiser').setRequired(true)))
@@ -108,13 +103,10 @@ module.exports = {
         .addStringOption(o => o.setName('emoji').setDescription('Emoji de la monnaie').setRequired(false)))
 
       .addSubcommand(s => s.setName('daily').setDescription('Configurer la récompense journalière')
-        .addIntegerOption(o => o.setName('montant').setDescription('Montant du daily').setRequired(true).setMinValue(0)))
 
       .addSubcommand(s => s.setName('xp-multiplicateur').setDescription('Configurer le multiplicateur d\'XP')
-        .addNumberOption(o => o.setName('valeur').setDescription('Multiplicateur (0.1 à 10)').setRequired(true).setMinValue(0.1).setMaxValue(10)))
 
       .addSubcommand(s => s.setName('coins-par-message').setDescription('Définir les coins gagnés par message')
-        .addIntegerOption(o => o.setName('montant').setDescription('Coins par message').setRequired(true).setMinValue(0).setMaxValue(1000)))
 
       .addSubcommand(s => s.setName('bienvenue').setDescription('Configurer le canal et message de bienvenue')
         .addChannelOption(o => o.setName('canal').setDescription('Canal de bienvenue').setRequired(true))
@@ -137,7 +129,6 @@ module.exports = {
         .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer').setRequired(true)))
 
       .addSubcommand(s => s.setName('niveau-role').setDescription('Attribuer un rôle à l\'atteinte d\'un niveau')
-        .addIntegerOption(o => o.setName('niveau').setDescription('Niveau requis').setRequired(true).setMinValue(1))
         .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer').setRequired(true)))
 
       .addSubcommand(s => s.setName('niveau-canal').setDescription('Canal d\'annonce de montée de niveau')
@@ -145,7 +136,6 @@ module.exports = {
 
       .addSubcommand(s => s.setName('starboard').setDescription('Configurer le canal starboard')
         .addChannelOption(o => o.setName('canal').setDescription('Canal starboard').setRequired(true))
-        .addIntegerOption(o => o.setName('seuil').setDescription('Nombre d\'étoiles requis').setRequired(false).setMinValue(1)))
 
       .addSubcommand(s => s.setName('voir').setDescription('Afficher la configuration complète actuelle du serveur'))
     )
@@ -157,26 +147,21 @@ module.exports = {
 
       .addSubcommand(s => s.setName('ajouter').setDescription('Ajouter un article à la boutique')
         .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
-        .addIntegerOption(o => o.setName('prix').setDescription('Prix en coins').setRequired(true).setMinValue(1))
         .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(200))
         .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false))
         .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat').setRequired(false))
-        .addIntegerOption(o => o.setName('stock').setDescription('Stock (-1 = illimité)').setRequired(false).setMinValue(-1))
-        .addIntegerOption(o => o.setName('max-par-user').setDescription('Maximum par utilisateur').setRequired(false).setMinValue(1)))
 
       .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer un article de la boutique')
-        .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
 
       .addSubcommand(s => s.setName('modifier-prix').setDescription('Modifier le prix d\'un article')
-        .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
-        .addIntegerOption(o => o.setName('prix').setDescription('Nouveau prix').setRequired(true).setMinValue(1)))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
 
       .addSubcommand(s => s.setName('modifier-stock').setDescription('Modifier le stock d\'un article')
-        .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
-        .addIntegerOption(o => o.setName('stock').setDescription('Nouveau stock (-1 = illimité)').setRequired(true).setMinValue(-1)))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
 
       .addSubcommand(s => s.setName('activer').setDescription('Activer ou désactiver un article')
-        .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
         .addBooleanOption(o => o.setName('actif').setDescription('Activer l\'article').setRequired(true)))
 
       .addSubcommand(s => s.setName('liste').setDescription('Afficher tous les articles (y compris inactifs)'))
@@ -198,10 +183,9 @@ module.exports = {
           { name: '💬 Bonus Messages', value: 'msg_bonus' },
           { name: '🎰 Jackpot (gains x5)', value: 'jackpot' }
         ))
-        .addIntegerOption(o => o.setName('duree').setDescription('Durée en heures').setRequired(true).setMinValue(1).setMaxValue(720)))
 
       .addSubcommand(s => s.setName('terminer').setDescription('Terminer un événement en cours')
-        .addIntegerOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
 
       .addSubcommand(s => s.setName('liste').setDescription('Afficher les événements actifs et à venir'))
     )
@@ -251,7 +235,6 @@ module.exports = {
         .addStringOption(o => o.setName('message').setDescription('Contenu du message').setRequired(true)))
 
       .addSubcommand(s => s.setName('purge').setDescription('Supprimer des messages dans un canal')
-        .addIntegerOption(o => o.setName('nombre').setDescription('Nombre de messages à supprimer (max 100)').setRequired(true).setMinValue(1).setMaxValue(100))
         .addChannelOption(o => o.setName('canal').setDescription('Canal cible (par défaut : canal actuel)').setRequired(false)))
 
       .addSubcommand(s => s.setName('stats-serveur').setDescription('Statistiques détaillées du serveur'))
@@ -278,7 +261,6 @@ module.exports = {
       .addSubcommand(s => s.setName('liste-blacklist').setDescription('Afficher tous les membres blacklistés'))
 
       .addSubcommand(s => s.setName('audit-log').setDescription('Consulter le journal des actions propriétaire')
-        .addIntegerOption(o => o.setName('limite').setDescription('Nombre d\'entrées à afficher (défaut: 15)').setRequired(false).setMinValue(1).setMaxValue(50)))
 
       .addSubcommand(s => s.setName('lockdown').setDescription('Activer ou désactiver le mode verrouillage du serveur')
         .addBooleanOption(o => o.setName('actif').setDescription('Activer le verrouillage').setRequired(true))

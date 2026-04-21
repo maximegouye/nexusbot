@@ -19,11 +19,8 @@ function fmt(n){return n.toLocaleString('fr-FR');}
 module.exports = {
   data: new SlashCommandBuilder().setName('banque').setDescription('🏦 Banque VIP avec intérêts composés')
     .addSubcommand(s=>s.setName('solde').setDescription('💰 Voir votre solde et tier VIP'))
-    .addSubcommand(s=>s.setName('deposer').setDescription('📥 Déposer des coins').addIntegerOption(o=>o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(1)))
-    .addSubcommand(s=>s.setName('retirer').setDescription('📤 Retirer des coins').addIntegerOption(o=>o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(1)))
     .addSubcommand(s=>s.setName('interets').setDescription('📈 Réclamer intérêts quotidiens'))
     .addSubcommand(s=>s.setName('historique').setDescription('📋 10 dernières transactions'))
-    .addSubcommand(s=>s.setName('virer').setDescription('💸 Virer à un membre').addUserOption(o=>o.setName('membre').setDescription('Destinataire').setRequired(true)).addIntegerOption(o=>o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(1)))
     .addSubcommand(s=>s.setName('tiers').setDescription('🏆 Voir les tiers VIP')),
   async execute(interaction) {
     const sub=interaction.options.getSubcommand(); const {guildId}=interaction; const userId=interaction.user.id;

@@ -23,7 +23,6 @@ module.exports = {
 
     .addSubcommand(s => s.setName('configurer').setDescription('⚙️ Configurer le starboard')
       .addChannelOption(o => o.setName('salon').setDescription('Salon starboard').setRequired(true).addChannelTypes(ChannelType.GuildText))
-      .addIntegerOption(o => o.setName('seuil').setDescription('Nombre d\'étoiles requis (défaut: 3)').setMinValue(1).setMaxValue(20))
       .addStringOption(o => o.setName('emoji').setDescription('Emoji à utiliser (défaut: ⭐)').setMaxLength(5)))
 
     .addSubcommand(s => s.setName('activer').setDescription('✅ Activer le starboard'))

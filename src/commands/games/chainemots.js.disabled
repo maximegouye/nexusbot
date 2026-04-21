@@ -8,7 +8,6 @@ module.exports = {
     .setName('chainemots')
     .setDescription('🔤 Jeu de la chaîne de mots !')
     .addSubcommand(s => s.setName('start').setDescription('▶️ Démarrer une partie')
-      .addIntegerOption(o => o.setName('temps').setDescription('Durée en secondes pour répondre (défaut: 30)').setMinValue(10).setMaxValue(120)))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la partie en cours'))
     .addSubcommand(s => s.setName('info').setDescription('ℹ️ Voir les règles')),
   cooldown: 5,

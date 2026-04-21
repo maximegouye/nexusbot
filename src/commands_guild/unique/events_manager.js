@@ -56,25 +56,23 @@ module.exports = {
       .addStringOption(o => o.setName('description').setDescription('Description').setMaxLength(500))
       .addStringOption(o => o.setName('lieu').setDescription('Lieu ou lien vocal').setMaxLength(200))
       .addStringOption(o => o.setName('fin').setDescription('Date/heure de fin (JJ/MM/AAAA HH:MM)'))
-      .addIntegerOption(o => o.setName('max_joueurs').setDescription('Nombre max de participants (0 = illimité)').setMinValue(0))
-      .addIntegerOption(o => o.setName('recompense').setDescription('Coins donnés aux participants').setMinValue(0)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les prochains événements'))
     .addSubcommand(s => s.setName('info')
       .setDescription('🔍 Voir les détails d\'un événement')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
     .addSubcommand(s => s.setName('participer')
       .setDescription('✅ S\'inscrire à un événement')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
     .addSubcommand(s => s.setName('desister')
       .setDescription('❌ Se désister d\'un événement')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
     .addSubcommand(s => s.setName('mes_events').setDescription('👤 Voir les événements auxquels tu es inscrit'))
     .addSubcommand(s => s.setName('terminer')
       .setDescription('🏁 Terminer un événement et distribuer les récompenses [Admin]')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
     .addSubcommand(s => s.setName('annuler')
       .setDescription('🗑️ Annuler un événement [Admin]')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true))),
 
   cooldown: 5,
 

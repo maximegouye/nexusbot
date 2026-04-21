@@ -5,10 +5,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('queue')
     .setDescription('Affiche la file d\'attente actuelle')
-    .addIntegerOption(option =>
+    .addStringOption(option =>
       option.setName('page')
         .setDescription('Numéro de la page (par défaut 1)')
-        .setMinValue(1)
         .setRequired(false)
     ),
 

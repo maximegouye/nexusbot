@@ -19,7 +19,6 @@ module.exports = {
     .setName('defi')
     .setDescription('🎯 Défie un membre avec un vrai défi !')
     .addUserOption(o => o.setName('cible').setDescription('Membre à défier').setRequired(true))
-    .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins (optionnel)').setRequired(false).setMinValue(10)),
   cooldown: 10,
 
   async execute(interaction) {

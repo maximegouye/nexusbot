@@ -53,7 +53,6 @@ module.exports = {
         .addChoices(...Object.entries(BUILDINGS).map(([k, v]) => ({ name: `${v.emoji} ${v.name} — ${v.desc}`, value: k })))))
     .addSubcommand(s => s.setName('collecter').setDescription('💰 Collecter les taxes de votre ville'))
     .addSubcommand(s => s.setName('taxer').setDescription('📊 Changer le taux de taxe (0-25%)')
-      .addIntegerOption(o => o.setName('taux').setDescription('Taux en % (0-25)').setRequired(true).setMinValue(0).setMaxValue(25)))
     .addSubcommand(s => s.setName('slogan').setDescription('✏️ Changer le slogan de votre ville')
       .addStringOption(o => o.setName('texte').setDescription('Nouveau slogan').setRequired(true).setMaxLength(80)))
     .addSubcommand(s => s.setName('batiments').setDescription('🏗️ Liste des bâtiments disponibles'))

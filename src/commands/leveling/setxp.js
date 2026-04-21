@@ -7,7 +7,6 @@ module.exports = {
     .setDescription('🛠️ Définir l\'XP d\'un membre')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
-    .addIntegerOption(o => o.setName('xp').setDescription('Valeur XP').setRequired(true).setMinValue(0))
     .addStringOption(o => o.setName('action').setDescription('Action').setRequired(false)
       .addChoices(
         { name: 'Définir (remplace)', value: 'set' },

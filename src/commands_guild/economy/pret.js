@@ -24,7 +24,6 @@ module.exports = {
     .setName('pret')
     .setDescription('🏦 Système de prêts — Empruntez des coins avec intérêts')
     .addSubcommand(s => s.setName('emprunter').setDescription('💸 Emprunter des coins')
-      .addIntegerOption(o => o.setName('montant').setDescription('Montant à emprunter').setRequired(true).setMinValue(100)))
     .addSubcommand(s => s.setName('rembourser').setDescription('💰 Rembourser votre prêt actif'))
     .addSubcommand(s => s.setName('statut').setDescription('📋 Voir votre situation de prêt'))
     .addSubcommand(s => s.setName('taux').setDescription('📊 Voir les taux selon votre niveau')),

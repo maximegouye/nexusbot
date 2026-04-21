@@ -24,7 +24,6 @@ module.exports = {
     .setName('mines')
     .setDescription('💣 Démineur casino — découvre les diamants sans toucher les mines')
     .addStringOption(o => o.setName('mise').setDescription('Ex: 500, 1000, all, 25%').setRequired(true).setMaxLength(20))
-    .addIntegerOption(o => o.setName('mines').setDescription('Nombre de mines cachées (1–19, défaut 3)').setMinValue(1).setMaxValue(19)),
   cooldown: 3,
 
   async execute(interaction) {

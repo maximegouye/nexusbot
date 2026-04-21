@@ -19,7 +19,6 @@ module.exports = {
     .setName('loto')
     .setDescription('🎰 Loterie hebdomadaire avec jackpot')
     .addSubcommand(s => s.setName('acheter').setDescription('🎟️ Acheter des tickets de loto')
-      .addIntegerOption(o => o.setName('quantite').setDescription('Nombre de tickets (1-10)').setMinValue(1).setMaxValue(10).setRequired(true)))
     .addSubcommand(s => s.setName('jackpot').setDescription('💰 Voir le jackpot actuel et ton nombre de tickets'))
     .addSubcommand(s => s.setName('classement').setDescription('📋 Qui a le plus de chances de gagner ?'))
     .addSubcommand(s => s.setName('tirage').setDescription('🎲 Effectuer le tirage au sort (Admin)')

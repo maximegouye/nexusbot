@@ -102,12 +102,9 @@ module.exports = {
     .addSubcommand(s => s.setName('donner').setDescription('🎁 Donner un item à quelqu\'un')
       .addUserOption(o => o.setName('joueur').setDescription('Destinataire').setRequired(true))
       .addStringOption(o => o.setName('item').setDescription('ID de l\'item à donner').setRequired(true))
-      .addIntegerOption(o => o.setName('quantite').setDescription('Quantité (défaut: 1)').setMinValue(1)))
     .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre un item contre des coins')
       .addStringOption(o => o.setName('item').setDescription('ID de l\'item à vendre').setRequired(true))
-      .addIntegerOption(o => o.setName('prix').setDescription('Prix en coins').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s.setName('lootbox').setDescription('📦 Ouvrir une lootbox (50 coins)')
-      .addIntegerOption(o => o.setName('quantite').setDescription('Nombre de lootboxes (1-10)').setMinValue(1).setMaxValue(10))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

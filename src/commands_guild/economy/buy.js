@@ -5,8 +5,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('buy')
     .setDescription('🛍️ Achète un article dans la boutique')
-    .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article (voir /shop)').setRequired(true).setMinValue(1))
-    .addIntegerOption(o => o.setName('quantite').setDescription('Quantité à acheter (défaut: 1)').setRequired(false).setMinValue(1).setMaxValue(50)),
   cooldown: 5,
 
   async execute(interaction) {

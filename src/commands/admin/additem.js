@@ -7,12 +7,9 @@ module.exports = {
     .setDescription('🛒 Ajouter un article à la boutique')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
-    .addIntegerOption(o => o.setName('prix').setDescription('Prix en coins').setRequired(true).setMinValue(1))
     .addStringOption(o => o.setName('description').setDescription('Description').setRequired(false).setMaxLength(200))
     .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false).setMaxLength(10))
     .addRoleOption(o => o.setName('role').setDescription('Rôle Discord à donner').setRequired(false))
-    .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée en heures (0 = permanent)').setRequired(false).setMinValue(0))
-    .addIntegerOption(o => o.setName('max_par_user').setDescription('Maximum par membre (0 = illimité)').setRequired(false).setMinValue(0)),
   cooldown: 5,
 
   async execute(interaction) {

@@ -7,7 +7,6 @@ module.exports = {
     .setDescription('🧹 Effacer les avertissements d\'un membre')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
-    .addIntegerOption(o => o.setName('warn_id').setDescription('ID d\'un warn spécifique (laisser vide = tout effacer)').setRequired(false).setMinValue(1)),
   cooldown: 3,
 
   async execute(interaction) {

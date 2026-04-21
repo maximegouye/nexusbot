@@ -32,7 +32,6 @@ module.exports = {
       .addBooleanOption(o => o.setName('embed').setDescription('Afficher en embed ?'))
       .addStringOption(o => o.setName('couleur').setDescription('Couleur embed HEX'))
       .addRoleOption(o => o.setName('role_requis').setDescription('Rôle requis pour utiliser cette commande'))
-      .addIntegerOption(o => o.setName('cooldown').setDescription('Cooldown en secondes').setMinValue(0).setMaxValue(3600)))
     .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer une commande personnalisée')
       .addStringOption(o => o.setName('trigger').setDescription('Déclencheur à supprimer').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir toutes les commandes de ce serveur'))

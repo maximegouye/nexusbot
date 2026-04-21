@@ -115,11 +115,10 @@ module.exports = {
     .addSubcommand(s => s
       .setName('approuver')
       .setDescription('✅ Approuver une suggestion (Staff)')
-      .addIntegerOption(o => o
+      .addStringOption(o => o
         .setName('id')
         .setDescription('ID de la suggestion')
         .setRequired(true)
-        .setMinValue(1)
       )
       .addStringOption(o => o
         .setName('commentaire')
@@ -131,11 +130,10 @@ module.exports = {
     .addSubcommand(s => s
       .setName('refuser')
       .setDescription('❌ Refuser une suggestion (Staff)')
-      .addIntegerOption(o => o
+      .addStringOption(o => o
         .setName('id')
         .setDescription('ID de la suggestion')
         .setRequired(true)
-        .setMinValue(1)
       )
       .addStringOption(o => o
         .setName('raison')
@@ -147,11 +145,10 @@ module.exports = {
     .addSubcommand(s => s
       .setName('encours')
       .setDescription('🔄 Marquer une suggestion comme en cours (Staff)')
-      .addIntegerOption(o => o
+      .addStringOption(o => o
         .setName('id')
         .setDescription('ID de la suggestion')
         .setRequired(true)
-        .setMinValue(1)
       )
       .addStringOption(o => o
         .setName('commentaire')
@@ -179,11 +176,10 @@ module.exports = {
     .addSubcommand(s => s
       .setName('voir')
       .setDescription('👀 Voir les détails d\'une suggestion')
-      .addIntegerOption(o => o
+      .addStringOption(o => o
         .setName('id')
         .setDescription('ID de la suggestion')
         .setRequired(true)
-        .setMinValue(1)
       )
     )
     .addSubcommand(s => s

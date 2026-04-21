@@ -35,7 +35,6 @@ module.exports = {
     .addSubcommand(s => s.setName('aide').setDescription('❓ Guide d\'accessibilité — Comment utiliser NexusBot'))
     .addSubcommand(s => s.setName('commandes').setDescription('📋 Liste de toutes les commandes en texte accessible'))
     .addSubcommand(s => s.setName('lire').setDescription('🔊 Résumer les derniers messages du salon en texte pur')
-      .addIntegerOption(o => o.setName('nombre').setDescription('Nombre de messages à lire (1-20)').setMinValue(1).setMaxValue(20))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

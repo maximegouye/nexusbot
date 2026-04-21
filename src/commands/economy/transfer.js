@@ -6,7 +6,6 @@ module.exports = {
     .setName('transfer')
     .setDescription('💸 Envoie des coins à un autre membre')
     .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true))
-    .addIntegerOption(o => o.setName('montant').setDescription('Montant à envoyer').setRequired(true).setMinValue(1)),
   cooldown: 10,
 
   async execute(interaction) {

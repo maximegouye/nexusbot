@@ -46,10 +46,8 @@ module.exports = {
     .addSubcommand(s => s.setName('defier')
       .setDescription('⚔️ Défier quelqu\'un en trivia')
       .addUserOption(o => o.setName('adversaire').setDescription('Votre adversaire').setRequired(true))
-      .addIntegerOption(o => o.setName('mise').setDescription('Mise en coins').setMinValue(0).setMaxValue(2000)))
     .addSubcommand(s => s.setName('solo')
       .setDescription('🎯 Jouer seul contre la montre')
-      .addIntegerOption(o => o.setName('questions').setDescription('Nombre de questions (3-10)').setMinValue(3).setMaxValue(10))),
 
   cooldown: 5,
 

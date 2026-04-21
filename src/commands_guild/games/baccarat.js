@@ -195,7 +195,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('baccarat')
     .setDescription('🎴 Baccarat — Misez sur le joueur, banquier ou égalité')
-    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10))
     .addStringOption(o => o.setName('pari').setDescription('joueur / banquier / egalite').setRequired(true)
       .addChoices(
         { name: '👤 Joueur (×2)', value: 'joueur' },

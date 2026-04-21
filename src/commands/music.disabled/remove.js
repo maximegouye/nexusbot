@@ -5,10 +5,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('remove')
     .setDescription('Supprime une piste de la file d\'attente')
-    .addIntegerOption(option =>
+    .addStringOption(option =>
       option.setName('position')
         .setDescription('Position de la piste à supprimer (1 = première piste)')
-        .setMinValue(1)
         .setRequired(true)
     ),
 

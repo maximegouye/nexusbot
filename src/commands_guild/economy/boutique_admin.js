@@ -18,27 +18,20 @@ module.exports = {
       .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200))
       .addStringOption(o => o.setName('emoji').setDescription('Emoji de l\'article (ex: 🎩)').setMaxLength(10))
       .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat'))
-      .addIntegerOption(o => o.setName('stock').setDescription('Stock disponible (-1 = illimité)').setMinValue(-1).setMaxValue(999999))
-      .addIntegerOption(o => o.setName('max_par_joueur').setDescription('Limite par joueur').setMinValue(1).setMaxValue(100))
-      .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée du rôle en heures (0 = permanent)').setMinValue(0)))
 
     .addSubcommand(s => s.setName('modifier').setDescription('✏️ Modifier un article existant')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true).setMinValue(1))
       .addStringOption(o => o.setName('nom').setDescription('Nouveau nom'))
-      .addIntegerOption(o => o.setName('prix').setDescription('Nouveau prix').setMinValue(1))
       .addStringOption(o => o.setName('description').setDescription('Nouvelle description').setMaxLength(200))
       .addStringOption(o => o.setName('emoji').setDescription('Nouvel emoji'))
-      .addIntegerOption(o => o.setName('stock').setDescription('Nouveau stock (-1 = illimité)').setMinValue(-1))
       .addBooleanOption(o => o.setName('actif').setDescription('Activer ou désactiver cet article')))
 
     .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer un article de la boutique')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article à supprimer').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'article à supprimer').setRequired(true)))
 
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir tous les articles de la boutique (admin view)'))
 
     .addSubcommand(s => s.setName('stock_ajouter').setDescription('📦 Ajouter du stock à un article')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
-      .addIntegerOption(o => o.setName('quantite').setDescription('Quantité à ajouter').setRequired(true).setMinValue(1)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
 
     .addSubcommand(s => s.setName('ventes').setDescription('📊 Statistiques de ventes des articles'))
 
@@ -46,11 +39,10 @@ module.exports = {
       .addStringOption(o => o.setName('confirmation').setDescription('Tapez CONFIRMER').setRequired(true)))
 
     .addSubcommand(s => s.setName('dupliquer').setDescription('📋 Dupliquer un article existant')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article à copier').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'article à copier').setRequired(true)))
 
     .addSubcommand(s => s.setName('promo').setDescription('🏷️ Mettre un article en promotion')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
-      .addIntegerOption(o => o.setName('reduction').setDescription('Réduction en % (ex: 20 = -20%)').setRequired(true).setMinValue(1).setMaxValue(90))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

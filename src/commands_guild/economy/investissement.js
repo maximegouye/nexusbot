@@ -33,7 +33,6 @@ module.exports = {
           { name: '₿ Crypto — +25% / 12h (très risqué)', value: 'crypto_inv' },
           { name: '🏠 Immobilier — +50% / 7j (risque faible)', value: 'immo' },
         ))
-      .addIntegerOption(o => o.setName('montant').setDescription('Montant à investir').setRequired(true).setMinValue(100)))
     .addSubcommand(s => s.setName('portefeuille').setDescription('💼 Voir vos investissements actifs'))
     .addSubcommand(s => s.setName('collecter').setDescription('💰 Collecter les investissements arrivés à maturité'))
     .addSubcommand(s => s.setName('options').setDescription('📊 Voir tous les types d\'investissement')),

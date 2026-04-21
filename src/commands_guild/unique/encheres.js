@@ -32,21 +32,17 @@ module.exports = {
     .setDescription('🏷️ Système d\'enchères — vendez et achetez aux enchères !')
     .addSubcommand(s => s.setName('creer').setDescription('🏷️ Créer une enchère')
       .addStringOption(o => o.setName('article').setDescription('Nom de l\'article').setRequired(true).setMaxLength(80))
-      .addIntegerOption(o => o.setName('prix_depart').setDescription('Prix de départ').setRequired(true).setMinValue(10))
-      .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée en heures (1-72)').setRequired(true).setMinValue(1).setMaxValue(72))
       .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200))
-      .addIntegerOption(o => o.setName('increment_min').setDescription('Surenchère minimale (défaut: 10)').setMinValue(1)))
     .addSubcommand(s => s.setName('encherir').setDescription('💰 Faire une enchère')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))
-      .addIntegerOption(o => o.setName('montant').setDescription('Votre mise').setRequired(true).setMinValue(1)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir une enchère')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Liste des enchères actives'))
     .addSubcommand(s => s.setName('historique').setDescription('📜 Historique de vos enchères'))
     .addSubcommand(s => s.setName('annuler').setDescription('❌ Annuler votre enchère (avant première mise)')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('cloturer').setDescription('🔒 Clôturer une enchère terminée')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

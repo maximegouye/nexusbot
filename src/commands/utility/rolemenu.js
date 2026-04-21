@@ -22,10 +22,9 @@ module.exports = {
       .addRoleOption(o => o.setName('role5').setDescription('Rôle 5').setRequired(false))
       .addStringOption(o => o.setName('description').setDescription('Description / instructions').setRequired(false))
       .addChannelOption(o => o.setName('salon').setDescription('Salon où envoyer le menu').setRequired(false))
-      .addIntegerOption(o => o.setName('max').setDescription('Nb max de rôles sélectionnables (0 = illimité)').setMinValue(0).setMaxValue(25))
     )
     .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer un menu (par ID)')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du menu').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID du menu').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('Voir tous les menus du serveur')),
 
   async execute(interaction) {

@@ -5,7 +5,6 @@ module.exports = {
     .setName('slowmode')
     .setDescription('🐌 Activer/désactiver le mode lent sur un salon')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
-    .addIntegerOption(o => o.setName('secondes').setDescription('Délai en secondes (0 = désactiver, max 21600)').setRequired(true).setMinValue(0).setMaxValue(21600)),
   cooldown: 3,
 
   async execute(interaction) {

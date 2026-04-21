@@ -36,7 +36,6 @@ module.exports = {
     .setDescription('🌱 Gérez votre ferme virtuelle — Plantez et récoltez !')
     .addSubcommand(s => s.setName('voir').setDescription('🌱 Voir l\'état de votre ferme'))
     .addSubcommand(s => s.setName('planter').setDescription('🌱 Planter une graine dans un slot')
-      .addIntegerOption(o => o.setName('slot').setDescription('Numéro du slot (1-3)').setRequired(true).setMinValue(1).setMaxValue(3))
       .addStringOption(o => o.setName('culture').setDescription('Type de culture').setRequired(true)
         .addChoices(
           { name: '🌾 Blé (1h → 80🪙)', value: 'ble' },

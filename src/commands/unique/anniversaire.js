@@ -98,19 +98,15 @@ module.exports = {
     .addSubcommand(s => s
       .setName('set')
       .setDescription('➕ Enregistrer votre date d\'anniversaire')
-      .addIntegerOption(o => o
+      .addStringOption(o => o
         .setName('jour')
         .setDescription('Jour du mois (1-31)')
         .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(31)
       )
-      .addIntegerOption(o => o
+      .addStringOption(o => o
         .setName('mois')
         .setDescription('Mois (1-12)')
         .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(12)
       )
     )
     .addSubcommand(s => s

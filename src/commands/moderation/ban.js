@@ -8,7 +8,6 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addUserOption(o => o.setName('membre').setDescription('Membre à bannir').setRequired(true))
     .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
-    .addIntegerOption(o => o.setName('jours').setDescription('Jours de messages à supprimer (0-7)').setRequired(false).setMinValue(0).setMaxValue(7)),
   cooldown: 3,
 
   async execute(interaction) {

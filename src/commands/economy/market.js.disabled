@@ -9,17 +9,12 @@ module.exports = {
     .addSubcommand(s => s
       .setName('vendre')
       .setDescription('📤 Mettre un article en vente')
-      .addIntegerOption(o => o.setName('item_id').setDescription('ID de l\'article (voir /inventory)').setRequired(true).setMinValue(1))
-      .addIntegerOption(o => o.setName('prix').setDescription('Prix de vente').setRequired(true).setMinValue(1))
-      .addIntegerOption(o => o.setName('quantite').setDescription('Quantité (défaut: 1)').setRequired(false).setMinValue(1)))
     .addSubcommand(s => s
       .setName('acheter')
       .setDescription('📥 Acheter une annonce du marché')
-      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s
       .setName('retirer')
       .setDescription('❌ Retirer ta propre annonce')
-      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce').setRequired(true).setMinValue(1))),
   cooldown: 5,
 
   async execute(interaction) {

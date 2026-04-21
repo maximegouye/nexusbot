@@ -23,12 +23,10 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand(s => s.setName('setup').setDescription('Configurer le starboard')
       .addChannelOption(o => o.setName('salon').setDescription('Salon starboard').setRequired(true))
-      .addIntegerOption(o => o.setName('seuil').setDescription('Nb de ⭐ requis (défaut: 3)').setMinValue(1).setMaxValue(50))
       .addStringOption(o => o.setName('emoji').setDescription('Emoji de vote (défaut: ⭐)'))
       .addBooleanOption(o => o.setName('selfstar').setDescription('Autoriser de voter son propre message')))
     .addSubcommand(s => s.setName('statut').setDescription('Voir la configuration et les statistiques'))
     .addSubcommand(s => s.setName('top').setDescription('🏆 Top 10 des messages les plus étoilés')
-      .addIntegerOption(o => o.setName('limite').setDescription('Nombre de messages (1-20)').setMinValue(1).setMaxValue(20)))
     .addSubcommand(s => s.setName('aleatoire').setDescription('🎲 Afficher un message étoilé au hasard'))
     .addSubcommand(s => s.setName('desactiver').setDescription('Désactiver le starboard'))
     .addSubcommand(s => s.setName('reset').setDescription('🗑️ Réinitialiser tous les messages étoilés')),

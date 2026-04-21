@@ -25,19 +25,17 @@ module.exports = {
     .addSubcommand(s => s.setName('creer').setDescription('📋 Créer une élection ou un vote')
       .addStringOption(o => o.setName('titre').setDescription('Titre de l\'élection').setRequired(true).setMaxLength(80))
       .addStringOption(o => o.setName('candidats').setDescription('Candidats séparés par des virgules (ou @mentions)').setRequired(true))
-      .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée en heures (1-168)').setRequired(true).setMinValue(1).setMaxValue(168))
       .addStringOption(o => o.setName('description').setDescription('Description du vote').setMaxLength(300)))
     .addSubcommand(s => s.setName('voter').setDescription('🗳️ Voter dans une élection')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'élection').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'élection').setRequired(true))
       .addStringOption(o => o.setName('choix').setDescription('Votre candidat/choix').setRequired(true)))
     .addSubcommand(s => s.setName('resultats').setDescription('📊 Voir les résultats d\'une élection')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'élection').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'élection').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Liste des élections actives'))
     .addSubcommand(s => s.setName('cloturer').setDescription('🔒 Clôturer et annoncer les résultats (admins)')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'élection').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'élection').setRequired(true)))
     .addSubcommand(s => s.setName('referendum').setDescription('📊 Référendum rapide oui/non')
       .addStringOption(o => o.setName('question').setDescription('Question du référendum').setRequired(true).setMaxLength(200))
-      .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée en heures').setMinValue(1).setMaxValue(72))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

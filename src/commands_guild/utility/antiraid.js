@@ -39,8 +39,6 @@ module.exports = {
     .addSubcommand(s => s.setName('desactiver').setDescription('❌ Désactiver la protection'))
     .addSubcommand(s => s.setName('configurer')
       .setDescription('⚙️ Configurer les paramètres')
-      .addIntegerOption(o => o.setName('seuil').setDescription('Nb de joins pour déclencher (défaut: 10)').setMinValue(3).setMaxValue(50))
-      .addIntegerOption(o => o.setName('fenetre').setDescription('Fenêtre de temps en secondes (défaut: 30)').setMinValue(5).setMaxValue(120))
       .addStringOption(o => o.setName('action').setDescription('Action à prendre')
         .addChoices(
           { name: '👢 Expulser', value: 'kick' },
@@ -48,7 +46,6 @@ module.exports = {
           { name: '🔇 Timeout 1h', value: 'timeout' },
           { name: '🚫 Lockdown serveur', value: 'lockdown' },
         ))
-      .addIntegerOption(o => o.setName('age_compte').setDescription('Age minimum du compte en jours (anti-alts)').setMinValue(0).setMaxValue(365))
       .addChannelOption(o => o.setName('log').setDescription('Salon de logs anti-raid')))
     .addSubcommand(s => s.setName('lockdown')
       .setDescription('🚨 Activer/désactiver le lockdown d\'urgence')

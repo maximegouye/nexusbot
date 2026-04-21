@@ -20,7 +20,6 @@ module.exports = {
     .addSubcommand(s => s.setName('creer').setDescription('📊 Créer un nouveau sondage')
       .addStringOption(o => o.setName('question').setDescription('Question du sondage').setRequired(true).setMaxLength(256))
       .addStringOption(o => o.setName('options').setDescription('Options séparées par | (ex: Option1|Option2|Option3)').setRequired(true))
-      .addIntegerOption(o => o.setName('duree').setDescription('Durée en minutes (0 = sans limite)').setMinValue(0).setMaxValue(43200))
       .addBooleanOption(o => o.setName('anonyme').setDescription('Votes anonymes (défaut: non)')))
     .addSubcommand(s => s.setName('terminer').setDescription('🔒 Terminer un sondage prématurément')
       .addStringOption(o => o.setName('message_id').setDescription('ID du message sondage').setRequired(true)))

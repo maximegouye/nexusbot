@@ -39,7 +39,6 @@ module.exports = {
       { name: '🎯 Sept (×5)',                  value: 'sept' },
       { name: '🎰 Numéro précis (×5 à ×35)',   value: 'numero' },
     ))
-    .addIntegerOption(o => o.setName('numero').setDescription('Somme des 2 dés (2-12) si pari = Numéro précis').setMinValue(2).setMaxValue(12)),
   cooldown: 2,
 
   async execute(interaction) {

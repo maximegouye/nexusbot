@@ -52,7 +52,6 @@ module.exports = {
     .setDescription('🎮 Quiz Jeopardy — Catégories, niveaux, compétition !')
     .addSubcommand(s => s.setName('start')
       .setDescription('▶️ Lancer une partie de Jeopardy')
-      .addIntegerOption(o => o.setName('duree').setDescription('Durée de la partie en minutes (défaut: 10)').setMinValue(3).setMaxValue(20)))
     .addSubcommand(s => s.setName('question')
       .setDescription('❓ Choisir une catégorie et une valeur')
       .addStringOption(o => o.setName('categorie').setDescription('Catégorie').setRequired(true)
@@ -63,7 +62,7 @@ module.exports = {
           { name: '🎬 Culture Pop', value: 'Culture Pop' },
           { name: '⚽ Sport', value: 'Sport' },
         ))
-      .addIntegerOption(o => o.setName('valeur').setDescription('Valeur de la question').setRequired(true)
+      .addStringOption(o => o.setName('valeur').setDescription('Valeur de la question').setRequired(true)
         .addChoices(
           { name: '💰 200', value: 200 },
           { name: '💰 400', value: 400 },

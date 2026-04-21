@@ -8,7 +8,6 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addStringOption(o => o.setName('ids').setDescription('IDs séparés par des espaces ou virgules').setRequired(true))
     .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
-    .addIntegerOption(o => o.setName('supprimer_messages').setDescription('Supprimer X jours de messages (0-7)').setMinValue(0).setMaxValue(7)),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });

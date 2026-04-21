@@ -41,19 +41,18 @@ module.exports = {
       .addStringOption(o => o.setName('option_b').setDescription('Option B').setRequired(true).setMaxLength(100)))
     .addSubcommand(s => s.setName('miser')
       .setDescription('💰 Miser sur un pari')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))
       .addStringOption(o => o.setName('choix').setDescription('Votre choix').setRequired(true).addChoices(
         { name: '🅰️ Option A', value: 'a' },
         { name: '🅱️ Option B', value: 'b' },
       ))
-      .addIntegerOption(o => o.setName('montant').setDescription('Montant à miser').setRequired(true).setMinValue(10)))
     .addSubcommand(s => s.setName('voir')
       .setDescription('👁️ Voir un pari')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du pari').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les paris ouverts'))
     .addSubcommand(s => s.setName('resoudre')
       .setDescription('🏆 Résoudre un pari (admin/créateur)')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))
       .addStringOption(o => o.setName('gagnant').setDescription('Option gagnante').setRequired(true).addChoices(
         { name: '🅰️ Option A gagne', value: 'a' },
         { name: '🅱️ Option B gagne', value: 'b' },
@@ -61,7 +60,7 @@ module.exports = {
       )))
     .addSubcommand(s => s.setName('annuler')
       .setDescription('❌ Annuler un pari (admin/créateur)')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))),
 
   cooldown: 5,
 

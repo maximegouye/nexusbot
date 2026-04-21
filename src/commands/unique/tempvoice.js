@@ -31,13 +31,11 @@ module.exports = {
       subcommand
         .setName('limite')
         .setDescription("Définir la limite d'utilisateurs du salon")
-        .addIntegerOption(option =>
+        .addStringOption(option =>
           option
             .setName('nombre')
             .setDescription('Limite (0 = illimité)')
             .setRequired(true)
-            .setMinValue(0)
-            .setMaxValue(99)
         )
     )
     .addSubcommand(subcommand =>

@@ -43,7 +43,7 @@ module.exports = {
       .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true)))
 
     .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer un avertissement (par ID de cas)')
-      .addIntegerOption(o => o.setName('cas_id').setDescription('ID du cas à supprimer').setRequired(true))
+      .addStringOption(o => o.setName('cas_id').setDescription('ID du cas à supprimer').setRequired(true))
       .addStringOption(o => o.setName('raison').setDescription('Raison de la suppression')))
 
     .addSubcommand(s => s.setName('effacer_tout').setDescription('🗑️ Effacer toutes les sanctions d\'un membre')
@@ -51,12 +51,11 @@ module.exports = {
       .addStringOption(o => o.setName('confirmation').setDescription('Tapez CONFIRMER').setRequired(true)))
 
     .addSubcommand(s => s.setName('cas').setDescription('🔍 Voir le détail d\'un cas')
-      .addIntegerOption(o => o.setName('cas_id').setDescription('Numéro du cas').setRequired(true)))
+      .addStringOption(o => o.setName('cas_id').setDescription('Numéro du cas').setRequired(true)))
 
     .addSubcommand(s => s.setName('serveur').setDescription('📊 Statistiques des sanctions du serveur'))
 
     .addSubcommand(s => s.setName('seuils').setDescription('⚙️ Configurer les actions automatiques selon les avertissements')
-      .addIntegerOption(o => o.setName('nb_warn').setDescription('Nombre d\'avertissements déclencheur').setRequired(true).setMinValue(2).setMaxValue(10))
       .addStringOption(o => o.setName('action').setDescription('Action à effectuer').setRequired(true)
         .addChoices(
           { name: '⚠️ Rien (garder en note)', value: 'none' },
@@ -64,7 +63,6 @@ module.exports = {
           { name: '👢 Kick', value: 'kick' },
           { name: '🔨 Ban', value: 'ban' },
         ))
-      .addIntegerOption(o => o.setName('duree_minutes').setDescription('Durée du mute en minutes (si action = mute)').setMinValue(1).setMaxValue(40320))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

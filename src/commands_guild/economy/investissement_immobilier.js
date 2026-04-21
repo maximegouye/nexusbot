@@ -35,12 +35,10 @@ module.exports = {
     .addSubcommand(s => s.setName('marche').setDescription('🏪 Voir les propriétés disponibles'))
     .addSubcommand(s => s.setName('acheter')
       .setDescription('💰 Acheter une propriété')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de la propriété').setRequired(true).setMinValue(1).setMaxValue(6)))
     .addSubcommand(s => s.setName('portfolio').setDescription('📋 Voir ton portfolio immobilier'))
     .addSubcommand(s => s.setName('loyer').setDescription('💸 Collecter les loyers de tes propriétés'))
     .addSubcommand(s => s.setName('vendre')
       .setDescription('📉 Vendre une propriété')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de la propriété').setRequired(true).setMinValue(1).setMaxValue(6))),
 
   cooldown: 5,
 

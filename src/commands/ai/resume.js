@@ -9,7 +9,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('resume')
     .setDescription('🧠 Résume les derniers messages du salon via l\'IA')
-    .addIntegerOption(o => o.setName('messages').setDescription('Nombre de messages à résumer (10-200, défaut 50)').setMinValue(10).setMaxValue(200))
     .addChannelOption(o => o.setName('salon').setDescription('Salon à résumer (défaut: ici)').addChannelTypes(ChannelType.GuildText))
     .addStringOption(o => o.setName('langue').setDescription('Langue du résumé').setChoices(
       { name: 'Français', value: 'français' },

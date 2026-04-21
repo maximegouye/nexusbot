@@ -37,7 +37,6 @@ module.exports = {
         .setName('niveau')
         .setDescription('✏️ Définir le niveau d\'un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
-        .addIntegerOption(o => o.setName('niveau').setDescription('Niveau').setRequired(true).setMinValue(1).setMaxValue(500))
       )
     )
 
@@ -88,13 +87,11 @@ module.exports = {
       .addSubcommand(s => s
         .setName('slowmode')
         .setDescription('⏱️ Définir le mode lent')
-        .addIntegerOption(o => o.setName('secondes').setDescription('Délai en secondes (0 = désactiver)').setRequired(true).setMinValue(0).setMaxValue(21600))
         .addChannelOption(o => o.setName('salon').setDescription('Salon (vide = courant)').setRequired(false))
       )
       .addSubcommand(s => s
         .setName('purge')
         .setDescription('🗑️ Supprimer des messages en masse')
-        .addIntegerOption(o => o.setName('nombre').setDescription('Nombre de messages (1-100)').setRequired(true).setMinValue(1).setMaxValue(100))
         .addUserOption(o => o.setName('membre').setDescription('Uniquement les messages de ce membre').setRequired(false))
       )
       .addSubcommand(s => s

@@ -5,7 +5,6 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('lotto')
     .setDescription('🎟️ Participe à la loterie hebdomadaire du serveur !')
-    .addIntegerOption(o => o.setName('tickets').setDescription('Nombre de tickets à acheter (1-10, 100 coins chacun)').setRequired(false).setMinValue(1).setMaxValue(10)),
   cooldown: 5,
 
   async execute(interaction) {

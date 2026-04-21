@@ -6,7 +6,6 @@ module.exports = {
     .setName('tempban')
     .setDescription('⛔ Bannir temporairement un membre')
     .addUserOption(o => o.setName('membre').setDescription('Membre à bannir').setRequired(true))
-    .addIntegerOption(o => o.setName('duree').setDescription('Durée en heures').setRequired(true).setMinValue(1).setMaxValue(720))
     .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
   cooldown: 5,

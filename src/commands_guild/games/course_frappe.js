@@ -54,7 +54,6 @@ module.exports = {
           { name: '💀 Difficile', value: 'difficile' },
           { name: '💻 Code', value: 'code' },
         ))
-      .addIntegerOption(o => o.setName('temps').setDescription('Temps limite en secondes (défaut: 60)').setMinValue(20).setMaxValue(120)))
     .addSubcommand(s => s.setName('solo')
       .setDescription('⏱️ Entraînement solo — mesure ta vitesse')
       .addStringOption(o => o.setName('difficulte').setDescription('Niveau')
