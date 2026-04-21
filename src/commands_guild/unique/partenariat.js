@@ -1,6 +1,6 @@
 // ============================================================
-// partenariat.js — Système de partenariats COMPLET v2
-// Menus interactifs, Modal de demande, Panel Admin animé
+// partenariat.js — Système de partenariats v3
+// Subcommands clairs + config avec sélecteur de salon/rôle
 // ============================================================
 
 const {
@@ -9,7 +9,6 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -19,7 +18,7 @@ const {
 const fs   = require('fs');
 const path = require('path');
 
-// ─── Stockage JSON ──────────────────────────────────────────
+// ─── Stockage JSON ───────────────────────────────────────────
 const DATA_DIR  = path.join(__dirname, '../../../data');
 const DATA_FILE = path.join(DATA_DIR, 'partenariats.json');
 
@@ -33,744 +32,414 @@ function saveData(data) { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null,
 function getGuild(guildId) {
   const data = loadData();
   if (!data[guildId]) {
-    data[guildId] = { requestChannelId: null, partnerChannelId: null, pubChannelId: null, partners: [], requests: [], pubCooldowns: {} };
+    data[guildId] = { requestChannelId: null, partnerChannelId: null, pubChannelId: null, partnerRoleId: null, partners: [], requests: [], pubCooldowns: {} };
     saveData(data);
   }
   return data[guildId];
 }
 function updateGuild(guildId, update) {
   const data = loadData();
-  if (!data[guildId]) data[guildId] = { requestChannelId: null, partnerChannelId: null, pubChannelId: null, partners: [], requests: [], pubCooldowns: {} };
+  if (!data[guildId]) data[guildId] = { requestChannelId: null, partnerChannelId: null, pubChannelId: null, partnerRoleId: null, partners: [], requests: [], pubCooldowns: {} };
   Object.assign(data[guildId], update);
   saveData(data);
 }
 function genId() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
-function isAdmin(member) { return member.permissions.has(PermissionFlagsBits.Administrator); }
-function isPartner(userId, guildId) {
-  const g = getGuild(guildId);
-  return g.partners.some(p => p.repUserId === userId);
-}
+function isAdmin(member) { return member.permissions.has(PermissionFlagsBits.Administrator) || member.permissions.has(PermissionFlagsBits.ManageGuild); }
+function getPartner(userId, guildId) { return getGuild(guildId).partners.find(p => p.repUserId === userId) || null; }
 
-// ─── Couleurs & emojis ───────────────────────────────────────
-const COLOR_MAIN  = 0x5865F2; // bleu Discord
-const COLOR_GREEN = 0x57F287;
-const COLOR_RED   = 0xED4245;
-const COLOR_GOLD  = 0xFEE75C;
-const COLOR_ADMIN = 0xEB459E; // rose admin
+const C_MAIN = 0x5865F2, C_GREEN = 0x57F287, C_RED = 0xED4245, C_GOLD = 0xFEE75C, C_ADMIN = 0xEB459E;
 
-// ─── Embeds ──────────────────────────────────────────────────
-function embedMain(g) {
-  const nb = g.partners.length;
-  return new EmbedBuilder()
-    .setColor(COLOR_MAIN)
-    .setTitle('🤝 Système de Partenariats')
-    .setDescription(
-      '> Bienvenue dans le gestionnaire de partenariats !\n\n' +
-      `📋 **${nb}** serveur${nb !== 1 ? 's' : ''} partenaire${nb !== 1 ? 's' : ''} actif${nb !== 1 ? 's' : ''}\n` +
-      '📥 Soumettez votre demande via le menu ci-dessous\n' +
-      '📢 Les partenaires peuvent envoyer une pub dans le salon dédié'
-    )
-    .setFooter({ text: 'Utilisez le menu pour naviguer' })
-    .setTimestamp();
-}
-
-function embedAdmin(g) {
-  const pending = g.requests.filter(r => r.status === 'pending').length;
-  return new EmbedBuilder()
-    .setColor(COLOR_ADMIN)
-    .setTitle('⚙️ Panel Administrateur — Partenariats')
-    .setDescription(
-      `> Gérez les partenariats de votre serveur\n\n` +
-      `📨 Demandes en attente : **${pending}**\n` +
-      `🤝 Partenaires actifs : **${g.partners.length}**\n\n` +
-      '**Salons configurés :**\n' +
-      `• Demandes : ${g.requestChannelId ? `<#${g.requestChannelId}>` : '❌ Non défini'}\n` +
-      `• Partenaires : ${g.partnerChannelId ? `<#${g.partnerChannelId}>` : '❌ Non défini'}\n` +
-      `• Pub : ${g.pubChannelId ? `<#${g.pubChannelId}>` : '❌ Non défini'}`
-    )
-    .setFooter({ text: 'Panel Admin — Partenariats' })
-    .setTimestamp();
-}
-
-// ─── Menus & boutons ────────────────────────────────────────
-function rowUserMenu() {
-  return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId('part_menu_user')
-      .setPlaceholder('📋 Que souhaitez-vous faire ?')
-      .addOptions([
-        { label: '📋 Voir les partenaires', value: 'liste',    description: 'Liste de tous nos serveurs partenaires', emoji: '📋' },
-        { label: '🔍 Info sur un partenaire', value: 'info',   description: 'Détails d\'un serveur partenaire',        emoji: '🔍' },
-        { label: '📥 Faire une demande',      value: 'demander', description: 'Soumettre une demande de partenariat',  emoji: '📥' },
-        { label: '📢 Envoyer une pub',         value: 'pub',   description: 'Partenaires uniquement',                  emoji: '📢' },
-      ])
-  );
-}
-
-function rowAdminButtons() {
-  return [
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('part_admin_demandes').setLabel('📨 Demandes en attente').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('part_admin_liste').setLabel('🤝 Voir les partenaires').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('part_admin_config').setLabel('⚙️ Configurer les salons').setStyle(ButtonStyle.Secondary),
-    ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('part_admin_ajouter').setLabel('➕ Ajouter directement').setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId('part_admin_retirer').setLabel('➖ Retirer un partenaire').setStyle(ButtonStyle.Danger),
-    ),
-  ];
-}
-
-// ─── Slash Command ───────────────────────────────────────────
+// ============================================================
+// SLASH COMMAND
+// ============================================================
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('partenariat')
-    .setDescription('🤝 Système de partenariats du serveur'),
+    .setDescription('🤝 Système de partenariats du serveur')
+
+    // ── Utilisateurs ─────────────────────────────────────────
+    .addSubcommand(s => s.setName('liste').setDescription('📋 Voir tous les serveurs partenaires'))
+    .addSubcommand(s => s.setName('demander').setDescription('📥 Soumettre une demande de partenariat'))
+    .addSubcommand(s => s.setName('statut').setDescription('🔍 Voir l\'état de ma demande de partenariat'))
+    .addSubcommand(s => s.setName('pub').setDescription('📢 Envoyer une publication (partenaires uniquement)'))
+
+    // ── Config Admin (salon sélectionnable directement) ───────
+    .addSubcommand(s => s
+      .setName('config-salon-demandes')
+      .setDescription('⚙️ [ADMIN] Salon où arrivent les demandes de partenariat')
+      .addChannelOption(o => o.setName('salon').setDescription('Choisir le salon').addChannelTypes(ChannelType.GuildText).setRequired(true)))
+    .addSubcommand(s => s
+      .setName('config-salon-partenaires')
+      .setDescription('⚙️ [ADMIN] Salon où sont annoncés les nouveaux partenaires')
+      .addChannelOption(o => o.setName('salon').setDescription('Choisir le salon').addChannelTypes(ChannelType.GuildText).setRequired(true)))
+    .addSubcommand(s => s
+      .setName('config-salon-pub')
+      .setDescription('⚙️ [ADMIN] Salon pour les publications des partenaires')
+      .addChannelOption(o => o.setName('salon').setDescription('Choisir le salon').addChannelTypes(ChannelType.GuildText).setRequired(true)))
+    .addSubcommand(s => s
+      .setName('config-role')
+      .setDescription('⚙️ [ADMIN] Rôle attribué automatiquement aux partenaires')
+      .addRoleOption(o => o.setName('role').setDescription('Choisir le rôle').setRequired(true)))
+    .addSubcommand(s => s.setName('config-voir').setDescription('⚙️ [ADMIN] Voir toute la configuration actuelle'))
+
+    // ── Admin : gérer demandes ────────────────────────────────
+    .addSubcommand(s => s.setName('admin-demandes').setDescription('📨 [ADMIN] Voir les demandes en attente'))
+    .addSubcommand(s => s
+      .setName('admin-valider')
+      .setDescription('✅ [ADMIN] Accepter une demande')
+      .addStringOption(o => o.setName('id').setDescription('ID de la demande').setRequired(true)))
+    .addSubcommand(s => s
+      .setName('admin-refuser')
+      .setDescription('❌ [ADMIN] Refuser une demande')
+      .addStringOption(o => o.setName('id').setDescription('ID de la demande').setRequired(true))
+      .addStringOption(o => o.setName('raison').setDescription('Raison du refus (optionnel)').setRequired(false)))
+    .addSubcommand(s => s.setName('admin-ajouter').setDescription('➕ [ADMIN] Ajouter un partenaire directement (sans demande)'))
+    .addSubcommand(s => s
+      .setName('admin-retirer')
+      .setDescription('➖ [ADMIN] Retirer un partenaire')
+      .addStringOption(o => o.setName('id').setDescription('ID du partenaire (voir /partenariat admin-liste)').setRequired(true)))
+    .addSubcommand(s => s.setName('admin-liste').setDescription('📋 [ADMIN] Liste des partenaires avec leurs IDs')),
 
   async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
     const g = getGuild(interaction.guildId);
-    const admin = isAdmin(interaction.member);
+    const adminSubs = ['config-salon-demandes','config-salon-partenaires','config-salon-pub','config-role','config-voir','admin-demandes','admin-valider','admin-refuser','admin-ajouter','admin-retirer','admin-liste'];
 
-    const rows = [rowUserMenu()];
-    if (admin) {
-      rows.push(
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('part_open_admin')
-            .setLabel('⚙️ Panel Administrateur')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🛠️')
-        )
-      );
+    if (adminSubs.includes(sub) && !isAdmin(interaction.member)) {
+      return interaction.reply({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
     }
 
-    await interaction.reply({
-      embeds: [embedMain(g)],
-      components: rows,
-      ephemeral: true,
-    });
+    // ── /partenariat liste ────────────────────────────────────
+    if (sub === 'liste') {
+      if (!g.partners.length) {
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GOLD).setTitle('📋 Partenaires').setDescription('Aucun serveur partenaire pour le moment.\n\nUtilise `/partenariat demander` pour faire une demande !').setTimestamp()], ephemeral: true });
+      }
+      const lines = g.partners.map((p, i) => `\`${String(i+1).padStart(2,'0')}\` **${p.nom}**\n> 🔗 ${p.invite}\n> ${p.description?.slice(0,80) || 'Aucune description'}`).join('\n\n');
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_MAIN).setTitle(`🤝 Serveurs Partenaires — ${g.partners.length}`).setDescription(lines.slice(0,4000)).setFooter({ text: 'Pour rejoindre : /partenariat demander' }).setTimestamp()], ephemeral: true });
+    }
+
+    // ── /partenariat demander ─────────────────────────────────
+    if (sub === 'demander') {
+      const pending = g.requests.find(r => r.submittedBy === interaction.user.id && r.status === 'pending');
+      if (pending) return interaction.reply({ content: `⏳ Tu as déjà une demande en attente (\`${pending.id}\`). Utilise \`/partenariat statut\` pour la suivre.`, ephemeral: true });
+      const already = getPartner(interaction.user.id, interaction.guildId);
+      if (already) return interaction.reply({ content: `✅ Tu représentes déjà **${already.nom}** ! Utilise \`/partenariat pub\` pour envoyer une pub.`, ephemeral: true });
+
+      const modal = new ModalBuilder().setCustomId('part_modal_demande').setTitle('📥 Demande de partenariat').addComponents(
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('nom').setLabel('📛 Nom de votre serveur').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100).setPlaceholder('Ex: Gaming Paradise')),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('invite').setLabel('🔗 Lien d\'invitation (discord.gg/...)').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('https://discord.gg/monserveur')),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('description').setLabel('📝 Description de votre serveur (max 300 chars)').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(300).setPlaceholder('Parlez de votre communauté, thème, activités...')),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('membres').setLabel('👥 Nombre de membres approximatif').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Ex: 500 membres')),
+      );
+      return interaction.showModal(modal);
+    }
+
+    // ── /partenariat statut ───────────────────────────────────
+    if (sub === 'statut') {
+      const partner = getPartner(interaction.user.id, interaction.guildId);
+      if (partner) {
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Tu es partenaire !').setDescription(`Tu représentes **${partner.nom}**.\n🔗 ${partner.invite}\n\n📢 Envoie une pub avec \`/partenariat pub\` (1 fois/24h).`).setTimestamp()], ephemeral: true });
+      }
+      const req = g.requests.filter(r => r.submittedBy === interaction.user.id).sort((a,b) => b.submittedAt - a.submittedAt)[0];
+      if (!req) return interaction.reply({ content: '📋 Aucune demande en cours. Utilise `/partenariat demander` !', ephemeral: true });
+
+      const statusMap = {
+        pending:  { emoji: '⏳', label: 'En attente de traitement', color: C_GOLD },
+        accepted: { emoji: '✅', label: 'Acceptée', color: C_GREEN },
+        refused:  { emoji: '❌', label: 'Refusée',  color: C_RED },
+      };
+      const s = statusMap[req.status];
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor(s.color).setTitle('🔍 État de ta demande')
+          .addFields(
+            { name: 'Serveur', value: req.nom,                                       inline: true },
+            { name: 'Statut',  value: `${s.emoji} ${s.label}`,                       inline: true },
+            { name: 'ID',      value: `\`${req.id}\``,                               inline: true },
+            { name: 'Soumise', value: `<t:${Math.floor(req.submittedAt/1000)}:R>`,   inline: true },
+          )
+          .setDescription(req.refusRaison ? `**Raison du refus :** ${req.refusRaison}` : '')
+          .setTimestamp()],
+        ephemeral: true,
+      });
+    }
+
+    // ── /partenariat pub ──────────────────────────────────────
+    if (sub === 'pub') {
+      const partner = getPartner(interaction.user.id, interaction.guildId);
+      if (!partner) return interaction.reply({ content: '❌ Seuls les représentants partenaires peuvent envoyer une pub. Fais une demande avec `/partenariat demander`.', ephemeral: true });
+      if (!g.pubChannelId) return interaction.reply({ content: '❌ Aucun salon pub configuré. Contacte un administrateur.', ephemeral: true });
+
+      const lastPub = g.pubCooldowns[interaction.user.id] || 0;
+      const diff = Date.now() - lastPub;
+      if (diff < 86400000) {
+        const heures = Math.ceil((86400000 - diff) / 3600000);
+        return interaction.reply({ content: `⏳ Tu peux envoyer une nouvelle pub dans **${heures}h**.`, ephemeral: true });
+      }
+
+      const modal = new ModalBuilder().setCustomId('part_modal_pub').setTitle('📢 Envoyer une publication').addComponents(
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('message').setLabel('Votre message (événements, nouveautés, etc.)').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000).setPlaceholder('Parlez de votre serveur, vos événements du moment...')),
+      );
+      return interaction.showModal(modal);
+    }
+
+    // ── Config admins ─────────────────────────────────────────
+    if (sub === 'config-salon-demandes') {
+      const ch = interaction.options.getChannel('salon');
+      updateGuild(interaction.guildId, { requestChannelId: ch.id });
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Salon configuré').setDescription(`📨 Les demandes arriveront dans <#${ch.id}>.`).setTimestamp()], ephemeral: true });
+    }
+    if (sub === 'config-salon-partenaires') {
+      const ch = interaction.options.getChannel('salon');
+      updateGuild(interaction.guildId, { partnerChannelId: ch.id });
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Salon configuré').setDescription(`🤝 Les nouveaux partenaires seront annoncés dans <#${ch.id}>.`).setTimestamp()], ephemeral: true });
+    }
+    if (sub === 'config-salon-pub') {
+      const ch = interaction.options.getChannel('salon');
+      updateGuild(interaction.guildId, { pubChannelId: ch.id });
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Salon configuré').setDescription(`📢 Les pubs partenaires iront dans <#${ch.id}>.`).setTimestamp()], ephemeral: true });
+    }
+    if (sub === 'config-role') {
+      const role = interaction.options.getRole('role');
+      updateGuild(interaction.guildId, { partnerRoleId: role.id });
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Rôle configuré').setDescription(`🎭 Le rôle <@&${role.id}> sera donné à chaque nouveau partenaire accepté.`).setTimestamp()], ephemeral: true });
+    }
+    if (sub === 'config-voir') {
+      const pending = g.requests.filter(r => r.status === 'pending').length;
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor(C_ADMIN).setTitle('⚙️ Configuration Partenariats').setDescription('Configuration actuelle du système :')
+          .addFields(
+            { name: '📨 Salon Demandes',    value: g.requestChannelId ? `<#${g.requestChannelId}>`  : '❌ Non configuré — `/partenariat config-salon-demandes`',   inline: false },
+            { name: '🤝 Salon Partenaires', value: g.partnerChannelId ? `<#${g.partnerChannelId}>` : '❌ Non configuré — `/partenariat config-salon-partenaires`', inline: false },
+            { name: '📢 Salon Pub',         value: g.pubChannelId     ? `<#${g.pubChannelId}>`     : '❌ Non configuré — `/partenariat config-salon-pub`',         inline: false },
+            { name: '🎭 Rôle Partenaire',   value: g.partnerRoleId    ? `<@&${g.partnerRoleId}>`   : '❌ Non configuré — `/partenariat config-role`',             inline: false },
+            { name: '📊 Stats',             value: `🤝 ${g.partners.length} partenaire(s) | ⏳ ${pending} demande(s) en attente`, inline: false },
+          ).setTimestamp()],
+        ephemeral: true,
+      });
+    }
+
+    // ── Admin : demandes ──────────────────────────────────────
+    if (sub === 'admin-demandes') {
+      const pending = g.requests.filter(r => r.status === 'pending');
+      if (!pending.length) return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('📨 Demandes').setDescription('✅ Aucune demande en attente !').setTimestamp()], ephemeral: true });
+
+      await interaction.deferReply({ ephemeral: true });
+      for (const req of pending.slice(0, 5)) {
+        const embed = new EmbedBuilder().setColor(C_GOLD)
+          .setTitle(`📨 Demande \`${req.id}\` — ${req.nom}`)
+          .setDescription(req.description || 'Aucune description')
+          .addFields(
+            { name: '🔗 Invitation', value: req.invite, inline: true },
+            { name: '👤 Soumis par', value: `<@${req.submittedBy}>`, inline: true },
+            { name: '👥 Membres',    value: req.membres || 'Non précisé', inline: true },
+            { name: '📅 Date',       value: `<t:${Math.floor(req.submittedAt/1000)}:R>`, inline: true },
+          )
+          .setFooter({ text: `Valider: /partenariat admin-valider id:${req.id}  |  Refuser: /partenariat admin-refuser id:${req.id}` }).setTimestamp();
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`part_valider_${req.id}`).setLabel('✅ Valider').setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId(`part_refuser_${req.id}`).setLabel('❌ Refuser').setStyle(ButtonStyle.Danger),
+        );
+        await interaction.followUp({ embeds: [embed], components: [row], ephemeral: true });
+      }
+      if (pending.length > 5) await interaction.followUp({ content: `📌 *${pending.length - 5} demande(s) supplémentaire(s). Traitez d'abord les 5 premières.*`, ephemeral: true });
+      return;
+    }
+
+    if (sub === 'admin-valider') {
+      return validerDemande(interaction, interaction.options.getString('id').toUpperCase().trim(), g);
+    }
+    if (sub === 'admin-refuser') {
+      return refuserDemande(interaction, interaction.options.getString('id').toUpperCase().trim(), interaction.options.getString('raison') || null, g);
+    }
+
+    if (sub === 'admin-ajouter') {
+      const modal = new ModalBuilder().setCustomId('part_modal_ajouter').setTitle('➕ Ajouter un partenaire').addComponents(
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('nom').setLabel('Nom du serveur').setStyle(TextInputStyle.Short).setRequired(true)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('invite').setLabel('Lien d\'invitation').setStyle(TextInputStyle.Short).setRequired(true)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(300)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('representant_id').setLabel('ID Discord du représentant (optionnel)').setStyle(TextInputStyle.Short).setRequired(false)),
+      );
+      return interaction.showModal(modal);
+    }
+
+    if (sub === 'admin-retirer') {
+      const partnerId = interaction.options.getString('id').toUpperCase().trim();
+      const idx = g.partners.findIndex(p => p.id === partnerId);
+      if (idx === -1) return interaction.reply({ content: `❌ Partenaire \`${partnerId}\` introuvable. Voir \`/partenariat admin-liste\`.`, ephemeral: true });
+      const [removed] = g.partners.splice(idx, 1);
+      updateGuild(interaction.guildId, { partners: g.partners });
+      if (g.partnerRoleId && removed.repUserId) {
+        try { const m = await interaction.guild.members.fetch(removed.repUserId).catch(() => null); if (m) await m.roles.remove(g.partnerRoleId).catch(() => {}); } catch {}
+      }
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_RED).setTitle('➖ Partenaire retiré').setDescription(`**${removed.nom}** retiré.${removed.repUserId ? ` Rôle retiré de <@${removed.repUserId}>.` : ''}`).setTimestamp()], ephemeral: true });
+    }
+
+    if (sub === 'admin-liste') {
+      if (!g.partners.length) return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GOLD).setTitle('📋 Partenaires').setDescription('Aucun partenaire.').setTimestamp()], ephemeral: true });
+      const lines = g.partners.map((p, i) => `\`${String(i+1).padStart(2,'0')}\` **${p.nom}** | ID: \`${p.id}\` | Rep: ${p.repUserId ? `<@${p.repUserId}>` : '*aucun*'}\n> 🔗 ${p.invite}`).join('\n');
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_ADMIN).setTitle(`📋 Partenaires Admin — ${g.partners.length}`).setDescription(lines.slice(0,4000)).setFooter({ text: 'Retirer: /partenariat admin-retirer id:<ID>' }).setTimestamp()], ephemeral: true });
+    }
   },
 
-  // ─── Handler global des composants ────────────────────────
+  // ── Handler boutons & modals ──────────────────────────────
   async handleComponent(interaction) {
     const id = interaction.customId;
 
-    // ── Menu utilisateur ────────────────────────────────────
-    if (id === 'part_menu_user') {
-      const val = interaction.values[0];
-      const guild = interaction.guild;
-      const guildId = interaction.guildId;
-      const g = getGuild(guildId);
-
-      if (val === 'liste') {
-        await showListe(interaction, g);
-      } else if (val === 'info') {
-        await showInfoPrompt(interaction, g);
-      } else if (val === 'demander') {
-        await showDemandeModal(interaction);
-      } else if (val === 'pub') {
-        await handlePubPrompt(interaction, g);
-      }
-      return;
-    }
-
-    // ── Ouvrir panel admin ──────────────────────────────────
-    if (id === 'part_open_admin') {
-      if (!isAdmin(interaction.member)) {
-        return interaction.reply({ content: '🔒 Accès administrateur requis.', ephemeral: true });
-      }
-      const g = getGuild(interaction.guildId);
-      await interaction.reply({
-        embeds: [embedAdmin(g)],
-        components: rowAdminButtons(),
-        ephemeral: true,
-      });
-      return;
-    }
-
-    // ── Boutons admin ────────────────────────────────────────
-    if (id.startsWith('part_admin_')) {
-      if (!isAdmin(interaction.member)) {
-        return interaction.reply({ content: '🔒 Accès administrateur requis.', ephemeral: true });
-      }
-      const g = getGuild(interaction.guildId);
-      const action = id.replace('part_admin_', '');
-
-      if (action === 'demandes')      await showDemandesAdmin(interaction, g);
-      else if (action === 'liste')    await showListeAdmin(interaction, g);
-      else if (action === 'config')   await showConfigAdmin(interaction, g);
-      else if (action === 'ajouter')  await showAjouterModal(interaction);
-      else if (action === 'retirer')  await showRetirerMenu(interaction, g);
-      return;
-    }
-
-    // ── Valider demande ──────────────────────────────────────
     if (id.startsWith('part_valider_')) {
-      if (!isAdmin(interaction.member)) {
-        return interaction.reply({ content: '🔒 Accès administrateur requis.', ephemeral: true });
-      }
-      await validerDemande(interaction, id.replace('part_valider_', ''));
-      return;
+      if (!isAdmin(interaction.member)) return interaction.reply({ content: '🔒 Admins uniquement.', ephemeral: true });
+      return validerDemande(interaction, id.replace('part_valider_', ''), getGuild(interaction.guildId));
     }
-
-    // ── Refuser demande ──────────────────────────────────────
     if (id.startsWith('part_refuser_')) {
-      if (!isAdmin(interaction.member)) {
-        return interaction.reply({ content: '🔒 Accès administrateur requis.', ephemeral: true });
-      }
-      await refuserDemande(interaction, id.replace('part_refuser_', ''));
-      return;
+      if (!isAdmin(interaction.member)) return interaction.reply({ content: '🔒 Admins uniquement.', ephemeral: true });
+      return refuserDemande(interaction, id.replace('part_refuser_', ''), null, getGuild(interaction.guildId));
     }
 
-    // ── Retirer partenaire sélectionné ───────────────────────
-    if (id === 'part_select_retirer') {
-      if (!isAdmin(interaction.member)) {
-        return interaction.reply({ content: '🔒 Accès administrateur requis.', ephemeral: true });
-      }
-      await retirerPartenaire(interaction, interaction.values[0]);
-      return;
-    }
-
-    // ── Config select salon ───────────────────────────────────
-    if (id === 'part_config_type') {
-      if (!isAdmin(interaction.member)) {
-        return interaction.reply({ content: '🔒 Accès administrateur requis.', ephemeral: true });
-      }
-      await showConfigSalonModal(interaction, interaction.values[0]);
-      return;
-    }
-
-    // ── Modals ────────────────────────────────────────────────
     if (interaction.isModalSubmit()) {
-      if (id === 'part_modal_demande') {
-        await submitDemande(interaction);
-      } else if (id === 'part_modal_ajouter') {
-        await submitAjouter(interaction);
-      } else if (id.startsWith('part_modal_config_')) {
-        await submitConfig(interaction, id.replace('part_modal_config_', ''));
-      } else if (id === 'part_modal_pub') {
-        await submitPub(interaction);
-      }
+      if (id === 'part_modal_demande') return submitDemande(interaction);
+      if (id === 'part_modal_ajouter') return submitAjouter(interaction);
+      if (id === 'part_modal_pub')     return submitPub(interaction);
     }
   },
 
-  // ─── Handler prefix ────────────────────────────────────────
   name: 'partenariat',
   aliases: ['partner', 'partners', 'part'],
-  async run(message, args) {
-    const sub = (args[0] || 'liste').toLowerCase();
+  async run(message) {
     const g = getGuild(message.guildId);
-
-    if (sub === 'liste' || sub === 'list') {
-      const lines = g.partners.map((p, i) => `\`${i + 1}.\` **${p.nom}** — ${p.invite}`).join('\n') || 'Aucun partenaire.';
-      await message.reply({ embeds: [new EmbedBuilder().setColor(COLOR_MAIN).setTitle('🤝 Partenaires').setDescription(lines).setTimestamp()] });
-    } else if (sub === 'admin') {
-      if (!isAdmin(message.member)) return message.reply({ content: '🔒 Accès administrateur requis.' });
-      await message.reply({ content: '🛠️ Utilisez `/partenariat` pour accéder au panel admin.' });
-    } else {
-      await message.reply({ content: '📋 Utilisez `/partenariat` pour accéder au système complet.' });
-    }
+    const lines = g.partners.map((p, i) => `\`${i+1}.\` **${p.nom}** — ${p.invite}`).join('\n') || 'Aucun partenaire.';
+    await message.reply({ embeds: [new EmbedBuilder().setColor(C_MAIN).setTitle('🤝 Partenaires').setDescription(lines).setTimestamp()] });
   },
 };
 
-// ═══════════════════════════════════════════════════════════
-// ─── Sous-fonctions utilisateur ────────────────────────────
-// ═══════════════════════════════════════════════════════════
-
-async function showListe(interaction, g) {
-  if (!g.partners.length) {
-    return interaction.update({
-      embeds: [new EmbedBuilder().setColor(COLOR_GOLD).setTitle('📋 Partenaires').setDescription('Aucun serveur partenaire pour le moment.\n\nUtilisez 📥 **Faire une demande** pour rejoindre !').setTimestamp()],
-      components: [rowUserMenu()],
-    });
-  }
-  const lines = g.partners.map((p, i) =>
-    `\`${String(i + 1).padStart(2, '0')}\` **${p.nom}**\n> 🔗 ${p.invite}${p.description ? `\n> ${p.description.slice(0, 80)}` : ''}`
-  ).join('\n\n');
-
-  await interaction.update({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(COLOR_MAIN)
-        .setTitle(`🤝 Serveurs Partenaires (${g.partners.length})`)
-        .setDescription(lines.slice(0, 4000))
-        .setFooter({ text: 'Utilisez /partenariat info <nom> pour plus de détails' })
-        .setTimestamp(),
-    ],
-    components: [rowUserMenu()],
-  });
-}
-
-async function showInfoPrompt(interaction, g) {
-  if (!g.partners.length) {
-    return interaction.update({
-      embeds: [new EmbedBuilder().setColor(COLOR_GOLD).setTitle('🔍 Info partenaire').setDescription('Aucun partenaire enregistré.').setTimestamp()],
-      components: [rowUserMenu()],
-    });
-  }
-  const options = g.partners.slice(0, 25).map(p => ({
-    label: p.nom.slice(0, 100),
-    value: p.id,
-    description: (p.description || 'Pas de description').slice(0, 100),
-  }));
-  await interaction.update({
-    embeds: [new EmbedBuilder().setColor(COLOR_MAIN).setTitle('🔍 Choisissez un partenaire').setDescription('Sélectionnez le serveur dont vous voulez voir les infos :').setTimestamp()],
-    components: [
-      new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder().setCustomId('part_info_select').setPlaceholder('Choisir un partenaire...').addOptions(options)
-      ),
-    ],
-  });
-}
-
-async function showDemandeModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('part_modal_demande')
-    .setTitle('📥 Demande de partenariat');
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('invite').setLabel('🔗 Lien d\'invitation Discord (discord.gg/...)').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('https://discord.gg/...')
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('nom').setLabel('📛 Nom de votre serveur').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('description').setLabel('📝 Description (max 300 caractères)').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(300).setPlaceholder('Décrivez votre serveur...')
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('banniere').setLabel('🖼️ URL bannière/logo (optionnel)').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('https://...')
-    ),
-  );
-
-  await interaction.showModal(modal);
-}
-
-async function handlePubPrompt(interaction, g) {
-  const userId = interaction.user.id;
-  const guildId = interaction.guildId;
-
-  if (!isPartner(userId, guildId)) {
-    return interaction.update({
-      embeds: [new EmbedBuilder().setColor(COLOR_RED).setTitle('📢 Pub partenaire').setDescription('❌ Seuls les représentants des serveurs partenaires peuvent envoyer une pub.\n\nFaites une demande de partenariat via 📥 **Faire une demande**.').setTimestamp()],
-      components: [rowUserMenu()],
-    });
-  }
-
-  const modal = new ModalBuilder()
-    .setCustomId('part_modal_pub')
-    .setTitle('📢 Envoyer une publication');
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('message').setLabel('Votre message promotionnel').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000).setPlaceholder('Parlez de votre serveur, événements, nouveautés...')
-    ),
-  );
-
-  await interaction.showModal(modal);
-}
-
-// ═══════════════════════════════════════════════════════════
-// ─── Sous-fonctions admin ───────────────────────────────────
-// ═══════════════════════════════════════════════════════════
-
-async function showDemandesAdmin(interaction, g) {
-  const pending = g.requests.filter(r => r.status === 'pending');
-
-  if (!pending.length) {
-    return interaction.reply({
-      embeds: [new EmbedBuilder().setColor(COLOR_GREEN).setTitle('📨 Demandes en attente').setDescription('✅ Aucune demande en attente !').setTimestamp()],
-      ephemeral: true,
-    });
-  }
-
-  // Afficher les 5 premières demandes avec boutons valider/refuser
-  for (const req of pending.slice(0, 5)) {
-    const embed = new EmbedBuilder()
-      .setColor(COLOR_GOLD)
-      .setTitle(`📨 Demande — ${req.nom}`)
-      .setDescription(req.description || 'Pas de description')
-      .addFields(
-        { name: '🔗 Invitation', value: req.invite,                         inline: true },
-        { name: '👤 Soumis par', value: `<@${req.submittedBy}>`,             inline: true },
-        { name: '🆔 ID',         value: `\`${req.id}\``,                    inline: true },
-        { name: '📅 Date',       value: `<t:${Math.floor(req.submittedAt / 1000)}:R>`, inline: true },
-      )
-      .setTimestamp();
-
-    if (req.banniere) embed.setThumbnail(req.banniere);
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`part_valider_${req.id}`).setLabel('✅ Valider').setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId(`part_refuser_${req.id}`).setLabel('❌ Refuser').setStyle(ButtonStyle.Danger),
-    );
-
-    await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
-  }
-
-  if (pending.length > 5) {
-    await interaction.followUp({ content: `📌 *Il y a encore ${pending.length - 5} demande(s) supplémentaire(s).*`, ephemeral: true });
-  }
-}
-
-async function showListeAdmin(interaction, g) {
-  if (!g.partners.length) {
-    return interaction.reply({
-      embeds: [new EmbedBuilder().setColor(COLOR_GOLD).setTitle('🤝 Partenaires').setDescription('Aucun partenaire enregistré.').setTimestamp()],
-      ephemeral: true,
-    });
-  }
-  const lines = g.partners.map((p, i) =>
-    `\`${i + 1}.\` **${p.nom}** | Rep: <@${p.repUserId || '?'}> | ID: \`${p.id}\``
-  ).join('\n');
-
-  await interaction.reply({
-    embeds: [new EmbedBuilder().setColor(COLOR_ADMIN).setTitle(`🤝 Partenaires (${g.partners.length})`).setDescription(lines.slice(0, 4000)).setTimestamp()],
-    ephemeral: true,
-  });
-}
-
-async function showConfigAdmin(interaction, g) {
-  const row = new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId('part_config_type')
-      .setPlaceholder('Quel salon configurer ?')
-      .addOptions([
-        { label: '📨 Salon des demandes',    value: 'requests',  description: 'Où arrivent les demandes de partenariat' },
-        { label: '🤝 Salon des partenaires', value: 'partners',  description: 'Où s\'affiche la liste des partenaires' },
-        { label: '📢 Salon pub',             value: 'pub',       description: 'Où les partenaires envoient leur pub' },
-      ])
-  );
-
-  await interaction.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(COLOR_ADMIN)
-        .setTitle('⚙️ Configuration des salons')
-        .setDescription(
-          '**Salons actuels :**\n' +
-          `• 📨 Demandes : ${g.requestChannelId ? `<#${g.requestChannelId}>` : '❌ Non défini'}\n` +
-          `• 🤝 Partenaires : ${g.partnerChannelId ? `<#${g.partnerChannelId}>` : '❌ Non défini'}\n` +
-          `• 📢 Pub : ${g.pubChannelId ? `<#${g.pubChannelId}>` : '❌ Non défini'}\n\n` +
-          'Sélectionnez le type de salon à configurer :'
-        )
-        .setTimestamp(),
-    ],
-    components: [row],
-    ephemeral: true,
-  });
-}
-
-async function showAjouterModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('part_modal_ajouter')
-    .setTitle('➕ Ajouter un partenaire');
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('nom').setLabel('Nom du serveur').setStyle(TextInputStyle.Short).setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('invite').setLabel('Lien d\'invitation').setStyle(TextInputStyle.Short).setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(300)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('representant_id').setLabel('ID Discord du représentant').setStyle(TextInputStyle.Short).setRequired(false)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder().setCustomId('banniere').setLabel('URL bannière (optionnel)').setStyle(TextInputStyle.Short).setRequired(false)
-    ),
-  );
-
-  await interaction.showModal(modal);
-}
-
-async function showRetirerMenu(interaction, g) {
-  if (!g.partners.length) {
-    return interaction.reply({
-      embeds: [new EmbedBuilder().setColor(COLOR_GOLD).setTitle('➖ Retirer un partenaire').setDescription('Aucun partenaire à retirer.').setTimestamp()],
-      ephemeral: true,
-    });
-  }
-
-  const options = g.partners.slice(0, 25).map(p => ({
-    label: p.nom.slice(0, 100),
-    value: p.id,
-    description: p.invite.slice(0, 100),
-  }));
-
-  await interaction.reply({
-    embeds: [new EmbedBuilder().setColor(COLOR_RED).setTitle('➖ Retirer un partenaire').setDescription('Sélectionnez le partenaire à retirer :').setTimestamp()],
-    components: [
-      new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder().setCustomId('part_select_retirer').setPlaceholder('Choisir...').addOptions(options)
-      ),
-    ],
-    ephemeral: true,
-  });
-}
-
-async function showConfigSalonModal(interaction, type) {
-  const labels = { requests: '📨 Salon des demandes', partners: '🤝 Salon des partenaires', pub: '📢 Salon pub' };
-  const modal = new ModalBuilder()
-    .setCustomId(`part_modal_config_${type}`)
-    .setTitle(`⚙️ ${labels[type]}`);
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId('channel_id')
-        .setLabel('ID du salon (clic droit → Copier l\'ID)')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-        .setPlaceholder('Ex: 1234567890123456789')
-    ),
-  );
-
-  await interaction.showModal(modal);
-}
-
-// ═══════════════════════════════════════════════════════════
-// ─── Handlers Modal Submit ─────────────────────────────────
-// ═══════════════════════════════════════════════════════════
+// ============================================================
+// FONCTIONS INTERNES
+// ============================================================
 
 async function submitDemande(interaction) {
-  const invite      = interaction.fields.getTextInputValue('invite').trim();
   const nom         = interaction.fields.getTextInputValue('nom').trim();
+  const invite      = interaction.fields.getTextInputValue('invite').trim();
   const description = interaction.fields.getTextInputValue('description').trim();
-  const banniere    = interaction.fields.getTextInputValue('banniere')?.trim() || null;
+  const membres     = interaction.fields.getTextInputValue('membres')?.trim() || null;
 
   if (!invite.includes('discord.gg/') && !invite.includes('discord.com/invite/')) {
-    return interaction.reply({ content: '❌ Le lien d\'invitation doit être un lien Discord valide (discord.gg/...).', ephemeral: true });
+    return interaction.reply({ content: '❌ Le lien doit être un lien Discord valide (discord.gg/...).', ephemeral: true });
   }
 
-  const guildId = interaction.guildId;
-  const g = getGuild(guildId);
-
-  const existing = g.requests.find(r => r.submittedBy === interaction.user.id && r.status === 'pending');
-  if (existing) {
-    return interaction.reply({ content: `⏳ Tu as déjà une demande en attente (ID : \`${existing.id}\`). Attends qu'elle soit traitée.`, ephemeral: true });
+  const g = getGuild(interaction.guildId);
+  if (g.requests.find(r => r.submittedBy === interaction.user.id && r.status === 'pending')) {
+    return interaction.reply({ content: '⏳ Tu as déjà une demande en attente.', ephemeral: true });
   }
-
   if (g.partners.some(p => p.nom.toLowerCase() === nom.toLowerCase())) {
     return interaction.reply({ content: `❌ **${nom}** est déjà partenaire !`, ephemeral: true });
   }
 
   const id = genId();
-  const request = { id, nom, invite, description, banniere, submittedBy: interaction.user.id, submittedAt: Date.now(), status: 'pending' };
-  g.requests.push(request);
-  updateGuild(guildId, { requests: g.requests });
+  g.requests.push({ id, nom, invite, description, membres, submittedBy: interaction.user.id, submittedAt: Date.now(), status: 'pending', refusRaison: null });
+  updateGuild(interaction.guildId, { requests: g.requests });
 
-  // Notification dans salon demandes si configuré
   if (g.requestChannelId) {
-    const reqChannel = interaction.guild.channels.cache.get(g.requestChannelId);
-    if (reqChannel) {
-      const embed = new EmbedBuilder()
-        .setColor(COLOR_GOLD)
-        .setTitle(`📨 Nouvelle demande — ${nom}`)
-        .setDescription(description)
+    const chan = interaction.guild.channels.cache.get(g.requestChannelId);
+    if (chan) {
+      const embed = new EmbedBuilder().setColor(C_GOLD).setTitle(`📨 Nouvelle demande \`${id}\` — ${nom}`).setDescription(description)
         .addFields(
-          { name: '🔗 Invitation',   value: invite,                inline: true },
-          { name: '👤 Soumis par',   value: `<@${interaction.user.id}>`, inline: true },
-          { name: '🆔 ID',           value: `\`${id}\``,           inline: true },
+          { name: '🔗 Invitation', value: invite, inline: true },
+          { name: '👤 Soumis par', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '👥 Membres',    value: membres || 'Non précisé', inline: true },
         )
-        .setFooter({ text: 'Répondez depuis le Panel Admin (/partenariat → ⚙️ Panel Admin)' })
-        .setTimestamp();
-
-      if (banniere) embed.setThumbnail(banniere);
-
+        .setFooter({ text: `Valider: /partenariat admin-valider id:${id}  |  Refuser: /partenariat admin-refuser id:${id}` }).setTimestamp();
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`part_valider_${id}`).setLabel('✅ Valider').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`part_refuser_${id}`).setLabel('❌ Refuser').setStyle(ButtonStyle.Danger),
       );
-
-      await reqChannel.send({ embeds: [embed], components: [row] }).catch(() => {});
+      await chan.send({ embeds: [embed], components: [row] }).catch(() => {});
     }
   }
 
-  await interaction.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(COLOR_GREEN)
-        .setTitle('✅ Demande envoyée !')
-        .setDescription(`Ta demande de partenariat pour **${nom}** a bien été soumise.\nID : \`${id}\`\n\nUn administrateur va la traiter prochainement. 🙏`)
-        .setTimestamp(),
-    ],
+  return interaction.reply({
+    embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Demande envoyée !').setDescription(`Demande pour **${nom}** soumise avec succès !\n**ID :** \`${id}\`\n\nSuivi : \`/partenariat statut\` 🙏`).setTimestamp()],
     ephemeral: true,
   });
 }
 
 async function submitAjouter(interaction) {
-  const nom           = interaction.fields.getTextInputValue('nom').trim();
-  const invite        = interaction.fields.getTextInputValue('invite').trim();
-  const description   = interaction.fields.getTextInputValue('description').trim();
-  const repId         = interaction.fields.getTextInputValue('representant_id')?.trim() || null;
-  const banniere      = interaction.fields.getTextInputValue('banniere')?.trim() || null;
+  const nom   = interaction.fields.getTextInputValue('nom').trim();
+  const invite = interaction.fields.getTextInputValue('invite').trim();
+  const description = interaction.fields.getTextInputValue('description').trim();
+  const repId = interaction.fields.getTextInputValue('representant_id')?.trim() || null;
 
-  const guildId = interaction.guildId;
-  const g = getGuild(guildId);
-
+  const g = getGuild(interaction.guildId);
   if (g.partners.some(p => p.nom.toLowerCase() === nom.toLowerCase())) {
     return interaction.reply({ content: `❌ **${nom}** est déjà partenaire.`, ephemeral: true });
   }
 
   const id = genId();
-  const partner = { id, nom, invite, description, banniere, repUserId: repId, addedAt: Date.now(), addedBy: interaction.user.id };
-  g.partners.push(partner);
-  updateGuild(guildId, { partners: g.partners });
+  g.partners.push({ id, nom, invite, description, repUserId: repId, addedAt: Date.now(), addedBy: interaction.user.id });
+  updateGuild(interaction.guildId, { partners: g.partners });
 
-  // Post dans salon partenaires si configuré
+  if (g.partnerRoleId && repId) {
+    try { const m = await interaction.guild.members.fetch(repId).catch(() => null); if (m) await m.roles.add(g.partnerRoleId).catch(() => {}); } catch {}
+  }
   if (g.partnerChannelId) {
     const chan = interaction.guild.channels.cache.get(g.partnerChannelId);
-    if (chan) {
-      const embed = new EmbedBuilder()
-        .setColor(COLOR_GREEN)
-        .setTitle(`🎉 Nouveau partenaire — ${nom}`)
-        .setDescription(description)
-        .addFields({ name: '🔗 Rejoindre', value: invite, inline: true })
-        .setTimestamp();
-      if (banniere) embed.setThumbnail(banniere);
-      await chan.send({ embeds: [embed] }).catch(() => {});
-    }
+    if (chan) await chan.send({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle(`🎉 Nouveau Partenaire — ${nom}`).setDescription(`${description}\n\n🔗 **Rejoindre :** ${invite}`).setTimestamp()] }).catch(() => {});
   }
 
-  await interaction.reply({
-    embeds: [new EmbedBuilder().setColor(COLOR_GREEN).setTitle('✅ Partenaire ajouté !').setDescription(`**${nom}** a été ajouté comme partenaire. 🎉`).setTimestamp()],
-    ephemeral: true,
-  });
-}
-
-async function submitConfig(interaction, type) {
-  const channelId = interaction.fields.getTextInputValue('channel_id').trim();
-  const chan = interaction.guild.channels.cache.get(channelId);
-
-  if (!chan) {
-    return interaction.reply({ content: `❌ Salon introuvable. Vérifie l'ID (clic droit sur le salon → Copier l'ID).`, ephemeral: true });
-  }
-
-  const MAP = { requests: 'requestChannelId', partners: 'partnerChannelId', pub: 'pubChannelId' };
-  const labels = { requests: '📨 Demandes', partners: '🤝 Partenaires', pub: '📢 Pub' };
-  updateGuild(interaction.guildId, { [MAP[type]]: channelId });
-
-  await interaction.reply({
-    embeds: [new EmbedBuilder().setColor(COLOR_GREEN).setTitle('✅ Salon configuré !').setDescription(`**${labels[type]}** → <#${channelId}>`).setTimestamp()],
-    ephemeral: true,
-  });
+  return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Partenaire ajouté !').setDescription(`**${nom}** ajouté. 🎉${repId ? ` Rôle donné à <@${repId}>.` : ''}`).setTimestamp()], ephemeral: true });
 }
 
 async function submitPub(interaction) {
   const message = interaction.fields.getTextInputValue('message').trim();
   const g = getGuild(interaction.guildId);
-
-  if (!g.pubChannelId) {
-    return interaction.reply({ content: '❌ Aucun salon pub configuré. Demandez à un admin.', ephemeral: true });
-  }
-
-  const lastPub = g.pubCooldowns[interaction.user.id] || 0;
-  const COOLDOWN = 24 * 60 * 60 * 1000;
-  const diff = Date.now() - lastPub;
-  if (diff < COOLDOWN) {
-    const reste = Math.ceil((COOLDOWN - diff) / 3600000);
-    return interaction.reply({ content: `⏳ Tu peux renvoyer une pub dans **${reste}h**.`, ephemeral: true });
-  }
-
-  const partner = g.partners.find(p => p.repUserId === interaction.user.id);
+  const partner = getPartner(interaction.user.id, interaction.guildId);
   const pubChannel = interaction.guild.channels.cache.get(g.pubChannelId);
+  if (!pubChannel) return interaction.reply({ content: '❌ Salon pub introuvable.', ephemeral: true });
 
-  if (!pubChannel) {
-    return interaction.reply({ content: '❌ Salon pub introuvable. Contactez un admin.', ephemeral: true });
-  }
-
-  const embed = new EmbedBuilder()
-    .setColor(0x9B59B6)
-    .setTitle(`📢 ${partner?.nom || 'Serveur partenaire'}`)
-    .setDescription(message)
+  const embed = new EmbedBuilder().setColor(0x9B59B6).setTitle(`📢 ${partner?.nom || 'Serveur Partenaire'}`).setDescription(message)
     .addFields({ name: '🔗 Rejoindre', value: partner?.invite || '-', inline: true })
-    .setFooter({ text: `Pub envoyée par ${interaction.user.tag}` })
-    .setTimestamp();
-
-  if (partner?.banniere) embed.setThumbnail(partner.banniere);
+    .setFooter({ text: `Pub par ${interaction.user.tag}` }).setTimestamp();
 
   await pubChannel.send({ embeds: [embed] }).catch(() => {});
   g.pubCooldowns[interaction.user.id] = Date.now();
   updateGuild(interaction.guildId, { pubCooldowns: g.pubCooldowns });
-
-  await interaction.reply({ content: `✅ Pub envoyée dans <#${g.pubChannelId}> !`, ephemeral: true });
+  return interaction.reply({ content: `✅ Pub envoyée dans <#${g.pubChannelId}> !`, ephemeral: true });
 }
 
-// ─── Valider / Refuser ───────────────────────────────────────
-async function validerDemande(interaction, reqId) {
-  const guildId = interaction.guildId;
-  const g = getGuild(guildId);
+async function validerDemande(interaction, reqId, g) {
   const idx = g.requests.findIndex(r => r.id === reqId && r.status === 'pending');
-
-  if (idx === -1) {
-    return interaction.reply({ content: `❌ Demande \`${reqId}\` introuvable ou déjà traitée.`, ephemeral: true });
-  }
+  if (idx === -1) return interaction.reply({ content: `❌ Demande \`${reqId}\` introuvable ou déjà traitée.`, ephemeral: true });
 
   const req = g.requests[idx];
   req.status = 'accepted';
-
-  const partner = {
-    id: genId(), nom: req.nom, invite: req.invite, description: req.description,
-    banniere: req.banniere || null, repUserId: req.submittedBy, addedAt: Date.now(), addedBy: interaction.user.id,
-  };
+  const partner = { id: genId(), nom: req.nom, invite: req.invite, description: req.description, repUserId: req.submittedBy, addedAt: Date.now(), addedBy: interaction.user.id };
   g.partners.push(partner);
-  updateGuild(guildId, { requests: g.requests, partners: g.partners });
+  updateGuild(interaction.guildId, { requests: g.requests, partners: g.partners });
 
-  // Post dans salon partenaires
+  if (g.partnerRoleId) {
+    try { const m = await interaction.guild.members.fetch(req.submittedBy).catch(() => null); if (m) await m.roles.add(g.partnerRoleId).catch(() => {}); } catch {}
+  }
+  try {
+    const user = await interaction.client.users.fetch(req.submittedBy).catch(() => null);
+    if (user) await user.send({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('🎉 Partenariat accepté !').setDescription(`Votre demande pour **${req.nom}** sur **${interaction.guild.name}** a été **acceptée** !\n\nEnvoie une pub avec \`/partenariat pub\`. 📢`).setTimestamp()] }).catch(() => {});
+  } catch {}
   if (g.partnerChannelId) {
     const chan = interaction.guild.channels.cache.get(g.partnerChannelId);
-    if (chan) {
-      const embed = new EmbedBuilder()
-        .setColor(COLOR_GREEN)
-        .setTitle(`🎉 Nouveau partenaire — ${req.nom}`)
-        .setDescription(req.description)
-        .addFields({ name: '🔗 Rejoindre', value: req.invite, inline: true })
-        .setTimestamp();
-      if (req.banniere) embed.setThumbnail(req.banniere);
-      await chan.send({ embeds: [embed] }).catch(() => {});
-    }
+    if (chan) await chan.send({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle(`🎉 Nouveau Partenaire — ${req.nom}`).setDescription(`${req.description}\n\n🔗 **Rejoindre :** ${req.invite}`).setTimestamp()] }).catch(() => {});
   }
-
-  await interaction.reply({
-    embeds: [new EmbedBuilder().setColor(COLOR_GREEN).setTitle('✅ Partenariat validé !').setDescription(`**${req.nom}** est maintenant partenaire. 🎉`).setTimestamp()],
-    ephemeral: true,
-  });
+  if (interaction.message) await interaction.message.edit({ components: [] }).catch(() => {});
+  return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Partenariat accepté !').setDescription(`**${req.nom}** est maintenant partenaire ! 🎉\nLe demandeur a été notifié par DM.`).setTimestamp()], ephemeral: true });
 }
 
-async function refuserDemande(interaction, reqId) {
-  const g = getGuild(interaction.guildId);
+async function refuserDemande(interaction, reqId, raison, g) {
   const idx = g.requests.findIndex(r => r.id === reqId && r.status === 'pending');
-
-  if (idx === -1) {
-    return interaction.reply({ content: `❌ Demande \`${reqId}\` introuvable ou déjà traitée.`, ephemeral: true });
-  }
+  if (idx === -1) return interaction.reply({ content: `❌ Demande \`${reqId}\` introuvable ou déjà traitée.`, ephemeral: true });
 
   g.requests[idx].status = 'refused';
+  g.requests[idx].refusRaison = raison;
   updateGuild(interaction.guildId, { requests: g.requests });
 
-  await interaction.reply({
-    embeds: [new EmbedBuilder().setColor(COLOR_RED).setTitle('❌ Demande refusée').setDescription(`La demande de **${g.requests[idx].nom}** a été refusée.`).setTimestamp()],
-    ephemeral: true,
-  });
-}
-
-async function retirerPartenaire(interaction, partnerId) {
-  const g = getGuild(interaction.guildId);
-  const idx = g.partners.findIndex(p => p.id === partnerId);
-
-  if (idx === -1) {
-    return interaction.reply({ content: '❌ Partenaire introuvable.', ephemeral: true });
-  }
-
-  const [removed] = g.partners.splice(idx, 1);
-  updateGuild(interaction.guildId, { partners: g.partners });
-
-  await interaction.reply({
-    embeds: [new EmbedBuilder().setColor(COLOR_RED).setTitle('➖ Partenaire retiré').setDescription(`**${removed.nom}** a été retiré des partenaires.`).setTimestamp()],
-    ephemeral: true,
-  });
+  try {
+    const user = await interaction.client.users.fetch(g.requests[idx].submittedBy).catch(() => null);
+    if (user) await user.send({ embeds: [new EmbedBuilder().setColor(C_RED).setTitle('❌ Demande refusée').setDescription(`Votre demande pour **${g.requests[idx].nom}** sur **${interaction.guild.name}** a été refusée.${raison ? `\n\n**Raison :** ${raison}` : ''}`).setTimestamp()] }).catch(() => {});
+  } catch {}
+  if (interaction.message) await interaction.message.edit({ components: [] }).catch(() => {});
+  return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_RED).setTitle('❌ Demande refusée').setDescription(`Demande de **${g.requests[idx].nom}** refusée.${raison ? ` Raison : ${raison}` : ''}\nDemandeur notifié par DM.`).setTimestamp()], ephemeral: true });
 }

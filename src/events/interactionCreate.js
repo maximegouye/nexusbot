@@ -41,6 +41,24 @@ async function _handleInteraction(interaction, client) {
       if (_handled !== false) return;
     }
 
+  // ── Route automatique des composants vers handleComponent ──
+  if (interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
+    const cid = interaction.customId || '';
+    const COMPONENT_ROUTES = {
+      'part_':        'partenariat',
+      'travail_job_': 'travail',
+      'peche_buy_':   'peche',
+      'giveaway_':    'giveaway',
+    };
+    for (const [prefix, cmdName] of Object.entries(COMPONENT_ROUTES)) {
+      if (cid.startsWith(prefix)) {
+        const cmd = client.commands?.get(cmdName) || [...(client.commands?.values() || [])].find(c => c.data?.name === cmdName);
+        if (cmd && typeof cmd.handleComponent === 'function') {
+          return cmd.handleComponent(interaction).catch(e => console.error('[handleComponent]', cmdName, e));
+        }
+      }
+    }
+  }
     // ── BANQUE : boutons dep/ret/refresh + modals ───────────────────
     if (interaction.isButton() && _cfgId.startsWith('banque_')) {
       try {
@@ -1500,6 +1518,11 @@ async function _handleInteraction(interaction, client) {
           return interaction.reply({
             embeds: [new EmbedBuilder()
               .setColor('#E74C3C')
+                if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+                  interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
+                } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
+                  interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.' }).catch(() => {});
+                }
               .setTitle('🚫 Accès refusé — Tickets désactivés')
               .setDescription(
                 `Tu as été **banni du système de tickets** de ce serveur.\n\n` +
