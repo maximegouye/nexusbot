@@ -11,7 +11,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('admin')
-    .setDescription('🛡️ Panneau d\'administration complet (Administrateurs)')
+    .setDescription('🛡️ Panneau d\'administrationMath.min(100, Math.max(1, parseInt(interaction.options.getString('nombre') || '10') || 10)); complet (Administrateurs)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 
     // ── Membres ──────────────────────────────────────────────────────
@@ -333,7 +333,7 @@ module.exports = {
       }
 
       if (sub === 'purge') {
-        const count  = parseInt(interaction.options.getString('nombre'));
+        const count  = Math.min(100, Math.max(1, parseInt(interaction.options.getString('nombre') || '10') || 10));
         const member = interaction.options.getUser('membre');
         const channel = interaction.channel;
 
