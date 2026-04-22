@@ -54,7 +54,7 @@ module.exports = {
 
     if (sub === 'chasser') {
       const cd = COOLDOWN - (now - c.last_hunt);
-      if (cd > 0) return interaction.reply({ content: `🔫 Rechargement dans **${cd}s**.`, ephemeral: true });
+      if (cd > 0) return interaction.editReply({ content: `🔫 Rechargement dans **${cd}s**.`, ephemeral: true });
 
       await interaction.deferReply();
       await new Promise(r => setTimeout(r, 1000));
@@ -86,7 +86,7 @@ module.exports = {
     if (sub === 'stats') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const stats = db.db.prepare('SELECT * FROM chasse WHERE guild_id=? AND user_id=?').get(guildId, target.id) || { total_kills: 0, total_earned: 0, rifle_level: 1 };
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle(`🏹 Stats de chasse — ${target.username}`)
           .addFields(
             { name: '🎯 Kills', value: `**${stats.total_kills}**`, inline: true },
@@ -101,26 +101,26 @@ module.exports = {
       const costs = [0, 250, 600, 1500, 3500, 8000, 18000];
       if (action === 'voir') {
         const lines = costs.slice(1).map((cost, i) => `Niv.**${i+2}** — ${cost} ${coin} | Bonus: +${(i+1)*12}%`).join('\n');
-        return interaction.reply({ embeds: [
+        return interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('#8B4513').setTitle('🔫 Améliorations Fusil')
             .setDescription(`Niveau actuel : **${c.rifle_level}** (+${(c.rifle_level-1)*12}%)\n\n${lines}`)
         ], ephemeral: true });
       }
-      if (c.rifle_level >= 7) return interaction.reply({ content: '✅ Fusil au niveau maximum !', ephemeral: true });
+      if (c.rifle_level >= 7) return interaction.editReply({ content: '✅ Fusil au niveau maximum !', ephemeral: true });
       const cost = costs[c.rifle_level];
       const u = db.getUser(userId, guildId);
-      if (u.balance < cost) return interaction.reply({ content: `❌ Coût: **${cost} ${coin}**.`, ephemeral: true });
+      if (u.balance < cost) return interaction.editReply({ content: `❌ Coût: **${cost} ${coin}**.`, ephemeral: true });
       db.addCoins(userId, guildId, -cost);
       db.db.prepare('UPDATE chasse SET rifle_level=rifle_level+1 WHERE guild_id=? AND user_id=?').run(guildId, userId);
-      return interaction.reply({ content: `✅ Fusil amélioré → Niv.**${c.rifle_level+1}** !` });
+      return interaction.editReply({ content: `✅ Fusil amélioré → Niv.**${c.rifle_level+1}** !` });
     }
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM chasse WHERE guild_id=? ORDER BY total_earned DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '❌ Aucun chasseur.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '❌ Aucun chasseur.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((t, i) => `${medals[i] || `**${i+1}.**`} <@${t.user_id}> — 🎯 ${t.total_kills} | 💰 ${t.total_earned} ${coin}`).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('🏆 Meilleurs Chasseurs').setDescription(lines)
       ]});
     }

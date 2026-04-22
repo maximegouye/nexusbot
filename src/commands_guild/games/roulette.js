@@ -91,17 +91,17 @@ async function playRoulette(source, userId, guildId, mise, betType) {
   const bet = parseBet(betType);
   if (!bet) {
     const err = `❌ Type de pari invalide.\n\n${BET_HELP}`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 5) {
     const err = '❌ Mise minimale : **5 coins**.';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 

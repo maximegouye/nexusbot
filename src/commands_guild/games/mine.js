@@ -59,7 +59,7 @@ module.exports = {
 
     if (sub === 'creuser') {
       const cd = COOLDOWN - (now - m.last_mine);
-      if (cd > 0) return interaction.reply({ content: `⏳ Pioche en refroidissement ! Réessayez dans **${cd}s**.`, ephemeral: true });
+      if (cd > 0) return interaction.editReply({ content: `⏳ Pioche en refroidissement ! Réessayez dans **${cd}s**.`, ephemeral: true });
 
       await interaction.deferReply();
       await new Promise(r => setTimeout(r, 1200));
@@ -95,18 +95,18 @@ module.exports = {
       const niveau = parseInt(interaction.options.getString('niveau'));
       const depthCosts = [0, 0, 300, 800, 2000, 5000, 12000, 25000, 50000, 100000];
 
-      if (niveau <= m.depth) return interaction.reply({ content: `❌ Vous êtes déjà à la profondeur **${m.depth}**. Choisissez un niveau plus élevé.`, ephemeral: true });
+      if (niveau <= m.depth) return interaction.editReply({ content: `❌ Vous êtes déjà à la profondeur **${m.depth}**. Choisissez un niveau plus élevé.`, ephemeral: true });
 
       let totalCost = 0;
       for (let i = m.depth + 1; i <= niveau; i++) totalCost += depthCosts[i - 1] || 100000;
 
       const u = db.getUser(userId, guildId);
-      if (u.balance < totalCost) return interaction.reply({ content: `❌ Coût total pour atteindre la profondeur ${niveau}: **${totalCost} ${coin}**.`, ephemeral: true });
+      if (u.balance < totalCost) return interaction.editReply({ content: `❌ Coût total pour atteindre la profondeur ${niveau}: **${totalCost} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -totalCost);
       db.db.prepare('UPDATE mine SET depth=? WHERE guild_id=? AND user_id=?').run(niveau, guildId, userId);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('⬇️ Nouveau palier atteint !')
           .setDescription(`Profondeur **${m.depth}** → **${niveau}**\nNouveau minerai disponible : **${ORES.find(o => o.minDepth === niveau)?.emoji || ''} ${ORES.find(o => o.minDepth === niveau)?.name || ''}**`)
           .addFields({ name: '💰 Coût', value: `-${totalCost} ${coin}`, inline: true })
@@ -118,22 +118,22 @@ module.exports = {
       const costs = [0, 300, 800, 2000, 5000, 12000, 25000, 60000, 150000];
       if (action === 'voir') {
         const lines = costs.slice(1).map((c, i) => `Niv.**${i + 2}** — ${c} ${coin} | Bonus: +${(i + 1) * 15}%`).join('\n');
-        return interaction.reply({ embeds: [
+        return interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('#8B4513').setTitle('⛏️ Améliorations pioche')
             .setDescription(`Niveau actuel : **${m.pickaxe_level}** (+${(m.pickaxe_level - 1) * 15}%)\n\n${lines}`)
         ], ephemeral: true });
       }
-      if (m.pickaxe_level >= 9) return interaction.reply({ content: '✅ Pioche déjà maximale !', ephemeral: true });
+      if (m.pickaxe_level >= 9) return interaction.editReply({ content: '✅ Pioche déjà maximale !', ephemeral: true });
       const cost = costs[m.pickaxe_level];
       const u = db.getUser(userId, guildId);
-      if (u.balance < cost) return interaction.reply({ content: `❌ Insuffisant ! Coût: **${cost} ${coin}**.`, ephemeral: true });
+      if (u.balance < cost) return interaction.editReply({ content: `❌ Insuffisant ! Coût: **${cost} ${coin}**.`, ephemeral: true });
       db.addCoins(userId, guildId, -cost);
       db.db.prepare('UPDATE mine SET pickaxe_level=pickaxe_level+1 WHERE guild_id=? AND user_id=?').run(guildId, userId);
-      return interaction.reply({ content: `✅ Pioche améliorée → Niv.**${m.pickaxe_level + 1}** (+${m.pickaxe_level * 15}%)`, ephemeral: false });
+      return interaction.editReply({ content: `✅ Pioche améliorée → Niv.**${m.pickaxe_level + 1}** (+${m.pickaxe_level * 15}%)`, ephemeral: false });
     }
 
     if (sub === 'stats') {
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('⛏️ Vos Stats Minières')
           .addFields(
             { name: '⛏️ Fouilles', value: `**${m.total_mined}**`, inline: true },
@@ -146,10 +146,10 @@ module.exports = {
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM mine WHERE guild_id=? ORDER BY total_earned DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '❌ Aucun mineur.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '❌ Aucun mineur.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((t, i) => `${medals[i] || `**${i+1}.**`} <@${t.user_id}> — ⛏️ ${t.total_mined} | 💰 ${t.total_earned} ${coin}`).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('🏆 Meilleurs Mineurs').setDescription(lines)
       ]});
     }

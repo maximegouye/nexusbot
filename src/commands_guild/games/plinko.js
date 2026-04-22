@@ -65,17 +65,17 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
   const riskKey = risk.toLowerCase();
   if (!MULTIPLIERS[riskKey]) {
     const err = '❌ Risque invalide. Choisir : `faible`, `moyen`, ou `eleve`';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 10) {
     const err = '❌ Mise minimale : **10 coins**.';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 

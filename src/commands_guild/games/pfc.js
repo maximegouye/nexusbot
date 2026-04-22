@@ -17,7 +17,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -25,7 +25,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
   const chosen = choix ? choix.toLowerCase() : null;
   if (chosen && !side.includes(chosen)) {
     const err = '❌ Choisis `pile` ou `face`.';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 

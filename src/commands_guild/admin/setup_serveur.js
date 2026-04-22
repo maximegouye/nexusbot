@@ -59,12 +59,12 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has('Administrator'))
-      return interaction.reply({ content: '🔒 Réservé aux administrateurs.', ephemeral: true });
+      return interaction.editReply({ content: '🔒 Réservé aux administrateurs.', ephemeral: true });
     const sub = interaction.options.getSubcommand(), guild = interaction.guild;
 
     if (sub === 'apercu') {
       const lines = TEMPLATE.flatMap(t => [`\n**${t.category}**`, ...t.channels.map(ch => `　${ch.name}`)]).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle('✨ ・ Modèle de serveur ・').setDescription(lines.slice(0,4090)).setFooter({ text: '/setup-serveur creer pour appliquer' })], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle('✨ ・ Modèle de serveur ・').setDescription(lines.slice(0,4090)).setFooter({ text: '/setup-serveur creer pour appliquer' })], ephemeral: true });
     }
 
     if (sub === 'renommer') {
@@ -100,8 +100,8 @@ module.exports = {
       try {
         const sep = await guild.channels.create({ name: nom, type: ChannelType.GuildText,
           permissionOverwrites: [{ id: guild.roles.everyone.id, deny: ['SendMessages','AddReactions'], allow: ['ViewChannel'] }] });
-        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('➖ ・ Séparateur créé').setDescription(`**${sep.name}** ・ Déplacez-le où vous voulez.`)], ephemeral: true });
-      } catch (e) { return interaction.reply({ content: `❌ Erreur : ${e.message}`, ephemeral: true }); }
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('➖ ・ Séparateur créé').setDescription(`**${sep.name}** ・ Déplacez-le où vous voulez.`)], ephemeral: true });
+      } catch (e) { return interaction.editReply({ content: `❌ Erreur : ${e.message}`, ephemeral: true }); }
     }
   }
 };

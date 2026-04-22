@@ -199,12 +199,12 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
   const totalMise = mise * lines;
   if (!u || u.solde < totalMise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}** (mise totale : ${totalMise}).`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 5) {
     const err = '❌ Mise minimale : **5 coins** par ligne.';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 

@@ -24,7 +24,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator))
-      return interaction.reply({ content: '🚫 Réservé aux administrateurs.', ephemeral: true });
+      return interaction.editReply({ content: '🚫 Réservé aux administrateurs.', ephemeral: true });
     await interaction.deferReply({ ephemeral: true });
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guild.id;

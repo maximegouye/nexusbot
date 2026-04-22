@@ -65,12 +65,12 @@ async function playVideoPoker(source, userId, guildId, mise) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (sessions.has(userId)) {
     const err = '⚠️ Tu as déjà une partie de Video Poker en cours !';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 

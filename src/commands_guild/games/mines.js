@@ -138,22 +138,22 @@ async function playMines(source, userId, guildId, mise, minesCount) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (sessions.has(userId)) {
     const err = '⚠️ Tu as déjà une partie de Mines en cours !';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 10) {
     const err = '❌ Mise minimale : **10 coins**.';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (minesCount < 1 || minesCount > 24) {
     const err = '❌ Nombre de mines entre **1** et **24**.';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 

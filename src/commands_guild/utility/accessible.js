@@ -51,7 +51,7 @@ module.exports = {
 
     if (sub === 'activer') {
       upsert({ plain_text: 1, no_emoji: 1, screen_reader: 1, large_text: 1 });
-      return interaction.reply({
+      return interaction.editReply({
         content:
           'Mode accessibilite complet active.\n\n' +
           'Texte brut : Oui.\n' +
@@ -65,12 +65,12 @@ module.exports = {
 
     if (sub === 'desactiver') {
       upsert({ plain_text: 0, no_emoji: 0, screen_reader: 0, large_text: 0 });
-      return interaction.reply({ content: '✅ Mode accessibilité désactivé. Retour à l\'affichage normal.', ephemeral: true });
+      return interaction.editReply({ content: '✅ Mode accessibilité désactivé. Retour à l\'affichage normal.', ephemeral: true });
     }
 
     if (sub === 'voir') {
       if (settings.screen_reader) {
-        return interaction.reply({
+        return interaction.editReply({
           content:
             'Vos parametres d\'accessibilite :\n\n' +
             `Mode texte brut : ${settings.plain_text ? 'Actif' : 'Inactif'}\n` +
@@ -80,7 +80,7 @@ module.exports = {
           ephemeral: true
         });
       }
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle('♿ Vos paramètres d\'accessibilité')
         .addFields(
           { name: '📄 Texte brut', value: settings.plain_text ? '✅ Actif' : '❌ Inactif', inline: true },
@@ -94,13 +94,13 @@ module.exports = {
     if (sub === 'textebrut') {
       const newVal = settings.plain_text ? 0 : 1;
       upsert({ plain_text: newVal });
-      return interaction.reply({ content: `✅ Mode texte brut : **${newVal ? 'Activé' : 'Désactivé'}**`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Mode texte brut : **${newVal ? 'Activé' : 'Désactivé'}**`, ephemeral: true });
     }
 
     if (sub === 'sansemojis') {
       const newVal = settings.no_emoji ? 0 : 1;
       upsert({ no_emoji: newVal });
-      return interaction.reply({ content: `✅ Mode sans emojis : **${newVal ? 'Activé' : 'Désactivé'}**`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Mode sans emojis : **${newVal ? 'Activé' : 'Désactivé'}**`, ephemeral: true });
     }
 
     if (sub === 'aide') {
@@ -126,7 +126,7 @@ module.exports = {
         'Utilisez /accessible lire pour obtenir un resume des derniers messages en texte pur.\n\n' +
         'Si vous avez des problemes, contactez un administrateur du serveur.';
 
-      return interaction.reply({ content: guide, ephemeral: true });
+      return interaction.editReply({ content: guide, ephemeral: true });
     }
 
     if (sub === 'commandes') {
@@ -162,7 +162,7 @@ module.exports = {
         '/ticket - Support et signalement\n\n' +
         'Pour plus de details sur une commande, tapez /aide ou n!aide';
 
-      return interaction.reply({ content: liste, ephemeral: true });
+      return interaction.editReply({ content: liste, ephemeral: true });
     }
 
     if (sub === 'lire') {

@@ -273,7 +273,7 @@ module.exports = {
   async execute(interaction) {
     // ── Vérification propriétaire ──────────────────────────────────────────
     if (!isOwner(interaction)) {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [baseEmbed('🔐 Accès refusé', '#E74C3C')
           .setDescription('Cette commande est réservée exclusivement au propriétaire du serveur.')],
         ephemeral: true
