@@ -67,19 +67,20 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub     = interaction.options.getSubcommand();
     const channel = interaction.channel;
 
     if (sub === 'stop') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.reply({ content: '❌ Aucune course en cours.', ephemeral: true });
+      if (!sess) return interaction.editReply({ content: '❌ Aucune course en cours.', ephemeral: true });
       sess.collector?.stop('manual');
       activeSessions.delete(channel.id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('⏹️ Course arrêtée.')] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('⏹️ Course arrêtée.')] });
     }
 
     if (activeSessions.has(channel.id)) {
-      return interaction.reply({ content: '⚠️ Une course est déjà en cours !', ephemeral: true });
+      return interaction.editReply({ content: '⚠️ Une course est déjà en cours !', ephemeral: true });
     }
 
     const diff  = interaction.options.getString('difficulte') || 'moyen';
@@ -88,7 +89,7 @@ module.exports = {
     const phrase  = phrases[Math.floor(Math.random() * phrases.length)];
 
     // Décompte
-    await interaction.reply({ embeds: [new EmbedBuilder().setColor('#f39c12').setTitle('⌨️ Course de Frappe').setDescription(`**Préparez-vous !**\nDifficulté : **${diff}** | Temps : **${temps}s**\n\nLa phrase apparaîtra dans 3 secondes...`)] });
+    await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#f39c12').setTitle('⌨️ Course de Frappe').setDescription(`**Préparez-vous !**\nDifficulté : **${diff}** | Temps : **${temps}s**\n\nLa phrase apparaîtra dans 3 secondes...`)] });
     await new Promise(r => setTimeout(r, 3000));
 
     const startTime = Date.now();

@@ -203,6 +203,7 @@ module.exports = {
       )),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playBaccaratGame(
       interaction,
       interaction.user.id,

@@ -48,6 +48,7 @@ module.exports = {
     .addSubcommand(s => s.setName('classement').setDescription('🏆 Top explorateurs du donjon')),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
@@ -63,7 +64,7 @@ module.exports = {
 
     if (sub === 'personnage') {
       const hpBar = '█'.repeat(Math.floor(hero.hp / hero.max_hp * 10)) + '░'.repeat(10 - Math.floor(hero.hp / hero.max_hp * 10));
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#9B59B6').setTitle(`🧙 ${interaction.user.username}`)
           .addFields(
             { name: '❤️ PV', value: `${hpBar} ${hero.hp}/${hero.max_hp}`, inline: false },
@@ -77,9 +78,9 @@ module.exports = {
     }
 
     if (sub === 'explorer') {
-      if (hero.hp <= 0) return interaction.reply({ content: '❌ Votre héros est mort ! Utilisez `/donjon reset` pour recommencer.', ephemeral: true });
+      if (hero.hp <= 0) return interaction.editReply({ content: '❌ Votre héros est mort ! Utilisez `/donjon reset` pour recommencer.', ephemeral: true });
       const cd = COOLDOWN - (now - hero.last_run);
-      if (cd > 0) return interaction.reply({ content: `⏳ Récupération en cours ! Prêt dans **${cd}s**.`, ephemeral: true });
+      if (cd > 0) return interaction.editReply({ content: `⏳ Récupération en cours ! Prêt dans **${cd}s**.`, ephemeral: true });
 
       // Choisir un monstre selon l'étage
       const monsterLevel = Math.min(Math.ceil(hero.floor / 5), MONSTERS.length);
@@ -121,7 +122,7 @@ module.exports = {
         db.db.prepare('UPDATE donjon SET hp=?, floor=?, total_floors=total_floors+1, total_earned=total_earned+? WHERE guild_id=? AND user_id=?')
           .run(newHp, newFloor, gain, guildId, userId);
 
-        return interaction.reply({ embeds: [
+        return interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('#2ECC71').setTitle(`⚔️ Victoire ! Étage ${hero.floor}`)
             .setDescription(`Vous avez vaincu **${monster.emoji} ${monster.name}** !\nGain : **+${gain} ${coin}**`)
             .addFields(
@@ -136,13 +137,13 @@ module.exports = {
         db.db.prepare('UPDATE donjon SET hp=? WHERE guild_id=? AND user_id=?').run(newHp, guildId, userId);
 
         if (newHp <= 0) {
-          return interaction.reply({ embeds: [
+          return interaction.editReply({ embeds: [
             new EmbedBuilder().setColor('#E74C3C').setTitle(`💀 Défaite — Étage ${hero.floor}`)
               .setDescription(`**${monster.emoji} ${monster.name}** vous a vaincu !\nVotre héros est mort. Utilisez \`/donjon reset\` pour recommencer.`)
           ]});
         }
 
-        return interaction.reply({ embeds: [
+        return interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('#E74C3C').setTitle(`💔 Défaite — Étage ${hero.floor}`)
             .setDescription(`**${monster.emoji} ${monster.name}** vous a repoussé !\nPV perdus : ${dmgTaken}`)
             .addFields({ name: '❤️ PV restants', value: `${newHp}/${hero.max_hp}`, inline: true })
@@ -155,7 +156,7 @@ module.exports = {
       const costs = { hp: 200, atk: 300, def: 250 };
       const cost = costs[stat];
       const u = db.getUser(userId, guildId);
-      if (u.balance < cost) return interaction.reply({ content: `❌ Coût : **${cost} ${coin}**.`, ephemeral: true });
+      if (u.balance < cost) return interaction.editReply({ content: `❌ Coût : **${cost} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
       if (stat === 'hp') db.db.prepare('UPDATE donjon SET max_hp=max_hp+20, hp=hp+20 WHERE guild_id=? AND user_id=?').run(guildId, userId);
@@ -163,20 +164,20 @@ module.exports = {
       if (stat === 'def') db.db.prepare('UPDATE donjon SET def=def+3 WHERE guild_id=? AND user_id=?').run(guildId, userId);
 
       const labels = { hp: '❤️ +20 PV', atk: '⚔️ +5 ATK', def: '🛡️ +3 DEF' };
-      return interaction.reply({ content: `✅ **${labels[stat]}** ! (-${cost} ${coin})` });
+      return interaction.editReply({ content: `✅ **${labels[stat]}** ! (-${cost} ${coin})` });
     }
 
     if (sub === 'reset') {
       db.db.prepare('UPDATE donjon SET hp=max_hp, floor=1 WHERE guild_id=? AND user_id=?').run(guildId, userId);
-      return interaction.reply({ content: '🔄 Votre héros a été réinitialisé au rez-de-chaussée avec tous ses PV. Les stats sont conservées.', ephemeral: true });
+      return interaction.editReply({ content: '🔄 Votre héros a été réinitialisé au rez-de-chaussée avec tous ses PV. Les stats sont conservées.', ephemeral: true });
     }
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM donjon WHERE guild_id=? ORDER BY total_floors DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '❌ Aucun explorateur.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '❌ Aucun explorateur.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((t, i) => `${medals[i] || `**${i+1}.**`} <@${t.user_id}> — 🏰 Étage ${t.floor} | 🗺️ ${t.total_floors} | 💰 ${t.total_earned} ${coin}`).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#9B59B6').setTitle('🏆 Meilleurs Explorateurs').setDescription(lines)
       ]});
     }

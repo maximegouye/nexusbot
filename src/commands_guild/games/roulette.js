@@ -208,6 +208,7 @@ module.exports = {
     .addSubcommand ? undefined : undefined, // pas de subcommands ici
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playRoulette(
       interaction,
       interaction.user.id,

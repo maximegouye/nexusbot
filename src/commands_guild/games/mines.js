@@ -275,6 +275,7 @@ module.exports = {
       .setName('mines').setDescription('Nombre de mines 1-24 (défaut 3)')),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playMines(
       interaction,
       interaction.user.id,

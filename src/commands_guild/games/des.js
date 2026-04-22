@@ -136,6 +136,7 @@ module.exports = {
     .addStringOption(o => o.setName('des').setDescription('Nombre de dés (1 ou 2)')),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playDice(
       interaction,
       interaction.user.id,

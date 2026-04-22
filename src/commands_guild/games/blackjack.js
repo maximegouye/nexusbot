@@ -13,6 +13,7 @@ module.exports = {
       .setRequired(true)),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const userId  = interaction.user.id;
     const guildId = interaction.guildId;
     const user    = db.getUser(userId, guildId);
@@ -31,9 +32,9 @@ module.exports = {
     }
 
     if (isNaN(mise) || mise < 10)
-      return interaction.reply({ content: `❌ Mise invalide. Min 10 ${symbol}. Ex: \`/blackjack 100\``, ephemeral: true });
+      return interaction.editReply({ content: `❌ Mise invalide. Min 10 ${symbol}. Ex: \`/blackjack 100\``, ephemeral: true });
     if (!user || balance < mise)
-      return interaction.reply({ content: `❌ Solde insuffisant. Tu as **${balance}** ${symbol}.`, ephemeral: true });
+      return interaction.editReply({ content: `❌ Solde insuffisant. Tu as **${balance}** ${symbol}.`, ephemeral: true });
 
     db.removeCoins(userId, guildId, mise);
     const embedOpts = { symbol, color: '#FFD700', userName: interaction.user.username };
@@ -41,10 +42,10 @@ module.exports = {
 
     if (immediateFinish) {
       if (game.payout > 0n) db.addCoins(userId, guildId, Number(game.payout));
-      return interaction.reply({ embeds: [bjm.buildEmbed(game, embedOpts)] });
+      return interaction.editReply({ embeds: [bjm.buildEmbed(game, embedOpts)] });
     }
 
-    await interaction.reply({ embeds: [bjm.buildEmbed(game, embedOpts)], components: [bjm.buildButtons(game)] });
+    await interaction.editReply({ embeds: [bjm.buildEmbed(game, embedOpts)], components: [bjm.buildButtons(game)] });
     try {
       const msg = await interaction.fetchReply();
       db.saveGameSession(msg.id, userId, guildId, interaction.channelId, 'blackjack',

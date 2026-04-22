@@ -112,6 +112,7 @@ module.exports = {
     )),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playCoinFlip(
       interaction,
       interaction.user.id,

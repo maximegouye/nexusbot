@@ -76,32 +76,33 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub     = interaction.options.getSubcommand();
     const channel = interaction.channel;
     const guildId = interaction.guildId;
 
     if (sub === 'stop') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.reply({ content: '❌ Aucune partie en cours.', ephemeral: true });
+      if (!sess) return interaction.editReply({ content: '❌ Aucune partie en cours.', ephemeral: true });
       activeSessions.delete(channel.id);
       const scores = Object.entries(sess.scores).sort((a,b) => b[1]-a[1]);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setTitle('⏹️ Partie arrêtée')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setTitle('⏹️ Partie arrêtée')
         .setDescription(scores.length ? scores.map(([id,pts],i) => `${i===0?'🥇':i===1?'🥈':'🥉'} <@${id}> — **${pts} pts**`).join('\n') : 'Aucun point.')
       ]});
     }
 
     if (sub === 'scores') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.reply({ content: '❌ Aucune partie en cours.', ephemeral: true });
+      if (!sess) return interaction.editReply({ content: '❌ Aucune partie en cours.', ephemeral: true });
       const scores = Object.entries(sess.scores).sort((a,b) => b[1]-a[1]);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#f39c12').setTitle('🏆 Scores Music Quiz')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#f39c12').setTitle('🏆 Scores Music Quiz')
         .setDescription(scores.length ? scores.map(([id,pts],i) => `${i===0?'🥇':i===1?'🥈':'🥉'} <@${id}> — **${pts} pts**`).join('\n') : 'Personne n\'a encore répondu.')
         .setFooter({ text: `Question ${sess.current}/${sess.total}` })
       ], ephemeral: true });
     }
 
     if (sub === 'jouer') {
-      if (activeSessions.has(channel.id)) return interaction.reply({ content: '⚠️ Une partie est déjà en cours !', ephemeral: true });
+      if (activeSessions.has(channel.id)) return interaction.editReply({ content: '⚠️ Une partie est déjà en cours !', ephemeral: true });
 
       const categorie = interaction.options.getString('categorie') || 'mixte';
       const nbQ       = parseInt(interaction.options.getString('questions')) || 5;
@@ -124,7 +125,7 @@ module.exports = {
       const sess = { scores: {}, current: 0, total: questions.length, questions, guildId };
       activeSessions.set(channel.id, sess);
 
-      await interaction.reply({ embeds: [new EmbedBuilder()
+      await interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#e91e8c')
         .setTitle('🎵 Music Quiz — Partie lancée !')
         .setDescription(`**${questions.length} questions** sur le thème : **${categorie === 'mixte' ? 'Mixte' : categorie}**\n\nRépondez dans le chat ! ⏱️ 20 secondes par question.\n\nBonne chance ! 🎶`)

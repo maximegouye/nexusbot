@@ -90,6 +90,7 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const diff    = interaction.options.getString('difficulte');
     const cfg     = CONFIGS[diff];
     const userId  = interaction.user.id;
@@ -112,7 +113,7 @@ module.exports = {
       )
       .setFooter({ text: `Joueur : ${interaction.user.username} • Démineur Discord (spoilers)` });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
 
     // Since Discord minesweeper works via spoilers that the user reveals manually,
     // we give reward based on honor system + add a "I won !" button interaction

@@ -204,6 +204,7 @@ module.exports = {
     .addStringOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true)),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playVideoPoker(interaction, interaction.user.id, interaction.guildId, parseInt(interaction.options.getString('mise')));
   },
 
