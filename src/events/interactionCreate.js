@@ -1409,7 +1409,7 @@ async function _handleInteraction(interaction, client) {
         const { handleAdvancedInteraction } = require('../utils/configPanelAdvanced');
         const _db2 = require('../database/db');
         const _handled2 = await handleAdvancedInteraction(interaction, _db2, client);
-        if (_handled2 !== false) return;
+        if (_handled2 === true) return; // FIX: slash commands debloqués
       } catch (e) {
         console.error('[ADV-PANEL] Erreur:', e);
       }
