@@ -1420,6 +1420,12 @@ async function _handleInteraction(interaction, client) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
 
+  // === DEFER_IMMEDIAT_COWORK avant toutes les verifications DB ===
+  // Garantit une reponse a Discord en moins de 3 secondes
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
+  }
+
       // ── Vérification blacklist NexusBot ───────────────────
       if (interaction.commandName !== 'nexus') {
         try {
