@@ -59,7 +59,7 @@ async function handleCasino(source, userId, guildId, sub) {
       .setTimestamp();
 
     if (isInteraction) return source.editReply({ embeds: [embed] });
-    return source.reply({ embeds: [embed] });
+    return source.editReply({ embeds: [embed] });
   }
 
   if (sub === 'jackpot') {
@@ -78,7 +78,7 @@ async function handleCasino(source, userId, guildId, sub) {
       .setTimestamp();
 
     if (isInteraction) return source.editReply({ embeds: [embed] });
-    return source.reply({ embeds: [embed] });
+    return source.editReply({ embeds: [embed] });
   }
 
   if (sub === 'top' || sub === 'classement') {
@@ -109,6 +109,6 @@ async function handleCasino(source, userId, guildId, sub) {
       .setTimestamp();
 
     if (isInteraction) return source.editReply({ embeds: [embed] });
-    return source.reply({ embeds: [embed] });
+    return source.editReply({ embeds: [embed] });
   }
 }

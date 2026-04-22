@@ -90,13 +90,13 @@ module.exports = {
         permissionOverwrites: [{ id: interaction.guild.roles.everyone, deny: ['Connect'] }],
       }).catch(() => null);
 
-      if (!channel) return interaction.reply({ content: '❌ Impossible de créer le salon. Vérifiez les permissions du bot.', ephemeral: true });
+      if (!channel) return interaction.editReply({ content: '❌ Impossible de créer le salon. Vérifiez les permissions du bot.', ephemeral: true });
 
       db.db.prepare(`INSERT INTO stats_channels (guild_id,channel_id,type,template) VALUES(?,?,?,?)
         ON CONFLICT(guild_id,type) DO UPDATE SET channel_id=?, template=?`)
         .run(guildId, channel.id, type, template, channel.id, template);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle('✅ Salon de statistique créé')
         .addFields(
           { name: '📊 Type',      value: info.label, inline: true },
@@ -110,27 +110,27 @@ module.exports = {
     if (sub === 'supprimer') {
       const type = interaction.options.getString('type');
       const entry = db.db.prepare('SELECT * FROM stats_channels WHERE guild_id=? AND type=?').get(guildId, type);
-      if (!entry) return interaction.reply({ content: `❌ Aucun salon configuré pour ce type.`, ephemeral: true });
+      if (!entry) return interaction.editReply({ content: `❌ Aucun salon configuré pour ce type.`, ephemeral: true });
 
       const channel = interaction.guild.channels.cache.get(entry.channel_id);
       if (channel) await channel.delete().catch(() => {});
       db.db.prepare('DELETE FROM stats_channels WHERE guild_id=? AND type=?').run(guildId, type);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setDescription(`🗑️ Salon de statistique **${STAT_TYPES[type]?.label || type}** supprimé.`)] });
     }
 
     if (sub === 'liste') {
       const entries = db.db.prepare('SELECT * FROM stats_channels WHERE guild_id=?').all(guildId);
-      if (!entries.length) return interaction.reply({ content: '📊 Aucun salon de stat configuré.', ephemeral: true });
+      if (!entries.length) return interaction.editReply({ content: '📊 Aucun salon de stat configuré.', ephemeral: true });
       const lines = entries.map(e => `**${STAT_TYPES[e.type]?.label || e.type}** → <#${e.channel_id}> | \`${e.template}\``);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle('📊 Salons de statistiques')
         .setDescription(lines.join('\n'))], ephemeral: true });
     }
 
     if (sub === 'actualiser') {
       const entries = db.db.prepare('SELECT * FROM stats_channels WHERE guild_id=?').all(guildId);
-      if (!entries.length) return interaction.reply({ content: '❌ Aucun salon configuré.', ephemeral: true });
+      if (!entries.length) return interaction.editReply({ content: '❌ Aucun salon configuré.', ephemeral: true });
 
       let updated = 0;
       for (const entry of entries) {
@@ -141,7 +141,7 @@ module.exports = {
         await channel.setName(name).catch(() => {});
         updated++;
       }
-      return interaction.reply({ content: `✅ **${updated}** salon(s) de statistique mis à jour.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ **${updated}** salon(s) de statistique mis à jour.`, ephemeral: true });
     }
   }
 };

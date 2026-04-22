@@ -118,10 +118,10 @@ async function playVideoPoker(source, userId, guildId, mise) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+    await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+    msg = await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
   }
 
   const filter = i => i.user.id === userId && i.customId.startsWith(`vp_`);

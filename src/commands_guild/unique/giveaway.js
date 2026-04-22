@@ -81,19 +81,19 @@ async function endGiveaway(giveaway, client) {
 async function handleGiveawayButton(interaction) {
   const parts = interaction.customId.split('_');
   const giveawayId = parseInt(parts[2]);
-  if (isNaN(giveawayId)) return interaction.reply({ content: '❌ Giveaway invalide.', ephemeral: true });
+  if (isNaN(giveawayId)) return interaction.editReply({ content: '❌ Giveaway invalide.', ephemeral: true });
   const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE id = ? AND guild_id = ?').get(giveawayId, interaction.guildId);
-  if (!giveaway) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
-  if (giveaway.status !== 'active') return interaction.reply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
-  if (giveaway.ends_at < Math.floor(Date.now() / 1000)) return interaction.reply({ content: '❌ Ce giveaway est expiré.', ephemeral: true });
+  if (!giveaway) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+  if (giveaway.status !== 'active') return interaction.editReply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
+  if (giveaway.ends_at < Math.floor(Date.now() / 1000)) return interaction.editReply({ content: '❌ Ce giveaway est expiré.', ephemeral: true });
   if (giveaway.min_level > 0 || giveaway.min_balance > 0) {
     const user = db.db.prepare('SELECT * FROM users WHERE user_id = ? AND guild_id = ?').get(interaction.user.id, interaction.guildId);
     if (giveaway.min_level > 0 && (!user || user.level < giveaway.min_level))
-      return interaction.reply({ content: `❌ Niveau minimum requis : **${giveaway.min_level}**. Ton niveau : **${user ? user.level : 0}**.`, ephemeral: true });
+      return interaction.editReply({ content: `❌ Niveau minimum requis : **${giveaway.min_level}**. Ton niveau : **${user ? user.level : 0}**.`, ephemeral: true });
     if (giveaway.min_balance > 0) {
       const balance = user ? ((user.balance || 0) + (user.bank || 0)) : 0;
       if (balance < giveaway.min_balance)
-        return interaction.reply({ content: `❌ Balance minimum requise : **${giveaway.min_balance}**. Ta balance : **${balance}**.`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Balance minimum requise : **${giveaway.min_balance}**. Ta balance : **${balance}**.`, ephemeral: true });
     }
   }
   const entries = JSON.parse(giveaway.entries || '[]');
@@ -102,13 +102,13 @@ async function handleGiveawayButton(interaction) {
     const newEntries = entries.filter(id => id !== interaction.user.id);
     db.db.prepare('UPDATE giveaways SET entries = ? WHERE id = ?').run(JSON.stringify(newEntries), giveawayId);
     try { await interaction.message.edit({ embeds: [buildEmbed({ ...giveaway, entries: JSON.stringify(newEntries) }, newEntries)] }); } catch {}
-    return interaction.reply({ content: '👋 Tu as quitté le giveaway.', ephemeral: true });
+    return interaction.editReply({ content: '👋 Tu as quitté le giveaway.', ephemeral: true });
   }
   let newEntries = [...entries, interaction.user.id];
   if (giveaway.bonus_role_id && interaction.member && interaction.member.roles.cache.has(giveaway.bonus_role_id)) newEntries.push(interaction.user.id);
   db.db.prepare('UPDATE giveaways SET entries = ? WHERE id = ?').run(JSON.stringify(newEntries), giveawayId);
   try { await interaction.message.edit({ embeds: [buildEmbed({ ...giveaway, entries: JSON.stringify(newEntries) }, newEntries)] }); } catch {}
-  await interaction.reply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** ! (${new Set(newEntries).size} participant(s))`, ephemeral: true });
+  await interaction.editReply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** ! (${new Set(newEntries).size} participant(s))`, ephemeral: true });
 }
 
 module.exports = {
@@ -149,8 +149,8 @@ module.exports = {
       const balanceMin = parseInt(interaction.options.getString('balance_min') || '0') || 0;
       const roleBonus = interaction.options.getRole('role_bonus');
       const dureeMs = parseDuration(dureeStr);
-      if (!dureeMs || dureeMs < 60000) return interaction.reply({ content: '❌ Durée invalide. Exemples : `10m`, `2h`, `1j`.', ephemeral: true });
-      if (dureeMs > 30 * 86400000) return interaction.reply({ content: '❌ Durée maximale : 30 jours.', ephemeral: true });
+      if (!dureeMs || dureeMs < 60000) return interaction.editReply({ content: '❌ Durée invalide. Exemples : `10m`, `2h`, `1j`.', ephemeral: true });
+      if (dureeMs > 30 * 86400000) return interaction.editReply({ content: '❌ Durée maximale : 30 jours.', ephemeral: true });
       const endsAt = Math.floor((Date.now() + dureeMs) / 1000);
       const result = db.db.prepare(`INSERT INTO giveaways (guild_id, channel_id, host_id, prize, winners_count, min_level, min_balance, bonus_role_id, status, ends_at, entries, winner_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, '[]', '[]')`).run(interaction.guildId, channel.id, interaction.user.id, prize, gagnants, niveauMin, balanceMin, roleBonus ? roleBonus.id : null, endsAt);
       const giveawayId = result.lastInsertRowid;
@@ -160,12 +160,12 @@ module.exports = {
       const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`giveaway_join_${giveawayId}`).setLabel('🎉 Participer').setStyle(ButtonStyle.Primary));
       const msg = await channel.send({ embeds: [embed], components: [row] });
       db.db.prepare('UPDATE giveaways SET message_id = ? WHERE id = ?').run(msg.id, giveawayId);
-      await interaction.reply({ content: `✅ Giveaway **${prize}** créé dans <#${channel.id}> ! (ID: \`${giveawayId}\`)`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Giveaway **${prize}** créé dans <#${channel.id}> ! (ID: \`${giveawayId}\`)`, ephemeral: true });
     } else if (sub === 'terminer' || sub === 'end') {
       const idRaw = interaction.options.getString('id');
       const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE (id = ? OR message_id = ?) AND guild_id = ?').get(idRaw, idRaw, interaction.guildId);
-      if (!giveaway) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
-      if (giveaway.status !== 'active') return interaction.reply({ content: '❌ Ce giveaway est déjà terminé.', ephemeral: true });
+      if (!giveaway) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+      if (giveaway.status !== 'active') return interaction.editReply({ content: '❌ Ce giveaway est déjà terminé.', ephemeral: true });
       await interaction.deferReply({ ephemeral: true });
       await endGiveaway(giveaway, interaction.client);
       await interaction.editReply({ content: `✅ Giveaway **${giveaway.prize}** terminé !` });
@@ -173,30 +173,30 @@ module.exports = {
       const idRaw = interaction.options.getString('id');
       const nombre = Math.min(20, Math.max(1, parseInt(interaction.options.getString('nombre') || '1') || 1));
       const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE (id = ? OR message_id = ?) AND guild_id = ?').get(idRaw, idRaw, interaction.guildId);
-      if (!giveaway) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
-      if (giveaway.status === 'active') return interaction.reply({ content: '❌ Giveaway encore actif. Terminez-le d\'abord.', ephemeral: true });
+      if (!giveaway) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+      if (giveaway.status === 'active') return interaction.editReply({ content: '❌ Giveaway encore actif. Terminez-le d\'abord.', ephemeral: true });
       const entries = JSON.parse(giveaway.entries || '[]');
-      if (entries.length === 0) return interaction.reply({ content: '❌ Aucun participant.', ephemeral: true });
+      if (entries.length === 0) return interaction.editReply({ content: '❌ Aucun participant.', ephemeral: true });
       const winners = pickWinners(entries, nombre);
       const mentions = winners.map(id => `<@${id}>`).join(', ');
       try { const ch = await interaction.client.channels.fetch(giveaway.channel_id); const msg = await ch.messages.fetch(giveaway.message_id); await msg.reply({ content: `🔄 **Reroll !** Nouveaux gagnants : ${mentions} — félicitations pour **${giveaway.prize}** ! 🎉` }); } catch {}
-      await interaction.reply({ content: `✅ Reroll ! Gagnants : ${mentions}`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Reroll ! Gagnants : ${mentions}`, ephemeral: true });
     } else if (sub === 'info') {
       const idRaw = interaction.options.getString('id');
       const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE (id = ? OR message_id = ?) AND guild_id = ?').get(idRaw, idRaw, interaction.guildId);
-      if (!giveaway) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+      if (!giveaway) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
       const entries = JSON.parse(giveaway.entries || '[]');
       const embed = buildEmbed(giveaway, entries);
       embed.setTitle(`📋 Giveaway #${giveaway.id} — ${giveaway.prize}`);
       embed.addFields({ name: '🆔 ID', value: `${giveaway.id}`, inline: true });
       if (giveaway.status !== 'active') { const w = JSON.parse(giveaway.winner_ids || '[]'); if (w.length > 0) embed.addFields({ name: '🏆 Gagnants', value: w.map(id => `<@${id}>`).join(', ') }); }
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.editReply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'liste') {
       const list = db.db.prepare('SELECT * FROM giveaways WHERE guild_id = ? AND status = ? ORDER BY ends_at ASC LIMIT 10').all(interaction.guildId, 'active');
-      if (list.length === 0) return interaction.reply({ content: '📭 Aucun giveaway actif.', ephemeral: true });
+      if (list.length === 0) return interaction.editReply({ content: '📭 Aucun giveaway actif.', ephemeral: true });
       const embed = new EmbedBuilder().setTitle('🎉 Giveaways actifs').setColor(0xf1c40f)
         .setDescription(list.map(g => { const e = JSON.parse(g.entries || '[]'); return `**#${g.id}** — ${g.prize}\n👥 ${new Set(e).size} participant(s) · 🕒 <t:${g.ends_at}:R> · <#${g.channel_id}>`; }).join('\n\n'));
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.editReply({ embeds: [embed], ephemeral: true });
     }
   }
 
@@ -213,18 +213,18 @@ module.exports = {
       try {
         const gw = await db.get('SELECT * FROM giveaways WHERE id = ? AND guild_id = ?', [giveawayId, guildId])
                 || await db.get('SELECT * FROM giveaways WHERE message_id = ? AND guild_id = ?', [giveawayId, guildId]);
-        if (!gw) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
-        if (gw.status !== 'active' && gw.ended) return interaction.reply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
+        if (!gw) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+        if (gw.status !== 'active' && gw.ended) return interaction.editReply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
 
         const already = await db.get('SELECT 1 FROM giveaway_entries WHERE giveaway_id = ? AND user_id = ?', [gw.id || giveawayId, userId]);
-        if (already) return interaction.reply({ content: '✅ Tu participes déjà à ce giveaway !', ephemeral: true });
+        if (already) return interaction.editReply({ content: '✅ Tu participes déjà à ce giveaway !', ephemeral: true });
 
         await db.run('INSERT OR IGNORE INTO giveaway_entries (giveaway_id, user_id, guild_id) VALUES (?, ?, ?)', [gw.id || giveawayId, userId, guildId]);
         const count = await db.get('SELECT COUNT(*) as n FROM giveaway_entries WHERE giveaway_id = ?', [gw.id || giveawayId]);
-        return interaction.reply({ content: `🎉 Tu participes au giveaway ! (${count?.n || '?'} participants)`, ephemeral: true });
+        return interaction.editReply({ content: `🎉 Tu participes au giveaway ! (${count?.n || '?'} participants)`, ephemeral: true });
       } catch(e) {
         console.error('[GIVEAWAY COMPONENT]', e);
-        return interaction.reply({ content: '❌ Erreur lors de la participation.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Erreur lors de la participation.', ephemeral: true });
       }
     }
   },

@@ -62,13 +62,13 @@ module.exports = {
       const endTime = now + duree * 3600;
 
       // Coût de mise en vente : 50 coins
-      if ((u.balance || 0) < 50) return interaction.reply({ content: `❌ Il faut **50 ${coin}** pour mettre un article en vente.`, ephemeral: true });
+      if ((u.balance || 0) < 50) return interaction.editReply({ content: `❌ Il faut **50 ${coin}** pour mettre un article en vente.`, ephemeral: true });
       db.addCoins(userId, guildId, -50);
 
       const result = db.db.prepare('INSERT INTO encheres (guild_id,seller_id,item_name,description,starting_price,current_price,min_increment,end_time) VALUES(?,?,?,?,?,?,?,?)')
         .run(guildId, userId, article, desc, prixDepart, prixDepart, increment, endTime);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle(`🏷️ Enchère créée — ${article}`)
         .setDescription(desc || '*Aucune description*')
         .addFields(
@@ -84,17 +84,17 @@ module.exports = {
       const id = parseInt(interaction.options.getString('id'));
       const montant = parseInt(interaction.options.getString('montant'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
-      if (enc.status !== 'active') return interaction.reply({ content: '❌ Cette enchère est terminée.', ephemeral: true });
-      if (now > enc.end_time) return interaction.reply({ content: '❌ Cette enchère est expirée.', ephemeral: true });
-      if (enc.seller_id === userId) return interaction.reply({ content: '❌ Vous ne pouvez pas enchérir sur votre propre article.', ephemeral: true });
-      if (enc.highest_bidder === userId) return interaction.reply({ content: '❌ Vous êtes déjà le plus offrant.', ephemeral: true });
+      if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
+      if (enc.status !== 'active') return interaction.editReply({ content: '❌ Cette enchère est terminée.', ephemeral: true });
+      if (now > enc.end_time) return interaction.editReply({ content: '❌ Cette enchère est expirée.', ephemeral: true });
+      if (enc.seller_id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas enchérir sur votre propre article.', ephemeral: true });
+      if (enc.highest_bidder === userId) return interaction.editReply({ content: '❌ Vous êtes déjà le plus offrant.', ephemeral: true });
 
       const minBid = enc.current_price + enc.min_increment;
-      if (montant < minBid) return interaction.reply({ content: `❌ La mise minimale est **${minBid} ${coin}** (actuel: ${enc.current_price} + incrément: ${enc.min_increment}).`, ephemeral: true });
+      if (montant < minBid) return interaction.editReply({ content: `❌ La mise minimale est **${minBid} ${coin}** (actuel: ${enc.current_price} + incrément: ${enc.min_increment}).`, ephemeral: true });
 
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < montant) return interaction.reply({ content: `❌ Vous n\'avez que **${u.balance || 0} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < montant) return interaction.editReply({ content: `❌ Vous n\'avez que **${u.balance || 0} ${coin}**.`, ephemeral: true });
 
       // Rembourser le précédent enchérisseur
       if (enc.highest_bidder) {
@@ -106,7 +106,7 @@ module.exports = {
       db.db.prepare('UPDATE encheres SET current_price=?, highest_bidder=? WHERE id=?').run(montant, userId, id);
       db.db.prepare('INSERT INTO enchere_bids (enchere_id,guild_id,bidder_id,amount) VALUES(?,?,?,?)').run(id, guildId, userId, montant);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle(`💰 Enchère #${id} — Nouvelle mise !`)
         .setDescription(`<@${userId}> a mis **${montant} ${coin}** sur **${enc.item_name}** !`)
         .addFields(
@@ -118,12 +118,12 @@ module.exports = {
     if (sub === 'voir') {
       const id = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
+      if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
       const bids = db.db.prepare('SELECT COUNT(*) as c FROM enchere_bids WHERE enchere_id=?').get(id);
       const isExpired = now > enc.end_time;
       const statusEmoji = enc.status === 'active' && !isExpired ? '🟢' : '🔒';
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle(`${statusEmoji} Enchère #${id} — ${enc.item_name}`)
         .setDescription(enc.description || '*Aucune description*')
         .addFields(
@@ -138,9 +138,9 @@ module.exports = {
 
     if (sub === 'liste') {
       const encs = db.db.prepare('SELECT * FROM encheres WHERE guild_id=? AND status=? AND end_time>? ORDER BY end_time ASC LIMIT 10').all(guildId, 'active', now);
-      if (!encs.length) return interaction.reply({ content: '📋 Aucune enchère active. Créez-en une avec `/enchere creer` !', ephemeral: true });
+      if (!encs.length) return interaction.editReply({ content: '📋 Aucune enchère active. Créez-en une avec `/enchere creer` !', ephemeral: true });
       const desc = encs.map(e => `**[#${e.id}] ${e.item_name}** — ${e.current_price} ${coin} | Fin : <t:${e.end_time}:R>`).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('🏷️ Enchères actives')
         .setDescription(desc)
         .setFooter({ text: '/enchere voir id:<n> pour les détails' })] });
@@ -151,7 +151,7 @@ module.exports = {
       const myBids = db.db.prepare('SELECT * FROM encheres WHERE guild_id=? AND highest_bidder=? ORDER BY id DESC LIMIT 5').all(guildId, userId);
       const salesDesc = mySales.length ? mySales.map(e => `📦 **[#${e.id}] ${e.item_name}** — ${e.current_price} ${coin} | ${e.status}`).join('\n') : '*Aucune vente*';
       const bidsDesc = myBids.length ? myBids.map(e => `💰 **[#${e.id}] ${e.item_name}** — ${e.current_price} ${coin} | ${e.status}`).join('\n') : '*Aucune enchère*';
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle('📜 Votre historique d\'enchères')
         .addFields(
           { name: '🏪 Vos ventes', value: salesDesc, inline: false },
@@ -162,34 +162,34 @@ module.exports = {
     if (sub === 'annuler') {
       const id = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=? AND seller_id=?').get(id, guildId, userId);
-      if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable ou vous n\'êtes pas le vendeur.`, ephemeral: true });
-      if (enc.highest_bidder) return interaction.reply({ content: '❌ Impossible d\'annuler : quelqu\'un a déjà enchéri. Attendez la fin.', ephemeral: true });
+      if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable ou vous n\'êtes pas le vendeur.`, ephemeral: true });
+      if (enc.highest_bidder) return interaction.editReply({ content: '❌ Impossible d\'annuler : quelqu\'un a déjà enchéri. Attendez la fin.', ephemeral: true });
       db.db.prepare('UPDATE encheres SET status=? WHERE id=?').run('annulee', id);
       db.addCoins(userId, guildId, 25); // Remboursement partiel
-      return interaction.reply({ content: `✅ Enchère #${id} annulée. Remboursement partiel : +25 ${coin}`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Enchère #${id} annulée. Remboursement partiel : +25 ${coin}`, ephemeral: true });
     }
 
     if (sub === 'cloturer') {
       const id = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!enc) return interaction.reply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
-      if (enc.status !== 'active') return interaction.reply({ content: '❌ Cette enchère est déjà clôturée.', ephemeral: true });
+      if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
+      if (enc.status !== 'active') return interaction.editReply({ content: '❌ Cette enchère est déjà clôturée.', ephemeral: true });
       if (enc.seller_id !== userId && !interaction.member.permissions.has(0x8n)) {
-        return interaction.reply({ content: '❌ Seul le vendeur ou un admin peut clôturer.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Seul le vendeur ou un admin peut clôturer.', ephemeral: true });
       }
-      if (now < enc.end_time) return interaction.reply({ content: `❌ L\'enchère n\'est pas encore terminée. Fin : <t:${enc.end_time}:R>`, ephemeral: true });
+      if (now < enc.end_time) return interaction.editReply({ content: `❌ L\'enchère n\'est pas encore terminée. Fin : <t:${enc.end_time}:R>`, ephemeral: true });
 
       db.db.prepare('UPDATE encheres SET status=? WHERE id=?').run('terminee', id);
       // Donner les coins au vendeur
       if (enc.highest_bidder) {
         db.addCoins(enc.seller_id, guildId, enc.current_price);
-        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle(`🏆 Enchère #${id} terminée — ${enc.item_name}`)
           .setDescription(`**Gagnant :** <@${enc.highest_bidder}>\n**Prix final :** ${enc.current_price} ${coin}\n\nLe vendeur a reçu **${enc.current_price} ${coin}** !`)] });
       } else {
         // Remboursement complet si aucune mise
         db.addCoins(enc.seller_id, guildId, 50);
-        return interaction.reply({ content: `❌ Enchère #${id} terminée sans enchérisseur. Frais remboursés (+50 ${coin}).`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Enchère #${id} terminée sans enchérisseur. Frais remboursés (+50 ${coin}).`, ephemeral: true });
       }
     }
   }

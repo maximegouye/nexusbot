@@ -100,7 +100,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.reply({ embeds: [startEmbed] });
+    msg = await source.editReply({ embeds: [startEmbed] });
   }
 
   // Animation bille tombe rangée par rangée

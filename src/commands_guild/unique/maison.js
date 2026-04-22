@@ -82,17 +82,17 @@ module.exports = {
 
     if (sub === 'construire') {
       const existing = db.db.prepare('SELECT id FROM maisons WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.reply({ content: '❌ Vous avez déjà une maison ! Utilisez `/maison voir` pour la consulter.', ephemeral: true });
+      if (existing) return interaction.editReply({ content: '❌ Vous avez déjà une maison ! Utilisez `/maison voir` pour la consulter.', ephemeral: true });
 
       const cost = 500;
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < cost) return interaction.reply({ content: `❌ Construire une maison coûte **${cost} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < cost) return interaction.editReply({ content: `❌ Construire une maison coûte **${cost} ${coin}**.`, ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       db.addCoins(userId, guildId, -cost);
       db.db.prepare('INSERT INTO maisons (guild_id,user_id,name) VALUES(?,?,?)').run(guildId, userId, nom);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('🏠 Maison construite !')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('🏠 Maison construite !')
         .setDescription(`**${nom}** est maintenant votre chez-vous ! Décorez-la avec \`/maison ameliorer\`.`)
         .addFields(
           { name: '💰 Coût', value: `-${cost} ${coin}`, inline: true },
@@ -106,12 +106,12 @@ module.exports = {
     if (sub === 'voir') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const house = db.db.prepare('SELECT * FROM maisons WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-      if (!house) return interaction.reply({ content: `❌ **${target.username}** n'a pas encore de maison.`, ephemeral: true });
+      if (!house) return interaction.editReply({ content: `❌ **${target.username}** n'a pas encore de maison.`, ephemeral: true });
 
       const style = STYLES[house.style] || STYLES.moderne;
       const prestige = calcPrestige(house);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle(`${style.emoji} ${house.name}`)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle(`${style.emoji} ${house.name}`)
         .setDescription(`Propriétaire : <@${target.id}> • ${style.emoji} Style **${house.style}**`)
         .addFields(
           { name: '🚪 Pièces', value: `**${house.rooms}**/10`, inline: true },
@@ -127,22 +127,22 @@ module.exports = {
 
     if (sub === 'ameliorer') {
       const house = db.db.prepare('SELECT * FROM maisons WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!house) return interaction.reply({ content: '❌ Vous n\'avez pas de maison. Utilisez `/maison construire`.', ephemeral: true });
+      if (!house) return interaction.editReply({ content: '❌ Vous n\'avez pas de maison. Utilisez `/maison construire`.', ephemeral: true });
 
       const type = interaction.options.getString('type');
       const upg = UPGRADES[type];
       const current = house[type];
-      if (current >= upg.max) return interaction.reply({ content: `❌ Vous avez déjà le maximum de **${upg.name}** (${upg.max}).`, ephemeral: true });
+      if (current >= upg.max) return interaction.editReply({ content: `❌ Vous avez déjà le maximum de **${upg.name}** (${upg.max}).`, ephemeral: true });
 
       const cost = upg.basePrice * (current + 1);
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < cost) return interaction.reply({ content: `❌ Cette amélioration coûte **${cost.toLocaleString()} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < cost) return interaction.editReply({ content: `❌ Cette amélioration coûte **${cost.toLocaleString()} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
       db.db.prepare(`UPDATE maisons SET ${type}=${type}+1, prestige_score=? WHERE guild_id=? AND user_id=?`)
         .run(calcPrestige({ ...house, [type]: current + 1 }), guildId, userId);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`${upg.emoji} ${upg.name} ajouté(e) !`)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`${upg.emoji} ${upg.name} ajouté(e) !`)
         .addFields(
           { name: upg.emoji + ' Amélioration', value: `${upg.name} : ${current} → **${current + 1}**`, inline: true },
           { name: '💰 Coût', value: `-${cost.toLocaleString()} ${coin}`, inline: true },
@@ -152,32 +152,32 @@ module.exports = {
 
     if (sub === 'style') {
       const house = db.db.prepare('SELECT * FROM maisons WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!house) return interaction.reply({ content: '❌ Vous n\'avez pas de maison.', ephemeral: true });
+      if (!house) return interaction.editReply({ content: '❌ Vous n\'avez pas de maison.', ephemeral: true });
 
       const style = interaction.options.getString('style');
       const s = STYLES[style];
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < s.cost) return interaction.reply({ content: `❌ Ce style coûte **${s.cost.toLocaleString()} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < s.cost) return interaction.editReply({ content: `❌ Ce style coûte **${s.cost.toLocaleString()} ${coin}**.`, ephemeral: true });
 
       if (s.cost > 0) db.addCoins(userId, guildId, -s.cost);
       db.db.prepare('UPDATE maisons SET style=? WHERE guild_id=? AND user_id=?').run(style, guildId, userId);
 
-      return interaction.reply({ content: `✅ Style changé pour **${s.emoji} ${style}** !${s.cost > 0 ? ` (-${s.cost.toLocaleString()} ${coin})` : ''}` });
+      return interaction.editReply({ content: `✅ Style changé pour **${s.emoji} ${style}** !${s.cost > 0 ? ` (-${s.cost.toLocaleString()} ${coin})` : ''}` });
     }
 
     if (sub === 'renommer') {
       const house = db.db.prepare('SELECT * FROM maisons WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!house) return interaction.reply({ content: '❌ Vous n\'avez pas de maison.', ephemeral: true });
+      if (!house) return interaction.editReply({ content: '❌ Vous n\'avez pas de maison.', ephemeral: true });
       const nom = interaction.options.getString('nom');
       db.db.prepare('UPDATE maisons SET name=? WHERE guild_id=? AND user_id=?').run(nom, guildId, userId);
-      return interaction.reply({ content: `✅ Votre maison s'appelle maintenant **${nom}** !` });
+      return interaction.editReply({ content: `✅ Votre maison s'appelle maintenant **${nom}** !` });
     }
 
     if (sub === 'visiter') {
       const target = interaction.options.getUser('membre');
-      if (target.id === userId) return interaction.reply({ content: '❌ Visitez la maison d\'un autre !', ephemeral: true });
+      if (target.id === userId) return interaction.editReply({ content: '❌ Visitez la maison d\'un autre !', ephemeral: true });
       const house = db.db.prepare('SELECT * FROM maisons WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-      if (!house) return interaction.reply({ content: `❌ **${target.username}** n'a pas de maison.`, ephemeral: true });
+      if (!house) return interaction.editReply({ content: `❌ **${target.username}** n'a pas de maison.`, ephemeral: true });
 
       db.db.prepare('UPDATE maisons SET visits=visits+1 WHERE guild_id=? AND user_id=?').run(guildId, target.id);
 
@@ -193,7 +193,7 @@ module.exports = {
 
       const style = STYLES[house.style] || STYLES.moderne;
       const prestige = calcPrestige(house);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle(`${style.emoji} Visite de ${house.name}`)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle(`${style.emoji} Visite de ${house.name}`)
         .setDescription(`Propriétaire : <@${target.id}>` + visitReward)
         .addFields(
           { name: '🚪 Pièces', value: `${house.rooms}`, inline: true },
@@ -212,13 +212,13 @@ module.exports = {
         SELECT *, (rooms*10 + furniture*5 + garden*25 + pool*40 + garage*20 + level*15) as score
         FROM maisons WHERE guild_id=? ORDER BY score DESC LIMIT 10
       `).all(guildId);
-      if (!houses.length) return interaction.reply({ content: '❌ Aucune maison sur ce serveur encore.', ephemeral: true });
+      if (!houses.length) return interaction.editReply({ content: '❌ Aucune maison sur ce serveur encore.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const desc = houses.map((h, i) => {
         const s = STYLES[h.style] || STYLES.moderne;
         return `${medals[i] || `**${i+1}.**`} ${s.emoji} **${h.name}** (<@${h.owner_id || h.user_id}>) — ⭐ ${h.score} pts`;
       }).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏠 Top Maisons').setDescription(desc)] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏠 Top Maisons').setDescription(desc)] });
     }
   }
 };

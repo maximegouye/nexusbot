@@ -146,7 +146,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     await source.deferReply();
     msg = await source.editReply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   } else {
-    msg = await source.reply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
+    msg = await source.editReply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   }
 
   activeGames.set(userId, { cashedOut: false, mult: 1.0, msg });

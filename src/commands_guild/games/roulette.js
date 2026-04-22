@@ -119,10 +119,10 @@ async function playRoulette(source, userId, guildId, mise, betType) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [spinEmbed()] });
+    await source.editReply({ embeds: [spinEmbed()] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.reply({ embeds: [spinEmbed()] });
+    msg = await source.editReply({ embeds: [spinEmbed()] });
   }
 
   // Animation spinning

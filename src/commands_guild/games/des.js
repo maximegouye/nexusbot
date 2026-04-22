@@ -78,10 +78,10 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [animEmbed] });
+    await source.editReply({ embeds: [animEmbed] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.reply({ embeds: [animEmbed] });
+    msg = await source.editReply({ embeds: [animEmbed] });
   }
 
   for (let f = 0; f < 4; f++) {

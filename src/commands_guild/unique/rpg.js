@@ -100,7 +100,7 @@ module.exports = {
 
     if (sub === 'creer') {
       const existing = db.db.prepare('SELECT id FROM rpg_chars WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.reply({ content: '❌ Vous avez déjà un personnage ! Utilisez `/rpg profil` pour le voir.', ephemeral: true });
+      if (existing) return interaction.editReply({ content: '❌ Vous avez déjà un personnage ! Utilisez `/rpg profil` pour le voir.', ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       const classe = interaction.options.getString('classe');
@@ -109,7 +109,7 @@ module.exports = {
       db.db.prepare('INSERT INTO rpg_chars (guild_id,user_id,name,class,hp,max_hp,attack,defense,speed,magic) VALUES(?,?,?,?,?,?,?,?,?,?)')
         .run(guildId, userId, nom, classe, cl.hp, cl.hp, cl.attack, cl.defense, cl.speed, cl.magic);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`${cl.emoji} ${nom} est né(e) !`)
         .setDescription(`**Classe :** ${classe.charAt(0).toUpperCase()+classe.slice(1)}\n${cl.desc}`)
         .addFields(
@@ -126,12 +126,12 @@ module.exports = {
     if (sub === 'profil') {
       const target = interaction.options.getUser('joueur') || interaction.user;
       const char = db.db.prepare('SELECT * FROM rpg_chars WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-      if (!char) return interaction.reply({ content: `❌ **${target.username}** n'a pas de personnage RPG.`, ephemeral: true });
+      if (!char) return interaction.editReply({ content: `❌ **${target.username}** n'a pas de personnage RPG.`, ephemeral: true });
       const cl = CLASSES[char.class] || CLASSES.guerrier;
       const needed = xpForLevel(char.level);
       const inventory = JSON.parse(char.inventory || '[]');
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E67E22')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E67E22')
         .setTitle(`${cl.emoji} ${char.name} — Niveau ${char.level}`)
         .setDescription(`**Classe :** ${char.class.charAt(0).toUpperCase()+char.class.slice(1)}\n**Joueur :** <@${target.id}>`)
         .addFields(
@@ -150,7 +150,7 @@ module.exports = {
 
     if (sub === 'quete') {
       const char = db.db.prepare('SELECT * FROM rpg_chars WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!char) return interaction.reply({ content: '❌ Créez d\'abord un personnage avec `/rpg creer`.', ephemeral: true });
+      if (!char) return interaction.editReply({ content: '❌ Créez d\'abord un personnage avec `/rpg creer`.', ephemeral: true });
 
       // Choisir une quête en fonction du niveau
       const availableQuests = QUETES.filter(q => {
@@ -163,7 +163,7 @@ module.exports = {
 
       if (now - char.last_quest < quete.cooldown / availableQuests.length) {
         const waitSecs = (quete.cooldown / availableQuests.length) - (now - char.last_quest);
-        return interaction.reply({ content: `⏳ Vous êtes fatigué(e). Reposez-vous encore **${Math.ceil(waitSecs/60)} minutes**.`, ephemeral: true });
+        return interaction.editReply({ content: `⏳ Vous êtes fatigué(e). Reposez-vous encore **${Math.ceil(waitSecs/60)} minutes**.`, ephemeral: true });
       }
 
       // Simuler la quête (succès probabiliste selon les stats)
@@ -200,7 +200,7 @@ module.exports = {
 
       const color = success ? '#2ECC71' : '#E74C3C';
       const emoji = success ? '✅' : '❌';
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(color)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(color)
         .setTitle(`${emoji} Quête : ${quete.name}`)
         .addFields(
           { name: success ? '🏆 Victoire !' : '💀 Défaite...', value: success ? `Vous avez accompli la quête avec brio !` : `Vous avez subi une défaite cuisante...`, inline: false },
@@ -214,12 +214,12 @@ module.exports = {
 
     if (sub === 'combat') {
       const target = interaction.options.getUser('adversaire');
-      if (target.id === userId) return interaction.reply({ content: '❌ Vous ne pouvez pas vous battre contre vous-même.', ephemeral: true });
+      if (target.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous battre contre vous-même.', ephemeral: true });
 
       const char1 = db.db.prepare('SELECT * FROM rpg_chars WHERE guild_id=? AND user_id=?').get(guildId, userId);
       const char2 = db.db.prepare('SELECT * FROM rpg_chars WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-      if (!char1) return interaction.reply({ content: '❌ Vous n\'avez pas de personnage RPG.', ephemeral: true });
-      if (!char2) return interaction.reply({ content: `❌ **${target.username}** n'a pas de personnage RPG.`, ephemeral: true });
+      if (!char1) return interaction.editReply({ content: '❌ Vous n\'avez pas de personnage RPG.', ephemeral: true });
+      if (!char2) return interaction.editReply({ content: `❌ **${target.username}** n'a pas de personnage RPG.`, ephemeral: true });
 
       // Simulation de combat
       let hp1 = char1.hp, hp2 = char2.hp;
@@ -252,7 +252,7 @@ module.exports = {
       db.db.prepare('UPDATE rpg_chars SET losses=losses+1, hp=? WHERE guild_id=? AND user_id=?').run(Math.max(1, loserId === userId ? hp1 : hp2), guildId, loserId);
       db.addCoins(winnerId, guildId, goldGain);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`⚔️ Combat : ${char1.name} vs ${char2.name}`)
         .setDescription(log.join('\n') + `\n*... ${rounds} rounds ...*`)
         .addFields(
@@ -265,7 +265,7 @@ module.exports = {
 
     if (sub === 'shop') {
       const lines = ITEMS_SHOP.map(i => `${i.emoji} **${i.name}** (ID: \`${i.id}\`) — **${i.cost}g** — ${i.effect}`).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('🏪 Boutique RPG')
         .setDescription(lines)
         .setFooter({ text: '/rpg acheter item:<id> pour acheter' })] });
@@ -274,16 +274,16 @@ module.exports = {
     if (sub === 'acheter') {
       const itemId = interaction.options.getString('item');
       const item = ITEMS_SHOP.find(i => i.id === itemId);
-      if (!item) return interaction.reply({ content: '❌ Item introuvable.', ephemeral: true });
+      if (!item) return interaction.editReply({ content: '❌ Item introuvable.', ephemeral: true });
       const char = db.db.prepare('SELECT * FROM rpg_chars WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!char) return interaction.reply({ content: '❌ Vous n\'avez pas de personnage RPG.', ephemeral: true });
-      if (char.gold < item.cost) return interaction.reply({ content: `❌ Vous n\'avez que **${char.gold}g** (il faut ${item.cost}g).`, ephemeral: true });
+      if (!char) return interaction.editReply({ content: '❌ Vous n\'avez pas de personnage RPG.', ephemeral: true });
+      if (char.gold < item.cost) return interaction.editReply({ content: `❌ Vous n\'avez que **${char.gold}g** (il faut ${item.cost}g).`, ephemeral: true });
 
       const inventory = JSON.parse(char.inventory || '[]');
       inventory.push(item.name);
       db.db.prepare('UPDATE rpg_chars SET gold=gold-?, inventory=? WHERE guild_id=? AND user_id=?').run(item.cost, JSON.stringify(inventory), guildId, userId);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle(`${item.emoji} Achat : ${item.name}`)
         .addFields(
           { name: '💰 Prix payé', value: `${item.cost}g`, inline: true },
@@ -293,26 +293,26 @@ module.exports = {
 
     if (sub === 'soigner') {
       const char = db.db.prepare('SELECT * FROM rpg_chars WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!char) return interaction.reply({ content: '❌ Vous n\'avez pas de personnage RPG.', ephemeral: true });
+      if (!char) return interaction.editReply({ content: '❌ Vous n\'avez pas de personnage RPG.', ephemeral: true });
       const inventory = JSON.parse(char.inventory || '[]');
       const idx = inventory.findIndex(i => i === 'Potion de vie');
-      if (idx === -1) return interaction.reply({ content: '❌ Vous n\'avez pas de Potion de vie. Achetez-en une à la boutique !', ephemeral: true });
+      if (idx === -1) return interaction.editReply({ content: '❌ Vous n\'avez pas de Potion de vie. Achetez-en une à la boutique !', ephemeral: true });
       inventory.splice(idx, 1);
       const newHp = Math.min(char.max_hp, char.hp + 40);
       db.db.prepare('UPDATE rpg_chars SET hp=?, inventory=? WHERE guild_id=? AND user_id=?').run(newHp, JSON.stringify(inventory), guildId, userId);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`🧪 Potion utilisée ! PV : **${char.hp} → ${newHp}/${char.max_hp}** (+40 PV)`)] });
     }
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM rpg_chars WHERE guild_id=? ORDER BY level DESC, xp DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '❌ Aucun personnage RPG sur ce serveur.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '❌ Aucun personnage RPG sur ce serveur.', ephemeral: true });
       const medals = ['🥇','🥈','🥉'];
       const desc = top.map((c, i) => {
         const cl = CLASSES[c.class] || CLASSES.guerrier;
         return `${medals[i] || `**${i+1}.**`} ${cl.emoji} **${c.name}** (<@${c.user_id}>) — Niv. **${c.level}** | ${c.wins}V/${c.losses}D`;
       }).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('🏆 Classement RPG')
         .setDescription(desc)] });
     }

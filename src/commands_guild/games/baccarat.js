@@ -108,10 +108,10 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [animEmbed] });
+    await source.editReply({ embeds: [animEmbed] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.reply({ embeds: [animEmbed] });
+    msg = await source.editReply({ embeds: [animEmbed] });
   }
 
   await sleep(800);

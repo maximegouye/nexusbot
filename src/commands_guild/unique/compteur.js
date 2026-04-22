@@ -42,7 +42,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const guild = interaction.guild;
 
-    if (!interaction.member.permissions.has(0x20n)) return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+    if (!interaction.member.permissions.has(0x20n)) return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
 
     if (sub === 'setup') {
       const type = interaction.options.getString('type');
@@ -64,12 +64,12 @@ module.exports = {
           permissionOverwrites: [{ id: guild.id, deny: ['Connect'] }],
         });
       } catch (e) {
-        return interaction.reply({ content: `❌ Impossible de créer le salon : ${e.message}`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Impossible de créer le salon : ${e.message}`, ephemeral: true });
       }
 
       db.db.prepare('INSERT OR REPLACE INTO compteurs (guild_id, channel_id, type, value) VALUES (?,?,?,?)').run(guildId, channel.id, `${type}:${format}`, counts[type]);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Compteur créé !')
           .addFields(
             { name: '📊 Type', value: type, inline: true },
@@ -81,7 +81,7 @@ module.exports = {
 
     if (sub === 'update') {
       const counters = db.db.prepare('SELECT * FROM compteurs WHERE guild_id=?').all(guildId);
-      if (!counters.length) return interaction.reply({ content: '❌ Aucun compteur configuré.', ephemeral: true });
+      if (!counters.length) return interaction.editReply({ content: '❌ Aucun compteur configuré.', ephemeral: true });
 
       await guild.members.fetch();
       let updated = 0;
@@ -104,13 +104,13 @@ module.exports = {
         } catch {}
       }
 
-      return interaction.reply({ content: `✅ **${updated}** compteur(s) mis à jour.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ **${updated}** compteur(s) mis à jour.`, ephemeral: true });
     }
 
     if (sub === 'supprimer') {
       const type = interaction.options.getString('type');
       const counter = db.db.prepare("SELECT * FROM compteurs WHERE guild_id=? AND type LIKE ?").get(guildId, `${type}:%`);
-      if (!counter) return interaction.reply({ content: '❌ Compteur introuvable.', ephemeral: true });
+      if (!counter) return interaction.editReply({ content: '❌ Compteur introuvable.', ephemeral: true });
 
       try {
         const ch = guild.channels.cache.get(counter.channel_id);
@@ -118,7 +118,7 @@ module.exports = {
       } catch {}
 
       db.db.prepare("DELETE FROM compteurs WHERE guild_id=? AND type LIKE ?").run(guildId, `${type}:%`);
-      return interaction.reply({ content: '✅ Compteur supprimé.', ephemeral: true });
+      return interaction.editReply({ content: '✅ Compteur supprimé.', ephemeral: true });
     }
   }
 };

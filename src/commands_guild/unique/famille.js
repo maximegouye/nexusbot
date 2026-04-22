@@ -53,19 +53,19 @@ module.exports = {
     if (sub === 'demander') {
       const target = interaction.options.getUser('membre');
       const type = interaction.options.getString('type');
-      if (target.id === userId || target.bot) return interaction.reply({ content: '❌ Membre invalide.', ephemeral: true });
+      if (target.id === userId || target.bot) return interaction.editReply({ content: '❌ Membre invalide.', ephemeral: true });
 
       const myData = db.db.prepare('SELECT * FROM familles WHERE guild_id=? AND user_id=?').get(guildId, userId);
       const theirData = db.db.prepare('SELECT * FROM familles WHERE guild_id=? AND user_id=?').get(guildId, target.id);
 
       if (type === 'mariage') {
-        if (myData?.partner_id) return interaction.reply({ content: '❌ Vous êtes déjà marié(e) ! Divorcez d\'abord.', ephemeral: true });
-        if (theirData?.partner_id) return interaction.reply({ content: `❌ <@${target.id}> est déjà marié(e) !`, ephemeral: true });
+        if (myData?.partner_id) return interaction.editReply({ content: '❌ Vous êtes déjà marié(e) ! Divorcez d\'abord.', ephemeral: true });
+        if (theirData?.partner_id) return interaction.editReply({ content: `❌ <@${target.id}> est déjà marié(e) !`, ephemeral: true });
       }
 
       if (type === 'adoption') {
         if (theirData?.parent1_id || theirData?.parent2_id) {
-          return interaction.reply({ content: `❌ <@${target.id}> a déjà des parents.`, ephemeral: true });
+          return interaction.editReply({ content: `❌ <@${target.id}> a déjà des parents.`, ephemeral: true });
         }
       }
 
@@ -78,19 +78,19 @@ module.exports = {
         ? `<@${target.id}>, **${interaction.user.username}** vous demande en mariage ! 💍\n\nUtilisez \`/famille accepter\` ou \`/famille refuser\`.`
         : `<@${target.id}>, **${interaction.user.username}** souhaite vous adopter ! 👶\n\nUtilisez \`/famille accepter\` ou \`/famille refuser\`.`;
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#FF69B4').setTitle(`${emoji} Demande envoyée`).setDescription(msg)] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#FF69B4').setTitle(`${emoji} Demande envoyée`).setDescription(msg)] });
     }
 
     if (sub === 'accepter') {
       const prop = db.db.prepare('SELECT * FROM family_proposals WHERE guild_id=? AND to_id=? ORDER BY created_at DESC LIMIT 1').get(guildId, userId);
-      if (!prop) return interaction.reply({ content: '❌ Aucune demande en attente.', ephemeral: true });
+      if (!prop) return interaction.editReply({ content: '❌ Aucune demande en attente.', ephemeral: true });
 
       if (prop.type === 'mariage') {
         const marriageCost = 500;
         const myU = db.getUser(userId, guildId);
         const theirU = db.getUser(prop.from_id, guildId);
         if ((myU.balance || 0) < marriageCost / 2 || (theirU.balance || 0) < marriageCost / 2) {
-          return interaction.reply({ content: `❌ Le mariage coûte **${marriageCost} ${coin}** (partagé entre les deux époux).`, ephemeral: true });
+          return interaction.editReply({ content: `❌ Le mariage coûte **${marriageCost} ${coin}** (partagé entre les deux époux).`, ephemeral: true });
         }
         db.addCoins(userId, guildId, -marriageCost / 2);
         db.addCoins(prop.from_id, guildId, -marriageCost / 2);
@@ -102,7 +102,7 @@ module.exports = {
         db.db.prepare(upsert).run(guildId, prop.from_id, userId, now);
 
         db.db.prepare('DELETE FROM family_proposals WHERE id=?').run(prop.id);
-        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#FF69B4').setTitle('💍 Félicitations !')
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#FF69B4').setTitle('💍 Félicitations !')
           .setDescription(`<@${prop.from_id}> et <@${userId}> sont maintenant **mariés** ! 🎉\n-${marriageCost / 2} ${coin} chacun`)
         ]});
       }
@@ -112,15 +112,15 @@ module.exports = {
           ON CONFLICT(guild_id,user_id) DO UPDATE SET parent1_id=excluded.parent1_id`;
         db.db.prepare(upsert2).run(guildId, userId, prop.from_id);
         db.db.prepare('DELETE FROM family_proposals WHERE id=?').run(prop.id);
-        return interaction.reply({ content: `✅ <@${prop.from_id}> a officiellement adopté <@${userId}> ! 👶` });
+        return interaction.editReply({ content: `✅ <@${prop.from_id}> a officiellement adopté <@${userId}> ! 👶` });
       }
     }
 
     if (sub === 'refuser') {
       const prop = db.db.prepare('SELECT * FROM family_proposals WHERE guild_id=? AND to_id=? ORDER BY created_at DESC LIMIT 1').get(guildId, userId);
-      if (!prop) return interaction.reply({ content: '❌ Aucune demande en attente.', ephemeral: true });
+      if (!prop) return interaction.editReply({ content: '❌ Aucune demande en attente.', ephemeral: true });
       db.db.prepare('DELETE FROM family_proposals WHERE id=?').run(prop.id);
-      return interaction.reply({ content: `❌ Vous avez refusé la demande de <@${prop.from_id}>.` });
+      return interaction.editReply({ content: `❌ Vous avez refusé la demande de <@${prop.from_id}>.` });
     }
 
     if (sub === 'voir') {
@@ -147,35 +147,35 @@ module.exports = {
       }
 
       embed.setDescription(lines.join('\n'));
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (sub === 'divorcer') {
       const myData = db.db.prepare('SELECT * FROM familles WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!myData?.partner_id) return interaction.reply({ content: '❌ Vous n\'êtes pas marié(e).', ephemeral: true });
+      if (!myData?.partner_id) return interaction.editReply({ content: '❌ Vous n\'êtes pas marié(e).', ephemeral: true });
 
       const partnerId = myData.partner_id;
       db.db.prepare('UPDATE familles SET partner_id=NULL, married_at=NULL WHERE guild_id=? AND user_id=?').run(guildId, userId);
       db.db.prepare('UPDATE familles SET partner_id=NULL, married_at=NULL WHERE guild_id=? AND user_id=?').run(guildId, partnerId);
 
-      return interaction.reply({ content: `💔 Vous avez divorcé de <@${partnerId}>. C'est une décision difficile...` });
+      return interaction.editReply({ content: `💔 Vous avez divorcé de <@${partnerId}>. C'est une décision difficile...` });
     }
 
     if (sub === 'desadopter') {
       const child = interaction.options.getUser('membre');
       const childData = db.db.prepare('SELECT * FROM familles WHERE guild_id=? AND user_id=?').get(guildId, child.id);
       if (!childData || (childData.parent1_id !== userId && childData.parent2_id !== userId)) {
-        return interaction.reply({ content: `❌ <@${child.id}> n'est pas votre enfant adopté.`, ephemeral: true });
+        return interaction.editReply({ content: `❌ <@${child.id}> n'est pas votre enfant adopté.`, ephemeral: true });
       }
 
       const upd = childData.parent1_id === userId ? 'parent1_id' : 'parent2_id';
       db.db.prepare(`UPDATE familles SET ${upd}=NULL WHERE guild_id=? AND user_id=?`).run(guildId, child.id);
-      return interaction.reply({ content: `👋 <@${child.id}> a été désadopté(e). Bonne continuation !` });
+      return interaction.editReply({ content: `👋 <@${child.id}> a été désadopté(e). Bonne continuation !` });
     }
 
     if (sub === 'top') {
       const all = db.db.prepare('SELECT user_id FROM familles WHERE guild_id=?').all(guildId);
-      if (!all.length) return interaction.reply({ content: '❌ Aucune famille sur ce serveur.', ephemeral: true });
+      if (!all.length) return interaction.editReply({ content: '❌ Aucune famille sur ce serveur.', ephemeral: true });
 
       // Compter les membres de chaque famille (partenaire + enfants)
       const counts = {};
@@ -189,7 +189,7 @@ module.exports = {
       const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
       const medals = ['🥇', '🥈', '🥉'];
       const desc = sorted.map(([uid, sz], i) => `${medals[i] || `**${i+1}.**`} <@${uid}> — **${sz + 1}** membres`).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#FF69B4').setTitle('👨‍👩‍👧 Top Familles').setDescription(desc)] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#FF69B4').setTitle('👨‍👩‍👧 Top Familles').setDescription(desc)] });
     }
   }
 };

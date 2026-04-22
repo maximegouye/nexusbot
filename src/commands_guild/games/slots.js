@@ -225,7 +225,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
     await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.reply({ embeds: [startEmbed] });
+    msg = await source.editReply({ embeds: [startEmbed] });
   }
 
   const grid = spinGrid();

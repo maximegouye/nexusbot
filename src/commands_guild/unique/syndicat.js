@@ -67,7 +67,7 @@ module.exports = {
 
     if (sub === 'creer') {
       const existing = db.db.prepare('SELECT id FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.reply({ content: '❌ Vous appartenez déjà à une guilde. Quittez-la d\'abord avec `/guilde quitter`.', ephemeral: true });
+      if (existing) return interaction.editReply({ content: '❌ Vous appartenez déjà à une guilde. Quittez-la d\'abord avec `/guilde quitter`.', ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       const tag = interaction.options.getString('tag').toUpperCase().slice(0, 5);
@@ -75,10 +75,10 @@ module.exports = {
 
       const cost = 500;
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < cost) return interaction.reply({ content: `❌ Créer une guilde coûte **${cost} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < cost) return interaction.editReply({ content: `❌ Créer une guilde coûte **${cost} ${coin}**.`, ephemeral: true });
 
       const existingName = db.db.prepare('SELECT id FROM syndicats WHERE guild_id=? AND name=?').get(guildId, nom);
-      if (existingName) return interaction.reply({ content: '❌ Une guilde avec ce nom existe déjà.', ephemeral: true });
+      if (existingName) return interaction.editReply({ content: '❌ Une guilde avec ce nom existe déjà.', ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
       const result = db.db.prepare('INSERT INTO syndicats (guild_id,leader_id,name,tag,description,members,officers) VALUES(?,?,?,?,?,?,?)')
@@ -86,7 +86,7 @@ module.exports = {
       db.db.prepare('INSERT INTO syndicat_members (guild_id,user_id,syndicat_id,role) VALUES(?,?,?,?)')
         .run(guildId, userId, result.lastInsertRowid, 'leader');
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle(`🏰 Guilde [${tag}] ${nom} créée !`)
         .setDescription(desc || '*Aucune description*')
         .addFields(
@@ -98,36 +98,36 @@ module.exports = {
 
     if (sub === 'rejoindre') {
       const existing = db.db.prepare('SELECT id FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.reply({ content: '❌ Vous êtes déjà dans une guilde.', ephemeral: true });
+      if (existing) return interaction.editReply({ content: '❌ Vous êtes déjà dans une guilde.', ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       const synd = db.db.prepare('SELECT * FROM syndicats WHERE guild_id=? AND name=?').get(guildId, nom);
-      if (!synd) return interaction.reply({ content: `❌ Guilde "${nom}" introuvable.`, ephemeral: true });
+      if (!synd) return interaction.editReply({ content: `❌ Guilde "${nom}" introuvable.`, ephemeral: true });
 
       const members = JSON.parse(synd.members || '[]');
-      if (members.length >= 30) return interaction.reply({ content: '❌ Cette guilde est complète (30 membres max).', ephemeral: true });
+      if (members.length >= 30) return interaction.editReply({ content: '❌ Cette guilde est complète (30 membres max).', ephemeral: true });
 
       members.push(userId);
       db.db.prepare('UPDATE syndicats SET members=? WHERE id=?').run(JSON.stringify(members), synd.id);
       db.db.prepare('INSERT INTO syndicat_members (guild_id,user_id,syndicat_id,role) VALUES(?,?,?,?)').run(guildId, userId, synd.id, 'membre');
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle(`🚪 Bienvenue dans [${synd.tag}] ${synd.name} !`)
         .setDescription(`Vous avez rejoint la guilde.\n**Membres :** ${members.length}/30`)] });
     }
 
     if (sub === 'quitter') {
       const m = db.db.prepare('SELECT * FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!m) return interaction.reply({ content: '❌ Vous n\'êtes dans aucune guilde.', ephemeral: true });
+      if (!m) return interaction.editReply({ content: '❌ Vous n\'êtes dans aucune guilde.', ephemeral: true });
 
       const synd = db.db.prepare('SELECT * FROM syndicats WHERE id=?').get(m.syndicat_id);
-      if (synd.leader_id === userId) return interaction.reply({ content: '❌ Vous êtes le leader. Transférez le leadership avant de quitter.', ephemeral: true });
+      if (synd.leader_id === userId) return interaction.editReply({ content: '❌ Vous êtes le leader. Transférez le leadership avant de quitter.', ephemeral: true });
 
       db.db.prepare('DELETE FROM syndicat_members WHERE guild_id=? AND user_id=?').run(guildId, userId);
       const members = JSON.parse(synd.members || '[]').filter(id => id !== userId);
       db.db.prepare('UPDATE syndicats SET members=? WHERE id=?').run(JSON.stringify(members), synd.id);
 
-      return interaction.reply({ content: `✅ Vous avez quitté la guilde **[${synd.tag}] ${synd.name}**.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Vous avez quitté la guilde **[${synd.tag}] ${synd.name}**.`, ephemeral: true });
     }
 
     if (sub === 'info') {
@@ -139,12 +139,12 @@ module.exports = {
         const m = db.db.prepare('SELECT * FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
         if (m) synd = db.db.prepare('SELECT * FROM syndicats WHERE id=?').get(m.syndicat_id);
       }
-      if (!synd) return interaction.reply({ content: '❌ Guilde introuvable.', ephemeral: true });
+      if (!synd) return interaction.editReply({ content: '❌ Guilde introuvable.', ephemeral: true });
 
       const members = JSON.parse(synd.members || '[]');
       const officers = JSON.parse(synd.officers || '[]');
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle(`🏰 [${synd.tag}] ${synd.name}`)
         .setDescription(synd.description || '*Aucune description*')
         .addFields(
@@ -160,43 +160,43 @@ module.exports = {
 
     if (sub === 'liste') {
       const synds = db.db.prepare('SELECT * FROM syndicats WHERE guild_id=? ORDER BY level DESC, treasury DESC LIMIT 10').all(guildId);
-      if (!synds.length) return interaction.reply({ content: '❌ Aucune guilde sur ce serveur. Créez-en une avec `/guilde creer` !', ephemeral: true });
+      if (!synds.length) return interaction.editReply({ content: '❌ Aucune guilde sur ce serveur. Créez-en une avec `/guilde creer` !', ephemeral: true });
       const medals = ['🥇','🥈','🥉'];
       const desc = synds.map((s, i) => {
         const members = JSON.parse(s.members || '[]').length;
         return `${medals[i]||`**${i+1}.**`} 🏰 **[${s.tag}] ${s.name}** — Niv.${s.level} | ${members} membres | ${s.treasury} ${coin}`;
       }).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('🏰 Guildes du serveur')
         .setDescription(desc)] });
     }
 
     if (sub === 'don') {
       const m = db.db.prepare('SELECT * FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!m) return interaction.reply({ content: '❌ Vous n\'êtes dans aucune guilde.', ephemeral: true });
+      if (!m) return interaction.editReply({ content: '❌ Vous n\'êtes dans aucune guilde.', ephemeral: true });
 
       const montant = parseInt(interaction.options.getString('montant'));
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < montant) return interaction.reply({ content: `❌ Solde insuffisant.`, ephemeral: true });
+      if ((u.balance || 0) < montant) return interaction.editReply({ content: `❌ Solde insuffisant.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -montant);
       db.db.prepare('UPDATE syndicats SET treasury=treasury+? WHERE id=?').run(montant, m.syndicat_id);
 
       const synd = db.db.prepare('SELECT * FROM syndicats WHERE id=?').get(m.syndicat_id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`💰 Vous avez donné **${montant} ${coin}** au trésor de **[${synd.tag}] ${synd.name}** !\n**Total trésor :** ${synd.treasury + montant} ${coin}`)] });
     }
 
     if (sub === 'guerre') {
       const m = db.db.prepare('SELECT * FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!m) return interaction.reply({ content: '❌ Vous n\'êtes dans aucune guilde.', ephemeral: true });
+      if (!m) return interaction.editReply({ content: '❌ Vous n\'êtes dans aucune guilde.', ephemeral: true });
       const synd1 = db.db.prepare('SELECT * FROM syndicats WHERE id=?').get(m.syndicat_id);
-      if (synd1.leader_id !== userId) return interaction.reply({ content: '❌ Seul le leader peut déclarer la guerre.', ephemeral: true });
+      if (synd1.leader_id !== userId) return interaction.editReply({ content: '❌ Seul le leader peut déclarer la guerre.', ephemeral: true });
 
       const ennemiNom = interaction.options.getString('ennemi');
       const synd2 = db.db.prepare('SELECT * FROM syndicats WHERE guild_id=? AND name=?').get(guildId, ennemiNom);
-      if (!synd2) return interaction.reply({ content: `❌ Guilde "${ennemiNom}" introuvable.`, ephemeral: true });
-      if (synd2.id === m.syndicat_id) return interaction.reply({ content: '❌ Vous ne pouvez pas vous battre contre vous-même !', ephemeral: true });
+      if (!synd2) return interaction.editReply({ content: `❌ Guilde "${ennemiNom}" introuvable.`, ephemeral: true });
+      if (synd2.id === m.syndicat_id) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous battre contre vous-même !', ephemeral: true });
 
       // Simulation de guerre basée sur les niveaux et taillles
       const m1 = JSON.parse(synd1.members || '[]').length;
@@ -212,7 +212,7 @@ module.exports = {
       db.db.prepare('UPDATE syndicats SET losses=losses+1, treasury=MAX(0,treasury-?) WHERE id=?').run(prizeGold, loser.id);
       db.db.prepare('UPDATE syndicats SET treasury=treasury+? WHERE id=?').run(prizeGold, winner.id);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`⚔️ GUERRE : [${synd1.tag}] vs [${synd2.tag}]`)
         .setDescription(`Après une bataille épique de ${Math.floor(Math.random() * 20 + 5)} rounds...`)
         .addFields(
@@ -224,37 +224,37 @@ module.exports = {
 
     if (sub === 'classement') {
       const synds = db.db.prepare('SELECT * FROM syndicats WHERE guild_id=? ORDER BY level DESC, xp DESC LIMIT 10').all(guildId);
-      if (!synds.length) return interaction.reply({ content: '❌ Aucune guilde sur ce serveur.', ephemeral: true });
+      if (!synds.length) return interaction.editReply({ content: '❌ Aucune guilde sur ce serveur.', ephemeral: true });
       const medals = ['🥇','🥈','🥉'];
       const desc = synds.map((s, i) => `${medals[i]||`**${i+1}.**`} **[${s.tag}] ${s.name}** — Niv.${s.level} | ⚔️ ${s.wins}V/${s.losses}D`).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('🏆 Classement des Guildes')
         .setDescription(desc)] });
     }
 
     if (sub === 'expulser' || sub === 'promouvoir') {
       const m = db.db.prepare('SELECT * FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!m || !['leader','officier'].includes(m.role)) return interaction.reply({ content: '❌ Vous devez être leader ou officier.', ephemeral: true });
+      if (!m || !['leader','officier'].includes(m.role)) return interaction.editReply({ content: '❌ Vous devez être leader ou officier.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
       const tm = db.db.prepare('SELECT * FROM syndicat_members WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-      if (!tm || tm.syndicat_id !== m.syndicat_id) return interaction.reply({ content: '❌ Ce membre n\'est pas dans votre guilde.', ephemeral: true });
+      if (!tm || tm.syndicat_id !== m.syndicat_id) return interaction.editReply({ content: '❌ Ce membre n\'est pas dans votre guilde.', ephemeral: true });
 
       const synd = db.db.prepare('SELECT * FROM syndicats WHERE id=?').get(m.syndicat_id);
 
       if (sub === 'expulser') {
-        if (synd.leader_id === target.id) return interaction.reply({ content: '❌ Vous ne pouvez pas expulser le leader.', ephemeral: true });
+        if (synd.leader_id === target.id) return interaction.editReply({ content: '❌ Vous ne pouvez pas expulser le leader.', ephemeral: true });
         db.db.prepare('DELETE FROM syndicat_members WHERE guild_id=? AND user_id=?').run(guildId, target.id);
         const members = JSON.parse(synd.members || '[]').filter(id => id !== target.id);
         db.db.prepare('UPDATE syndicats SET members=? WHERE id=?').run(JSON.stringify(members), synd.id);
-        return interaction.reply({ content: `✅ **${target.username}** a été expulsé de la guilde **[${synd.tag}] ${synd.name}**.` });
+        return interaction.editReply({ content: `✅ **${target.username}** a été expulsé de la guilde **[${synd.tag}] ${synd.name}**.` });
       } else {
-        if (synd.leader_id !== userId) return interaction.reply({ content: '❌ Seul le leader peut promouvoir.', ephemeral: true });
+        if (synd.leader_id !== userId) return interaction.editReply({ content: '❌ Seul le leader peut promouvoir.', ephemeral: true });
         db.db.prepare('UPDATE syndicat_members SET role=? WHERE guild_id=? AND user_id=?').run('officier', guildId, target.id);
         const officers = JSON.parse(synd.officers || '[]');
         if (!officers.includes(target.id)) officers.push(target.id);
         db.db.prepare('UPDATE syndicats SET officers=? WHERE id=?').run(JSON.stringify(officers), synd.id);
-        return interaction.reply({ content: `⭐ **${target.username}** est maintenant **officier** de **[${synd.tag}] ${synd.name}** !` });
+        return interaction.editReply({ content: `⭐ **${target.username}** est maintenant **officier** de **[${synd.tag}] ${synd.name}** !` });
       }
     }
   }
