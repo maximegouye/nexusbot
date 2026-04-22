@@ -20,6 +20,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg  = db.getConfig(interaction.guildId);
     const user = db.getUser(interaction.user.id, interaction.guildId);
     const emoji = cfg.currency_emoji || '€';
@@ -29,7 +30,7 @@ module.exports = {
 
     if (now - (user.last_hunt || 0) < cd) {
       const rem = cd - (now - (user.last_hunt || 0));
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#FF6B6B').setDescription(`🏹 La forêt doit se reposer ! Reviens dans **${Math.floor(rem/60)} min**.`)],
         ephemeral: true
       });
@@ -59,6 +60,6 @@ module.exports = {
         : `${prey.emoji} **${prey.name}**... La forêt était vide aujourd'hui.`)
       .setFooter({ text: 'Prochaine chasse dans 45 minutes' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

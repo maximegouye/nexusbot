@@ -12,6 +12,7 @@ module.exports = {
     .addSubcommand(s => s.setName('boosts').setDescription('💎 Informations sur les boosts Nitro')),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guild = interaction.guild;
     await guild.members.fetch();
@@ -39,7 +40,7 @@ module.exports = {
         );
 
       if (guild.bannerURL()) embed.setImage(guild.bannerURL({ size: 1024 }));
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (sub === 'stats') {
@@ -55,7 +56,7 @@ module.exports = {
       // Stats de la base de données
       const dbStats = db.db.prepare('SELECT COUNT(*) as users, SUM(messages) as msgs, SUM(balance) as coins FROM users WHERE guild_id=?').get(guild.id);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle(`📊 Stats — ${guild.name}`)
           .addFields(
             { name: '🟢 En ligne', value: `**${online}**`, inline: true },
@@ -72,7 +73,7 @@ module.exports = {
     if (sub === 'roles') {
       const roles = guild.roles.cache.filter(r => r.id !== guild.id).sort((a, b) => b.position - a.position);
       const lines = roles.map(r => `${r} — ${r.members.size} membre(s)`).slice(0, 25).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle(`🎭 Rôles de ${guild.name} (${roles.size})`)
           .setDescription(lines || 'Aucun rôle')
           .setFooter({ text: roles.size > 25 ? `Affichage des 25 premiers sur ${roles.size}` : '' })
@@ -81,9 +82,9 @@ module.exports = {
 
     if (sub === 'emojis') {
       const emojis = guild.emojis.cache;
-      if (!emojis.size) return interaction.reply({ content: '❌ Aucun emoji personnalisé.', ephemeral: true });
+      if (!emojis.size) return interaction.editReply({ content: '❌ Aucun emoji personnalisé.', ephemeral: true });
       const lines = emojis.map(e => `${e} \`${e.name}\``).slice(0, 40).join(' ');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle(`😀 Emojis de ${guild.name} (${emojis.size})`)
           .setDescription(lines)
       ], ephemeral: true });
@@ -99,7 +100,7 @@ module.exports = {
       const level = guild.premiumTier;
       const info = boostLevels[level] || boostLevels[0];
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#FF73FA').setTitle(`💎 Boosts Nitro — ${guild.name}`)
           .addFields(
             { name: '🏆 Niveau', value: `${info.emoji} **${info.label}**`, inline: true },

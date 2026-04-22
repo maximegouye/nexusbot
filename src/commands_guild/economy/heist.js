@@ -8,6 +8,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg    = db.getConfig(interaction.guildId);
     const emoji  = cfg.currency_emoji || '€';
     const name   = cfg.currency_name  || 'Euros';
@@ -29,7 +30,7 @@ module.exports = {
       .setDescription(`**Organisateur :** ${interaction.user.username}\n🎯 **Cible :** **${target.toLocaleString('fr-FR')} ${name}**\n💼 **Mise d'entrée :** ${joinCost.toLocaleString('fr-FR')} ${name}\n\n👥 **Équipe :** ${[...participants.keys()].map(id => `<@${id}>`).join(', ')}\n\nClique **Rejoindre** pour participer ou **Lancer** pour démarrer !`)
       .setFooter({ text: `Fin du recrutement <t:${endsAt}:R>` });
 
-    const msg = await interaction.reply({ embeds: [buildEmbed()], components: [row], fetchReply: true });
+    const msg = await interaction.editReply({ embeds: [buildEmbed()], components: [row], fetchReply: true });
 
     const collector = msg.createMessageComponentCollector({ time: 120000 });
 

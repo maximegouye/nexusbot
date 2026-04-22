@@ -48,6 +48,7 @@ module.exports = {
     .addSubcommand(s => s.setName('top').setDescription('🏆 Classement des entreprises les plus riches')),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
@@ -57,19 +58,19 @@ module.exports = {
 
     if (sub === 'creer') {
       const existing = db.db.prepare('SELECT * FROM entreprises WHERE guild_id=? AND owner_id=?').get(guildId, userId);
-      if (existing) return interaction.reply({ content: '❌ Vous avez déjà une entreprise !', ephemeral: true });
+      if (existing) return interaction.editReply({ content: '❌ Vous avez déjà une entreprise !', ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       const secteur = interaction.options.getString('secteur');
       const s = SECTEURS[secteur];
       const cost = 1000;
       const u = db.getUser(userId, guildId);
-      if ((u.balance||0) < cost) return interaction.reply({ content: `❌ Créer une entreprise coûte **${cost} ${coin}**.`, ephemeral: true });
+      if ((u.balance||0) < cost) return interaction.editReply({ content: `❌ Créer une entreprise coûte **${cost} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
       db.db.prepare('INSERT INTO entreprises (guild_id,owner_id,name,secteur,revenue_per_hour) VALUES(?,?,?,?,?)').run(guildId, userId, nom, secteur, s.base_revenue);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`${s.emoji} ${nom} — Fondée !`)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`${s.emoji} ${nom} — Fondée !`)
         .setDescription(`Bienvenue dans le monde des affaires ! Votre entreprise génère **${s.base_revenue} ${coin}/heure**.`)
         .addFields({name:'💼 Secteur',value:`${s.emoji} ${secteur}`,inline:true},{name:'💰 Coût',value:`-${cost} ${coin}`,inline:true},{name:'📈 Revenu/h',value:`${s.base_revenue} ${coin}`,inline:true})
         .setFooter({text:'Utilisez /entreprise ameliorer et embaucher pour croître !'})
@@ -79,7 +80,7 @@ module.exports = {
     if (sub === 'voir') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const ent = db.db.prepare('SELECT * FROM entreprises WHERE guild_id=? AND owner_id=?').get(guildId, target.id);
-      if (!ent) return interaction.reply({ content: `❌ **${target.username}** n'a pas d'entreprise.`, ephemeral: true });
+      if (!ent) return interaction.editReply({ content: `❌ **${target.username}** n'a pas d'entreprise.`, ephemeral: true });
 
       const s = SECTEURS[ent.secteur] || SECTEURS.tech;
       const employees = JSON.parse(ent.employees || '[]');
@@ -87,7 +88,7 @@ module.exports = {
       const pending = Math.floor(ent.revenue_per_hour * (1 + employees.length * 0.05) * hoursElapsed);
       const nextUpgradeCost = s.upgrade_cost * ent.level;
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle(`${s.emoji} ${ent.name}`)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle(`${s.emoji} ${ent.name}`)
         .setDescription(`Propriétaire : <@${target.id}>`)
         .addFields(
           {name:'💼 Secteur',value:`${s.emoji} ${ent.secteur}`,inline:true},
@@ -103,17 +104,17 @@ module.exports = {
 
     if (sub === 'collecter') {
       const ent = db.db.prepare('SELECT * FROM entreprises WHERE guild_id=? AND owner_id=?').get(guildId, userId);
-      if (!ent) return interaction.reply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
+      if (!ent) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
 
       const employees = JSON.parse(ent.employees || '[]');
       const hoursElapsed = (now - ent.last_collect) / 3600;
-      if (hoursElapsed < 0.083) return interaction.reply({ content: '⏳ Attendez au moins 5 minutes avant de collecter.', ephemeral: true });
+      if (hoursElapsed < 0.083) return interaction.editReply({ content: '⏳ Attendez au moins 5 minutes avant de collecter.', ephemeral: true });
 
       const earned = Math.floor(ent.revenue_per_hour * (1 + employees.length * 0.05) * hoursElapsed);
       db.addCoins(userId, guildId, earned);
       db.db.prepare('UPDATE entreprises SET last_collect=?, treasury=treasury+? WHERE guild_id=? AND owner_id=?').run(now, earned, guildId, userId);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`💰 Revenus collectés — ${ent.name}`)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`💰 Revenus collectés — ${ent.name}`)
         .setDescription(`**+${earned.toLocaleString()} ${coin}** générés en **${hoursElapsed.toFixed(1)}h** !`)
         .addFields({name:'📈 Taux',value:`${ent.revenue_per_hour} ${coin}/h × ${(1+employees.length*0.05).toFixed(2)} (bonus employés)`,inline:false})
       ]});
@@ -121,63 +122,63 @@ module.exports = {
 
     if (sub === 'ameliorer') {
       const ent = db.db.prepare('SELECT * FROM entreprises WHERE guild_id=? AND owner_id=?').get(guildId, userId);
-      if (!ent) return interaction.reply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
+      if (!ent) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
 
       const s = SECTEURS[ent.secteur];
       const cost = s.upgrade_cost * ent.level;
       const u = db.getUser(userId, guildId);
-      if ((u.balance||0) < cost) return interaction.reply({ content: `❌ L'amélioration coûte **${cost.toLocaleString()} ${coin}**.`, ephemeral: true });
+      if ((u.balance||0) < cost) return interaction.editReply({ content: `❌ L'amélioration coûte **${cost.toLocaleString()} ${coin}**.`, ephemeral: true });
 
       const revenueBonus = Math.floor(ent.revenue_per_hour * 0.3);
       db.addCoins(userId, guildId, -cost);
       db.db.prepare('UPDATE entreprises SET level=level+1, revenue_per_hour=revenue_per_hour+? WHERE guild_id=? AND owner_id=?').run(revenueBonus, guildId, userId);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`⬆️ ${ent.name} — Niveau ${ent.level+1} !`)
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`⬆️ ${ent.name} — Niveau ${ent.level+1} !`)
         .addFields({name:'📈 Revenu/h',value:`+${revenueBonus} ${coin}`,inline:true},{name:'💰 Coût',value:`-${cost.toLocaleString()} ${coin}`,inline:true})
       ]});
     }
 
     if (sub === 'embaucher') {
       const ent = db.db.prepare('SELECT * FROM entreprises WHERE guild_id=? AND owner_id=?').get(guildId, userId);
-      if (!ent) return interaction.reply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
+      if (!ent) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
-      if (target.id === userId || target.bot) return interaction.reply({ content: '❌ Membre invalide.', ephemeral: true });
+      if (target.id === userId || target.bot) return interaction.editReply({ content: '❌ Membre invalide.', ephemeral: true });
 
       const employees = JSON.parse(ent.employees || '[]');
-      if (employees.length >= 10) return interaction.reply({ content: '❌ Maximum 10 employés.', ephemeral: true });
-      if (employees.includes(target.id)) return interaction.reply({ content: '❌ Ce membre est déjà employé.', ephemeral: true });
+      if (employees.length >= 10) return interaction.editReply({ content: '❌ Maximum 10 employés.', ephemeral: true });
+      if (employees.includes(target.id)) return interaction.editReply({ content: '❌ Ce membre est déjà employé.', ephemeral: true });
 
       const salaryCost = 500;
       const u = db.getUser(userId, guildId);
-      if ((u.balance||0) < salaryCost) return interaction.reply({ content: `❌ L'embauche coûte **${salaryCost} ${coin}**.`, ephemeral: true });
+      if ((u.balance||0) < salaryCost) return interaction.editReply({ content: `❌ L'embauche coûte **${salaryCost} ${coin}**.`, ephemeral: true });
 
       employees.push(target.id);
       db.addCoins(userId, guildId, -salaryCost);
       db.db.prepare('UPDATE entreprises SET employees=? WHERE guild_id=? AND owner_id=?').run(JSON.stringify(employees), guildId, userId);
 
-      return interaction.reply({ content: `✅ <@${target.id}> embauché(e) ! Votre entreprise génère maintenant **+5% de revenus** en plus. (${employees.length}/10 employés)` });
+      return interaction.editReply({ content: `✅ <@${target.id}> embauché(e) ! Votre entreprise génère maintenant **+5% de revenus** en plus. (${employees.length}/10 employés)` });
     }
 
     if (sub === 'licencier') {
       const ent = db.db.prepare('SELECT * FROM entreprises WHERE guild_id=? AND owner_id=?').get(guildId, userId);
-      if (!ent) return interaction.reply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
+      if (!ent) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'entreprise.', ephemeral: true });
       const target = interaction.options.getUser('membre');
       const employees = JSON.parse(ent.employees || '[]');
-      if (!employees.includes(target.id)) return interaction.reply({ content: '❌ Ce membre n\'est pas votre employé.', ephemeral: true });
+      if (!employees.includes(target.id)) return interaction.editReply({ content: '❌ Ce membre n\'est pas votre employé.', ephemeral: true });
       const newEmp = employees.filter(e => e !== target.id);
       db.db.prepare('UPDATE entreprises SET employees=? WHERE guild_id=? AND owner_id=?').run(JSON.stringify(newEmp), guildId, userId);
-      return interaction.reply({ content: `✅ <@${target.id}> a été licencié(e). (${newEmp.length}/10 employés)` });
+      return interaction.editReply({ content: `✅ <@${target.id}> a été licencié(e). (${newEmp.length}/10 employés)` });
     }
 
     if (sub === 'top') {
       const top = db.db.prepare('SELECT * FROM entreprises WHERE guild_id=? ORDER BY treasury DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '❌ Aucune entreprise sur ce serveur.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '❌ Aucune entreprise sur ce serveur.', ephemeral: true });
       const desc = top.map((e, i) => {
         const s = SECTEURS[e.secteur] || {};
         return `${['🥇','🥈','🥉'][i]||`**${i+1}.**`} ${s.emoji||'🏢'} **${e.name}** (<@${e.owner_id}>) — Niv.${e.level} • ${e.treasury.toLocaleString()} ${coin} au total`;
       }).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏢 Top Entreprises').setDescription(desc)] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏢 Top Entreprises').setDescription(desc)] });
     }
   }
 };

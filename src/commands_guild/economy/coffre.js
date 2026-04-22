@@ -16,10 +16,11 @@ function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 module.exports = {
   data: new SlashCommandBuilder().setName('coffre').setDescription('🎁 Ouvrir votre coffre quotidien !'),
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const {guildId} = interaction; const userId = interaction.user.id;
     const cfg = db.getConfig(guildId); const coin = cfg.currency_emoji||'€';
     const cd = checkCooldown(userId,'coffre',22*3600);
-    if (cd.onCooldown) return interaction.reply({content:cooldownMessage(cd.remaining),ephemeral:true});
+    if (cd.onCooldown) return interaction.editReply({content:cooldownMessage(cd.remaining),ephemeral:true});
     const today = new Date().toISOString().slice(0,10);
     let row = db.db.prepare('SELECT * FROM coffre_streaks WHERE user_id=? AND guild_id=?').get(userId,guildId);
     let streak=1;
@@ -45,6 +46,6 @@ module.exports = {
       )
       .setFooter({text:'Prochain coffre dans ~22h'});
     if (tier.bonus) embed.addFields({name:'🎉 Bonus !',value:tier.bonus});
-    return interaction.reply({embeds:[embed]});
+    return interaction.editReply({embeds:[embed]});
   }
 };

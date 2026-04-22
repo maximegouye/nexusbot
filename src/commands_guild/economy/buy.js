@@ -8,6 +8,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg   = db.getConfig(interaction.guildId);
     const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Euros';
@@ -16,14 +17,14 @@ module.exports = {
 
     const item = db.db.prepare('SELECT * FROM shop WHERE id = ? AND guild_id = ? AND active = 1').get(id, interaction.guildId);
     if (!item) {
-      return interaction.reply({ content: `❌ Article **#${id}** introuvable dans la boutique.`, ephemeral: true });
+      return interaction.editReply({ content: `❌ Article **#${id}** introuvable dans la boutique.`, ephemeral: true });
     }
 
     const user  = db.getUser(interaction.user.id, interaction.guildId);
     const total = item.price * qty;
 
     if (user.balance < total) {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setDescription(`❌ Solde insuffisant ! Il te faut **${total.toLocaleString('fr-FR')} ${name}** mais tu n'as que **${user.balance.toLocaleString('fr-FR')}**.`)
@@ -36,7 +37,7 @@ module.exports = {
       const owned = db.db.prepare('SELECT SUM(quantity) as q FROM inventory WHERE user_id = ? AND guild_id = ? AND item_id = ?')
         .get(interaction.user.id, interaction.guildId, item.id)?.q || 0;
       if (owned + qty > item.max_per_user) {
-        return interaction.reply({ content: `❌ Tu ne peux pas posséder plus de **${item.max_per_user}** × "${item.name}".`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Tu ne peux pas posséder plus de **${item.max_per_user}** × "${item.name}".`, ephemeral: true });
       }
     }
 
@@ -70,6 +71,6 @@ module.exports = {
         ...(item.duration_hours ? [{ name: '⏱️ Durée', value: `${item.duration_hours}h`, inline: true }] : []),
       );
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

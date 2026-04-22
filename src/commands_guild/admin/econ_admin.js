@@ -59,6 +59,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub    = interaction.options.getSubcommand();
     const cfg    = db.getConfig(interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
@@ -72,7 +73,7 @@ module.exports = {
       db.addCoins(target.id, interaction.guildId, amount);
       const newUser = db.getUser(target.id, interaction.guildId);
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('💸 Don effectué')
@@ -98,7 +99,7 @@ module.exports = {
       db.removeCoins(target.id, interaction.guildId, amount);
       const newUser = db.getUser(target.id, interaction.guildId);
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E67E22')
           .setTitle('💰 Retrait effectué')
@@ -118,7 +119,7 @@ module.exports = {
       const target = interaction.options.getUser('membre');
       db.db.prepare('UPDATE users SET balance=0, bank=0, total_earned=0 WHERE user_id=? AND guild_id=?')
         .run(target.id, interaction.guildId);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('🔄 Compte remis à zéro')
@@ -130,7 +131,7 @@ module.exports = {
 
     if (sub === 'reset-all') {
       db.db.prepare('UPDATE users SET balance=0, bank=0, total_earned=0 WHERE guild_id=?').run(interaction.guildId);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('⚠️ Économie complète remise à zéro')
@@ -143,7 +144,7 @@ module.exports = {
     if (sub === 'voir') {
       const target = interaction.options.getUser('membre');
       const u = db.getUser(target.id, interaction.guildId);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#7B2FBE')
           .setTitle(`🔍 Compte de ${target.username}`)
@@ -161,7 +162,7 @@ module.exports = {
       const target = interaction.options.getUser('membre');
       const amount = parseInt(interaction.options.getString('montant'));
       db.db.prepare('UPDATE users SET balance=? WHERE user_id=? AND guild_id=?').run(amount, target.id, interaction.guildId);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle('✏️ Solde défini')
@@ -182,7 +183,7 @@ module.exports = {
       if (daily !== null)  db.setConfig(interaction.guildId, 'daily_amount', daily);
       if (perMsg !== null) db.setConfig(interaction.guildId, 'coins_per_msg', perMsg);
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('⚙️ Économie configurée')
@@ -210,7 +211,7 @@ module.exports = {
         count++;
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('👥 Don de masse effectué')
@@ -233,7 +234,7 @@ module.exports = {
       const avgBalance  = totalUsers > 0 ? Math.round(totalMoney / totalUsers) : 0;
       const broke       = db.db.prepare("SELECT COUNT(*) as c FROM users WHERE guild_id=? AND balance+bank=0").get(interaction.guildId).c;
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#7B2FBE')
           .setTitle('📊 Économie du serveur')

@@ -16,6 +16,7 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const opponent = interaction.options.getUser('adversaire');
     const miseRaw  = interaction.options.get('mise')?.value;
     const cfg      = db.getConfig(interaction.guildId);
@@ -32,26 +33,26 @@ module.exports = {
     };
     const mise = parseBet(miseRaw, _me.balance);
     if (!Number.isFinite(mise) || mise < 50) {
-      return interaction.reply({ content: '❌ Mise invalide. Minimum **50**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Mise invalide. Minimum **50**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
     const emoji    = cfg.currency_emoji || '€';
     const name     = cfg.currency_name  || 'Euros';
 
-    if (opponent.bot) return interaction.reply({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
-    if (opponent.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas te battre contre toi-même.', ephemeral: true });
+    if (opponent.bot) return interaction.editReply({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
+    if (opponent.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas te battre contre toi-même.', ephemeral: true });
 
     const challenger = db.getUser(interaction.user.id, interaction.guildId);
     const defender   = db.getUser(opponent.id, interaction.guildId);
 
-    if (challenger.balance < mise) return interaction.reply({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
-    if (defender.balance < mise) return interaction.reply({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr-FR')} ${name}**. Mise trop élevée.`, ephemeral: true });
+    if (challenger.balance < mise) return interaction.editReply({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
+    if (defender.balance < mise) return interaction.editReply({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr-FR')} ${name}**. Mise trop élevée.`, ephemeral: true });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('duel_accept').setLabel('⚔️ Accepter le duel').setStyle(ButtonStyle.Danger),
       new ButtonBuilder().setCustomId('duel_refuse').setLabel('🏳️ Refuser').setStyle(ButtonStyle.Secondary),
     );
 
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       content: `${opponent} — Tu es défié(e) en duel !`,
       embeds: [new EmbedBuilder()
         .setColor('#E74C3C')

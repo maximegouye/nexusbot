@@ -29,6 +29,7 @@ function getMarketMultiplier(guildId) {
 module.exports = {
   data: new SlashCommandBuilder().setName('meteo_marche').setDescription('📊 Météo économique du jour'),
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg=db.getConfig(interaction.guildId); const coin=cfg.currency_emoji||'€';
     const ev=getTodayEvent(interaction.guildId);
     const next=new Date(); next.setUTCHours(0,0,0,0); next.setUTCDate(next.getUTCDate()+1);
@@ -41,7 +42,7 @@ module.exports = {
       )
       .addFields({name:'📌 Conseil',value:ev.tip})
       .setFooter({text:'Météo économique change chaque jour à minuit UTC'}).setTimestamp();
-    return interaction.reply({embeds:[embed]});
+    return interaction.editReply({embeds:[embed]});
   },
   getMarketMultiplier
 };

@@ -29,6 +29,7 @@ module.exports = {
     .addSubcommand(s => s.setName('top').setDescription('🏆 Classement des prestiges')),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
@@ -59,7 +60,7 @@ module.exports = {
         inline: false
       });
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (sub === 'monter') {
@@ -67,11 +68,11 @@ module.exports = {
       const currentPrestige = u.prestige || 0;
       const nextPData = PRESTIGE_LEVELS[currentPrestige];
 
-      if (!nextPData) return interaction.reply({ content: '🌟 Vous avez atteint le **prestige maximum** ! Félicitations !', ephemeral: true });
+      if (!nextPData) return interaction.editReply({ content: '🌟 Vous avez atteint le **prestige maximum** ! Félicitations !', ephemeral: true });
 
       const currentLevel = u.level || 1;
       if (currentLevel < nextPData.required_xp_level) {
-        return interaction.reply({ content: `❌ Vous devez être au niveau **${nextPData.required_xp_level}** minimum.\nActuellement : **${currentLevel}**`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Vous devez être au niveau **${nextPData.required_xp_level}** minimum.\nActuellement : **${currentLevel}**`, ephemeral: true });
       }
 
       // Récompense de prestige
@@ -92,12 +93,12 @@ module.exports = {
         new ButtonBuilder().setCustomId(`prestige_cancel_${userId}`).setLabel('❌ Annuler').setStyle(ButtonStyle.Secondary),
       );
 
-      return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], components: [row], ephemeral: true });
     }
 
     if (sub === 'top') {
       const top = db.db.prepare('SELECT user_id, prestige, level FROM users WHERE guild_id=? AND prestige > 0 ORDER BY prestige DESC, level DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '❌ Aucun membre avec du prestige sur ce serveur.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '❌ Aucun membre avec du prestige sur ce serveur.', ephemeral: true });
 
       const desc = top.map((u, i) => {
         const pData = PRESTIGE_LEVELS[(u.prestige || 1) - 1];
@@ -105,7 +106,7 @@ module.exports = {
         return `${medal} <@${u.user_id}> — ${pData?.emoji || '⭐'} Prestige **${u.prestige}** • Niveau **${u.level}**`;
       }).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#FFD700').setTitle('👑 Top Prestiges').setDescription(desc)
       ]});
     }

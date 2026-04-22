@@ -44,6 +44,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
@@ -52,14 +53,14 @@ module.exports = {
     const raw     = miseRaw ? String(miseRaw.value) : null;
 
     const mise = parseBet(raw, user.balance);
-    if (mise == null)   return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (mise < 1n)      return interaction.reply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (mise > BigInt(user.balance)) return interaction.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
+    if (mise == null)   return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (mise < 1n)      return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (mise > BigInt(user.balance)) return interaction.editReply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
 
     const pariType = interaction.options.getString('pari');
     if (!pariType) {
       // Pas de pari → on propose le menu
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#9B59B6')
           .setTitle('🎡 Choisis ton pari')
@@ -74,7 +75,7 @@ module.exports = {
     let param = null;
     if (pariType === 'numero') {
       param = parseInt(interaction.options.getString('numero'));
-      if (param == null) return interaction.reply({ content: '❌ Pour un numéro plein, précise aussi `numero:<0-36>`.', ephemeral: true });
+      if (param == null) return interaction.editReply({ content: '❌ Pour un numéro plein, précise aussi `numero:<0-36>`.', ephemeral: true });
     }
 
     await spinAndResolve(interaction, { type: pariType, param }, mise, cfg, symbol, user);
@@ -98,7 +99,7 @@ async function spinAndResolve(interaction, bet, mise, cfg, symbol, user) {
   if (interaction.replied || interaction.deferred) {
     replyMsg = await interaction.editReply({ embeds: [spinEmbed0], components: [] }).catch(() => null);
   } else {
-    replyMsg = await interaction.reply({ embeds: [spinEmbed0], components: [], fetchReply: true }).catch(() => null);
+    replyMsg = await interaction.editReply({ embeds: [spinEmbed0], components: [], fetchReply: true }).catch(() => null);
   }
 
   await new Promise(res => setTimeout(res, 900));

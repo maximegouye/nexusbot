@@ -67,6 +67,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg    = db.getConfig(interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
     const user   = db.getUser(interaction.user.id, interaction.guildId);
@@ -86,14 +87,14 @@ module.exports = {
 
     const mise = parseAmount(miseRaw, user.balance);
     if (!Number.isFinite(mise) || mise < 10) {
-      return interaction.reply({
+      return interaction.editReply({
         content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `tout`, `max`, `50%`, `moitié`.',
         ephemeral: true
       });
     }
 
     if (user.balance < mise) {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant')
@@ -148,7 +149,7 @@ module.exports = {
 
     db.removeCoins(interaction.user.id, interaction.guildId, mise);
 
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       embeds: [buildEmbed()],
       components: buildRow(),
       fetchReply: true,

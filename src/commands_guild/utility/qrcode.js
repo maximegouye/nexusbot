@@ -13,15 +13,16 @@ module.exports = {
       ))),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const contenu = interaction.options.getString('contenu');
     const taille = interaction.options.getString('taille') || '300';
 
-    if (contenu.length > 500) return interaction.reply({ content: '❌ Contenu trop long (500 caractères max).', ephemeral: true });
+    if (contenu.length > 500) return interaction.editReply({ content: '❌ Contenu trop long (500 caractères max).', ephemeral: true });
 
     const encoded = encodeURIComponent(contenu);
     const url = `https://api.qrserver.com/v1/create-qr-code/?size=${taille}x${taille}&data=${encoded}&format=png&margin=10`;
 
-    return interaction.reply({ embeds: [
+    return interaction.editReply({ embeds: [
       new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('📱 QR Code généré')

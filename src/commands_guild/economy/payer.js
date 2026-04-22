@@ -15,6 +15,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const target  = interaction.options.getUser('membre');
     const senderPre = db.getUser(interaction.user.id, interaction.guildId);
     const parseBet = (raw, base) => {
@@ -29,20 +30,20 @@ module.exports = {
     };
     const amount = parseBet(interaction.options.get('montant')?.value, senderPre.balance);
     if (!Number.isFinite(amount) || amount < 1) {
-      return interaction.reply({ content: '❌ Montant invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Montant invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
     const note    = interaction.options.getString('note') || '';
     const cfg     = db.getConfig(interaction.guildId);
     const symbol  = cfg.currency_emoji || '€';
 
     if (target.id === interaction.user.id)
-      return interaction.reply({ content: '❌ Tu ne peux pas te payer toi-même !', ephemeral: true });
+      return interaction.editReply({ content: '❌ Tu ne peux pas te payer toi-même !', ephemeral: true });
     if (target.bot)
-      return interaction.reply({ content: '❌ Tu ne peux pas payer un bot.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Tu ne peux pas payer un bot.', ephemeral: true });
 
     const sender = db.getUser(interaction.user.id, interaction.guildId);
     if (sender.balance < amount) {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant')
@@ -56,7 +57,7 @@ module.exports = {
     const totalCost = amount + fee;
 
     if (sender.balance < totalCost) {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant (frais inclus)')
@@ -83,7 +84,7 @@ module.exports = {
       )
       .setFooter({ text: 'Confirme dans 30 secondes sinon annulé auto.' });
 
-    const msg = await interaction.reply({ embeds: [confirmEmbed], components: [row], fetchReply: true });
+    const msg = await interaction.editReply({ embeds: [confirmEmbed], components: [row], fetchReply: true });
 
     const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === interaction.user.id, time: 30000 });
 

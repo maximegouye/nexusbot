@@ -24,6 +24,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg  = db.getConfig(interaction.guildId);
     const user = db.getUser(interaction.user.id, interaction.guildId);
     const emoji = cfg.currency_emoji || '€';
@@ -33,7 +34,7 @@ module.exports = {
 
     if (now - (user.last_dig || 0) < cd) {
       const rem = cd - (now - (user.last_dig || 0));
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#FF6B6B').setDescription(`⛏️ Ta pelle est fatiguée ! Attends encore **${Math.floor(rem/60)} min** avant de recreuser.`)],
         ephemeral: true
       });
@@ -62,6 +63,6 @@ module.exports = {
         : `Tu n'as trouvé que de la terre... Mieux vaut creuser ailleurs la prochaine fois.`)
       .setFooter({ text: found.rarity ? `Rareté : ${found.rarity}` : 'Raté !' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

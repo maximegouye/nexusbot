@@ -45,13 +45,14 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const cfg = db.getConfig(guildId);
     const coin = cfg.currency_emoji || '€';
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-      return interaction.reply({ content: '❌ Permission **Gérer le serveur** requise.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission **Gérer le serveur** requise.', ephemeral: true });
 
     // ── AJOUTER ──────────────────────────────────────────────────────
     if (sub === 'ajouter') {
@@ -69,7 +70,7 @@ module.exports = {
         VALUES (?,?,?,?,?,?,?,?,?,1)
       `).run(guildId, nom, desc, emoji, prix, stock, role?.id ?? null, maxPU, duree || null);
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle(`✅ Article ajouté — ID #${result.lastInsertRowid}`)
         .addFields(
           { name: '🏷️ Nom',        value: `${emoji} ${nom}`,            inline: true },
@@ -87,7 +88,7 @@ module.exports = {
     if (sub === 'modifier') {
       const id   = parseInt(interaction.options.getString('id'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
+      if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
 
       const changes = {};
       const nom   = interaction.options.getString('nom');
@@ -105,13 +106,13 @@ module.exports = {
       if (actif !== null) changes.active      = actif ? 1 : 0;
 
       if (Object.keys(changes).length === 0)
-        return interaction.reply({ content: '❌ Aucune modification spécifiée.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Aucune modification spécifiée.', ephemeral: true });
 
       const sets = Object.keys(changes).map(k => `${k}=?`).join(', ');
       db.db.prepare(`UPDATE shop SET ${sets} WHERE id=? AND guild_id=?`).run(...Object.values(changes), id, guildId);
 
       const updated = db.db.prepare('SELECT * FROM shop WHERE id=?').get(id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle(`✏️ Article #${id} mis à jour`)
         .setDescription(`${updated.emoji} **${updated.name}** — ${updated.price} ${coin} — Stock: ${updated.stock === -1 ? 'Illimité' : updated.stock} — ${updated.active ? '✅ Actif' : '❌ Inactif'}`)
         .setFooter({ text: `Modifié par ${interaction.user.username}` })] });
@@ -121,16 +122,16 @@ module.exports = {
     if (sub === 'supprimer') {
       const id = parseInt(interaction.options.getString('id'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
+      if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       db.db.prepare('DELETE FROM shop WHERE id=? AND guild_id=?').run(id, guildId);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setDescription(`🗑️ Article **${item.emoji} ${item.name}** (#${id}) supprimé.`)] });
     }
 
     // ── LISTE ─────────────────────────────────────────────────────────
     if (sub === 'liste') {
       const items = db.db.prepare('SELECT * FROM shop WHERE guild_id=? ORDER BY active DESC, price ASC').all(guildId);
-      if (!items.length) return interaction.reply({ content: '📦 Boutique vide. Ajoutez des articles avec `/boutique_admin ajouter`.', ephemeral: true });
+      if (!items.length) return interaction.editReply({ content: '📦 Boutique vide. Ajoutez des articles avec `/boutique_admin ajouter`.', ephemeral: true });
 
       const lines = items.map(it => {
         const status = it.active ? '✅' : '❌';
@@ -141,7 +142,7 @@ module.exports = {
       const chunks = [];
       for (let i = 0; i < lines.length; i += 15) chunks.push(lines.slice(i, i+15));
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`🛒 Boutique Admin — ${items.length} article(s)`)
         .setDescription(chunks[0].join('\n'))
         .setFooter({ text: 'Utilisez /boutique_admin modifier id:<n> pour éditer' })], ephemeral: true });
@@ -152,11 +153,11 @@ module.exports = {
       const id  = parseInt(interaction.options.getString('id'));
       const qty = parseInt(interaction.options.getString('quantite'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
-      if (item.stock === -1) return interaction.reply({ content: '❌ Cet article a un stock illimité.', ephemeral: true });
+      if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
+      if (item.stock === -1) return interaction.editReply({ content: '❌ Cet article a un stock illimité.', ephemeral: true });
       db.db.prepare('UPDATE shop SET stock=stock+? WHERE id=?').run(qty, id);
       const updated = db.db.prepare('SELECT stock FROM shop WHERE id=?').get(id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`📦 Stock de **${item.emoji} ${item.name}** : +${qty} → **${updated.stock}** unités.`)] });
     }
 
@@ -176,7 +177,7 @@ module.exports = {
         `**${i+1}.** ${it.emoji} ${it.name} — 🛒 ${it.sales||0} ventes | 💰 ${(it.revenue||0)} ${coin}`
       );
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('📊 Top ventes de la boutique')
         .setDescription(lines.join('\n') || '*Aucune vente enregistrée.*')], ephemeral: true });
     }
@@ -184,10 +185,10 @@ module.exports = {
     // ── VIDER ─────────────────────────────────────────────────────────
     if (sub === 'vider') {
       if (interaction.options.getString('confirmation') !== 'CONFIRMER')
-        return interaction.reply({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
       const count = db.db.prepare('SELECT COUNT(*) as c FROM shop WHERE guild_id=?').get(guildId);
       db.db.prepare('DELETE FROM shop WHERE guild_id=?').run(guildId);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle('☢️ Boutique vidée')
         .setDescription(`${count.c} article(s) supprimé(s).`)] });
     }
@@ -196,12 +197,12 @@ module.exports = {
     if (sub === 'dupliquer') {
       const id = parseInt(interaction.options.getString('id'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
+      if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       const result = db.db.prepare(`
         INSERT INTO shop (guild_id,name,description,emoji,price,stock,role_id,max_per_user,duration_hours,active)
         VALUES (?,?,?,?,?,?,?,?,?,1)
       `).run(guildId, `${item.name} (copie)`, item.description, item.emoji, item.price, item.stock, item.role_id, item.max_per_user, item.duration_hours);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setDescription(`📋 Article **${item.emoji} ${item.name}** dupliqué → Nouveau ID **#${result.lastInsertRowid}**.`)] });
     }
 
@@ -210,10 +211,10 @@ module.exports = {
       const id  = parseInt(interaction.options.getString('id'));
       const pct = parseInt(interaction.options.getString('reduction'));
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!item) return interaction.reply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
+      if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       const newPrice = Math.max(1, Math.floor(item.price * (1 - pct / 100)));
       db.db.prepare('UPDATE shop SET price=? WHERE id=?').run(newPrice, id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#EF4444')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#EF4444')
         .setTitle(`🏷️ Promotion appliquée — -${pct}%`)
         .setDescription(`${item.emoji} **${item.name}**\n~~${item.price}~~ → **${newPrice} ${coin}**`)
         .setFooter({ text: `Article #${id} mis en promo` })] });

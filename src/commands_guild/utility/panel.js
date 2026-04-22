@@ -14,11 +14,12 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction, client) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const db  = require('../../database/db');
     const cfg = db.getConfig(interaction.guildId);
 
     const panel = buildMainMenu(cfg, interaction.guild, interaction.user.id);
 
-    return interaction.reply({ ...panel, ephemeral: true });
+    return interaction.editReply({ ...panel, ephemeral: true });
   },
 };
