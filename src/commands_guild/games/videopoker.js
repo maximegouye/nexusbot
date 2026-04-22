@@ -65,12 +65,12 @@ async function playVideoPoker(source, userId, guildId, mise) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (sessions.has(userId)) {
     const err = '⚠️ Tu as déjà une partie de Video Poker en cours !';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -118,10 +118,10 @@ async function playVideoPoker(source, userId, guildId, mise) {
 
   let msg;
   if (isInteraction) {
-    await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+    await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+    msg = await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
   }
 
   const filter = i => i.user.id === userId && i.customId.startsWith(`vp_`);
@@ -201,11 +201,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('videopoker')
     .setDescription('🃏 Video Poker — Jacks or Better, gardez vos meilleures cartes !')
-    .addStringOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true)),
+    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10)),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    await playVideoPoker(interaction, interaction.user.id, interaction.guildId, parseInt(interaction.options.getString('mise')));
+    await playVideoPoker(interaction, interaction.user.id, interaction.guildId, interaction.options.getInteger('mise'));
   },
 
   name: 'videopoker',

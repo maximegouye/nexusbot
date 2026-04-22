@@ -88,12 +88,12 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
   const betKey = betMap[betOn.toLowerCase()];
   if (!betKey) {
     const err = '❌ Pari invalide. Choisir : `joueur`, `banquier`, ou `egalite`';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -108,10 +108,10 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
 
   let msg;
   if (isInteraction) {
-    await source.editReply({ embeds: [animEmbed] });
+    await source.reply({ embeds: [animEmbed] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.editReply({ embeds: [animEmbed] });
+    msg = await source.reply({ embeds: [animEmbed] });
   }
 
   await sleep(800);
@@ -195,6 +195,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('baccarat')
     .setDescription('🎴 Baccarat — Misez sur le joueur, banquier ou égalité')
+    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10))
     .addStringOption(o => o.setName('pari').setDescription('joueur / banquier / egalite').setRequired(true)
       .addChoices(
         { name: '👤 Joueur (×2)', value: 'joueur' },
@@ -203,12 +204,11 @@ module.exports = {
       )),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playBaccaratGame(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      parseInt(interaction.options.getString('mise')),
+      interaction.options.getInteger('mise'),
       interaction.options.getString('pari'),
     );
   },

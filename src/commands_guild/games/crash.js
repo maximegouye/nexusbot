@@ -68,17 +68,17 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (activeGames.has(userId)) {
     const err = '⚠️ Tu as déjà un crash en cours !';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 10) {
     const err = '❌ Mise minimale : **10 coins**.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -146,7 +146,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     await source.deferReply();
     msg = await source.editReply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   } else {
-    msg = await source.editReply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
+    msg = await source.reply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   }
 
   activeGames.set(userId, { cashedOut: false, mult: 1.0, msg });
@@ -234,17 +234,18 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('crash')
     .setDescription('🚀 Crash — regardez le multiplicateur monter et cashoutez avant le crash !')
-    .addStringOption(o => o
-      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true)getNumber('cashout'))
+    .addIntegerOption(o => o
+      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true).setMinValue(10))
     .addNumberOption(o => o
+      .setName('auto').setDescription('Cash-out automatique à ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
 
   async execute(interaction) {
     await playCrash(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      parseInt(interaction.options.getString('mise')),
-      parseFloat(interaction.options.getString('cashout')) || null,
+      interaction.options.getInteger('mise'),
+      interaction.options.getNumber('auto') || null,
     );
   },
 

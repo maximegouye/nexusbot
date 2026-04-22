@@ -138,22 +138,22 @@ async function playMines(source, userId, guildId, mise, minesCount) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (sessions.has(userId)) {
     const err = '⚠️ Tu as déjà une partie de Mines en cours !';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 10) {
     const err = '❌ Mise minimale : **10 coins**.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (minesCount < 1 || minesCount > 24) {
     const err = '❌ Nombre de mines entre **1** et **24**.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -170,10 +170,10 @@ async function playMines(source, userId, guildId, mise, minesCount) {
 
   let msg;
   if (isInteraction) {
-    await source.editReply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
+    await source.reply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
     msg = await source.fetchReply();
   } else {
-    msg = await source.editReply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
+    msg = await source.reply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
   }
 
   // Collecteur
@@ -269,19 +269,18 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('mines')
     .setDescription('💣 Mines — révèle les cases sans toucher les bombes !')
-    .addStringOption(o => o
-      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true))
-    .addStringOption(o => o
-      .setName('mines').setDescription('Nombre de mines 1-24 (défaut 3)')),
+    .addIntegerOption(o => o
+      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true).setMinValue(10))
+    .addIntegerOption(o => o
+      .setName('mines').setDescription('Nombre de mines 1-24 (défaut 3)').setMinValue(1).setMaxValue(24)),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playMines(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      parseInt(interaction.options.getString('mise')),
-      parseInt(interaction.options.getString('mines')) || 3,
+      interaction.options.getInteger('mise'),
+      interaction.options.getInteger('mines') || 3,
     );
   },
 

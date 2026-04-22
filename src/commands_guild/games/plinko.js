@@ -65,17 +65,17 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
   const riskKey = risk.toLowerCase();
   if (!MULTIPLIERS[riskKey]) {
     const err = '❌ Risque invalide. Choisir : `faible`, `moyen`, ou `eleve`';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 10) {
     const err = '❌ Mise minimale : **10 coins**.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -100,7 +100,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.editReply({ embeds: [startEmbed] });
+    msg = await source.reply({ embeds: [startEmbed] });
   }
 
   // Animation bille tombe rangée par rangée
@@ -156,7 +156,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('plinko')
     .setDescription('🎯 Plinko — lâchez la bille et regardez où elle tombe !')
-    .addStringOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true))
+    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10))
     .addStringOption(o => o.setName('risque').setDescription('Niveau de risque').addChoices(
       { name: '🟢 Faible (multiplicateurs modérés)', value: 'low' },
       { name: '🟡 Moyen (recommandé)', value: 'medium' },
@@ -168,7 +168,7 @@ module.exports = {
       interaction,
       interaction.user.id,
       interaction.guildId,
-      parseInt(interaction.options.getString('mise')),
+      interaction.options.getInteger('mise'),
       interaction.options.getString('risque') || 'medium',
     );
   },

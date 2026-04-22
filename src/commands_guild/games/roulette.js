@@ -91,17 +91,17 @@ async function playRoulette(source, userId, guildId, mise, betType) {
   const bet = parseBet(betType);
   if (!bet) {
     const err = `❌ Type de pari invalide.\n\n${BET_HELP}`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 5) {
     const err = '❌ Mise minimale : **5 coins**.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -119,10 +119,10 @@ async function playRoulette(source, userId, guildId, mise, betType) {
 
   let msg;
   if (isInteraction) {
-    await source.editReply({ embeds: [spinEmbed()] });
+    await source.reply({ embeds: [spinEmbed()] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.editReply({ embeds: [spinEmbed()] });
+    msg = await source.reply({ embeds: [spinEmbed()] });
   }
 
   // Animation spinning
@@ -199,7 +199,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('roulette')
     .setDescription('🎡 Roulette européenne — misez et tentez votre chance !')
-    .addStringOption(o => o
+    .addIntegerOption(o => o
       .setName('mise').setDescription('Montant à miser (min 5)').setRequired(true).setMinValue(5))
     .addStringOption(o => o
       .setName('pari')
@@ -208,12 +208,11 @@ module.exports = {
     .addSubcommand ? undefined : undefined, // pas de subcommands ici
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playRoulette(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      parseInt(interaction.options.getString('mise')),
+      interaction.options.getInteger('mise'),
       interaction.options.getString('pari'),
     );
   },

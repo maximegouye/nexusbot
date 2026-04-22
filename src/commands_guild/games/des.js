@@ -33,7 +33,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -53,7 +53,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     const n = parseInt(bet.replace(/[^0-9]/g, ''));
     if (!n || n < 2 || n > 12 || numDice < 2) {
       const err = '❌ Pour parier sur une somme, utilisez 2 dés. Ex: `&des 100 somme7 2`';
-      if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+      if (isInteraction) return source.reply({ content: err, ephemeral: true });
       return source.reply(err);
     }
     winCondition = (r1, r2) => r1 + r2 === n;
@@ -63,7 +63,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   } else {
     const help = '**Paris disponibles :**\n`haut` (4-6) ×1.8\n`bas` (1-3) ×1.8\n`pair` ×1.8\n`impair` ×1.8\n`1` à `6` (exact) ×5.5\n`somme7` (2 dés, somme exacte) ×variable';
     const err = `❌ Pari invalide.\n\n${help}`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -78,10 +78,10 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
 
   let msg;
   if (isInteraction) {
-    await source.editReply({ embeds: [animEmbed] });
+    await source.reply({ embeds: [animEmbed] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.editReply({ embeds: [animEmbed] });
+    msg = await source.reply({ embeds: [animEmbed] });
   }
 
   for (let f = 0; f < 4; f++) {
@@ -131,19 +131,18 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('des')
     .setDescription('🎲 Lancez les dés et pariez sur le résultat !')
-    .addStringOption(o => o.setName('mise').setDescription('Mise (min 5)').setRequired(true))
+    .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 5)').setRequired(true).setMinValue(5))
     .addStringOption(o => o.setName('pari').setDescription('haut/bas/pair/impair/1-6/somme7').setRequired(true))
-    .addStringOption(o => o.setName('des').setDescription('Nombre de dés (1 ou 2)')),
+    .addIntegerOption(o => o.setName('des').setDescription('Nombre de dés (1 ou 2)').setMinValue(1).setMaxValue(2)),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playDice(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      parseInt(interaction.options.getString('mise')),
+      interaction.options.getInteger('mise'),
       interaction.options.getString('pari'),
-      parseInt(interaction.options.getString('des')) || 1,
+      interaction.options.getInteger('des') || 1,
     );
   },
 

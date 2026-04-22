@@ -199,12 +199,12 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
   const totalMise = mise * lines;
   if (!u || u.solde < totalMise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}** (mise totale : ${totalMise}).`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (mise < 5) {
     const err = '❌ Mise minimale : **5 coins** par ligne.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -225,7 +225,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
     await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.editReply({ embeds: [startEmbed] });
+    msg = await source.reply({ embeds: [startEmbed] });
   }
 
   const grid = spinGrid();
@@ -346,14 +346,14 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('slots')
     .setDescription('🎰 Machine à sous — 5 rouleaux, jackpot progressif !')
-    .addStringOption(o => o
+    .addIntegerOption(o => o
       .setName('mise').setDescription('Mise par ligne (min 5)').setRequired(true).setMinValue(5))
-    .addStringOption(o => o
+    .addIntegerOption(o => o
       .setName('lignes').setDescription('Nombre de lignes (1-3, défaut 1)').setMinValue(1).setMaxValue(3)),
 
   async execute(interaction) {
-    const mise   = parseInt(interaction.options.getString('mise'));
-    const lignes = parseInt(interaction.options.getString('lignes')) || 1;
+    const mise   = interaction.options.getInteger('mise');
+    const lignes = interaction.options.getInteger('lignes') || 1;
     await playSlots(interaction, interaction.user.id, interaction.guildId, mise, lignes);
   },
 

@@ -17,7 +17,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -25,7 +25,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
   const chosen = choix ? choix.toLowerCase() : null;
   if (chosen && !side.includes(chosen)) {
     const err = '❌ Choisis `pile` ou `face`.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    if (isInteraction) return source.reply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -40,10 +40,10 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
 
   let msg;
   if (isInteraction) {
-    await source.editReply({ embeds: [animEmbed] });
+    await source.reply({ embeds: [animEmbed] });
     msg = await source.fetchReply();
   } else {
-    msg = await source.editReply({ embeds: [animEmbed] });
+    msg = await source.reply({ embeds: [animEmbed] });
   }
 
   for (const frame of SPIN_FRAMES) {
@@ -105,19 +105,18 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('pile-ou-face')
     .setDescription('🪙 Pile ou Face — 50/50, ×2 si tu gagnes !')
-    .addStringOption(o => o.setName('mise').setDescription('Montant à miser').setRequired(true).setMinValue(1))
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser').setRequired(true).setMinValue(1))
     .addStringOption(o => o.setName('choix').setDescription('pile ou face (optionnel)').addChoices(
       { name: '🟡 Pile', value: 'pile' },
       { name: '⚪ Face', value: 'face' },
     )),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playCoinFlip(
       interaction,
       interaction.user.id,
       interaction.guildId,
-      parseInt(interaction.options.getString('mise')),
+      interaction.options.getInteger('mise'),
       interaction.options.getString('choix'),
     );
   },
