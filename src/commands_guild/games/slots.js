@@ -222,7 +222,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
 
   let msg;
   if (isInteraction) {
-    await source.deferReply();
+    if (!source.deferred && !source.replied) await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
     msg = await source.reply({ embeds: [startEmbed] });

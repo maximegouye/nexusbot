@@ -97,7 +97,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
 
   let msg;
   if (isInteraction) {
-    await source.deferReply();
+    if (!source.deferred && !source.replied) await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
     msg = await source.reply({ embeds: [startEmbed] });

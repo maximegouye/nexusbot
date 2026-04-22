@@ -118,8 +118,7 @@ async function playVideoPoker(source, userId, guildId, mise) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
-    msg = await source.fetchReply();
+    msg = await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
   } else {
     msg = await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
   }

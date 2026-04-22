@@ -143,7 +143,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
 
   let msg;
   if (isInteraction) {
-    await source.deferReply();
+    if (!source.deferred && !source.replied) await source.deferReply();
     msg = await source.editReply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   } else {
     msg = await source.reply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });

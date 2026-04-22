@@ -216,8 +216,7 @@ async function startGame(source, userId, guildId, mise) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [tempEmbed], components: [] });
-    msg = await source.fetchReply();
+    msg = await source.editReply({ embeds: [tempEmbed], components: [] });
   } else {
     msg = await source.reply({ embeds: [tempEmbed] });
   }

@@ -170,8 +170,7 @@ async function playMines(source, userId, guildId, mise, minesCount) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
-    msg = await source.fetchReply();
+    msg = await source.editReply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
   } else {
     msg = await source.reply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
   }

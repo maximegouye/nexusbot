@@ -40,8 +40,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
 
   let msg;
   if (isInteraction) {
-    await source.reply({ embeds: [animEmbed] });
-    msg = await source.fetchReply();
+    msg = await source.editReply({ embeds: [animEmbed] });
   } else {
     msg = await source.reply({ embeds: [animEmbed] });
   }
