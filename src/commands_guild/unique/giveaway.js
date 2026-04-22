@@ -199,4 +199,34 @@ module.exports = {
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
   }
+
+  async handleComponent(interaction) {
+    const db = require('../../database/db');
+    const { EmbedBuilder } = require('discord.js');
+    const customId = interaction.customId;
+    const guildId = interaction.guild.id;
+    const userId = interaction.user.id;
+
+    // Bouton participer au giveaway
+    if (customId.startsWith('giveaway_enter_') || customId.startsWith('giveaway_join_') || customId.startsWith('giveaway_particip')) {
+      const giveawayId = customId.split('_').pop();
+      try {
+        const gw = await db.get('SELECT * FROM giveaways WHERE id = ? AND guild_id = ?', [giveawayId, guildId])
+                || await db.get('SELECT * FROM giveaways WHERE message_id = ? AND guild_id = ?', [giveawayId, guildId]);
+        if (!gw) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+        if (gw.status !== 'active' && gw.ended) return interaction.reply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
+
+        const already = await db.get('SELECT 1 FROM giveaway_entries WHERE giveaway_id = ? AND user_id = ?', [gw.id || giveawayId, userId]);
+        if (already) return interaction.reply({ content: '✅ Tu participes déjà à ce giveaway !', ephemeral: true });
+
+        await db.run('INSERT OR IGNORE INTO giveaway_entries (giveaway_id, user_id, guild_id) VALUES (?, ?, ?)', [gw.id || giveawayId, userId, guildId]);
+        const count = await db.get('SELECT COUNT(*) as n FROM giveaway_entries WHERE giveaway_id = ?', [gw.id || giveawayId]);
+        return interaction.reply({ content: `🎉 Tu participes au giveaway ! (${count?.n || '?'} participants)`, ephemeral: true });
+      } catch(e) {
+        console.error('[GIVEAWAY COMPONENT]', e);
+        return interaction.reply({ content: '❌ Erreur lors de la participation.', ephemeral: true });
+      }
+    }
+  },
+
 };

@@ -61,18 +61,17 @@ module.exports = {
     }
     if (command === 'config') {
       if (!isAdmin) return message.reply('🚫 Réservé aux administrateurs.');
-      const guild = message.guild;
-      return message.reply({ embeds: [new EmbedBuilder().setColor(0x9B59B6).setTitle(`⚙️ Config — ${guild.name}`)
+      return message.reply({ embeds: [new EmbedBuilder().setColor(0x9B59B6).setTitle(`⚙️ Config — ${message.guild.name}`)
         .addFields(
-          { name: '🆔 Guild ID', value: guild.id, inline: true },
-          { name: '👥 Membres', value: `${guild.memberCount}`, inline: true },
+          { name: '🆔 Guild ID', value: message.guild.id, inline: true },
+          { name: '👥 Membres', value: `${message.guild.memberCount}`, inline: true },
           { name: '💱 Préfixes', value: `/ et !`, inline: true }
         ).setTimestamp()] });
     }
     if (command === 'help' || command === 'aide') {
       if (!isAdmin) return;
       return message.reply({ embeds: [new EmbedBuilder().setColor(0x3498DB).setTitle('📋 Commandes Admin !')
-        .setDescription('`!donner @m montant` — Donner coins\n`!retirer @m montant` — Retirer coins\n`!reset @m` — Reset solde\n`!solde @m` — Voir solde\n`!cooldown @m` — Reset cooldowns\n`!config` — Config serveur\n\n> Aussi disponibles avec `/admin`')
+        .setDescription('`!donner @m montant` — Donner coins (bot finance)\n`!retirer @m montant` — Retirer coins\n`!reset @m` — Reset solde\n`!solde @m` — Voir solde\n`!cooldown @m` — Reset cooldowns\n`!config` — Config serveur\n\n> Aussi dispo avec `/admin`')
         .setTimestamp()] });
     }
   }
