@@ -1482,7 +1482,11 @@ async function _handleInteraction(interaction, client) {
       setTimeout(() => ts.delete(interaction.user.id), cd);
 
       try {
-        await command.execute(interaction, client);
+        // DEFER GARANTI
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: false }).catch(() => {});
+      }
+      await command.execute(interaction, client);
       } catch (error) {
         console.error(`[CMD] Erreur /${interaction.commandName}:`, error);
         const errEmbed = new EmbedBuilder()
