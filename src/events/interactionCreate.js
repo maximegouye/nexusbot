@@ -1455,7 +1455,7 @@ async function _handleInteraction(interaction, client) {
   // === DEFER_IMMEDIAT_COWORK avant toutes les verifications DB ===
   // Garantit une reponse a Discord en moins de 3 secondes
   if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    // [FIX-DEFER] await interaction.deferReply({ ephemeral: false }).catch(() => {});
   }
 
       // ── Vérification blacklist NexusBot ───────────────────
@@ -1522,7 +1522,7 @@ async function _handleInteraction(interaction, client) {
       try {
         // DEFER GARANTI
       if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: false }).catch(() => {});
+        // [FIX-DEFER] await interaction.deferReply({ ephemeral: false }).catch(() => {});
       }
       await command.execute(interaction, client);
       } catch (error) {
@@ -2714,7 +2714,7 @@ async function _handleInteraction(interaction, client) {
 
     // ── MODALS ────────────────────────────────────────────
     if (interaction.isModalSubmit()) {
-      if (!interaction.deferred && !interaction.replied) { await interaction.deferReply({ ephemeral: false }).catch(() => {}); }
+      if (!interaction.deferred && !interaction.replied) { // [FIX-DEFER] await interaction.deferReply({ ephemeral: false }).catch(() => {}); }
       const db = require('../database/db');
       const customId = interaction.customId;
 
