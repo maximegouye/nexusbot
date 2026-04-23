@@ -212,7 +212,7 @@ module.exports = {
     // ══════════════════════════════ ENVOYER ══════════════════
     if (sub === 'envoyer') {
       if (!cfg.suggestion_channel) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Aucun salon de suggestions configuré. Demandez à l\'admin d\'exécuter `/suggestion setup`.')
@@ -225,7 +225,7 @@ module.exports = {
       const channel = guild.channels.cache.get(cfg.suggestion_channel);
 
       if (!channel) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Le salon de suggestions n\'existe plus.')
@@ -265,7 +265,7 @@ module.exports = {
       // Envoyer le message dans le salon
       const msg = await channel.send({ embeds: [suggestionEmbed] }).catch(() => null);
       if (!msg) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Impossible d\'envoyer la suggestion au salon configuré.')
@@ -299,7 +299,7 @@ module.exports = {
         await thread.send({ embeds: [threadEmbed] }).catch(() => {});
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✅ Suggestion envoyée')
@@ -317,7 +317,7 @@ module.exports = {
     // ══════════════════════════════ APPROUVER ════════════════
     if (sub === 'approuver') {
       if (!isStaff(interaction.member, cfg)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Permission insuffisante.',
           ephemeral: true
         });
@@ -329,7 +329,7 @@ module.exports = {
         .get(id, interaction.guildId);
 
       if (!suggestion) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Suggestion introuvable.',
           ephemeral: true
         });
@@ -371,7 +371,7 @@ module.exports = {
         }
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setDescription(`✅ Suggestion #${id} approuvée avec succès!`)
@@ -383,7 +383,7 @@ module.exports = {
     // ══════════════════════════════ REFUSER ═══════════════════
     if (sub === 'refuser') {
       if (!isStaff(interaction.member, cfg)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Permission insuffisante.',
           ephemeral: true
         });
@@ -395,7 +395,7 @@ module.exports = {
         .get(id, interaction.guildId);
 
       if (!suggestion) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Suggestion introuvable.',
           ephemeral: true
         });
@@ -437,7 +437,7 @@ module.exports = {
         }
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setDescription(`❌ Suggestion #${id} refusée.`)
@@ -449,7 +449,7 @@ module.exports = {
     // ══════════════════════════════ ENCOURS ═══════════════════
     if (sub === 'encours') {
       if (!isStaff(interaction.member, cfg)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Permission insuffisante.',
           ephemeral: true
         });
@@ -461,7 +461,7 @@ module.exports = {
         .get(id, interaction.guildId);
 
       if (!suggestion) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Suggestion introuvable.',
           ephemeral: true
         });
@@ -503,7 +503,7 @@ module.exports = {
         }
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E67E22')
           .setDescription(`🔄 Suggestion #${id} marquée comme en cours.`)
@@ -515,7 +515,7 @@ module.exports = {
     // ══════════════════════════════ SETUP ════════════════════
     if (sub === 'setup') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Permission insuffisante.',
           ephemeral: true
         });
@@ -532,7 +532,7 @@ module.exports = {
           .run(logChannel.id, interaction.guildId);
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✅ Configuration appliquée')
@@ -552,14 +552,14 @@ module.exports = {
         .get(id, interaction.guildId);
 
       if (!suggestion) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Suggestion introuvable.',
           ephemeral: true
         });
       }
 
       const embed = await buildSuggestionEmbed(suggestion, guild);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [embed],
         ephemeral: true
       });
@@ -579,7 +579,7 @@ module.exports = {
       }
 
       if (suggestions.length === 0) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder()
             .setColor('#7B2FBE')
             .setDescription('📭 Aucune suggestion trouvée.')
@@ -598,7 +598,7 @@ module.exports = {
         )
         .setFooter({ text: `Total: ${suggestions.length}` });
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [embed],
         ephemeral: true
       });
@@ -610,7 +610,7 @@ module.exports = {
         .all(interaction.guildId, interaction.user.id);
 
       if (suggestions.length === 0) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder()
             .setColor('#7B2FBE')
             .setDescription('📭 Vous n\'avez pas encore envoyé de suggestions.')
@@ -629,7 +629,7 @@ module.exports = {
         )
         .setFooter({ text: `Total: ${suggestions.length}` });
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [embed],
         ephemeral: true
       });

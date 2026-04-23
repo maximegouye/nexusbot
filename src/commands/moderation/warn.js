@@ -14,7 +14,7 @@ module.exports = {
     const target = interaction.options.getUser('membre');
     const raison = interaction.options.getString('raison');
 
-    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas t\'avertir toi-même.', ephemeral: true });
+    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas t\'avertir toi-même.', ephemeral: true });
 
     db.db.prepare('INSERT INTO warnings (guild_id, user_id, mod_id, reason, created_at) VALUES (?, ?, ?, ?, ?)')
       .run(interaction.guildId, target.id, interaction.user.id, raison, Math.floor(Date.now() / 1000));
@@ -59,6 +59,6 @@ module.exports = {
       .setThumbnail(target.displayAvatarURL())
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

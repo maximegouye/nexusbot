@@ -29,7 +29,7 @@ module.exports = {
     const cfg = db.getConfig(interaction.guildId);
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-      return interaction.reply({ content: '❌ Tu as besoin de la permission Gérer le serveur.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Tu as besoin de la permission Gérer le serveur.', ephemeral: true });
     }
 
     // ── START ──
@@ -42,7 +42,7 @@ module.exports = {
       const roleBonus = interaction.options.getRole('role_bonus');
 
       const durSec = parseDuration(durStr);
-      if (!durSec) return interaction.reply({ content: '❌ Format de durée invalide. Exemples : `1d`, `12h`, `30m`', ephemeral: true });
+      if (!durSec) return interaction.editReply({ content: '❌ Format de durée invalide. Exemples : `1d`, `12h`, `30m`', ephemeral: true });
 
       const endsAt  = Math.floor(Date.now() / 1000) + durSec;
       const channel = interaction.channel;
@@ -76,29 +76,29 @@ module.exports = {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', '[]')`)
         .run(interaction.guildId, channel.id, gMsg.id, prize, winners, endsAt, interaction.user.id, minLevel, minBal, roleBonus?.id || null);
 
-      await interaction.reply({ content: `✅ Giveaway lancé dans ${channel} !`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Giveaway lancé dans ${channel} !`, ephemeral: true });
     }
 
     // ── END ──
     if (sub === 'end') {
       const msgId = interaction.options.getString('message_id');
       const gw    = db.db.prepare('SELECT * FROM giveaways WHERE message_id = ? AND guild_id = ?').get(msgId, interaction.guildId);
-      if (!gw) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
-      if (gw.status !== 'active') return interaction.reply({ content: '❌ Ce giveaway est déjà terminé.', ephemeral: true });
+      if (!gw) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+      if (gw.status !== 'active') return interaction.editReply({ content: '❌ Ce giveaway est déjà terminé.', ephemeral: true });
 
       db.db.prepare('UPDATE giveaways SET ends_at = ? WHERE message_id = ?').run(Math.floor(Date.now() / 1000) - 1, msgId);
-      await interaction.reply({ content: '✅ Le giveaway sera terminé au prochain tick (< 1 min).', ephemeral: true });
+      await interaction.editReply({ content: '✅ Le giveaway sera terminé au prochain tick (< 1 min).', ephemeral: true });
     }
 
     // ── REROLL ──
     if (sub === 'reroll') {
       const msgId = interaction.options.getString('message_id');
       const gw    = db.db.prepare('SELECT * FROM giveaways WHERE message_id = ? AND guild_id = ?').get(msgId, interaction.guildId);
-      if (!gw) return interaction.reply({ content: '❌ Giveaway introuvable.', ephemeral: true });
-      if (gw.status === 'active') return interaction.reply({ content: '❌ Ce giveaway est encore actif. Termine-le d\'abord.', ephemeral: true });
+      if (!gw) return interaction.editReply({ content: '❌ Giveaway introuvable.', ephemeral: true });
+      if (gw.status === 'active') return interaction.editReply({ content: '❌ Ce giveaway est encore actif. Termine-le d\'abord.', ephemeral: true });
 
       const entries = JSON.parse(gw.entries || '[]');
-      if (!entries.length) return interaction.reply({ content: '❌ Aucun participant.', ephemeral: true });
+      if (!entries.length) return interaction.editReply({ content: '❌ Aucun participant.', ephemeral: true });
 
       const newWinners = [];
       const pool = [...entries];
@@ -119,7 +119,7 @@ module.exports = {
         }).catch(() => {});
       }
 
-      await interaction.reply({ content: `✅ Reroll effectué ! Gagnants : ${winnerMentions}`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Reroll effectué ! Gagnants : ${winnerMentions}`, ephemeral: true });
     }
   }
 };

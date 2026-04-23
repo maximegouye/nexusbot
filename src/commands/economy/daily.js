@@ -25,7 +25,7 @@ module.exports = {
       const remaining = cooldown - (now - lastDaily);
       const h = Math.floor(remaining / 3600);
       const m = Math.floor((remaining % 3600) / 60);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setTitle('⏳ Récompense déjà récupérée')
@@ -77,6 +77,6 @@ module.exports = {
       )
       .setFooter({ text: 'Reviens demain pour conserver ta série !' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

@@ -52,7 +52,7 @@ module.exports = {
       db.kvSet(interaction.guildId, sessionKey, initState);
     } catch (e) { console.error('[cslot] init session:', e); }
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [cm.buildMenuEmbed({
         userName: interaction.user.username,
         mise,

@@ -37,9 +37,9 @@ module.exports = {
     const raw     = miseRaw ? String(miseRaw.value).trim().toLowerCase() : '';
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null)                return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (bet < 1n)                   return interaction.reply({ content: '❌ La mise doit être d\'au moins **1**.', ephemeral: true });
-    if (bet > BigInt(user.balance)) return interaction.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
+    if (bet == null)                return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (bet < 1n)                   return interaction.editReply({ content: '❌ La mise doit être d\'au moins **1**.', ephemeral: true });
+    if (bet > BigInt(user.balance)) return interaction.editReply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
 
     db.removeCoins(interaction.user.id, interaction.guildId, Number(bet));
     const balanceAfter = BigInt(user.balance) - bet;
@@ -49,10 +49,10 @@ module.exports = {
 
     if (immediateFinish) {
       if (game.payout > 0n) db.addCoins(interaction.user.id, interaction.guildId, Number(game.payout));
-      return interaction.reply({ embeds: [bj.buildEmbed(game, embedOpts)] });
+      return interaction.editReply({ embeds: [bj.buildEmbed(game, embedOpts)] });
     }
 
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       embeds: [bj.buildEmbed(game, embedOpts)],
       components: [bj.buildButtons(game)],
       fetchReply: true,

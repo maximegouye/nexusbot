@@ -39,13 +39,13 @@ module.exports = {
 
     if (sub === 'ajouter') {
       const count = db.db.prepare('SELECT COUNT(*) as c FROM notes WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (count.c >= 25) return interaction.reply({ content: '❌ Maximum 25 notes. Supprimez-en d\'abord.', ephemeral: true });
+      if (count.c >= 25) return interaction.editReply({ content: '❌ Maximum 25 notes. Supprimez-en d\'abord.', ephemeral: true });
 
       const title = interaction.options.getString('titre');
       const content = interaction.options.getString('contenu');
       const r = db.db.prepare('INSERT INTO notes (guild_id, user_id, title, content) VALUES (?,?,?,?)').run(guildId, userId, title, content);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle('📝 Note ajoutée !')
           .addFields(
             { name: '🏷️ Titre', value: title, inline: true },
@@ -56,10 +56,10 @@ module.exports = {
 
     if (sub === 'liste') {
       const notes = db.db.prepare('SELECT * FROM notes WHERE guild_id=? AND user_id=? ORDER BY pinned DESC, updated_at DESC').all(guildId, userId);
-      if (!notes.length) return interaction.reply({ content: '📝 Aucune note. Créez-en une avec `/notes ajouter` !', ephemeral: true });
+      if (!notes.length) return interaction.editReply({ content: '📝 Aucune note. Créez-en une avec `/notes ajouter` !', ephemeral: true });
 
       const lines = notes.map(n => `${n.pinned ? '📌' : '📝'} **#${n.id}** — ${n.title}\n> ${n.content.slice(0, 60)}${n.content.length > 60 ? '...' : ''}`).join('\n\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle(`📝 Vos notes (${notes.length}/25)`).setDescription(lines)
       ], ephemeral: true });
     }
@@ -67,9 +67,9 @@ module.exports = {
     if (sub === 'lire') {
       const id = parseInt(interaction.options.getString('id'));
       const note = db.db.prepare('SELECT * FROM notes WHERE id=? AND guild_id=? AND user_id=?').get(id, guildId, userId);
-      if (!note) return interaction.reply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
+      if (!note) return interaction.editReply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#3498DB')
           .setTitle(`${note.pinned ? '📌' : '📝'} ${note.title}`)
           .setDescription(note.content)
@@ -81,28 +81,28 @@ module.exports = {
       const id = parseInt(interaction.options.getString('id'));
       const content = interaction.options.getString('contenu');
       const r = db.db.prepare('UPDATE notes SET content=?, updated_at=? WHERE id=? AND guild_id=? AND user_id=?').run(content, now, id, guildId, userId);
-      if (!r.changes) return interaction.reply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
-      return interaction.reply({ content: `✅ Note **#${id}** modifiée !`, ephemeral: true });
+      if (!r.changes) return interaction.editReply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Note **#${id}** modifiée !`, ephemeral: true });
     }
 
     if (sub === 'supprimer') {
       const id = parseInt(interaction.options.getString('id'));
       const r = db.db.prepare('DELETE FROM notes WHERE id=? AND guild_id=? AND user_id=?').run(id, guildId, userId);
-      if (!r.changes) return interaction.reply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
-      return interaction.reply({ content: `✅ Note **#${id}** supprimée.`, ephemeral: true });
+      if (!r.changes) return interaction.editReply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Note **#${id}** supprimée.`, ephemeral: true });
     }
 
     if (sub === 'epingler') {
       const id = parseInt(interaction.options.getString('id'));
       const note = db.db.prepare('SELECT * FROM notes WHERE id=? AND guild_id=? AND user_id=?').get(id, guildId, userId);
-      if (!note) return interaction.reply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
+      if (!note) return interaction.editReply({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
       db.db.prepare('UPDATE notes SET pinned=? WHERE id=?').run(note.pinned ? 0 : 1, id);
-      return interaction.reply({ content: `✅ Note **#${id}** ${note.pinned ? 'désépinglée' : '📌 épinglée'} !`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Note **#${id}** ${note.pinned ? 'désépinglée' : '📌 épinglée'} !`, ephemeral: true });
     }
 
     if (sub === 'effacer') {
       const count = db.db.prepare('DELETE FROM notes WHERE guild_id=? AND user_id=?').run(guildId, userId);
-      return interaction.reply({ content: `✅ **${count.changes}** note(s) supprimée(s).`, ephemeral: true });
+      return interaction.editReply({ content: `✅ **${count.changes}** note(s) supprimée(s).`, ephemeral: true });
     }
   }
 };

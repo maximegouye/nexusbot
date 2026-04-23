@@ -16,7 +16,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Il n\'y a rien à écouter en ce moment.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const current = queue.current;
@@ -78,14 +78,14 @@ module.exports = {
         )
         .setTimestamp();
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande nowplaying:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors de l\'affichage de la piste actuelle.');
 
-      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

@@ -144,7 +144,7 @@ function initializeDatabase() {
   } catch (error) {
     // Silently ignore if tables already exist
     if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-      interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+      interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
     } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
       interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
     }
@@ -154,13 +154,13 @@ function initializeDatabase() {
 async function handleSetup(interaction, guildId) {
   // Check admin permissions
   if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-    return interaction.reply({ content: '❌ Seuls les administrateurs peuvent configurer ce système.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Seuls les administrateurs peuvent configurer ce système.', ephemeral: true });
   }
 
   const category = interaction.options.getChannel('categorie-discord');
 
   if (category.type !== 4) {
-    return interaction.reply({ content: '❌ Le salon sélectionné doit être une catégorie Discord.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Le salon sélectionné doit être une catégorie Discord.', ephemeral: true });
   }
 
   try {
@@ -193,9 +193,9 @@ async function handleSetup(interaction, guildId) {
       )
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors de la configuration : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors de la configuration : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -207,7 +207,7 @@ async function handleRename(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
@@ -215,7 +215,7 @@ async function handleRename(interaction, guildId, userId) {
     if (!channel) {
       // Clean up stale entry
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     await channel.setName(newName);
@@ -226,9 +226,9 @@ async function handleRename(interaction, guildId, userId) {
       .setDescription(`Votre salon vocal a été renommé en : **${newName}**`)
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors du renommage : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors du renommage : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -239,14 +239,14 @@ async function handleLimit(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     await channel.setUserLimit(limit === 0 ? 0 : limit);
@@ -258,9 +258,9 @@ async function handleLimit(interaction, guildId, userId) {
       .setDescription(`La limite de votre salon vocal est maintenant : **${limitText}**`)
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors de la définition de la limite : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors de la définition de la limite : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -269,14 +269,14 @@ async function handleLock(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Update permissions to prevent others from joining
@@ -290,9 +290,9 @@ async function handleLock(interaction, guildId, userId) {
       .setDescription('Votre salon vocal est maintenant verrouillé. Seul le propriétaire peut inviter des membres.')
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors du verrouillage : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors du verrouillage : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -301,14 +301,14 @@ async function handleUnlock(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Update permissions to allow others to join
@@ -322,9 +322,9 @@ async function handleUnlock(interaction, guildId, userId) {
       .setDescription('Votre salon vocal est maintenant ouvert à tous.')
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors du déverrouillage : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors du déverrouillage : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -335,20 +335,20 @@ async function handleKick(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Get the member to kick
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
     if (!member || member.voice.channelId !== channel.id) {
-      return interaction.reply({ content: `❌ ${targetUser.username} n'est pas dans ton salon vocal.`, ephemeral: true });
+      return interaction.editReply({ content: `❌ ${targetUser.username} n'est pas dans ton salon vocal.`, ephemeral: true });
     }
 
     // Disconnect the user
@@ -360,9 +360,9 @@ async function handleKick(interaction, guildId, userId) {
       .setDescription(`**${targetUser.username}** a été expulsé de votre salon vocal.`)
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors de l'expulsion : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors de l'expulsion : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -373,18 +373,18 @@ async function handleTransfer(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   if (newOwner.id === userId) {
-    return interaction.reply({ content: '❌ You can\'t transfer ownership to yourself.', ephemeral: true });
+    return interaction.editReply({ content: '❌ You can\'t transfer ownership to yourself.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     // Update the database with new owner
@@ -397,9 +397,9 @@ async function handleTransfer(interaction, guildId, userId) {
       .setDescription(`La propriété de votre salon a été transférée à **${newOwner.username}**.`)
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors du transfert : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors du transfert : ${error.message}`, ephemeral: true });
   }
 }
 
@@ -408,14 +408,14 @@ async function handleStatus(interaction, guildId, userId) {
     .get(guildId, userId);
 
   if (!tempChannel) {
-    return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
   }
 
   try {
     const channel = await interaction.guild.channels.fetch(tempChannel.channel_id);
     if (!channel) {
       db.db.prepare('DELETE FROM temp_channels WHERE channel_id = ?').run(tempChannel.channel_id);
-      return interaction.reply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
+      return interaction.editReply({ content: "❌ Votre salon vocal temporaire n'existe plus.", ephemeral: true });
     }
 
     const userCount = channel.members.size;
@@ -437,16 +437,16 @@ async function handleStatus(interaction, guildId, userId) {
       )
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors de la récupération du statut : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors de la récupération du statut : ${error.message}`, ephemeral: true });
   }
 }
 
 async function handleDisable(interaction, guildId) {
   // Check admin permissions
   if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-    return interaction.reply({ content: '❌ Seuls les administrateurs peuvent désactiver ce système.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Seuls les administrateurs peuvent désactiver ce système.', ephemeral: true });
   }
 
   try {
@@ -463,7 +463,7 @@ async function handleDisable(interaction, guildId) {
       } catch (error) {
         // Channel already deleted, ignore
         if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-          interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
         } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
           interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
         }
@@ -486,8 +486,8 @@ async function handleDisable(interaction, guildId) {
       )
       .setTimestamp();
 
-    interaction.reply({ embeds: [embed] });
+    interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    interaction.reply({ content: `❌ Erreur lors de la désactivation : ${error.message}`, ephemeral: true });
+    interaction.editReply({ content: `❌ Erreur lors de la désactivation : ${error.message}`, ephemeral: true });
   }
 }

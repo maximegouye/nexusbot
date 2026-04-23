@@ -29,7 +29,7 @@ module.exports = {
 
     if (now - (user.last_fish || 0) < cd) {
       const rem = cd - (now - (user.last_fish || 0));
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#FF6B6B').setDescription(`🎣 L'eau est encore agitée ! Attends **${Math.floor(rem/60)} min** avant de repêcher.`)],
         ephemeral: true
       });
@@ -55,6 +55,6 @@ module.exports = {
         : `${caught.emoji} **${caught.name}**... Meilleure chance la prochaine fois !`)
       .setFooter({ text: 'Prochaine pêche dans 20 minutes' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

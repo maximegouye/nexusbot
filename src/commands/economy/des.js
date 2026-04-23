@@ -50,14 +50,14 @@ module.exports = {
     const raw     = miseRaw ? String(miseRaw.value) : null;
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (bet < 1n)    return interaction.reply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (bet > BigInt(user.balance)) return interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
+    if (bet == null) return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (bet < 1n)    return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (bet > BigInt(user.balance)) return interaction.editReply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
 
     let numeroVise = null;
     if (pari === 'numero') {
       numeroVise = parseInt(interaction.options.getString('numero'));
-      if (numeroVise == null) return interaction.reply({ content: '❌ Précise aussi le numéro (2–12).', ephemeral: true });
+      if (numeroVise == null) return interaction.editReply({ content: '❌ Précise aussi le numéro (2–12).', ephemeral: true });
     }
 
     const mise = Number(bet);
@@ -70,7 +70,7 @@ module.exports = {
       const b = DICE_EMOJI[1 + Math.floor(Math.random() * 6)];
       return `# ${a}    ${b}`;
     };
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder().setColor(color)
         .setTitle('🎲 Les dés roulent…')
         .setDescription(['```', rollFrame(), '```', '🌪️ Les dés tournent dans le gobelet…'].join('\n'))

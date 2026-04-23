@@ -27,16 +27,16 @@ module.exports = {
     };
     const mise = parseBet(miseRaw, challenger0.balance);
     if (!Number.isFinite(mise) || mise < 1) {
-      return interaction.reply({ content: '❌ Mise invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Mise invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
     const adversaire = interaction.options.getUser('adversaire');
     const choix      = interaction.options.getString('choix');
     const userId     = interaction.user.id;
 
-    if (adversaire?.id === userId) return interaction.reply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
+    if (adversaire?.id === userId) return interaction.editReply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
 
     const challenger = db.getUser(userId, interaction.guildId);
-    if ((challenger.balance || 0) < mise) return interaction.reply({ content: `❌ Solde insuffisant : **${(challenger.balance ?? 0).toLocaleString('fr-FR')}** 🪙 · il te faut **${mise.toLocaleString('fr-FR')}** 🪙.`, ephemeral: true });
+    if ((challenger.balance || 0) < mise) return interaction.editReply({ content: `❌ Solde insuffisant : **${(challenger.balance ?? 0).toLocaleString('fr-FR')}** 🪙 · il te faut **${mise.toLocaleString('fr-FR')}** 🪙.`, ephemeral: true });
 
     // Réserver la mise
     db.db.prepare('UPDATE users SET balance=balance-? WHERE user_id=? AND guild_id=?').run(mise, userId, interaction.guildId);
@@ -54,7 +54,7 @@ module.exports = {
       new ButtonBuilder().setCustomId('cf_decline').setLabel('❌ Refuser').setStyle(ButtonStyle.Danger),
     );
 
-    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const msg = await interaction.editReply({ embeds: [embed], components: [row], fetchReply: true });
 
     pending.set(msg.id, {
       challengerId: userId,

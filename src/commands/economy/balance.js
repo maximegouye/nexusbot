@@ -66,6 +66,6 @@ module.exports = {
     embed.setFooter({ text: `💡 /daily · /work · /crime · /crypto · /casino pour jouer !` })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

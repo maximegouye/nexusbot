@@ -41,6 +41,6 @@ module.exports = {
       embed.addFields({ name: '🔑 Permissions notables', value: perms.slice(0, 10).join('\n') });
     }
 
-    return interaction.reply({ embeds: [embed] });
+    return interaction.editReply({ embeds: [embed] });
   }
 };

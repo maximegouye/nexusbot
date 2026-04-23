@@ -49,7 +49,7 @@ module.exports = {
       const vers = interaction.options.getString('vers');
       const depuis = interaction.options.getString('depuis') || 'auto';
 
-      if (texte.length > 1000) return interaction.reply({ content: '❌ Texte trop long (1000 caractères max).', ephemeral: true });
+      if (texte.length > 1000) return interaction.editReply({ content: '❌ Texte trop long (1000 caractères max).', ephemeral: true });
       await interaction.deferReply();
 
       try {
@@ -90,7 +90,7 @@ module.exports = {
 
     if (sub === 'langues') {
       const list = LANGUES.map(l => l.name).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#4285F4').setTitle('🌍 Langues disponibles').setDescription(list)
       ], ephemeral: true });
     }

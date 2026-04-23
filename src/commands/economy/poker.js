@@ -34,16 +34,16 @@ module.exports = {
     const raw = miseRaw ? String(miseRaw.value) : null;
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (bet < 1n)    return interaction.reply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (bet > BigInt(user.balance)) return interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
+    if (bet == null) return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (bet < 1n)    return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (bet > BigInt(user.balance)) return interaction.editReply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
 
     db.removeCoins(interaction.user.id, interaction.guildId, Number(bet));
 
     const game = pk.startGame(bet);
     const embedOpts = { symbol, color: cfg.color || '#9B59B6', userName: interaction.user.username };
 
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       embeds: [pk.buildEmbed(game, embedOpts)],
       components: pk.buildButtons(game),
       fetchReply: true,

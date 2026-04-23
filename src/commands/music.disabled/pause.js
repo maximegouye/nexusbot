@@ -17,7 +17,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Vous devez être dans un canal vocal pour utiliser cette commande.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Vérifier que le bot est dans le même canal
@@ -27,7 +27,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Je dois être dans le même canal vocal que vous.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const queue = getOrCreateQueue(interaction.guildId);
@@ -38,7 +38,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Il n\'y a rien à mettre en pause en ce moment.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const currentState = queue.audioPlayer.state.status;
@@ -67,17 +67,17 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ La piste ne peut pas être contrôlée pour le moment.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande pause:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors de la mise en pause/reprise.');
 
-      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

@@ -14,9 +14,9 @@ module.exports = {
     const target = interaction.options.getMember('membre');
     const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
 
-    if (!target) return interaction.reply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.kickable) return interaction.reply({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas t\'expulser toi-même.', ephemeral: true });
+    if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
+    if (!target.kickable) return interaction.editReply({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
+    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas t\'expulser toi-même.', ephemeral: true });
 
     await target.user.send({
       embeds: [new EmbedBuilder()
@@ -39,6 +39,6 @@ module.exports = {
       .setThumbnail(target.user.displayAvatarURL())
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

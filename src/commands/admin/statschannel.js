@@ -143,7 +143,7 @@ module.exports = {
       ).get(interaction.guildId);
 
       if (!stats) {
-        return interaction.reply({ content: '❌ Aucun canal de stats configuré.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Aucun canal de stats configuré.', ephemeral: true });
       }
 
       try {
@@ -161,10 +161,10 @@ module.exports = {
           .setTitle('✅ Configuration Supprimée')
           .setDescription('Les canaux de stats ont été supprimés.');
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       } catch (error) {
         console.error('Erreur statschannel retirer:', error);
-        return interaction.reply({ content: '❌ Erreur lors de la suppression.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Erreur lors de la suppression.', ephemeral: true });
       }
     }
 
@@ -174,7 +174,7 @@ module.exports = {
       ).get(interaction.guildId);
 
       if (!stats) {
-        return interaction.reply({ content: '❌ Aucun canal de stats configuré.\nUtilise `/statschannel setup` pour en créer.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Aucun canal de stats configuré.\nUtilise `/statschannel setup` pour en créer.', ephemeral: true });
       }
 
       const embed = new EmbedBuilder()
@@ -189,7 +189,7 @@ module.exports = {
         )
         .setFooter({ text: 'Mis à jour toutes les 10 minutes' });
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
   }
 };

@@ -27,19 +27,19 @@ module.exports = {
     const message = interaction.options.getString('message');
     const ms      = parseDuration(whenStr);
 
-    if (!ms || ms < 10000) return interaction.reply({ content: '❌ Durée invalide. Exemples : `30min`, `2h`, `1j`', ephemeral: true });
-    if (ms > 30 * 24 * 3600 * 1000) return interaction.reply({ content: '❌ Maximum 30 jours.', ephemeral: true });
+    if (!ms || ms < 10000) return interaction.editReply({ content: '❌ Durée invalide. Exemples : `30min`, `2h`, `1j`', ephemeral: true });
+    if (ms > 30 * 24 * 3600 * 1000) return interaction.editReply({ content: '❌ Maximum 30 jours.', ephemeral: true });
 
     const triggerAt = Math.floor((Date.now() + ms) / 1000);
 
     // Limite 5 rappels actifs par personne
     const count = db.db.prepare('SELECT COUNT(*) as c FROM reminders WHERE user_id = ? AND triggered = 0').get(interaction.user.id).c;
-    if (count >= 5) return interaction.reply({ content: '❌ Tu as déjà 5 rappels actifs. Attends qu\'ils se déclenchent.', ephemeral: true });
+    if (count >= 5) return interaction.editReply({ content: '❌ Tu as déjà 5 rappels actifs. Attends qu\'ils se déclenchent.', ephemeral: true });
 
     db.db.prepare('INSERT INTO reminders (guild_id, channel_id, user_id, message, trigger_at, triggered) VALUES (?, ?, ?, ?, ?, 0)')
       .run(interaction.guildId, interaction.channelId, interaction.user.id, message, triggerAt);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('⏰ Rappel créé !')

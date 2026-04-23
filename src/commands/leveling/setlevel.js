@@ -17,7 +17,7 @@ module.exports = {
     db.db.prepare('UPDATE users SET level = ?, xp = ? WHERE user_id = ? AND guild_id = ?')
       .run(level, xp, target.id, interaction.guildId);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setDescription(`✅ **${target.username}** est maintenant niveau **${level}** (${xp.toLocaleString('fr-FR')} XP).`)

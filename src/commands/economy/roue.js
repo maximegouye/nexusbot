@@ -46,9 +46,9 @@ module.exports = {
     const raw     = miseRaw ? String(miseRaw.value) : null;
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (bet < 1n)    return interaction.reply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (bet > BigInt(user.balance)) return interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
+    if (bet == null) return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (bet < 1n)    return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (bet > BigInt(user.balance)) return interaction.editReply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
 
     const mise = Number(bet);
     db.removeCoins(interaction.user.id, interaction.guildId, mise);
@@ -74,7 +74,7 @@ module.exports = {
         ].join('\n'));
     };
 
-    await interaction.reply({ embeds: [buildSpinEmbed(0)] });
+    await interaction.editReply({ embeds: [buildSpinEmbed(0)] });
     for (let i = 1; i <= 6; i++) {
       await new Promise(r => setTimeout(r, 450));
       await interaction.editReply({ embeds: [buildSpinEmbed(i)] }).catch(() => {});

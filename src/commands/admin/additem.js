@@ -28,7 +28,7 @@ module.exports = {
 
     const cfg = db.getConfig(interaction.guildId);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setTitle(`✅ Article ajouté — ${emoji || '📦'} ${nom}`)

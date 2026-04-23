@@ -80,7 +80,7 @@ module.exports = {
 
   async execute(interaction) {
     const cfg = db.getConfig(interaction.guildId);
-    return interaction.reply({ embeds: [buildMainEmbed(interaction, cfg)], components: buildButtons(interaction.user.id) });
+    return interaction.editReply({ embeds: [buildMainEmbed(interaction, cfg)], components: buildButtons(interaction.user.id) });
   },
 
   _build: { buildMainEmbed, buildButtons },

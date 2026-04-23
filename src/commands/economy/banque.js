@@ -49,7 +49,7 @@ module.exports = {
   async execute(interaction) {
     const cfg  = db.getConfig(interaction.guildId);
     const user = db.getUser(interaction.user.id, interaction.guildId);
-    return interaction.reply({ embeds: [buildEmbed(user, cfg)], components: buildButtons(interaction.user.id) });
+    return interaction.editReply({ embeds: [buildEmbed(user, cfg)], components: buildButtons(interaction.user.id) });
   },
 
   _build: { buildEmbed, buildButtons },

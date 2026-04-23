@@ -35,16 +35,16 @@ module.exports = {
     const mines  = parseInt(interaction.options.getString('mines')) ?? 3;
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null) return interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (bet < 1n)    return interaction.reply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (bet > BigInt(user.balance)) return interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
+    if (bet == null) return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (bet < 1n)    return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (bet > BigInt(user.balance)) return interaction.editReply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
 
     db.removeCoins(interaction.user.id, interaction.guildId, Number(bet));
 
     const game = mi.createGame(bet, mines);
     const embedOpts = { symbol, color: cfg.color || '#F39C12', userName: interaction.user.username };
 
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       embeds: [mi.buildEmbed(game, embedOpts)],
       components: mi.buildButtons(game),
       fetchReply: true,

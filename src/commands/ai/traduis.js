@@ -18,8 +18,8 @@ module.exports = {
     const lang = interaction.options.getString('langue') ?? 'français';
     const cfg = ai.getAIConfig(interaction.guildId, db);
 
-    if (!cfg.enabled)    return interaction.reply({ content: '❌ IA désactivée.', ephemeral: true });
-    if (!ai.isAvailable()) return interaction.reply({ content: '❌ Aucune clé API IA.', ephemeral: true });
+    if (!cfg.enabled)    return interaction.editReply({ content: '❌ IA désactivée.', ephemeral: true });
+    if (!ai.isAvailable()) return interaction.editReply({ content: '❌ Aucune clé API IA.', ephemeral: true });
 
     await interaction.deferReply();
     try {

@@ -16,7 +16,7 @@ module.exports = {
       ON CONFLICT(guild_id, user_id) DO UPDATE SET reason = ?, created_at = ?`)
       .run(interaction.guildId, interaction.user.id, raison, now, raison, now);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#FFA500')
         .setTitle('💤 Mode AFK activé')

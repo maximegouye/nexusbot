@@ -58,7 +58,7 @@ module.exports = {
       const remaining = cooldown - (now - lastWork);
       const h = Math.floor(remaining / 3600);
       const m = Math.floor((remaining % 3600) / 60);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setTitle('😴 Tu es fatigué !')
@@ -102,6 +102,6 @@ module.exports = {
       )
       .setFooter({ text: `Prochain travail disponible dans 1h • Solde: ${(user.balance + total).toLocaleString('fr-FR')}${symbol}` });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

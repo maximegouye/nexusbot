@@ -73,7 +73,7 @@ module.exports = {
       )
     );
 
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       embeds: [buildPollEmbed({})],
       components: [buildRow()],
       fetchReply: true,

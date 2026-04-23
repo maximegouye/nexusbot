@@ -25,12 +25,12 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member?.voice?.channel) {
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Rejoins un salon vocal d\'abord !')], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Rejoins un salon vocal d\'abord !')], ephemeral: true });
     }
 
     const idx     = parseInt(interaction.options.getString('station'));
     const station = STATIONS[idx];
-    if (!station) return interaction.reply({ content: '❌ Station inconnue.', ephemeral: true });
+    if (!station) return interaction.editReply({ content: '❌ Station inconnue.', ephemeral: true });
 
     await interaction.deferReply();
 

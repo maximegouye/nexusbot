@@ -39,7 +39,7 @@ module.exports = {
 
     if (sub === 'start') {
       if (activeSessions.has(channel.id)) {
-        return interaction.reply({ content: '⚠️ Une partie est déjà en cours dans ce salon !', ephemeral: true });
+        return interaction.editReply({ content: '⚠️ Une partie est déjà en cours dans ce salon !', ephemeral: true });
       }
 
       const theme   = interaction.options.getString('theme') || 'libre';
@@ -77,7 +77,7 @@ module.exports = {
         .setFooter({ text: `Démarre par : ${interaction.user.username}` })
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
 
       // Collecteur de messages
       const collector = channel.createMessageCollector({
@@ -156,15 +156,15 @@ module.exports = {
 
     if (sub === 'stop') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.reply({ content: '❌ Aucune partie en cours.', ephemeral: true });
+      if (!sess) return interaction.editReply({ content: '❌ Aucune partie en cours.', ephemeral: true });
       sess.collector?.stop();
       activeSessions.delete(channel.id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('⏹️ Partie arrêtée.')] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('⏹️ Partie arrêtée.')] });
     }
 
     if (sub === 'status') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.reply({ content: '❌ Aucune partie en cours.', ephemeral: true });
+      if (!sess) return interaction.editReply({ content: '❌ Aucune partie en cours.', ephemeral: true });
       const scores = Object.entries(sess.scores || {}).sort((a, b) => b[1] - a[1]);
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')
@@ -175,7 +175,7 @@ module.exports = {
           { name: '📚 Mots utilisés', value: `${sess.usedWords.size}`, inline: true },
           { name: '🏆 Scores', value: scores.length ? scores.map(([id, pts]) => `<@${id}> — ${pts} pts`).join('\n') : 'Aucun', inline: false },
         );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
   }
 };

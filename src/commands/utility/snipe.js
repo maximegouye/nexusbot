@@ -13,7 +13,7 @@ module.exports = {
   execute: async (interaction) => {
     const cached = snipeCache.get(interaction.channelId);
     if (!cached) {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#888888').setDescription('🔍 Aucun message supprimé récemment dans ce salon.')],
         ephemeral: true
       });
@@ -27,7 +27,7 @@ module.exports = {
       .setFooter({ text: `Supprimé` })
       .setTimestamp(cached.timestamp);
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   },
 
   // Méthode statique pour stocker depuis l'event messageDelete

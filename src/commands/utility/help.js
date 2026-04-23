@@ -77,7 +77,7 @@ module.exports = {
   async execute(interaction) {
     const cfg = db.getConfig(interaction.guildId);
     const color = cfg.color || '#7B2FBE';
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [buildHomeEmbed(interaction, color)],
       components: buildComponents(interaction.user.id, 'accueil'),
     });

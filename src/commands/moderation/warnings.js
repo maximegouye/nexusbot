@@ -30,6 +30,6 @@ module.exports = {
       embed.setDescription(desc);
     }
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

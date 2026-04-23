@@ -33,13 +33,13 @@ module.exports = {
     const cfg = ai.getAIConfig(interaction.guildId, db);
 
     if (!cfg.enabled) {
-      return interaction.reply({ content: '❌ L\'IA n\'est pas activée sur ce serveur. Un admin peut l\'activer via `/config` → 🧠 IA.', ephemeral: true });
+      return interaction.editReply({ content: '❌ L\'IA n\'est pas activée sur ce serveur. Un admin peut l\'activer via `/config` → 🧠 IA.', ephemeral: true });
     }
     if (!ai.isAvailable()) {
-      return interaction.reply({ content: '❌ Aucune clé API IA configurée côté hébergement. Ajoute `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` dans les variables Railway.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Aucune clé API IA configurée côté hébergement. Ajoute `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` dans les variables Railway.', ephemeral: true });
     }
-    const cA = checkAllowed(interaction.member, cfg);       if (!cA.ok) return interaction.reply({ content: cA.msg, ephemeral: true });
-    const cC = checkChannel(interaction.channelId, cfg);    if (!cC.ok) return interaction.reply({ content: cC.msg, ephemeral: true });
+    const cA = checkAllowed(interaction.member, cfg);       if (!cA.ok) return interaction.editReply({ content: cA.msg, ephemeral: true });
+    const cC = checkChannel(interaction.channelId, cfg);    if (!cC.ok) return interaction.editReply({ content: cC.msg, ephemeral: true });
 
     await interaction.deferReply({ ephemeral: priv });
 

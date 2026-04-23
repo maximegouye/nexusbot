@@ -31,7 +31,7 @@ module.exports = {
       }
       if (!ts || isNaN(ts)) throw new Error('invalid');
     } catch {
-      return interaction.reply({ content: '❌ Format de date invalide.\n**Exemples valides:** `25/12/2025`, `2025-12-25`, `maintenant`, `maintenant+7j`', ephemeral: true });
+      return interaction.editReply({ content: '❌ Format de date invalide.\n**Exemples valides:** `25/12/2025`, `2025-12-25`, `maintenant`, `maintenant+7j`', ephemeral: true });
     }
 
     const formats = [
@@ -46,7 +46,7 @@ module.exports = {
 
     const lines = formats.map(f => `**${f.label}** → \`<t:${ts}:${f.code}>\` → ${f.example}`).join('\n');
 
-    return interaction.reply({ embeds: [new EmbedBuilder()
+    return interaction.editReply({ embeds: [new EmbedBuilder()
       .setColor('#7B2FBE')
       .setTitle('🕐 Timestamps Discord')
       .setDescription(lines)

@@ -21,7 +21,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Vous devez être dans un canal vocal pour utiliser cette commande.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Vérifier que le bot est dans le même canal
@@ -31,7 +31,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Je dois être dans le même canal vocal que vous.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const queue = getOrCreateQueue(interaction.guildId);
@@ -42,7 +42,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ La file d\'attente est vide.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const position = parseInt(interaction.options.getString('position'));
@@ -53,7 +53,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription(`❌ La position ${position} n'existe pas. Il y a seulement ${queue.songs.length} piste(s).`);
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Supprimer la piste
@@ -71,14 +71,14 @@ module.exports = {
           value: `${queue.songs.length}`
         });
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande remove:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors de la suppression de la piste.');
 
-      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

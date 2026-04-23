@@ -47,6 +47,6 @@ module.exports = {
       );
     }
 
-    return interaction.reply({ embeds: [embed], components: [row] });
+    return interaction.editReply({ embeds: [embed], components: [row] });
   }
 };

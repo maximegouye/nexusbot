@@ -21,7 +21,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Vous devez être dans un canal vocal pour utiliser cette commande.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Vérifier que le bot est dans le même canal
@@ -31,7 +31,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Je dois être dans le même canal vocal que vous.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const queue = getOrCreateQueue(interaction.guildId);
@@ -42,7 +42,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Il n\'y a rien à sauter en ce moment.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const skipCount = parseInt(interaction.options.getString('nombre')) || 1;
@@ -53,7 +53,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription(`❌ Il y a seulement ${queue.songs.length} piste(s) dans la file.`);
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Récupérer la piste qui va jouer après les sauts
@@ -76,14 +76,14 @@ module.exports = {
             : 'Aucune piste suivante - file d\'attente vide'
         });
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande skip:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors du saut de piste.');
 
-      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

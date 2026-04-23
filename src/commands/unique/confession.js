@@ -141,7 +141,7 @@ module.exports = {
       // Check if confessions are enabled
       const guildConfig = db.getConfig(guildId);
       if (!guildConfig || !guildConfig.confession_channel) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Les confessions ne sont pas activées sur ce serveur.',
           ephemeral: true,
         });
@@ -150,7 +150,7 @@ module.exports = {
       // Check if user is banned
       if (isUserBanned(interaction.user.id, guildId)) {
         const reason = getBanReason(interaction.user.id, guildId);
-        return interaction.reply({
+        return interaction.editReply({
           content: `❌ Vous êtes bannis des confessions. Raison: ${reason || 'Non spécifiée'}`,
           ephemeral: true,
         });
@@ -159,7 +159,7 @@ module.exports = {
       // Check cooldown
       const cooldownRemaining = checkCooldown(interaction.user.id, guildId);
       if (cooldownRemaining) {
-        return interaction.reply({
+        return interaction.editReply({
           content: `⏳ Vous devez attendre ${cooldownRemaining} secondes avant de pouvoir envoyer une nouvelle confession.`,
           ephemeral: true,
         });
@@ -172,7 +172,7 @@ module.exports = {
         // Get confession channel
         const channel = await interaction.guild.channels.fetch(guildConfig.confession_channel).catch(() => null);
         if (!channel) {
-          return interaction.reply({
+          return interaction.editReply({
             content: '❌ Le salon des confessions n\'existe plus.',
             ephemeral: true,
           });
@@ -198,13 +198,13 @@ module.exports = {
           Math.floor(Date.now() / 1000)
         );
 
-        interaction.reply({
+        interaction.editReply({
           content: `✅ Votre confession a été envoyée anonymement! (#${confessionNumber})`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Confession error:', error);
-        interaction.reply({
+        interaction.editReply({
           content: '❌ Une erreur est survenue lors de l\'envoi de la confession.',
           ephemeral: true,
         });
@@ -214,7 +214,7 @@ module.exports = {
     if (subcommand === 'setup') {
       // Check permissions
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Vous devez être administrateur.',
           ephemeral: true,
         });
@@ -230,13 +230,13 @@ module.exports = {
           db.db.prepare('INSERT INTO guild_config (guild_id, confession_channel) VALUES (?, ?)').run(guildId, channel.id);
         }
 
-        interaction.reply({
+        interaction.editReply({
           content: `✅ Salon des confessions configuré: ${channel}`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Setup error:', error);
-        interaction.reply({
+        interaction.editReply({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });
@@ -246,7 +246,7 @@ module.exports = {
     if (subcommand === 'desactiver') {
       // Check permissions
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Vous devez être administrateur.',
           ephemeral: true,
         });
@@ -255,13 +255,13 @@ module.exports = {
       try {
         db.db.prepare('UPDATE guild_config SET confession_channel = NULL WHERE guild_id = ?').run(guildId);
 
-        interaction.reply({
+        interaction.editReply({
           content: '✅ Les confessions ont été désactivées.',
           ephemeral: true,
         });
       } catch (error) {
         console.error('Disable error:', error);
-        interaction.reply({
+        interaction.editReply({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });
@@ -271,7 +271,7 @@ module.exports = {
     if (subcommand === 'bannir') {
       // Check permissions
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Vous devez être administrateur.',
           ephemeral: true,
         });
@@ -288,13 +288,13 @@ module.exports = {
           interaction.user.id
         );
 
-        interaction.reply({
+        interaction.editReply({
           content: `✅ ${user.tag} a été banni des confessions. Raison: ${reason}`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Ban error:', error);
-        interaction.reply({
+        interaction.editReply({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });
@@ -304,7 +304,7 @@ module.exports = {
     if (subcommand === 'debannir') {
       // Check permissions
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Vous devez être administrateur.',
           ephemeral: true,
         });
@@ -315,13 +315,13 @@ module.exports = {
       try {
         db.db.prepare('DELETE FROM confession_bans WHERE guild_id = ? AND user_id = ?').run(guildId, user.id);
 
-        interaction.reply({
+        interaction.editReply({
           content: `✅ ${user.tag} a été débanni des confessions.`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Unban error:', error);
-        interaction.reply({
+        interaction.editReply({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });

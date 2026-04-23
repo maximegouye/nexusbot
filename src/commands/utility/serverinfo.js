@@ -49,6 +49,6 @@ module.exports = {
       .setFooter({ text: `NexusBot • ${guild.name}` })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

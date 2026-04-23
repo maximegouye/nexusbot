@@ -42,14 +42,14 @@ async function handleDonner(interaction) {
   const cfg = db.getConfig(interaction.guildId);
 
   if (target.bot) {
-    return interaction.reply({
+    return interaction.editReply({
       content: '❌ Les bots ne peuvent pas recevoir de réputation.',
       ephemeral: true
     });
   }
 
   if (target.id === interaction.user.id) {
-    return interaction.reply({
+    return interaction.editReply({
       content: '❌ Tu ne peux pas te donner de la réputation à toi-même.',
       ephemeral: true
     });
@@ -63,7 +63,7 @@ async function handleDonner(interaction) {
 
   if (lastRep) {
     const nextAt = lastRep.created_at + 86400;
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#FF6B6B')
         .setDescription(`❌ Tu as déjà donné une rep à **${target.username}** aujourd'hui. Prochain dans <t:${nextAt}:R>.`)
@@ -114,7 +114,7 @@ async function handleDonner(interaction) {
     .setThumbnail(target.displayAvatarURL({ size: 128 }))
     .setFooter({ text: `Donnée par ${interaction.user.username}` });
 
-  await interaction.reply({ embeds: [embed] });
+  await interaction.editReply({ embeds: [embed] });
 }
 
 // ──── SUBCOMMAND: voir ────

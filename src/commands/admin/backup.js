@@ -165,7 +165,7 @@ module.exports = {
         embed.setDescription('Aucune sauvegarde trouvée.');
       }
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'supprimer') {
@@ -175,7 +175,7 @@ module.exports = {
       ).get(backupId, interaction.guildId);
 
       if (!backup) {
-        return interaction.reply({ content: '❌ Sauvegarde non trouvée.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Sauvegarde non trouvée.', ephemeral: true });
       }
 
       db.db.prepare('DELETE FROM backups WHERE id = ?').run(backupId);
@@ -185,7 +185,7 @@ module.exports = {
         .setTitle('✅ Sauvegarde Supprimée')
         .setDescription(`**${backup.name}** a été supprimée.`);
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
   }
 };

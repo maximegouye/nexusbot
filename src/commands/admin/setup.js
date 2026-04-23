@@ -47,14 +47,14 @@ module.exports = {
         )
         .setFooter({ text: 'Utilise /setup <sous-commande> pour modifier' });
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'couleur') {
       const hex = interaction.options.getString('hex');
-      if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return interaction.reply({ content: '❌ Format invalide. Exemple : `#7B2FBE`', ephemeral: true });
+      if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return interaction.editReply({ content: '❌ Format invalide. Exemple : `#7B2FBE`', ephemeral: true });
       db.setConfig(interaction.guildId, 'color', hex);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(hex).setDescription(`✅ Couleur définie sur **${hex}**.`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(hex).setDescription(`✅ Couleur définie sur **${hex}**.`)], ephemeral: true });
     }
 
     if (sub === 'monnaie') {
@@ -62,7 +62,7 @@ module.exports = {
       const emoji = interaction.options.getString('emoji');
       if (nom)   db.setConfig(interaction.guildId, 'currency_name', nom);
       if (emoji) db.setConfig(interaction.guildId, 'currency_emoji', emoji);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Monnaie : **${emoji || cfg.currency_emoji || '🪙'} ${nom || cfg.currency_name || 'Coins'}**.`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Monnaie : **${emoji || cfg.currency_emoji || '🪙'} ${nom || cfg.currency_name || 'Coins'}**.`)], ephemeral: true });
     }
 
     if (sub === 'welcome') {
@@ -70,25 +70,25 @@ module.exports = {
       const msg   = interaction.options.getString('message');
       db.setConfig(interaction.guildId, 'welcome_channel', canal.id);
       if (msg) db.setConfig(interaction.guildId, 'welcome_msg', msg);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de bienvenue : ${canal}.`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de bienvenue : ${canal}.`)], ephemeral: true });
     }
 
     if (sub === 'leave') {
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'leave_channel', canal.id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de départ : ${canal}.`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de départ : ${canal}.`)], ephemeral: true });
     }
 
     if (sub === 'levels') {
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'level_channel', canal.id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal level-up : ${canal}.`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal level-up : ${canal}.`)], ephemeral: true });
     }
 
     if (sub === 'autorole') {
       const role = interaction.options.getRole('role');
       db.setConfig(interaction.guildId, 'autorole', role?.id || null);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(role ? `✅ Auto-rôle : <@&${role.id}>.` : '✅ Auto-rôle désactivé.')], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(role ? `✅ Auto-rôle : <@&${role.id}>.` : '✅ Auto-rôle désactivé.')], ephemeral: true });
     }
 
     if (sub === 'xp') {
@@ -96,7 +96,7 @@ module.exports = {
       const multi = parseInt(interaction.options.getString('multiplicateur'));
       db.setConfig(interaction.guildId, 'xp_enabled', actif ? 1 : 0);
       if (multi) db.setConfig(interaction.guildId, 'xp_multiplier', multi);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ XP ${actif ? 'activé' : 'désactivé'}${multi ? ` — Multiplicateur ×${multi}` : ''}.`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ XP ${actif ? 'activé' : 'désactivé'}${multi ? ` — Multiplicateur ×${multi}` : ''}.`)], ephemeral: true });
     }
   }
 };

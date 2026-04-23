@@ -49,7 +49,7 @@ module.exports = {
       const remaining = cooldown - (now - lastCrime);
       const h = Math.floor(remaining / 3600);
       const m = Math.floor((remaining % 3600) / 60);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setTitle('🚔 Trop risqué !')
@@ -77,7 +77,7 @@ module.exports = {
       db.addCoins(interaction.user.id, interaction.guildId, earned);
 
       const msg = SUCCESS_MSGS[Math.floor(Math.random() * SUCCESS_MSGS.length)];
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle(`${crime.emoji} ${crime.name} — Réussi !`)
@@ -97,7 +97,7 @@ module.exports = {
       db.removeCoins(interaction.user.id, interaction.guildId, fine);
 
       const msg = CAUGHT_MSGS[Math.floor(Math.random() * CAUGHT_MSGS.length)];
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle(`🚔 ${crime.name} — Arrêté !`)

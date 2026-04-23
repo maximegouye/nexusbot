@@ -42,7 +42,7 @@ module.exports = {
       });
 
       if (hoisted.size === 0) {
-        return interaction.reply({ content: '✅ Aucun pseudo avec hoisting détecté !', ephemeral: true });
+        return interaction.editReply({ content: '✅ Aucun pseudo avec hoisting détecté !', ephemeral: true });
       }
 
       const list = hoisted
@@ -60,7 +60,7 @@ module.exports = {
         .setDescription(list || 'Aucun')
         .setFooter({ text: `${hoisted.size} pseudo(s) à nettoyer (affichage limité à 25)` });
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'appliquer') {
@@ -71,7 +71,7 @@ module.exports = {
       });
 
       if (hoisted.size === 0) {
-        return interaction.reply({ content: '✅ Aucun pseudo avec hoisting à traiter !', ephemeral: true });
+        return interaction.editReply({ content: '✅ Aucun pseudo avec hoisting à traiter !', ephemeral: true });
       }
 
       await interaction.deferReply({ ephemeral: true });
@@ -124,14 +124,14 @@ module.exports = {
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
 
       if (!member) {
-        return interaction.reply({ content: '❌ Utilisateur non trouvé.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Utilisateur non trouvé.', ephemeral: true });
       }
 
       const current = member.nickname || member.user.username;
       const cleaned = dehoist(current);
 
       if (cleaned === current) {
-        return interaction.reply({ content: '✅ Ce pseudo n\'a pas de hoisting.', ephemeral: true });
+        return interaction.editReply({ content: '✅ Ce pseudo n\'a pas de hoisting.', ephemeral: true });
       }
 
       try {
@@ -142,9 +142,9 @@ module.exports = {
           .setDescription(`${member} : **${current}** → **${cleaned}**`)
           .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       } catch (err) {
-        return interaction.reply({ content: `❌ Erreur : impossible de renommer (permissions insuffisantes).`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Erreur : impossible de renommer (permissions insuffisantes).`, ephemeral: true });
       }
     }
   }

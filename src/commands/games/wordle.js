@@ -56,10 +56,10 @@ module.exports = {
     const userId = interaction.user.id;
 
     if (sub === 'jouer') {
-      if (games.has(userId)) return interaction.reply({ content: '❌ Tu as déjà une partie en cours ! Utilise `/wordle deviner` ou `/wordle abandonner`.', ephemeral: true });
+      if (games.has(userId)) return interaction.editReply({ content: '❌ Tu as déjà une partie en cours ! Utilise `/wordle deviner` ou `/wordle abandonner`.', ephemeral: true });
       const word = pickWord();
       games.set(userId, { word, guesses: [], startTime: Date.now() });
-      return interaction.reply({ embeds: [new EmbedBuilder()
+      return interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('🟩 Wordle — Nouvelle partie !')
         .setDescription('Devine le mot en **6 essais**.\n🟩 = Bonne lettre, bonne place\n🟨 = Bonne lettre, mauvaise place\n⬛ = Lettre absente\n\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛')
@@ -69,12 +69,12 @@ module.exports = {
 
     if (sub === 'deviner') {
       const game = games.get(userId);
-      if (!game) return interaction.reply({ content: '❌ Aucune partie en cours. Lance `/wordle jouer`.', ephemeral: true });
+      if (!game) return interaction.editReply({ content: '❌ Aucune partie en cours. Lance `/wordle jouer`.', ephemeral: true });
 
       const guess = interaction.options.getString('mot').toUpperCase().trim();
-      if (guess.length !== 5) return interaction.reply({ content: '❌ Le mot doit faire **5 lettres**.', ephemeral: true });
-      if (!/^[A-Z]+$/.test(guess)) return interaction.reply({ content: '❌ Lettres uniquement (sans accents).', ephemeral: true });
-      if (game.guesses.includes(guess)) return interaction.reply({ content: '❌ Tu as déjà essayé ce mot.', ephemeral: true });
+      if (guess.length !== 5) return interaction.editReply({ content: '❌ Le mot doit faire **5 lettres**.', ephemeral: true });
+      if (!/^[A-Z]+$/.test(guess)) return interaction.editReply({ content: '❌ Lettres uniquement (sans accents).', ephemeral: true });
+      if (game.guesses.includes(guess)) return interaction.editReply({ content: '❌ Tu as déjà essayé ce mot.', ephemeral: true });
 
       game.guesses.push(guess);
       const correct = guess === game.word;
@@ -93,10 +93,10 @@ module.exports = {
             { name: '🎯 Essais', value: `${game.guesses.length}/6`, inline: true },
           );
         if (correct) embed.addFields({ name: '🏆 Score', value: `${(6 - game.guesses.length + 1) * 100} points`, inline: true });
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       }
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
         .setTitle(`🟩 Wordle — Essai ${game.guesses.length}/6`)
         .setDescription(renderGame(game))
         .setFooter({ text: `Encore ${6 - game.guesses.length} essai(s)` })
@@ -105,9 +105,9 @@ module.exports = {
 
     if (sub === 'abandonner') {
       const game = games.get(userId);
-      if (!game) return interaction.reply({ content: '❌ Aucune partie en cours.', ephemeral: true });
+      if (!game) return interaction.editReply({ content: '❌ Aucune partie en cours.', ephemeral: true });
       games.delete(userId);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('Red')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red')
         .setDescription(`🏳️ Partie abandonnée. Le mot était **${game.word}**.`)], ephemeral: true });
     }
   }

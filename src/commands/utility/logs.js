@@ -33,7 +33,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
@@ -51,7 +51,7 @@ module.exports = {
         quest_channel: '🏆 Quêtes',
       };
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setDescription(`✅ **${names[type] || type}** configuré sur ${salon} !`)
@@ -62,14 +62,14 @@ module.exports = {
     if (sub === 'desactiver') {
       const type = interaction.options.getString('type');
       db.setConfig(interaction.guildId, type, null);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription(`❌ Log \`${type}\` désactivé.`)], ephemeral: true
       });
     }
 
     if (sub === 'voir') {
       const channelName = (id) => id ? `<#${id}>` : '❌ Non configuré';
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle('📋 Configuration des Logs')

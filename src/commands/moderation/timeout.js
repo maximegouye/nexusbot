@@ -28,14 +28,14 @@ module.exports = {
     const target = interaction.options.getMember('membre');
     const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
 
-    if (!target) return interaction.reply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas te mettre toi-même en timeout.', ephemeral: true });
-    if (!target.moderatable) return interaction.reply({ content: '❌ Je ne peux pas mettre ce membre en timeout (rôle trop élevé).', ephemeral: true });
+    if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
+    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas te mettre toi-même en timeout.', ephemeral: true });
+    if (!target.moderatable) return interaction.editReply({ content: '❌ Je ne peux pas mettre ce membre en timeout (rôle trop élevé).', ephemeral: true });
 
     if (sub === 'appliquer') {
       const duree = interaction.options.getString('duree');
       const ms    = parseDuration(duree);
-      if (!ms) return interaction.reply({ content: '❌ Durée invalide. Ex: `10m`, `1h`, `7d` (max 28j, min 5s)', ephemeral: true });
+      if (!ms) return interaction.editReply({ content: '❌ Durée invalide. Ex: `10m`, `1h`, `7d` (max 28j, min 5s)', ephemeral: true });
 
       await target.timeout(ms, raison);
 
@@ -68,14 +68,14 @@ module.exports = {
         if (ch) ch.send({ embeds: [embed] }).catch(() => {});
       }
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'retirer') {
-      if (!target.isCommunicationDisabled()) return interaction.reply({ content: '❌ Ce membre n\'est pas en timeout.', ephemeral: true });
+      if (!target.isCommunicationDisabled()) return interaction.editReply({ content: '❌ Ce membre n\'est pas en timeout.', ephemeral: true });
       await target.timeout(null, raison);
 
-      return interaction.reply({ embeds: [new EmbedBuilder()
+      return interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('Green')
         .setDescription(`✅ Timeout retiré pour <@${target.id}>.\nRaison: ${raison}`)
       ], ephemeral: true });

@@ -43,6 +43,6 @@ module.exports = {
       embed.setFooter({ text: `${items.length} type${items.length > 1 ? 's' : ''} d'article` });
     }
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

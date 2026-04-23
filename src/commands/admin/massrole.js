@@ -39,13 +39,13 @@ module.exports = {
         .setTitle('📊 Info Rôle')
         .setDescription(`Le rôle <@&${role.id}> est attribué à **${count}** membre(s).`)
         .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'ajouter' || sub === 'retirer') {
       // Vérifier que le bot peut gérer ce rôle
       if (!interaction.guild.members.me.roles.highest.comparePositionTo(role) > 0) {
-        return interaction.reply({ content: '❌ Je ne peux pas gérer ce rôle (trop élevé).', ephemeral: true });
+        return interaction.editReply({ content: '❌ Je ne peux pas gérer ce rôle (trop élevé).', ephemeral: true });
       }
 
       const isAdd = sub === 'ajouter';
@@ -54,7 +54,7 @@ module.exports = {
       );
 
       if (targetMembers.size === 0) {
-        return interaction.reply({ content: `❌ Aucun membre à traiter.`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Aucun membre à traiter.`, ephemeral: true });
       }
 
       // Defer si plus de 50 membres
@@ -111,7 +111,7 @@ module.exports = {
       if (targetMembers.size > 50) {
         return interaction.editReply({ content: '', embeds: [embed] });
       } else {
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       }
     }
   }

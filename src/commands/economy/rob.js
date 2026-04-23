@@ -13,8 +13,8 @@ module.exports = {
     const symbol = cfg.currency_emoji || '€';
     const target = interaction.options.getUser('cible');
 
-    if (target.bot)  return interaction.reply({ content: '❌ Tu ne peux pas voler un bot.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas te voler toi-même.', ephemeral: true });
+    if (target.bot)  return interaction.editReply({ content: '❌ Tu ne peux pas voler un bot.', ephemeral: true });
+    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas te voler toi-même.', ephemeral: true });
 
     const robber   = db.getUser(interaction.user.id, interaction.guildId);
     const victim   = db.getUser(target.id, interaction.guildId);
@@ -26,7 +26,7 @@ module.exports = {
       const remaining = cooldown - (now - lastRob);
       const h = Math.floor(remaining / 3600);
       const m = Math.floor((remaining % 3600) / 60);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#FF6B6B').setTitle('🚔 Trop tôt !')
           .setDescription(`La police surveille encore ta zone. Attends **${h}h ${m}min**.`)],
         ephemeral: true
@@ -34,7 +34,7 @@ module.exports = {
     }
 
     if (victim.balance < 20) {
-      return interaction.reply({ content: `❌ **${target.username}** a trop peu d'argent pour être volé (moins de 20€).`, ephemeral: true });
+      return interaction.editReply({ content: `❌ **${target.username}** a trop peu d'argent pour être volé (moins de 20€).`, ephemeral: true });
     }
 
     // Bonus si kit de vol du marché noir
@@ -57,7 +57,7 @@ module.exports = {
       db.addCoins(interaction.user.id, interaction.guildId, stolen);
       db.removeCoins(target.id, interaction.guildId, stolen);
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('🥷 Vol réussi !')
@@ -79,7 +79,7 @@ module.exports = {
       db.removeCoins(interaction.user.id, interaction.guildId, fine);
       db.addCoins(target.id, interaction.guildId, Math.floor(fine * 0.5)); // victime récupère 50%
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('🚔 Pris en flagrant délit !')

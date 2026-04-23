@@ -92,7 +92,7 @@ module.exports = {
   async execute(interaction) {
     const target = interaction.options.getUser('membre') || interaction.user;
     if (target.id !== interaction.user.id && !interaction.member.permissions.has('ManageGuild')) {
-      return interaction.reply({ content: '❌ Tu dois être admin pour consulter l\'historique d\'un autre membre.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Tu dois être admin pour consulter l\'historique d\'un autre membre.', ephemeral: true });
     }
     const cfg    = db.getConfig(interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
@@ -102,7 +102,7 @@ module.exports = {
     const rows  = db.getTransactions(target.id, interaction.guildId, PAGE_SIZE, 0);
     const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [buildEmbed({ user: target, guild: interaction.guild, page: 1, total, rows, symbol, color })],
       components: [buildButtons(target.id, 1, pages)],
     });

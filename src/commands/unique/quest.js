@@ -24,7 +24,7 @@ module.exports = {
       const quests = db.db.prepare('SELECT * FROM quests WHERE guild_id = ? AND status = "active" ORDER BY created_at DESC').all(interaction.guildId);
 
       if (!quests.length) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder()
             .setColor(cfg.color || '#7B2FBE')
             .setTitle('🗺️ Quêtes communautaires')
@@ -51,7 +51,7 @@ module.exports = {
         });
       }
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     // ── CONTRIBUER ──
@@ -60,10 +60,10 @@ module.exports = {
       const amount  = parseInt(interaction.options.getString('montant'));
       const quest   = db.db.prepare('SELECT * FROM quests WHERE id = ? AND guild_id = ? AND status = "active"').get(questId, interaction.guildId);
 
-      if (!quest) return interaction.reply({ content: `❌ Quête **#${questId}** introuvable.`, ephemeral: true });
+      if (!quest) return interaction.editReply({ content: `❌ Quête **#${questId}** introuvable.`, ephemeral: true });
 
       const user = db.getUser(interaction.user.id, interaction.guildId);
-      if (user.balance < amount) return interaction.reply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
+      if (user.balance < amount) return interaction.editReply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
 
       db.removeCoins(interaction.user.id, interaction.guildId, amount);
       db.db.prepare('UPDATE quests SET current = current + ? WHERE id = ?').run(amount, questId);
@@ -99,13 +99,13 @@ module.exports = {
           { name: `${emoji} Restant`, value: `**${Math.max(0, updated.target - updated.current).toLocaleString('fr-FR')}** ${name}`, inline: true },
         );
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     // ── CRÉER (Admin) ──
     if (sub === 'creer') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-        return interaction.reply({ content: '❌ Tu n\'as pas la permission de créer des quêtes.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Tu n\'as pas la permission de créer des quêtes.', ephemeral: true });
       }
 
       const titre    = interaction.options.getString('titre');
@@ -119,7 +119,7 @@ module.exports = {
         VALUES (?, ?, ?, ?, 0, ?, "active", ?, ?)`)
         .run(interaction.guildId, titre, desc, objectif, reward, endsAt, Math.floor(Date.now() / 1000));
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✅ Quête créée !')

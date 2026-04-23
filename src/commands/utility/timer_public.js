@@ -64,8 +64,8 @@ module.exports = {
       const targetChannel = interaction.options.getChannel('salon') || interaction.channel;
       const duree = parseDuration(dureeStr);
 
-      if (duree < 10) return interaction.reply({ content: '❌ Durée trop courte (minimum 10 secondes).', ephemeral: true });
-      if (duree > 30 * 86400) return interaction.reply({ content: '❌ Durée trop longue (maximum 30 jours).', ephemeral: true });
+      if (duree < 10) return interaction.editReply({ content: '❌ Durée trop courte (minimum 10 secondes).', ephemeral: true });
+      if (duree > 30 * 86400) return interaction.editReply({ content: '❌ Durée trop longue (maximum 30 jours).', ephemeral: true });
 
       const endTime = Math.floor(Date.now() / 1000) + duree;
 
@@ -80,7 +80,7 @@ module.exports = {
         .setFooter({ text: `Timer ID: ? • Mis à jour toutes les 30s` })
         .setTimestamp();
 
-      await interaction.reply({ content: '✅ Timer créé !', ephemeral: true });
+      await interaction.editReply({ content: '✅ Timer créé !', ephemeral: true });
       const msg = await targetChannel.send({ embeds: [embed] }).catch(() => null);
       if (!msg) return;
 
@@ -131,7 +131,7 @@ module.exports = {
 
     if (sub === 'liste') {
       const timers = db.db.prepare('SELECT * FROM timers_publics WHERE guild_id=? AND active=1 ORDER BY end_time ASC').all(guildId);
-      if (!timers.length) return interaction.reply({ content: '❌ Aucun timer actif.', ephemeral: true });
+      if (!timers.length) return interaction.editReply({ content: '❌ Aucun timer actif.', ephemeral: true });
 
       const now = Math.floor(Date.now() / 1000);
       const desc = timers.map(t => {
@@ -139,7 +139,7 @@ module.exports = {
         return `**#${t.id}** ${t.title} — ${remaining > 0 ? formatDuration(remaining) : '🏁 Terminé'} • <t:${t.end_time}:R>`;
       }).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle('⏱️ Timers actifs').setDescription(desc)
       ], ephemeral: true });
     }
@@ -147,15 +147,15 @@ module.exports = {
     if (sub === 'annuler') {
       const id = parseInt(interaction.options.getString('id'));
       const timer = db.db.prepare('SELECT * FROM timers_publics WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!timer) return interaction.reply({ content: `❌ Timer #${id} introuvable.`, ephemeral: true });
+      if (!timer) return interaction.editReply({ content: `❌ Timer #${id} introuvable.`, ephemeral: true });
       if (timer.created_by !== userId && !interaction.member.permissions.has(0x4000n)) {
-        return interaction.reply({ content: '❌ Vous ne pouvez annuler que vos propres timers.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Vous ne pouvez annuler que vos propres timers.', ephemeral: true });
       }
 
       db.db.prepare('UPDATE timers_publics SET active=0 WHERE id=?').run(id);
       if (activeTimers.has(id)) { clearInterval(activeTimers.get(id)); activeTimers.delete(id); }
 
-      return interaction.reply({ content: `✅ Timer **#${id}** annulé.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Timer **#${id}** annulé.`, ephemeral: true });
     }
   }
 };

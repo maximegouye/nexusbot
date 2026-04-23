@@ -48,6 +48,6 @@ module.exports = {
       .setFooter({ text: `NexusBot` })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

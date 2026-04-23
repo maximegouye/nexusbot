@@ -67,7 +67,7 @@ module.exports = {
 
       const desc = passwords.map((p, i) => `**${i+1}.** \`${p}\``).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor(color).setTitle('🔐 Mot(s) de passe généré(s)')
           .setDescription(desc)
           .addFields(
@@ -91,7 +91,7 @@ module.exports = {
         `${pwd.length >= 12 ? '✅' : '❌'} 12+ caractères`,
       ];
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor(color).setTitle('🔍 Analyse du mot de passe')
           .addFields(
             { name: '🛡️ Force', value: label, inline: true },

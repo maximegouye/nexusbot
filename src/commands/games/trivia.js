@@ -189,7 +189,7 @@ module.exports = {
         .setColor(Colors.Blue)
         .setFooter({ text: 'Tu as 20 secondes pour répondre!' });
 
-      const msg = await interaction.reply({ embeds: [embed], components: [buttons], fetchReply: true });
+      const msg = await interaction.editReply({ embeds: [embed], components: [buttons], fetchReply: true });
 
       const collector = msg.createMessageComponentCollector({
         filter: i => i.user.id === interaction.user.id,
@@ -244,7 +244,7 @@ module.exports = {
         } catch (error) {
           console.error('Error updating trivia stats:', error);
           if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-            interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+            interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
           } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
             interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
           }
@@ -282,7 +282,7 @@ module.exports = {
         .setDescription(categoryList)
         .setColor(Colors.Purple)
         .setFooter({ text: 'Utilise /trivia jouer <categorie> pour jouer!' });
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'score') {
@@ -296,7 +296,7 @@ module.exports = {
             .setTitle('📊 Statistiques de Trivia')
             .setDescription(`${user.username} n'a pas encore joué!`)
             .setColor(Colors.Greyple);
-          return interaction.reply({ embeds: [embed] });
+          return interaction.editReply({ embeds: [embed] });
         }
 
         const percentage = stats.total > 0 ? ((stats.correct / stats.total) * 100).toFixed(1) : 0;
@@ -312,10 +312,10 @@ module.exports = {
           .setColor(Colors.Gold)
           .setThumbnail(user.displayAvatarURL());
 
-        return interaction.reply({ embeds: [embed] });
+        return interaction.editReply({ embeds: [embed] });
       } catch (error) {
         console.error('Error fetching trivia stats:', error);
-        return interaction.reply({ content: '❌ Erreur lors de la récupération des statistiques.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Erreur lors de la récupération des statistiques.', ephemeral: true });
       }
     }
 
@@ -330,7 +330,7 @@ module.exports = {
             .setTitle('🏆 Classement Trivia')
             .setDescription('Aucun joueur n\'a encore participé au trivia sur ce serveur!')
             .setColor(Colors.Greyple);
-          return interaction.reply({ embeds: [embed] });
+          return interaction.editReply({ embeds: [embed] });
         }
 
         let leaderboardText = '';
@@ -347,10 +347,10 @@ module.exports = {
           .setColor(Colors.Gold)
           .setFooter({ text: 'Basé sur les coins gagnés au trivia!' });
 
-        return interaction.reply({ embeds: [embed] });
+        return interaction.editReply({ embeds: [embed] });
       } catch (error) {
         console.error('Error fetching leaderboard:', error);
-        return interaction.reply({ content: '❌ Erreur lors de la récupération du classement.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Erreur lors de la récupération du classement.', ephemeral: true });
       }
     }
   }

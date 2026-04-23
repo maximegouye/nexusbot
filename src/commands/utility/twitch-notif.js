@@ -50,7 +50,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Vous avez besoin de la permission "Gérer le serveur" pour utiliser cette commande.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const subcommand = interaction.options.getSubcommand();
@@ -68,7 +68,7 @@ module.exports = {
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors du traitement de votre demande.');
 
-      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };
@@ -102,7 +102,7 @@ function handleAdd(interaction) {
           .setColor('#FF0000')
           .setDescription('❌ Ce streamer est déjà surveillé sur ce serveur.');
 
-        return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
       }
       throw error;
     }
@@ -125,14 +125,14 @@ function handleAdd(interaction) {
         }
       );
 
-    return interaction.reply({ embeds: [embed] });
+    return interaction.editReply({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleAdd:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de l\'ajout du streamer.');
 
-    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
   }
 }
 
@@ -162,7 +162,7 @@ function handleRemove(interaction) {
         .setColor('#FF0000')
         .setDescription('❌ Ce streamer n\'est pas surveillé sur ce serveur.');
 
-      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
     }
 
     const embed = new EmbedBuilder()
@@ -170,14 +170,14 @@ function handleRemove(interaction) {
       .setTitle('✅ Notification Twitch supprimée')
       .setDescription(`Le streamer **${login}** n'est plus surveillé.`);
 
-    return interaction.reply({ embeds: [embed] });
+    return interaction.editReply({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleRemove:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de la suppression du streamer.');
 
-    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
   }
 }
 
@@ -194,7 +194,7 @@ function handleList(interaction) {
         .setColor('#FF0000')
         .setDescription('❌ Aucune notification Twitch configurée sur ce serveur.');
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     let description = '**Streamers surveillés:**\n\n';
@@ -212,13 +212,13 @@ function handleList(interaction) {
         text: `Total: ${subscriptions.length} streamer(s)`
       });
 
-    return interaction.reply({ embeds: [embed] });
+    return interaction.editReply({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleList:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de la récupération de la liste.');
 
-    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
   }
 }

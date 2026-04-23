@@ -25,10 +25,10 @@ module.exports = {
     const lang = interaction.options.getString('langue') ?? 'français';
     const cfg = ai.getAIConfig(interaction.guildId, db);
 
-    if (!cfg.enabled) return interaction.reply({ content: '❌ IA désactivée. Active-la via `/config` → 🧠 IA.', ephemeral: true });
-    if (!ai.isAvailable()) return interaction.reply({ content: '❌ Aucune clé API IA.', ephemeral: true });
+    if (!cfg.enabled) return interaction.editReply({ content: '❌ IA désactivée. Active-la via `/config` → 🧠 IA.', ephemeral: true });
+    if (!ai.isAvailable()) return interaction.editReply({ content: '❌ Aucune clé API IA.', ephemeral: true });
     if (cfg.required_role && !interaction.member.roles.cache.has(cfg.required_role)) {
-      return interaction.reply({ content: `❌ Rôle requis : <@&${cfg.required_role}>`, ephemeral: true });
+      return interaction.editReply({ content: `❌ Rôle requis : <@&${cfg.required_role}>`, ephemeral: true });
     }
 
     await interaction.deferReply();

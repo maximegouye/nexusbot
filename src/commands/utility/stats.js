@@ -53,6 +53,6 @@ module.exports = {
       .setFooter({ text: `Node.js ${process.version} • discord.js v14` })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

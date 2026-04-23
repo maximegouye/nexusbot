@@ -88,7 +88,7 @@ module.exports = {
     const cfg = db.getConfig(interaction.guildId);
     const user = db.getUser(target.id, interaction.guildId);
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [buildMainEmbed(target, member, user, cfg, interaction.guild)],
       components: buildButtons(interaction.user.id, target.id),
     });

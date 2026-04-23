@@ -25,12 +25,12 @@ module.exports = {
     const durStr = interaction.options.getString('duree');
     const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
 
-    if (!target) return interaction.reply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.moderatable) return interaction.reply({ content: '❌ Je ne peux pas muter ce membre.', ephemeral: true });
+    if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
+    if (!target.moderatable) return interaction.editReply({ content: '❌ Je ne peux pas muter ce membre.', ephemeral: true });
 
     const ms = parseDuration(durStr);
-    if (!ms) return interaction.reply({ content: '❌ Format de durée invalide. Exemples : `10m`, `1h`, `2d`', ephemeral: true });
-    if (ms > 28 * 24 * 3600 * 1000) return interaction.reply({ content: '❌ La durée maximale est de 28 jours.', ephemeral: true });
+    if (!ms) return interaction.editReply({ content: '❌ Format de durée invalide. Exemples : `10m`, `1h`, `2d`', ephemeral: true });
+    if (ms > 28 * 24 * 3600 * 1000) return interaction.editReply({ content: '❌ La durée maximale est de 28 jours.', ephemeral: true });
 
     await target.timeout(ms, `${interaction.user.tag}: ${raison}`);
 
@@ -48,6 +48,6 @@ module.exports = {
       .setThumbnail(target.user.displayAvatarURL())
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

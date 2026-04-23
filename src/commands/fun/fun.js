@@ -214,7 +214,7 @@ module.exports = {
         .setDescription(`**${joke.setup}**\n\n||${joke.punchline}||`)
         .setColor(Colors.Blue)
         .setFooter({ text: 'Hover pour voir la réponse!' });
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'de') {
@@ -229,7 +229,7 @@ module.exports = {
         )
         .setColor(Colors.Gold)
         .setFooter({ text: `D${faces}` });
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'ship') {
@@ -268,7 +268,7 @@ module.exports = {
         .setColor(color)
         .setThumbnail(user1.displayAvatarURL())
         .setImage(user2.displayAvatarURL());
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'fortune') {
@@ -278,7 +278,7 @@ module.exports = {
         .setDescription(`*${fortune}*`)
         .setColor(Colors.Purple)
         .setFooter({ text: 'Ton avenir t\'attend!' });
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'mock') {
@@ -302,7 +302,7 @@ module.exports = {
           { name: 'Moqué', value: `\`\`\`\n${mocked}\n\`\`\`` }
         )
         .setColor(Colors.Green);
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'morse') {
@@ -337,7 +337,7 @@ module.exports = {
           { name: 'Morse', value: `\`\`\`\n${output.trim()}\n\`\`\`` }
         )
         .setColor(Colors.Blurple);
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'inverser') {
@@ -350,7 +350,7 @@ module.exports = {
           { name: 'Inversé', value: `\`\`\`\n${reversed}\n\`\`\`` }
         )
         .setColor(Colors.Orange);
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'comptermots') {
@@ -370,7 +370,7 @@ module.exports = {
           { name: 'Texte analysé', value: `\`\`\`\n${text}\n\`\`\`` }
         )
         .setColor(Colors.Cyan);
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === 'choisir') {
@@ -390,7 +390,7 @@ module.exports = {
           { name: '✅ Choix', value: `**${chosen}**`, inline: false }
         )
         .setColor('#7B2FBE');
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     if (subcommand === '8ball') {
@@ -404,7 +404,7 @@ module.exports = {
       ];
       const pick = all[Math.floor(Math.random() * all.length)];
       const question = interaction.options.getString('question');
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(pick.color)
           .setTitle('🎱 Boule Magique')
@@ -435,7 +435,7 @@ module.exports = {
         result = '😢 Tu perds...'; color = '#E74C3C';
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(color)
           .setTitle('✊ Pierre — Feuille — Ciseaux')

@@ -11,7 +11,7 @@ module.exports = {
   async execute(interaction) {
     const key = `${interaction.user.id}:${interaction.guildId}`;
     if (activeGames.has(key)) {
-      return interaction.reply({ content: '⏳ Tu as déjà une partie en cours ! Termine-la d\'abord.', ephemeral: true });
+      return interaction.editReply({ content: '⏳ Tu as déjà une partie en cours ! Termine-la d\'abord.', ephemeral: true });
     }
 
     const secret  = Math.floor(Math.random() * 100) + 1;
@@ -25,7 +25,7 @@ module.exports = {
       .setDescription(`J'ai choisi un nombre entre **1** et **100**.\nTu as **${maxTries} essais** pour le trouver !\n\n**Réponds avec un nombre dans ce salon.**`)
       .setFooter({ text: `Essais : 0/${maxTries}` });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
 
     // Collector de messages
     const filter  = m => m.author.id === interaction.user.id && !isNaN(parseInt(m.content.trim()));
