@@ -21,7 +21,7 @@ module.exports = {
       console.error('[INTERACTION] Erreur non gérée:', err);
       try {
         if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-          await interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie ou contacte un admin.', ephemeral: true });
+          await interaction.reply({ content: '❌ Une erreur est survenue. Réessaie ou contacte un admin.', ephemeral: true });
         } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
           await interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie ou contacte un admin.' });
         }
@@ -71,7 +71,7 @@ async function _handleInteraction(interaction, client) {
         const action = parts[0].replace('banque_', '');
         const uid = parts[1];
         if (interaction.user.id !== uid) {
-          return interaction.editReply({ content: '❌ Cette banque n\'est pas la tienne.', ephemeral: true });
+          return interaction.reply({ content: '❌ Cette banque n\'est pas la tienne.', ephemeral: true });
         }
 
         if (action === 'refresh') {
@@ -80,7 +80,7 @@ async function _handleInteraction(interaction, client) {
         }
 
         if (action === 'depall') {
-          if (user.balance <= 0) return interaction.editReply({ content: '❌ Tu n\'as rien à déposer.', ephemeral: true });
+          if (user.balance <= 0) return interaction.reply({ content: '❌ Tu n\'as rien à déposer.', ephemeral: true });
           db2.db.prepare('UPDATE users SET bank = bank + balance, balance = 0 WHERE user_id = ? AND guild_id = ?').run(uid, interaction.guildId);
           const user2 = db2.getUser(uid, interaction.guildId);
           const { _build } = require('../commands/economy/banque');
@@ -88,7 +88,7 @@ async function _handleInteraction(interaction, client) {
         }
 
         if (action === 'retall') {
-          if (user.bank <= 0) return interaction.editReply({ content: '❌ Ta banque est vide.', ephemeral: true });
+          if (user.bank <= 0) return interaction.reply({ content: '❌ Ta banque est vide.', ephemeral: true });
           db2.db.prepare('UPDATE users SET balance = balance + bank, bank = 0 WHERE user_id = ? AND guild_id = ?').run(uid, interaction.guildId);
           const user2 = db2.getUser(uid, interaction.guildId);
           const { _build } = require('../commands/economy/banque');
@@ -119,7 +119,7 @@ async function _handleInteraction(interaction, client) {
             total += v;
             return `${m.emoji} **${w.crypto}** — ${w.amount.toFixed(6)} = ${Math.floor(v).toLocaleString('fr-FR')}${symbol}`;
           }).filter(Boolean).join('\n') || '*Aucune crypto.*';
-          return interaction.editReply({
+          return interaction.reply({
             embeds: [ef.money(`💹 Crypto`, lines + `\n\n**Valeur totale : ${Math.floor(total).toLocaleString('fr-FR')}${symbol}**`)],
             ephemeral: true,
           });
@@ -131,7 +131,7 @@ async function _handleInteraction(interaction, client) {
           const total = db2.countTransactions(uid, interaction.guildId);
           const rows  = db2.getTransactions(uid, interaction.guildId, _build.PAGE_SIZE, 0);
           const pages = Math.max(1, Math.ceil(total / _build.PAGE_SIZE));
-          return interaction.editReply({
+          return interaction.reply({
             embeds: [_build.buildEmbed({ user: interaction.user, guild: interaction.guild, page: 1, total, rows, symbol, color: cfg.color || '#7C3AED' })],
             components: [_build.buildButtons(uid, 1, pages)],
             ephemeral: true,
@@ -150,7 +150,7 @@ async function _handleInteraction(interaction, client) {
       } catch (err) {
         console.error('[GIVEAWAY BUTTON]', err);
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.editReply({ content: '\u274C Erreur lors du traitement.', ephemeral: true });
+          await interaction.reply({ content: '\u274C Erreur lors du traitement.', ephemeral: true });
         }
       }
     }
@@ -164,7 +164,7 @@ async function _handleInteraction(interaction, client) {
         const ef = require('../utils/embedFactory');
         const isDep = _cfgId.startsWith('banque_dep_modal:');
         const uid = _cfgId.split(':')[1];
-        if (interaction.user.id !== uid) return interaction.editReply({ content: '❌ Pas ta banque.', ephemeral: true });
+        if (interaction.user.id !== uid) return interaction.reply({ content: '❌ Pas ta banque.', ephemeral: true });
 
         const raw = interaction.fields.getTextInputValue('montant').trim().toLowerCase();
         const user = db2.getUser(uid, interaction.guildId);
@@ -176,10 +176,10 @@ async function _handleInteraction(interaction, client) {
         else if (s === 'half' || s === '50%' || s === 'moitié' || s === 'moitie') amount = Math.floor(source / 2);
         else {
           const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
-          if (!m) return interaction.editReply({ embeds: [ef.error('Montant invalide', 'Ex : 500 · 10000 · all · 50% · moitié')], ephemeral: true });
+          if (!m) return interaction.reply({ embeds: [ef.error('Montant invalide', 'Ex : 500 · 10000 · all · 50% · moitié')], ephemeral: true });
           amount = m[2] === '%' ? Math.floor(source * Math.min(100, parseFloat(m[1])) / 100) : Math.floor(parseFloat(m[1]));
         }
-        if (amount < 1 || amount > source) return interaction.editReply({ embeds: [ef.error('Montant hors limites', `Disponible : **${source.toLocaleString('fr-FR')}${symbol}**`)], ephemeral: true });
+        if (amount < 1 || amount > source) return interaction.reply({ embeds: [ef.error('Montant hors limites', `Disponible : **${source.toLocaleString('fr-FR')}${symbol}**`)], ephemeral: true });
 
         if (isDep) {
           db2.db.prepare('UPDATE users SET balance = balance - ?, bank = bank + ? WHERE user_id = ? AND guild_id = ?').run(amount, amount, uid, interaction.guildId);
@@ -189,7 +189,7 @@ async function _handleInteraction(interaction, client) {
 
         const user2 = db2.getUser(uid, interaction.guildId);
         const { _build } = require('../commands/economy/banque');
-        return interaction.update({ embeds: [_build.buildEmbed(user2, cfg)], components: _build.buildButtons(uid) });
+        return interaction.reply({ embeds: [_build.buildEmbed(user2, cfg)], components: _build.buildButtons(uid) });
       } catch (e) { console.error('[BANQUE modal]', e); }
     }
 
@@ -208,14 +208,14 @@ async function _handleInteraction(interaction, client) {
         if (action === 'stats') {
           const stats = db2.getGameStats(interaction.user.id, interaction.guildId);
           if (!stats.length) {
-            return interaction.editReply({ content: '📊 Aucune partie jouée pour l\'instant. Lance un jeu !', ephemeral: true });
+            return interaction.reply({ content: '📊 Aucune partie jouée pour l\'instant. Lance un jeu !', ephemeral: true });
           }
           const lines = stats.sort((a, b) => b.played - a.played).map(g => {
             const wr = g.played > 0 ? Math.round(g.won / g.played * 100) : 0;
             const net = (g.total_won - g.total_bet);
             return `**${g.game}** — ${g.played} parties · ${g.won}✅/${g.lost}❌ (${wr}%) · net ${net >= 0 ? '+' : ''}${net.toLocaleString('fr-FR')}${symbol}`;
           }).join('\n');
-          return interaction.editReply({
+          return interaction.reply({
             embeds: [new EmbedBuilder().setColor(cfg.color || '#E67E22').setTitle(`📊 Stats détaillées — ${interaction.user.username}`).setDescription(lines)],
             ephemeral: true,
           });
@@ -228,7 +228,7 @@ async function _handleInteraction(interaction, client) {
             FROM game_stats WHERE guild_id = ? GROUP BY user_id ORDER BY big DESC LIMIT 10
           `).all(interaction.guildId);
           const lines = top.map((r, i) => `${['🥇','🥈','🥉'][i] || `**${i+1}.**`} <@${r.user_id}> · plus gros gain : **${(r.big || 0).toLocaleString('fr-FR')}${symbol}** · ${r.played} parties`).join('\n');
-          return interaction.editReply({
+          return interaction.reply({
             embeds: [new EmbedBuilder().setColor(cfg.color || '#F1C40F').setTitle('🏆 Top gagnants du casino').setDescription(lines || '*Aucun joueur.*')],
             ephemeral: true,
           });
@@ -247,7 +247,7 @@ async function _handleInteraction(interaction, client) {
           crypto: 'Tape `&crypto` pour le marché, `&crypto portefeuille` pour ton wallet, `&crypto acheter BTC 1000`',
         };
         if (shortcuts[action]) {
-          return interaction.editReply({ content: `💡 **${action.toUpperCase()}** — ${shortcuts[action]}`, ephemeral: true });
+          return interaction.reply({ content: `💡 **${action.toUpperCase()}** — ${shortcuts[action]}`, ephemeral: true });
         }
         return;
       } catch (e) { console.error('[CASINO handler]', e); }
@@ -312,7 +312,7 @@ async function _handleInteraction(interaction, client) {
         if (action === 'buy' || action === 'sell') {
           // Ouvre un menu déroulant avec les 12 cryptos + leur prix actuel
           const { _build } = require('../commands/economy/crypto');
-          return interaction.editReply({
+          return interaction.reply({
             embeds: [new EmbedBuilder().setColor(action === 'buy' ? '#2ECC71' : '#E74C3C')
               .setTitle(action === 'buy' ? '🟢 Acheter une crypto' : '🔴 Vendre une crypto')
               .setDescription(action === 'buy'
@@ -336,7 +336,7 @@ async function _handleInteraction(interaction, client) {
         const mode = parts[1]; // 'buy' ou 'sell'
         const uid = parts[2];
         if (interaction.user.id !== uid) {
-          return interaction.editReply({ content: '❌ Ce menu n\'est pas le tien.', ephemeral: true });
+          return interaction.reply({ content: '❌ Ce menu n\'est pas le tien.', ephemeral: true });
         }
         const sym = interaction.values[0];
         const modal = new ModalBuilder()
@@ -357,6 +357,7 @@ async function _handleInteraction(interaction, client) {
     // ── CRYPTO : modal submit → exécute achat/vente ─────────────────
     if (interaction.isModalSubmit && interaction.isModalSubmit() && _cfgId.startsWith('crypto_modal:')) {
       try {
+        if (!interaction.deferred && !interaction.replied) { await interaction.deferReply({ ephemeral: true }).catch(() => {}); }
         const db2 = require('../database/db');
         const cfg = db2.getConfig(interaction.guildId);
         const symbol = cfg.currency_emoji || '€';
@@ -424,17 +425,17 @@ async function _handleInteraction(interaction, client) {
         const pk  = require('../utils/pokerEngine');
         const sess = db2.getGameSession(interaction.message.id);
         if (!sess || sess.game !== 'poker') {
-          return interaction.editReply({ content: '⏱️ Cette partie de Poker a expiré. Lance `&poker <mise>` pour en refaire une.', ephemeral: true });
+          return interaction.reply({ content: '⏱️ Cette partie de Poker a expiré. Lance `&poker <mise>` pour en refaire une.', ephemeral: true });
         }
         if (interaction.user.id !== sess.user_id) {
-          return interaction.editReply({ content: '❌ Cette partie n\'est pas la tienne.', ephemeral: true });
+          return interaction.reply({ content: '❌ Cette partie n\'est pas la tienne.', ephemeral: true });
         }
 
         const state = pk.deserialize(sess.state.state);
         const embedOpts = sess.state.embedOpts || { userName: interaction.user.username, symbol: '€', color: '#9B59B6' };
 
         if (state.phase !== 'hold') {
-          return interaction.editReply({ content: '❌ Cette partie est déjà terminée.', ephemeral: true });
+          return interaction.reply({ content: '❌ Cette partie est déjà terminée.', ephemeral: true });
         }
 
         if (_cfgId === 'poker_draw') {
@@ -454,7 +455,7 @@ async function _handleInteraction(interaction, client) {
       } catch (e) {
         console.error('[POKER handler]', e);
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.editReply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
+          await interaction.reply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
         }
         return;
       }
@@ -469,7 +470,7 @@ async function _handleInteraction(interaction, client) {
         const color = cfg.color || '#7B2FBE';
         const uid = _cfgId.split(':')[1];
         if (interaction.user.id !== uid) {
-          return interaction.editReply({ content: '❌ Ce menu d\'aide ne t\'appartient pas. Lance la tienne avec `/aide`.', ephemeral: true });
+          return interaction.reply({ content: '❌ Ce menu d\'aide ne t\'appartient pas. Lance la tienne avec `/aide`.', ephemeral: true });
         }
 
         if (_cfgId.startsWith('help_cat:')) {
@@ -490,13 +491,13 @@ async function _handleInteraction(interaction, client) {
         if (_cfgId.startsWith('help_config:')) {
           const { buildMainMenu } = require('../utils/configPanel');
           const panel = buildMainMenu(cfg, interaction.guild, uid);
-          return interaction.editReply({ ...panel, ephemeral: true });
+          return interaction.reply({ ...panel, ephemeral: true });
         }
         return;
       } catch (e) {
         console.error('[AIDE handler]', e);
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.editReply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
+          await interaction.reply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
         }
         return;
       }
@@ -509,16 +510,16 @@ async function _handleInteraction(interaction, client) {
         const mi  = require('../utils/minesEngine');
         const sess = db2.getGameSession(interaction.message.id);
         if (!sess || sess.game !== 'mines') {
-          return interaction.editReply({ content: '⏱️ Cette partie de Mines a expiré. Lance `&mines <mise> <nb_mines>` pour en refaire une.', ephemeral: true });
+          return interaction.reply({ content: '⏱️ Cette partie de Mines a expiré. Lance `&mines <mise> <nb_mines>` pour en refaire une.', ephemeral: true });
         }
         if (interaction.user.id !== sess.user_id) {
-          return interaction.editReply({ content: '❌ Cette partie n\'est pas la tienne.', ephemeral: true });
+          return interaction.reply({ content: '❌ Cette partie n\'est pas la tienne.', ephemeral: true });
         }
 
         const game = sess.state.state;
         const embedOpts = sess.state.embedOpts || { userName: interaction.user.username };
 
-        if (game.over) return interaction.editReply({ content: '❌ Cette partie est terminée.', ephemeral: true });
+        if (game.over) return interaction.reply({ content: '❌ Cette partie est terminée.', ephemeral: true });
 
         if (_cfgId === 'mines_cash') {
           mi.cashOut(game);
@@ -541,7 +542,7 @@ async function _handleInteraction(interaction, client) {
       } catch (e) {
         console.error('[MINES handler]', e);
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.editReply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
+          await interaction.reply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}`, ephemeral: true }).catch(() => {});
         }
         return;
       }
@@ -1187,7 +1188,7 @@ async function _handleInteraction(interaction, client) {
         newMise = Math.max(1, Math.min(newMise, user0.balance));
         state.mise = newMise;
         db2.kvSet(interaction.guildId, sessionKey, state);
-        return interaction.update({
+        return interaction.reply({
           embeds: [cm.buildMenuEmbed({
             userName: interaction.user.username,
             mise: state.mise, balance: user0.balance, symbol, color,
@@ -1221,7 +1222,7 @@ async function _handleInteraction(interaction, client) {
           const { _build } = require('../commands/social/profil');
           const member = interaction.guild.members.cache.get(targetId) || await interaction.guild.members.fetch(targetId).catch(() => null);
           const user = db2.getUser(targetId, interaction.guildId);
-          return interaction.update({
+          return interaction.reply({
             embeds: [_build.buildMainEmbed(target, member, user, cfg, interaction.guild)],
             components: _build.buildButtons(ownerId, targetId),
           });
@@ -1333,7 +1334,7 @@ async function _handleInteraction(interaction, client) {
         const offset = (newPage - 1) * _build.PAGE_SIZE;
         const rows = db2.getTransactions(targetId, interaction.guildId, _build.PAGE_SIZE, offset);
 
-        return interaction.update({
+        return interaction.reply({
           embeds: [_build.buildEmbed({ user: target, guild: interaction.guild, page: newPage, total, rows, symbol, color })],
           components: [_build.buildButtons(targetId, newPage, pages)],
         });
@@ -1528,11 +1529,6 @@ async function _handleInteraction(interaction, client) {
           return interaction.editReply({
             embeds: [new EmbedBuilder()
               .setColor('#E74C3C')
-                if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-                  interaction.reply({ content: '❌ Une erreur est survenue. Réessaie.', ephemeral: true }).catch(() => {});
-                } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
-                  interaction.editReply({ content: '❌ Une erreur est survenue. Réessaie.' }).catch(() => {});
-                }
               .setTitle('🚫 Accès refusé — Tickets désactivés')
               .setDescription(
                 `Tu as été **banni du système de tickets** de ce serveur.\n\n` +
@@ -2557,10 +2553,10 @@ async function _handleInteraction(interaction, client) {
       if (interaction.customId.startsWith('ticket_qr_select_')) {
         const ticketId = parseInt(interaction.customId.replace('ticket_qr_select_', ''));
         const ticket   = db2.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-        if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
+        if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true });
 
         const channel = interaction.guild.channels.cache.get(ticket.channel_id);
-        if (!channel) return interaction.editReply({ content: '❌ Salon introuvable.', ephemeral: true });
+        if (!channel) return interaction.reply({ content: '❌ Salon introuvable.', ephemeral: true });
 
         const value = interaction.values[0];
 
@@ -2581,14 +2577,14 @@ async function _handleInteraction(interaction, client) {
           const customId = parseInt(value.replace('qr_custom_', ''));
           const customReply = db2.db.prepare('SELECT * FROM ticket_quick_replies WHERE id=? AND guild_id=?')
             .get(customId, interaction.guildId);
-          if (!customReply) return interaction.editReply({ content: '❌ Réponse introuvable.', ephemeral: true });
+          if (!customReply) return interaction.reply({ content: '❌ Réponse introuvable.', ephemeral: true });
           // Remplacer {user} par la mention
           msgContent = customReply.content.replace(/\{user\}/g, `<@${ticket.user_id}>`);
         } else {
           msgContent = QR_MESSAGES[value];
         }
 
-        if (!msgContent) return interaction.editReply({ content: '❌ Réponse inconnue.', ephemeral: true });
+        if (!msgContent) return interaction.reply({ content: '❌ Réponse inconnue.', ephemeral: true });
 
         await channel.send({ content: msgContent }).catch(() => {});
 
@@ -2605,10 +2601,10 @@ async function _handleInteraction(interaction, client) {
         const ticketId = parseInt(interaction.customId.replace('ticket_rate_select_', ''));
         const rating   = parseInt(interaction.values[0]);
         const ticket   = db2.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-        if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
+        if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true });
 
         if (interaction.user.id !== ticket.user_id) {
-          return interaction.editReply({ content: '❌ Seul le créateur du ticket peut évaluer le support.', ephemeral: true });
+          return interaction.reply({ content: '❌ Seul le créateur du ticket peut évaluer le support.', ephemeral: true });
         }
 
         db2.db.prepare('UPDATE tickets SET rating=? WHERE id=?').run(rating, ticketId);
@@ -2687,6 +2683,7 @@ async function _handleInteraction(interaction, client) {
 
     // ── MODALS ────────────────────────────────────────────
     if (interaction.isModalSubmit()) {
+      if (!interaction.deferred && !interaction.replied) { await interaction.deferReply({ ephemeral: false }).catch(() => {}); }
       const db = require('../database/db');
       const customId = interaction.customId;
 
