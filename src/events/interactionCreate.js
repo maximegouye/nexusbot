@@ -1419,15 +1419,7 @@ async function _handleInteraction(interaction, client) {
     // ── SLASH COMMANDS ───────────────────────────────────
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
-      if (!command) return;
-
-  // === DEFER_IMMEDIAT_COWORK avant toutes les verifications DB ===
-  // Garantit une reponse a Discord en moins de 3 secondes
-  if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
-  }
-
-      // ── Vérification blacklist NexusBot ───────────────────
+      if (!command) return;      // ── Vérification blacklist NexusBot ───────────────────
       if (interaction.commandName !== 'nexus') {
         try {
           const dbCheck = require('../database/db');
@@ -1488,12 +1480,7 @@ async function _handleInteraction(interaction, client) {
       ts.set(interaction.user.id, now);
       setTimeout(() => ts.delete(interaction.user.id), cd);
 
-      try {
-        // DEFER GARANTI
-      if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: false }).catch(() => {});
-      }
-      await command.execute(interaction, client);
+      try {      await command.execute(interaction, client);
       } catch (error) {
         console.error(`[CMD] Erreur /${interaction.commandName}:`, error);
         const errEmbed = new EmbedBuilder()
