@@ -184,17 +184,17 @@ async function startGame(source, userId, guildId, mise) {
 
   if (!u || u.solde < mise) {
     const errMsg = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: errMsg, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
   if (sessions.has(userId)) {
     const errMsg = '⚠️ Tu as déjà une partie en cours ! Termines-la d\'abord.';
-    if (isInteraction) return source.reply({ content: errMsg, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
   if (mise < 10) {
     const errMsg = '❌ Mise minimale : **10 coins**.';
-    if (isInteraction) return source.reply({ content: errMsg, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
 
@@ -218,7 +218,7 @@ async function startGame(source, userId, guildId, mise) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [tempEmbed], components: [] });
   } else {
-    msg = await source.reply({ embeds: [tempEmbed] });
+    msg = await source.editReply({ embeds: [tempEmbed] });
   }
   await sleep(500);
 

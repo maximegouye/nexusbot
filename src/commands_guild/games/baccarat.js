@@ -88,12 +88,12 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
   const betKey = betMap[betOn.toLowerCase()];
   if (!betKey) {
     const err = '❌ Pari invalide. Choisir : `joueur`, `banquier`, ou `egalite`';
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -110,7 +110,7 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [animEmbed] });
   } else {
-    msg = await source.reply({ embeds: [animEmbed] });
+    msg = await source.editReply({ embeds: [animEmbed] });
   }
 
   await sleep(800);

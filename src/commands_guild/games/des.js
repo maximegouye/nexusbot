@@ -33,7 +33,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
 
   if (!u || u.solde < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -53,7 +53,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     const n = parseInt(bet.replace(/[^0-9]/g, ''));
     if (!n || n < 2 || n > 12 || numDice < 2) {
       const err = '❌ Pour parier sur une somme, utilisez 2 dés. Ex: `&des 100 somme7 2`';
-      if (isInteraction) return source.reply({ content: err, ephemeral: true });
+      if (isInteraction) return source.editReply({ content: err, ephemeral: true });
       return source.reply(err);
     }
     winCondition = (r1, r2) => r1 + r2 === n;
@@ -63,7 +63,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   } else {
     const help = '**Paris disponibles :**\n`haut` (4-6) ×1.8\n`bas` (1-3) ×1.8\n`pair` ×1.8\n`impair` ×1.8\n`1` à `6` (exact) ×5.5\n`somme7` (2 dés, somme exacte) ×variable';
     const err = `❌ Pari invalide.\n\n${help}`;
-    if (isInteraction) return source.reply({ content: err, ephemeral: true });
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
@@ -80,7 +80,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [animEmbed] });
   } else {
-    msg = await source.reply({ embeds: [animEmbed] });
+    msg = await source.editReply({ embeds: [animEmbed] });
   }
 
   for (let f = 0; f < 4; f++) {

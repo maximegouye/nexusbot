@@ -57,8 +57,8 @@ async function handleCasino(source, userId, guildId, sub) {
       .setFooter({ text: 'Jouez de manière responsable · 18+ uniquement · Jeux fictifs' })
       .setTimestamp();
 
-    if (isInteraction) return source.reply({ embeds: [embed], ephemeral: true });
-    return source.reply({ embeds: [embed] });
+    if (isInteraction) return source.editReply({ embeds: [embed], ephemeral: true });
+    return source.editReply({ embeds: [embed] });
   }
 
   if (sub === 'jackpot') {
@@ -76,8 +76,8 @@ async function handleCasino(source, userId, guildId, sub) {
       .setFooter({ text: 'Le jackpot repart de 5 000 coins après chaque victoire' })
       .setTimestamp();
 
-    if (isInteraction) return source.reply({ embeds: [embed] });
-    return source.reply({ embeds: [embed] });
+    if (isInteraction) return source.editReply({ embeds: [embed] });
+    return source.editReply({ embeds: [embed] });
   }
 
   if (sub === 'top' || sub === 'classement') {
@@ -92,7 +92,7 @@ async function handleCasino(source, userId, guildId, sub) {
 
     if (!stats.length) {
       const msg = '📊 Aucune statistique disponible pour le moment.';
-      if (isInteraction) return source.reply({ content: msg, ephemeral: true });
+      if (isInteraction) return source.editReply({ content: msg, ephemeral: true });
       return source.reply(msg);
     }
 
@@ -107,7 +107,7 @@ async function handleCasino(source, userId, guildId, sub) {
       .setDescription(lines)
       .setTimestamp();
 
-    if (isInteraction) return source.reply({ embeds: [embed] });
-    return source.reply({ embeds: [embed] });
+    if (isInteraction) return source.editReply({ embeds: [embed] });
+    return source.editReply({ embeds: [embed] });
   }
 }
