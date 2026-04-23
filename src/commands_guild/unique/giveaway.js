@@ -201,7 +201,7 @@ module.exports = {
         .setDescription(list.map(g => { const e = JSON.parse(g.entries || '[]'); return `**#${g.id}** — ${g.prize}\n👥 ${new Set(e).size} participant(s) · 🕒 <t:${g.ends_at}:R> · <#${g.channel_id}>`; }).join('\n\n'));
       await interaction.editReply({ embeds: [embed], ephemeral: true });
     }
-  }
+  },
 
   handleComponent: async function(interaction) {
     // Defer immédiatement
