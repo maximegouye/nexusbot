@@ -53,14 +53,14 @@ module.exports = {
     const raw     = miseRaw ? String(miseRaw.value) : null;
 
     const mise = parseBet(raw, user.balance);
-    if (mise == null)   return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (mise < 1n)      return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (mise > BigInt(user.balance)) return interaction.editReply({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
+    if (mise == null)   return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide.', ephemeral: true });
+    if (mise < 1n)      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (mise > BigInt(user.balance)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')}${symbol}** en poche.`, ephemeral: true });
 
     const pariType = interaction.options.getString('pari');
     if (!pariType) {
       // Pas de pari → on propose le menu
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#9B59B6')
           .setTitle('🎡 Choisis ton pari')
@@ -75,7 +75,7 @@ module.exports = {
     let param = null;
     if (pariType === 'numero') {
       param = parseInt(interaction.options.getString('numero'));
-      if (param == null) return interaction.editReply({ content: '❌ Pour un numéro plein, précise aussi `numero:<0-36>`.', ephemeral: true });
+      if (param == null) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Pour un numéro plein, précise aussi `numero:<0-36>`.', ephemeral: true });
     }
 
     await spinAndResolve(interaction, { type: pariType, param }, mise, cfg, symbol, user);
@@ -97,15 +97,15 @@ async function spinAndResolve(interaction, bet, mise, cfg, symbol, user) {
   const spinEmbed0 = r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 0 });
   let replyMsg;
   if (interaction.replied || interaction.deferred) {
-    replyMsg = await interaction.editReply({ embeds: [spinEmbed0], components: [] }).catch(() => null);
+    replyMsg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [spinEmbed0], components: [] }).catch(() => null);
   } else {
-    replyMsg = await interaction.editReply({ embeds: [spinEmbed0], components: [], fetchReply: true }).catch(() => null);
+    replyMsg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [spinEmbed0], components: [], fetchReply: true }).catch(() => null);
   }
 
   await new Promise(res => setTimeout(res, 900));
-  await interaction.editReply({ embeds: [r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 1 })] }).catch(() => {});
+  await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 1 })] }).catch(() => {});
   await new Promise(res => setTimeout(res, 900));
-  await interaction.editReply({ embeds: [r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 2 })] }).catch(() => {});
+  await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [r.buildSpinningEmbed({ userName, bet, mise: miseNum, symbol, color, frame: 2 })] }).catch(() => {});
   await new Promise(res => setTimeout(res, 700));
 
   // Tirage + résolution
@@ -119,7 +119,7 @@ async function spinAndResolve(interaction, bet, mise, cfg, symbol, user) {
   const replayRow  = r.buildReplayButtons(bet, miseNum);
 
   if (interaction.replied || interaction.deferred) {
-    await interaction.editReply({ embeds: [finalEmbed], components: [replayRow] }).catch(() => {});
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [finalEmbed], components: [replayRow] }).catch(() => {});
   } else {
     await interaction.followUp({ embeds: [finalEmbed], components: [replayRow] }).catch(() => {});
   }

@@ -86,11 +86,11 @@ module.exports = {
     const miseRaw = interaction.options.get('mise')?.value;
     const mise = parseBet(miseRaw, user.balance);
     if (!Number.isFinite(mise) || mise < 10) {
-      return interaction.editReply({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
 
     if (user.balance < mise) {
-      return interaction.editReply({ content: `❌ Mise insuffisante ! Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Mise insuffisante ! Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
     }
 
     // ── SLOTS ──
@@ -122,7 +122,7 @@ module.exports = {
           { name: won ? '🤑 Gain net' : '💸 Perte', value: `**${Math.abs(net).toLocaleString('fr-FR')}** ${name}`, inline: true },
         );
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     // ── COINFLIP ──
@@ -143,7 +143,7 @@ module.exports = {
           { name: won ? '🤑 Gain' : '💸 Perte', value: `**${mise.toLocaleString('fr-FR')}** ${name}`, inline: true },
         );
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     // ── BLACKJACK ──
@@ -161,7 +161,7 @@ module.exports = {
       if (playerTotal === 21) {
         const gain = Math.floor(mise * 2.5);
         db.addCoins(interaction.user.id, interaction.guildId, gain);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#F39C12')
             .setTitle('🃏 BLACKJACK ! 🎉')
@@ -196,7 +196,7 @@ module.exports = {
         new ButtonBuilder().setCustomId('bj_double').setLabel('✖️ Doubler').setStyle(ButtonStyle.Danger).setDisabled(user.balance < mise),
       );
 
-      const msg = await interaction.editReply({ embeds: [buildBJEmbed(bjState)], components: [row], fetchReply: true });
+      const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildBJEmbed(bjState)], components: [row], fetchReply: true });
 
       const collector = msg.createMessageComponentCollector({ time: 60000 });
       collector.on('collect', async i => {

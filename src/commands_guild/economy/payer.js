@@ -30,20 +30,20 @@ module.exports = {
     };
     const amount = parseBet(interaction.options.get('montant')?.value, senderPre.balance);
     if (!Number.isFinite(amount) || amount < 1) {
-      return interaction.editReply({ content: '❌ Montant invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
     const note    = interaction.options.getString('note') || '';
     const cfg     = db.getConfig(interaction.guildId);
     const symbol  = cfg.currency_emoji || '€';
 
     if (target.id === interaction.user.id)
-      return interaction.editReply({ content: '❌ Tu ne peux pas te payer toi-même !', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te payer toi-même !', ephemeral: true });
     if (target.bot)
-      return interaction.editReply({ content: '❌ Tu ne peux pas payer un bot.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas payer un bot.', ephemeral: true });
 
     const sender = db.getUser(interaction.user.id, interaction.guildId);
     if (sender.balance < amount) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant')
@@ -57,7 +57,7 @@ module.exports = {
     const totalCost = amount + fee;
 
     if (sender.balance < totalCost) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant (frais inclus)')
@@ -84,7 +84,7 @@ module.exports = {
       )
       .setFooter({ text: 'Confirme dans 30 secondes sinon annulé auto.' });
 
-    const msg = await interaction.editReply({ embeds: [confirmEmbed], components: [row], fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [confirmEmbed], components: [row], fetchReply: true });
 
     const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === interaction.user.id, time: 30000 });
 

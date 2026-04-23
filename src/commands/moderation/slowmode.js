@@ -19,6 +19,6 @@ module.exports = {
         : `Mode lent de **${sec}s** activé dans <#${interaction.channelId}>.`
       );
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

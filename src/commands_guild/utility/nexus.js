@@ -273,7 +273,7 @@ module.exports = {
   async execute(interaction) {
     // ── Vérification propriétaire ──────────────────────────────────────────
     if (!isOwner(interaction)) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [baseEmbed('🔐 Accès refusé', '#E74C3C')
           .setDescription('Cette commande est réservée exclusivement au propriétaire du serveur.')],
         ephemeral: true
@@ -300,7 +300,7 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.addCoins(target.id, guildId, montant);
         auditLog(guildId, userId, 'ECO_DONNER', target.id, `+${montant} coins`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Coins ajoutés', '#2ECC71')
             .addFields(
               { name: 'Membre', value: `<@${target.id}>`, inline: true },
@@ -314,7 +314,7 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.addCoins(target.id, guildId, -montant);
         auditLog(guildId, userId, 'ECO_RETIRER', target.id, `-${montant} coins`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Coins retirés', '#E67E22')
             .addFields(
               { name: 'Membre', value: `<@${target.id}>`, inline: true },
@@ -328,7 +328,7 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE users SET balance=? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DEFINIR_SOLDE', target.id, `solde → ${montant}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Solde défini', '#3498DB')
             .addFields(
               { name: 'Membre', value: `<@${target.id}>`, inline: true },
@@ -342,7 +342,7 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE users SET xp=xp+? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DONNER_XP', target.id, `+${montant} XP`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ XP ajouté', '#9B59B6')
             .addFields(
               { name: 'Membre', value: `<@${target.id}>`, inline: true },
@@ -356,7 +356,7 @@ module.exports = {
         const niveau = parseInt(interaction.options.getString('niveau'));
         db.db.prepare('UPDATE users SET level=?, xp=0 WHERE user_id=? AND guild_id=?').run(niveau, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DEFINIR_NIVEAU', target.id, `niveau → ${niveau}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Niveau défini', '#1ABC9C')
             .addFields(
               { name: 'Membre', value: `<@${target.id}>`, inline: true },
@@ -369,7 +369,7 @@ module.exports = {
         const target = interaction.options.getUser('membre');
         db.db.prepare('UPDATE users SET balance=0, bank=0, xp=0, level=1, total_earned=0, streak=0 WHERE user_id=? AND guild_id=?').run(target.id, guildId);
         auditLog(guildId, userId, 'ECO_RESET_USER', target.id, 'réinitialisation complète');
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Profil réinitialisé', '#E74C3C')
             .setDescription(`Le profil économique de <@${target.id}> a été remis à zéro.`)
         ]});
@@ -378,7 +378,7 @@ module.exports = {
       if (sub === 'reset-serveur') {
         db.db.prepare('UPDATE users SET balance=0, bank=0, xp=0, level=1, total_earned=0, streak=0 WHERE guild_id=?').run(guildId);
         auditLog(guildId, userId, 'ECO_RESET_SERVEUR', null, 'réinitialisation globale');
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('⚠️ Économie réinitialisée', '#E74C3C')
             .setDescription('L\'intégralité de l\'économie du serveur a été remise à zéro.')
         ]});
@@ -387,8 +387,8 @@ module.exports = {
       if (sub === 'info-user') {
         const target = interaction.options.getUser('membre');
         const u = db.db.prepare('SELECT * FROM users WHERE user_id=? AND guild_id=?').get(target.id, guildId);
-        if (!u) return interaction.editReply({ content: '❌ Ce membre n\'a pas encore de données.' });
-        return interaction.editReply({ embeds: [
+        if (!u) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce membre n\'a pas encore de données.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed(`📋 Données — ${target.username}`)
             .addFields(
               { name: `${coin} Solde`, value: `${(u.balance||0).toLocaleString()}`, inline: true },
@@ -407,12 +407,12 @@ module.exports = {
 
       if (sub === 'top-richesse') {
         const top = db.db.prepare('SELECT * FROM users WHERE guild_id=? ORDER BY balance+bank DESC LIMIT 15').all(guildId);
-        if (!top.length) return interaction.editReply({ content: '❌ Aucun membre enregistré.' });
+        if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun membre enregistré.' });
         const medals = ['🥇', '🥈', '🥉'];
         const lines = top.map((u, i) =>
           `${medals[i] || `**${i+1}.**`} <@${u.user_id}> — **${(u.balance+u.bank).toLocaleString()} ${coin}**`
         ).join('\n');
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('💰 Classement des richesses').setDescription(lines)
         ]});
       }
@@ -426,11 +426,11 @@ module.exports = {
       if (sub === 'monnaie') {
         const nom   = interaction.options.getString('nom');
         const emoji = interaction.options.getString('emoji');
-        if (!nom && !emoji) return interaction.editReply({ content: '❌ Indiquez au moins un paramètre (nom ou emoji).' });
+        if (!nom && !emoji) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Indiquez au moins un paramètre (nom ou emoji).' });
         if (nom)   db.db.prepare('UPDATE guild_config SET currency_name=? WHERE guild_id=?').run(nom, guildId);
         if (emoji) db.db.prepare('UPDATE guild_config SET currency_emoji=? WHERE guild_id=?').run(emoji, guildId);
         auditLog(guildId, userId, 'CONFIG_MONNAIE', null, `nom=${nom} emoji=${emoji}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Monnaie mise à jour')
             .addFields(
               { name: 'Nom', value: nom || cfg.currency_name || 'Coins', inline: true },
@@ -443,7 +443,7 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE guild_config SET daily_amount=? WHERE guild_id=?').run(montant, guildId);
         auditLog(guildId, userId, 'CONFIG_DAILY', null, `montant=${montant}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Daily mis à jour')
             .addFields({ name: 'Nouveau montant', value: `**${montant.toLocaleString()} ${coin}**`, inline: true })
         ]});
@@ -453,7 +453,7 @@ module.exports = {
         const valeur = parseFloat(interaction.options.getString('valeur'));
         db.db.prepare('UPDATE guild_config SET xp_multiplier=? WHERE guild_id=?').run(valeur, guildId);
         auditLog(guildId, userId, 'CONFIG_XP_MULT', null, `multiplicateur=${valeur}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Multiplicateur XP mis à jour')
             .addFields({ name: 'Nouveau multiplicateur', value: `**×${valeur}**`, inline: true })
         ]});
@@ -463,7 +463,7 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE guild_config SET coins_per_msg=? WHERE guild_id=?').run(montant, guildId);
         auditLog(guildId, userId, 'CONFIG_COINS_MSG', null, `coins_per_msg=${montant}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Coins par message mis à jour')
             .addFields({ name: 'Coins par message', value: `**${montant} ${coin}**`, inline: true })
         ]});
@@ -475,7 +475,7 @@ module.exports = {
         db.db.prepare('UPDATE guild_config SET welcome_channel=? WHERE guild_id=?').run(canal.id, guildId);
         if (message) db.db.prepare('UPDATE guild_config SET welcome_msg=? WHERE guild_id=?').run(message, guildId);
         auditLog(guildId, userId, 'CONFIG_WELCOME', canal.id, message);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Canal de bienvenue configuré')
             .addFields(
               { name: 'Canal', value: `<#${canal.id}>`, inline: true },
@@ -490,7 +490,7 @@ module.exports = {
         db.db.prepare('UPDATE guild_config SET leave_channel=? WHERE guild_id=?').run(canal.id, guildId);
         if (message) db.db.prepare('UPDATE guild_config SET leave_msg=? WHERE guild_id=?').run(message, guildId);
         auditLog(guildId, userId, 'CONFIG_LEAVE', canal.id, message);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Canal d\'au revoir configuré')
             .addFields({ name: 'Canal', value: `<#${canal.id}>`, inline: true })
         ]});
@@ -500,7 +500,7 @@ module.exports = {
         const canal = interaction.options.getChannel('canal');
         db.db.prepare('UPDATE guild_config SET log_channel=? WHERE guild_id=?').run(canal.id, guildId);
         auditLog(guildId, userId, 'CONFIG_LOGS', canal.id);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Canal de logs configuré')
             .addFields({ name: 'Canal', value: `<#${canal.id}>`, inline: true })
         ]});
@@ -510,7 +510,7 @@ module.exports = {
         const canal = interaction.options.getChannel('canal');
         db.db.prepare('UPDATE guild_config SET mod_log_channel=? WHERE guild_id=?').run(canal.id, guildId);
         auditLog(guildId, userId, 'CONFIG_LOGS_MOD', canal.id);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Canal de logs de modération configuré')
             .addFields({ name: 'Canal', value: `<#${canal.id}>`, inline: true })
         ]});
@@ -520,7 +520,7 @@ module.exports = {
         const actif = interaction.options.getBoolean('actif');
         db.db.prepare('UPDATE guild_config SET automod_enabled=? WHERE guild_id=?').run(actif ? 1 : 0, guildId);
         auditLog(guildId, userId, 'CONFIG_AUTOMOD', null, `actif=${actif}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed(`✅ Automod ${actif ? 'activé' : 'désactivé'}`, actif ? '#2ECC71' : '#E74C3C')
         ]});
       }
@@ -529,7 +529,7 @@ module.exports = {
         const role = interaction.options.getRole('role');
         db.db.prepare('UPDATE guild_config SET autorole=? WHERE guild_id=?').run(role.id, guildId);
         auditLog(guildId, userId, 'CONFIG_AUTOROLE', role.id);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Autorole configuré')
             .addFields({ name: 'Rôle', value: `<@&${role.id}>`, inline: true })
         ]});
@@ -541,7 +541,7 @@ module.exports = {
         try {
           db.db.prepare('INSERT OR REPLACE INTO level_roles (guild_id, level, role_id) VALUES (?,?,?)').run(guildId, niveau, role.id);
           auditLog(guildId, userId, 'CONFIG_NIVEAU_ROLE', role.id, `niveau=${niveau}`);
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('✅ Rôle de niveau configuré')
               .addFields(
                 { name: 'Niveau', value: `**${niveau}**`, inline: true },
@@ -549,7 +549,7 @@ module.exports = {
               )
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Erreur lors de la configuration du rôle de niveau.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors de la configuration du rôle de niveau.' });
         }
       }
 
@@ -557,7 +557,7 @@ module.exports = {
         const canal = interaction.options.getChannel('canal');
         db.db.prepare('UPDATE guild_config SET level_channel=? WHERE guild_id=?').run(canal.id, guildId);
         auditLog(guildId, userId, 'CONFIG_NIVEAU_CANAL', canal.id);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Canal de niveau configuré')
             .addFields({ name: 'Canal', value: `<#${canal.id}>`, inline: true })
         ]});
@@ -569,7 +569,7 @@ module.exports = {
         db.db.prepare('UPDATE guild_config SET starboard_channel=? WHERE guild_id=?').run(canal.id, guildId);
         if (seuil) db.db.prepare('UPDATE guild_config SET starboard_threshold=? WHERE guild_id=?').run(seuil, guildId);
         auditLog(guildId, userId, 'CONFIG_STARBOARD', canal.id, `seuil=${seuil}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Starboard configuré')
             .addFields(
               { name: 'Canal', value: `<#${canal.id}>`, inline: true },
@@ -580,7 +580,7 @@ module.exports = {
 
       if (sub === 'voir') {
         const freshCfg = db.getConfig(guildId);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('⚙️ Configuration du serveur')
             .addFields(
               { name: '💰 Monnaie', value: `${freshCfg.currency_emoji || '🪙'} ${freshCfg.currency_name || 'Coins'}`, inline: true },
@@ -618,7 +618,7 @@ module.exports = {
         ).run(guildId, nom, desc, emoji, prix, stock, role?.id || null);
 
         auditLog(guildId, userId, 'BOUTIQUE_AJOUTER', String(result.lastInsertRowid), nom);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Article ajouté à la boutique', '#2ECC71')
             .addFields(
               { name: 'ID', value: `#${result.lastInsertRowid}`, inline: true },
@@ -633,10 +633,10 @@ module.exports = {
       if (sub === 'supprimer') {
         const id = parseInt(interaction.options.getString('id'));
         const item = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('DELETE FROM shop_items WHERE id=?').run(id);
         auditLog(guildId, userId, 'BOUTIQUE_SUPPRIMER', String(id), item.name);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Article supprimé', '#E74C3C')
             .setDescription(`**${item.emoji} ${item.name}** (ID #${id}) a été supprimé de la boutique.`)
         ]});
@@ -646,10 +646,10 @@ module.exports = {
         const id   = parseInt(interaction.options.getString('id'));
         const prix = parseInt(interaction.options.getString('prix'));
         const item = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('UPDATE shop_items SET price=? WHERE id=?').run(prix, id);
         auditLog(guildId, userId, 'BOUTIQUE_PRIX', String(id), `${item.price} → ${prix}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Prix mis à jour')
             .addFields(
               { name: 'Article', value: `${item.emoji} ${item.name}`, inline: true },
@@ -662,10 +662,10 @@ module.exports = {
         const id    = parseInt(interaction.options.getString('id'));
         const stock = parseInt(interaction.options.getString('stock'));
         const item  = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('UPDATE shop_items SET stock=? WHERE id=?').run(stock, id);
         auditLog(guildId, userId, 'BOUTIQUE_STOCK', String(id), `stock → ${stock}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Stock mis à jour')
             .addFields(
               { name: 'Article', value: `${item.emoji} ${item.name}`, inline: true },
@@ -678,10 +678,10 @@ module.exports = {
         const id    = parseInt(interaction.options.getString('id'));
         const actif = interaction.options.getBoolean('actif');
         const item  = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('UPDATE shop_items SET active=? WHERE id=?').run(actif ? 1 : 0, id);
         auditLog(guildId, userId, 'BOUTIQUE_ACTIVER', String(id), `actif=${actif}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed(`✅ Article ${actif ? 'activé' : 'désactivé'}`, actif ? '#2ECC71' : '#95A5A6')
             .setDescription(`**${item.emoji} ${item.name}** est maintenant ${actif ? 'disponible' : 'masqué'} dans la boutique.`)
         ]});
@@ -689,11 +689,11 @@ module.exports = {
 
       if (sub === 'liste') {
         const items = db.db.prepare('SELECT * FROM shop_items WHERE guild_id=? ORDER BY active DESC, price ASC').all(guildId);
-        if (!items.length) return interaction.editReply({ content: '❌ La boutique est vide.' });
+        if (!items.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ La boutique est vide.' });
         const lines = items.map(i =>
           `${i.active ? '✅' : '❌'} **#${i.id}** ${i.emoji} ${i.name} — **${i.price.toLocaleString()} ${coin}** ${i.stock === -1 ? '' : `(stock: ${i.stock})`}`
         ).join('\n');
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('🏪 Articles de la boutique').setDescription(lines.substring(0, 4000))
         ]});
       }
@@ -702,7 +702,7 @@ module.exports = {
         const count = db.db.prepare('SELECT COUNT(*) as c FROM shop_items WHERE guild_id=?').get(guildId).c;
         db.db.prepare('DELETE FROM shop_items WHERE guild_id=?').run(guildId);
         auditLog(guildId, userId, 'BOUTIQUE_VIDER', null, `${count} articles supprimés`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Boutique vidée', '#E74C3C')
             .setDescription(`**${count}** article(s) ont été supprimés.`)
         ]});
@@ -744,7 +744,7 @@ module.exports = {
         };
 
         auditLog(guildId, userId, 'EVENT_CREER', String(result.lastInsertRowid), `${type} ${duree}h`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('🎉 Événement créé', '#F1C40F')
             .addFields(
               { name: 'ID', value: `#${result.lastInsertRowid}`, inline: true },
@@ -760,28 +760,28 @@ module.exports = {
         const id = parseInt(interaction.options.getString('id'));
         try {
           const ev = db.db.prepare('SELECT * FROM eco_events WHERE id=? AND guild_id=?').get(id, guildId);
-          if (!ev) return interaction.editReply({ content: `❌ Événement #${id} introuvable.` });
+          if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable.` });
           db.db.prepare('UPDATE eco_events SET active=0 WHERE id=?').run(id);
           auditLog(guildId, userId, 'EVENT_TERMINER', String(id), ev.name);
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('✅ Événement terminé', '#95A5A6')
               .setDescription(`L'événement **${ev.name}** a été mis fin.`)
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Erreur : table d\'événements introuvable.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur : table d\'événements introuvable.' });
         }
       }
 
       if (sub === 'liste') {
         try {
           const events = db.db.prepare('SELECT * FROM eco_events WHERE guild_id=? AND active=1 ORDER BY ends_at ASC').all(guildId);
-          if (!events.length) return interaction.editReply({ content: '❌ Aucun événement actif.' });
+          if (!events.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun événement actif.' });
           const lines = events.map(e => `**#${e.id}** **${e.name}** — \`${e.type}\` — Fin : <t:${e.ends_at}:R>`).join('\n');
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('🎉 Événements actifs').setDescription(lines)
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Aucun événement enregistré.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun événement enregistré.' });
         }
       }
     }
@@ -796,7 +796,7 @@ module.exports = {
         await interaction.client.user.setStatus(type);
         auditLog(guildId, userId, 'BOT_STATUT', null, type);
         const labels = { online: '🟢 En ligne', idle: '🟡 Absent', dnd: '🔴 Ne pas déranger', invisible: '⚫ Invisible' };
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Statut mis à jour').addFields({ name: 'Nouveau statut', value: labels[type], inline: true })
         ]});
       }
@@ -812,7 +812,7 @@ module.exports = {
         };
         await interaction.client.user.setActivity(texte, { type: typeMap[type] });
         auditLog(guildId, userId, 'BOT_ACTIVITE', null, `${type}: ${texte}`);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Activité mise à jour')
             .addFields(
               { name: 'Type', value: type, inline: true },
@@ -826,12 +826,12 @@ module.exports = {
         try {
           await interaction.guild.members.me.setNickname(nom);
           auditLog(guildId, userId, 'BOT_PSEUDO', null, nom || 'réinitialisation');
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('✅ Pseudo mis à jour')
               .addFields({ name: 'Pseudo', value: nom || interaction.client.user.username, inline: true })
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Impossible de modifier le pseudo. Vérifiez les permissions.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible de modifier le pseudo. Vérifiez les permissions.' });
         }
       }
 
@@ -843,7 +843,7 @@ module.exports = {
         const h = Math.floor(uptime / 3600);
         const m = Math.floor((uptime % 3600) / 60);
         const s = uptime % 60;
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('🤖 Informations — NexusBot')
             .addFields(
               { name: '🏷️ Version Discord.js', value: require('discord.js').version, inline: true },
@@ -858,7 +858,7 @@ module.exports = {
 
       if (sub === 'ping') {
         const ws = interaction.client.ws.ping;
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('🏓 Latence du bot')
             .addFields({ name: 'WebSocket', value: `**${ws}ms**`, inline: true })
         ]});
@@ -876,7 +876,7 @@ module.exports = {
         const ping    = interaction.options.getBoolean('ping-everyone') || false;
 
         const targetChannel = interaction.guild.channels.cache.get(canal.id);
-        if (!targetChannel) return interaction.editReply({ content: '❌ Canal introuvable.' });
+        if (!targetChannel) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Canal introuvable.' });
 
         await targetChannel.send({
           content: ping ? '@everyone' : undefined,
@@ -891,7 +891,7 @@ module.exports = {
         });
 
         auditLog(guildId, userId, 'OUTILS_ANNONCE', canal.id, message.substring(0, 100));
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Annonce envoyée').addFields({ name: 'Canal', value: `<#${canal.id}>`, inline: true })
         ]});
       }
@@ -910,11 +910,11 @@ module.exports = {
             ]
           });
           auditLog(guildId, userId, 'OUTILS_DM', target.id, message.substring(0, 100));
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('✅ Message privé envoyé').addFields({ name: 'Destinataire', value: `<@${target.id}>`, inline: true })
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Impossible d\'envoyer le message. Le membre a peut-être désactivé ses messages privés.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer le message. Le membre a peut-être désactivé ses messages privés.' });
         }
       }
 
@@ -926,7 +926,7 @@ module.exports = {
         try {
           const deleted = await channel.bulkDelete(nombre, true);
           auditLog(guildId, userId, 'OUTILS_PURGE', channel.id, `${deleted.size} messages`);
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('✅ Messages supprimés', '#E74C3C')
               .addFields(
                 { name: 'Supprimés', value: `**${deleted.size}**`, inline: true },
@@ -934,7 +934,7 @@ module.exports = {
               )
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Impossible de supprimer les messages. Les messages de plus de 14 jours ne peuvent pas être supprimés en masse.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible de supprimer les messages. Les messages de plus de 14 jours ne peuvent pas être supprimés en masse.' });
         }
       }
 
@@ -949,7 +949,7 @@ module.exports = {
         const vocal   = channels.filter(c => c.type === 2).size;
         const roles   = guild.roles.cache.size - 1;
 
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed(`📊 Statistiques — ${guild.name}`)
             .setThumbnail(guild.iconURL())
             .addFields(
@@ -971,7 +971,7 @@ module.exports = {
         const shopItems   = db.db.prepare('SELECT COUNT(*) as c FROM shop_items WHERE guild_id=? AND active=1').get(guildId).c;
         const richest     = db.db.prepare('SELECT user_id, balance+bank as total FROM users WHERE guild_id=? ORDER BY total DESC LIMIT 1').get(guildId);
 
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('💰 Statistiques économiques')
             .addFields(
               { name: '👥 Membres enregistrés', value: `${totalUsers.toLocaleString()}`, inline: true },
@@ -989,7 +989,7 @@ module.exports = {
         try {
           db.db.prepare('INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, created_by) VALUES (?,?,?,?)').run(guildId, declencheur, reponse, userId);
           auditLog(guildId, userId, 'OUTILS_CMD_PERSO', declencheur, reponse.substring(0, 100));
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('✅ Commande personnalisée créée', '#2ECC71')
               .addFields(
                 { name: 'Déclencheur', value: `\`${declencheur}\``, inline: true },
@@ -997,7 +997,7 @@ module.exports = {
               )
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Erreur lors de la création de la commande.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors de la création de la commande.' });
         }
       }
     }
@@ -1010,11 +1010,11 @@ module.exports = {
       if (sub === 'blacklist') {
         const target = interaction.options.getUser('membre');
         const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
-        if (target.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous blacklister vous-même.' });
+        if (target.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous blacklister vous-même.' });
         try {
           db.db.prepare('INSERT OR REPLACE INTO nexus_blacklist (guild_id, user_id, reason, banned_by) VALUES (?,?,?,?)').run(guildId, target.id, raison, userId);
           auditLog(guildId, userId, 'SECURITE_BLACKLIST', target.id, raison);
-          return interaction.editReply({ embeds: [
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
             baseEmbed('🚫 Membre blacklisté', '#E74C3C')
               .addFields(
                 { name: 'Membre', value: `<@${target.id}>`, inline: true },
@@ -1022,16 +1022,16 @@ module.exports = {
               )
           ]});
         } catch {
-          return interaction.editReply({ content: '❌ Ce membre est déjà blacklisté.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce membre est déjà blacklisté.' });
         }
       }
 
       if (sub === 'unblacklist') {
         const target = interaction.options.getUser('membre');
         const result = db.db.prepare('DELETE FROM nexus_blacklist WHERE guild_id=? AND user_id=?').run(guildId, target.id);
-        if (!result.changes) return interaction.editReply({ content: '❌ Ce membre n\'est pas blacklisté.' });
+        if (!result.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce membre n\'est pas blacklisté.' });
         auditLog(guildId, userId, 'SECURITE_UNBLACKLIST', target.id);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('✅ Blacklist levée', '#2ECC71')
             .setDescription(`<@${target.id}> peut à nouveau utiliser NexusBot.`)
         ]});
@@ -1039,11 +1039,11 @@ module.exports = {
 
       if (sub === 'liste-blacklist') {
         const list = db.db.prepare('SELECT * FROM nexus_blacklist WHERE guild_id=? ORDER BY created_at DESC').all(guildId);
-        if (!list.length) return interaction.editReply({ embeds: [baseEmbed('✅ Blacklist vide').setDescription('Aucun membre blacklisté.')]});
+        if (!list.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [baseEmbed('✅ Blacklist vide').setDescription('Aucun membre blacklisté.')]});
         const lines = list.map((b, i) =>
           `**${i+1}.** <@${b.user_id}> — ${b.reason} — <t:${b.created_at}:D>`
         ).join('\n');
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('🚫 Membres blacklistés').setDescription(lines.substring(0, 4000))
         ]});
       }
@@ -1051,14 +1051,14 @@ module.exports = {
       if (sub === 'audit-log') {
         const limite = parseInt(interaction.options.getString('limite')) || 15;
         const logs = db.db.prepare('SELECT * FROM nexus_audit_log WHERE guild_id=? ORDER BY created_at DESC LIMIT ?').all(guildId, limite);
-        if (!logs.length) return interaction.editReply({ content: '❌ Aucune action enregistrée.' });
+        if (!logs.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune action enregistrée.' });
         const lines = logs.map(l => {
           const d = `<t:${l.created_at}:R>`;
           const target = l.target ? ` → \`${l.target}\`` : '';
           const details = l.details ? ` (${l.details})` : '';
           return `${d} **${l.action}**${target}${details}`;
         }).join('\n');
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed(`📋 Journal des actions (${logs.length})`)
             .setDescription(lines.substring(0, 4000))
         ]});
@@ -1081,7 +1081,7 @@ module.exports = {
         }
 
         auditLog(guildId, userId, actif ? 'SECURITE_LOCKDOWN_ON' : 'SECURITE_LOCKDOWN_OFF', null, raison);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed(actif ? '🔒 Serveur verrouillé' : '🔓 Verrouillage levé', actif ? '#E74C3C' : '#2ECC71')
             .addFields(
               { name: 'Canaux affectés', value: `${count}`, inline: true },

@@ -177,7 +177,7 @@ module.exports = {
     if (subcommand === 'setup') {
       // Check permissions
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Vous devez être administrateur.',
           ephemeral: true,
         });
@@ -203,13 +203,13 @@ module.exports = {
         }
 
         const roleText = role ? ` et le rôle ${role}` : '';
-        interaction.editReply({
+        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: `✅ Système de bump configuré sur ${channel}${roleText}`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Setup error:', error);
-        interaction.editReply({
+        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue lors de la configuration.',
           ephemeral: true,
         });
@@ -219,7 +219,7 @@ module.exports = {
     if (subcommand === 'ping') {
       // Check permissions
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Vous devez être administrateur.',
           ephemeral: true,
         });
@@ -227,7 +227,7 @@ module.exports = {
 
       const config = db.getConfig(guildId);
       if (!config || !config.bump_channel) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Le système de bump n\'est pas configuré. Utilisez `/bump setup`.',
           ephemeral: true,
         });
@@ -236,7 +236,7 @@ module.exports = {
       try {
         const channel = await interaction.guild.channels.fetch(config.bump_channel).catch(() => null);
         if (!channel) {
-          return interaction.editReply({
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             content: '❌ Le salon de bump n\'existe plus.',
             ephemeral: true,
           });
@@ -263,13 +263,13 @@ module.exports = {
         // Update last bump time
         setLastBumpTime(guildId, Math.floor(Date.now() / 1000));
 
-        interaction.editReply({
+        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '✅ Rappel de bump envoyé!',
           ephemeral: true,
         });
       } catch (error) {
         console.error('Ping error:', error);
-        interaction.editReply({
+        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue lors de l\'envoi du rappel.',
           ephemeral: true,
         });
@@ -280,7 +280,7 @@ module.exports = {
       const timeRemaining = getTimeUntilNextBump(guildId);
 
       if (timeRemaining === null) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '✅ Le prochain bump est disponible maintenant!',
           ephemeral: true,
         });
@@ -294,7 +294,7 @@ module.exports = {
         .setTimestamp()
         .setFooter({ text: 'Patience, c\'est bientôt!' });
 
-      interaction.editReply({
+      (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [embed],
         ephemeral: true,
       });
@@ -304,7 +304,7 @@ module.exports = {
       const leaderboard = getBumpLeaderboard(guildId);
 
       if (leaderboard.length === 0) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '📊 Aucun bump enregistré pour le moment.',
           ephemeral: true,
         });
@@ -323,7 +323,7 @@ module.exports = {
         .setTimestamp()
         .setFooter({ text: 'Bravo à tous les bumpeurs!' });
 
-      interaction.editReply({
+      (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [embed],
         ephemeral: true,
       });
@@ -333,7 +333,7 @@ module.exports = {
       // Check cooldown
       const cooldownRemaining = checkBumpCooldown(interaction.user.id, guildId);
       if (cooldownRemaining) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: `⏳ Vous devez attendre ${formatTime(cooldownRemaining)} avant de pouvoir confirmer un nouveau bump.`,
           ephemeral: true,
         });
@@ -363,13 +363,13 @@ module.exports = {
           .setTimestamp()
           .setFooter({ text: 'Votre engagement compte!' });
 
-        interaction.editReply({
+        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [embed],
           ephemeral: true,
         });
       } catch (error) {
         console.error('Fait error:', error);
-        interaction.editReply({
+        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue lors de la confirmation du bump.',
           ephemeral: true,
         });

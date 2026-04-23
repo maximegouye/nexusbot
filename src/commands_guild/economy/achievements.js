@@ -92,7 +92,7 @@ module.exports = {
 
     if (sub === 'voir' || sub === 'membre') {
       if (unlocked.length === 0) {
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setTitle('🏆 Aucun trophée').setDescription(`${sub === 'voir' ? 'Tu n\'as' : `**${targetUser.username}** n'a`} pas encore de trophée.\nUtilise \`/achievements vérifier\` pour vérifier !`)] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setTitle('🏆 Aucun trophée').setDescription(`${sub === 'voir' ? 'Tu n\'as' : `**${targetUser.username}** n'a`} pas encore de trophée.\nUtilise \`/achievements vérifier\` pour vérifier !`)] });
       }
       const list = ALL_ACHIEVEMENTS.filter(a => unlocked.includes(a.key));
       const chunks = [];
@@ -103,7 +103,7 @@ module.exports = {
         .setThumbnail(targetUser.displayAvatarURL())
         .setDescription(list.map(a => `${a.emoji} **${a.name}** — *${a.desc}*\n┗ \`${a.rarity}\` • +${a.reward} 🪙`).join('\n\n'))
         .setFooter({ text: `${unlocked.length}/${ALL_ACHIEVEMENTS.length} trophées débloqués` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'tous') {
@@ -120,7 +120,7 @@ module.exports = {
           inline: false,
         });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'verifier') {
@@ -142,14 +142,14 @@ module.exports = {
           .setDescription(newOnes.map(a => `${a.emoji} **${a.name}**\n┗ ${a.desc} • +${a.reward} 🪙`).join('\n\n'))
           .setFooter({ text: `+${totalReward} 🪙 de récompense au total !` })
           .setTimestamp();
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       }
       const embed = new EmbedBuilder()
         .setColor('#95a5a6')
         .setTitle('🏆 Vérification terminée')
         .setDescription(`Aucun nouveau trophée pour l'instant.\nTu en as **${unlocked.length}/${ALL_ACHIEVEMENTS.length}**.\nContinue tes activités pour en débloquer !`)
         .setFooter({ text: 'Reviens régulièrement !' });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

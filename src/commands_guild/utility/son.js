@@ -40,15 +40,15 @@ module.exports = {
       try {
         const sounds = await interaction.guild.soundboardSounds.fetch();
         if (!sounds.size) {
-          return interaction.editReply({ embeds: [ef.info('🔊 Soundboard', 'Ce serveur n\'a aucun son dans sa soundboard pour l\'instant.\n\nAjoutez-en via **Paramètres du serveur → Soundboard**.')], ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.info('🔊 Soundboard', 'Ce serveur n\'a aucun son dans sa soundboard pour l\'instant.\n\nAjoutez-en via **Paramètres du serveur → Soundboard**.')], ephemeral: true });
         }
         const lines = [...sounds.values()].map(s => `${s.emoji?.name || '🔊'} **${s.name}**`).join('\n');
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [ef.info('🔊 Soundboard du serveur', lines, { footer: `${sounds.size} son(s)` })],
           ephemeral: true,
         });
       } catch (e) {
-        return interaction.editReply({ embeds: [ef.error('Erreur', `Impossible de lire la soundboard : ${e.message}`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Erreur', `Impossible de lire la soundboard : ${e.message}`)], ephemeral: true });
       }
     }
 
@@ -57,19 +57,19 @@ module.exports = {
       const member = interaction.member;
       const voice = member.voice?.channel;
       if (!voice) {
-        return interaction.editReply({ embeds: [ef.warning('Rejoins un vocal', 'Tu dois être dans un salon vocal pour que je puisse jouer un son.')], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.warning('Rejoins un vocal', 'Tu dois être dans un salon vocal pour que je puisse jouer un son.')], ephemeral: true });
       }
       // Permissions
       const perms = voice.permissionsFor(interaction.client.user);
       if (!perms?.has(PermissionFlagsBits.Connect) || !perms?.has(PermissionFlagsBits.Speak)) {
-        return interaction.editReply({ embeds: [ef.error('Permissions manquantes', 'Le bot doit pouvoir **se connecter** et **parler** dans ce salon vocal.')], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Permissions manquantes', 'Le bot doit pouvoir **se connecter** et **parler** dans ce salon vocal.')], ephemeral: true });
       }
 
       try {
         const sounds = await interaction.guild.soundboardSounds.fetch();
         const sound = [...sounds.values()].find(s => s.name.toLowerCase() === name.toLowerCase());
         if (!sound) {
-          return interaction.editReply({ embeds: [ef.error('Son introuvable', `Aucun son nommé \`${name}\`. Utilise \`/son liste\` pour voir les sons disponibles.`)], ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Son introuvable', `Aucun son nommé \`${name}\`. Utilise \`/son liste\` pour voir les sons disponibles.`)], ephemeral: true });
         }
 
         // Rejoindre le vocal et envoyer le son (API soundboard native)
@@ -83,13 +83,13 @@ module.exports = {
           },
         });
 
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [ef.success('🔊 Son joué', `**${sound.emoji?.name || '🔊'} ${sound.name}** dans <#${voice.id}>`)],
           ephemeral: true,
         });
       } catch (e) {
         console.error('[SON]', e);
-        return interaction.editReply({ embeds: [ef.error('Erreur', `Impossible de jouer le son : ${e.message?.slice(0, 200)}\n\n💡 Astuce : le bot doit être connecté au vocal. Si ce n'est pas le cas, le système Soundboard Discord peut refuser l'envoi.`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Erreur', `Impossible de jouer le son : ${e.message?.slice(0, 200)}\n\n💡 Astuce : le bot doit être connecté au vocal. Si ce n'est pas le cas, le système Soundboard Discord peut refuser l'envoi.`)], ephemeral: true });
       }
     }
   },

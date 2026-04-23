@@ -38,9 +38,9 @@ async function _handleInteraction(interaction, client) {
       if (interaction.replied) {
         return await interaction.followUp({ ...options });
       } else if (interaction.deferred) {
-        return await interaction.editReply(options);
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(options);
       } else {
-        return await interaction.reply(options);
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(options);
       }
     } catch (e) {
       console.error('[safeReply]', e.message?.slice(0, 80));
@@ -51,11 +51,11 @@ async function _handleInteraction(interaction, client) {
     try {
       if (!interaction.isRepliable()) return;
       if (interaction.replied || interaction.deferred) {
-        return await interaction.editReply(options);
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(options);
       } else if (interaction.isButton() || interaction.isStringSelectMenu()) {
         return await interaction.update(options);
       } else {
-        return await interaction.editReply(options);
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(options);
       }
     } catch (e) {
       console.error('[safeUpdate]', e.message?.slice(0, 80));

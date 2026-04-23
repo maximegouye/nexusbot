@@ -10,7 +10,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
     const target = interaction.targetMember || await interaction.guild.members.fetch(interaction.targetId).catch(() => null);
-    if (!target) return interaction.editReply('❌ Membre introuvable.');
+    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Membre introuvable.');
 
     const warns = db.db.prepare('SELECT * FROM warnings WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 5').all(interaction.guildId, target.id);
     const cases = db.db.prepare('SELECT COUNT(*) as c FROM warnings WHERE guild_id=? AND user_id=?').get(interaction.guildId, target.id);
@@ -30,6 +30,6 @@ module.exports = {
       )
       .setTimestamp();
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

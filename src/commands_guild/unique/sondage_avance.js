@@ -39,8 +39,8 @@ module.exports = {
       const anonymous = interaction.options.getBoolean('anonyme') || false;
 
       const options = optionsRaw.split('|').map(o => o.trim()).filter(o => o.length > 0);
-      if (options.length < 2) return interaction.editReply({ content: '❌ Minimum 2 options séparées par `|`.', ephemeral: true });
-      if (options.length > 10) return interaction.editReply({ content: '❌ Maximum 10 options.', ephemeral: true });
+      if (options.length < 2) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Minimum 2 options séparées par `|`.', ephemeral: true });
+      if (options.length > 10) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 10 options.', ephemeral: true });
 
       const endsAt = duree > 0 ? now + duree * 60 : 0;
       const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
@@ -74,7 +74,7 @@ module.exports = {
         ));
       }
 
-      const msg = await interaction.editReply({ embeds: [embed], components: rows, fetchReply: true });
+      const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: rows, fetchReply: true });
 
       // Sauvegarder avec l'ID du message
       db.db.prepare('INSERT INTO sondages (guild_id, channel_id, message_id, user_id, question, options, ends_at, anonymous) VALUES (?,?,?,?,?,?,?,?)')
@@ -101,11 +101,11 @@ module.exports = {
     if (sub === 'terminer' || sub === 'resultats') {
       const msgId = interaction.options.getString('message_id');
       const sondage = db.db.prepare('SELECT * FROM sondages WHERE guild_id=? AND message_id=?').get(guildId, msgId);
-      if (!sondage) return interaction.editReply({ content: '❌ Sondage introuvable.', ephemeral: true });
+      if (!sondage) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Sondage introuvable.', ephemeral: true });
 
       if (sub === 'terminer') {
         if (sondage.user_id !== userId && !interaction.member.permissions.has(0x4000n))
-          return interaction.editReply({ content: '❌ Seul le créateur ou un modérateur peut terminer ce sondage.', ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seul le créateur ou un modérateur peut terminer ce sondage.', ephemeral: true });
         db.db.prepare('UPDATE sondages SET ended=1 WHERE id=?').run(sondage.id);
       }
 
@@ -121,7 +121,7 @@ module.exports = {
         return `${emojis[i]} **${o}**\n${bar} ${optVotes} vote(s) — **${pct}%**`;
       }).join('\n\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#5865F2').setTitle(`📊 Résultats — ${sondage.question}`)
           .setDescription(results)
           .addFields({ name: '🗳️ Total', value: `**${totalVotes}** vote(s)`, inline: true })

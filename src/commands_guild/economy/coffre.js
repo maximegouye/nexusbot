@@ -20,7 +20,7 @@ module.exports = {
     const {guildId} = interaction; const userId = interaction.user.id;
     const cfg = db.getConfig(guildId); const coin = cfg.currency_emoji||'€';
     const cd = checkCooldown(userId,'coffre',22*3600);
-    if (cd.onCooldown) return interaction.editReply({content:cooldownMessage(cd.remaining),ephemeral:true});
+    if (cd.onCooldown) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:cooldownMessage(cd.remaining),ephemeral:true});
     const today = new Date().toISOString().slice(0,10);
     let row = db.db.prepare('SELECT * FROM coffre_streaks WHERE user_id=? AND guild_id=?').get(userId,guildId);
     let streak=1;
@@ -46,6 +46,6 @@ module.exports = {
       )
       .setFooter({text:'Prochain coffre dans ~22h'});
     if (tier.bonus) embed.addFields({name:'🎉 Bonus !',value:tier.bonus});
-    return interaction.editReply({embeds:[embed]});
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[embed]});
   }
 };

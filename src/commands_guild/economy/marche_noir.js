@@ -85,7 +85,7 @@ module.exports = {
         return `**${i+1}.** ${meta?.label || item.item_id} — **${item.price.toLocaleString()} ${coin}** (stock: ${item.stock})${riskLabel}`;
       }).join('\n\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2C3E50')
           .setTitle('🕵️ Marché Noir')
           .setDescription(desc || '*Aucune offre disponible.*')
@@ -97,14 +97,14 @@ module.exports = {
     if (sub === 'acheter') {
       const num = parseInt(interaction.options.getString('numero')) - 1;
       const items = getOrGenerateMarket(guildId);
-      if (num < 0 || num >= items.length) return interaction.editReply({ content: '❌ Numéro d\'offre invalide.', ephemeral: true });
+      if (num < 0 || num >= items.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Numéro d\'offre invalide.', ephemeral: true });
 
       const item = items[num];
       const meta = ITEMS_BN.find(x => x.id === item.item_id);
       const u = db.getUser(userId, guildId);
 
       if ((u.balance || 0) < item.price) {
-        return interaction.editReply({ content: `❌ Pas assez de ${coin}. Il vous faut **${item.price.toLocaleString()}**, vous avez **${u.balance || 0}**.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pas assez de ${coin}. Il vous faut **${item.price.toLocaleString()}**, vous avez **${u.balance || 0}**.`, ephemeral: true });
       }
 
       db.addCoins(userId, guildId, -item.price);
@@ -155,7 +155,7 @@ module.exports = {
 
       db.db.prepare('INSERT INTO bm_purchases (guild_id, user_id, item_id, price, result) VALUES (?,?,?,?,?)').run(guildId, userId, item.item_id, item.price, result);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor(result === '✅' ? '#2ECC71' : result === '🚨' ? '#E74C3C' : '#F39C12')
           .setTitle(`${result} Achat — Marché Noir`)
@@ -175,9 +175,9 @@ module.exports = {
       if ((u.bm_mine_tnt || 0) > 0) fields.push({ name: '💣 TNT Mine', value: `**${u.bm_mine_tnt}** restants`, inline: true });
       if ((u.bm_steal_kit || 0) > 0) fields.push({ name: '🔓 Kit de Vol', value: `**${u.bm_steal_kit}** restant(s)`, inline: true });
 
-      if (!fields.length) return interaction.editReply({ content: '❌ Votre inventaire spécial est vide.', ephemeral: true });
+      if (!fields.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Votre inventaire spécial est vide.', ephemeral: true });
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2C3E50').setTitle('🎒 Inventaire Spécial').addFields(...fields)
       ], ephemeral: true });
     }

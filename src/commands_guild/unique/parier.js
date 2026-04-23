@@ -89,7 +89,7 @@ module.exports = {
           { name: '💰 Cagnotte', value: '0 coins', inline: true },
         )
         .setFooter({ text: `Misez avec /parier miser ${id} — Créé par ${interaction.user.username}` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'miser') {
@@ -98,14 +98,14 @@ module.exports = {
       const amount = parseInt(interaction.options.getString('montant'));
 
       const pari = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!pari) return interaction.editReply({ content: `❌ Pari #${id} introuvable.` });
-      if (pari.status !== 'open') return interaction.editReply({ content: '❌ Ce pari est fermé.' });
+      if (!pari) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pari #${id} introuvable.` });
+      if (pari.status !== 'open') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce pari est fermé.' });
 
       const user = db.getUser(userId, guildId);
-      if (user.coins < amount) return interaction.editReply({ content: `❌ Tu n'as que **${user.coins}** coins.` });
+      if (user.coins < amount) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${user.coins}** coins.` });
 
       const existing = db.db.prepare('SELECT * FROM paris_bets WHERE pari_id=? AND user_id=?').get(id, userId);
-      if (existing) return interaction.editReply({ content: '❌ Tu as déjà misé sur ce pari !' });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu as déjà misé sur ce pari !' });
 
       db.removeCoins(userId, guildId, amount);
       db.db.prepare('INSERT INTO paris_bets (pari_id, user_id, guild_id, choix, amount) VALUES (?,?,?,?,?)').run(id, userId, guildId, choix, amount);
@@ -122,13 +122,13 @@ module.exports = {
           { name: '🅰️ Cagnotte A', value: `${totalA} coins`, inline: true },
           { name: '🅱️ Cagnotte B', value: `${totalB} coins`, inline: true },
         );
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'voir') {
       const id   = parseInt(interaction.options.getString('id'));
       const pari = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!pari) return interaction.editReply({ content: `❌ Pari #${id} introuvable.` });
+      if (!pari) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pari #${id} introuvable.` });
 
       const totalA  = db.db.prepare("SELECT SUM(amount) as t, COUNT(*) as c FROM paris_bets WHERE pari_id=? AND choix='a'").get(id);
       const totalB  = db.db.prepare("SELECT SUM(amount) as t, COUNT(*) as c FROM paris_bets WHERE pari_id=? AND choix='b'").get(id);
@@ -153,17 +153,17 @@ module.exports = {
         );
       if (myBet) embed.addFields({ name: '🎯 Ta mise', value: `${myBet.choix === 'a' ? pari.option_a : pari.option_b} — ${myBet.amount} coins`, inline: true });
       if (pari.winner) embed.addFields({ name: '🏆 Gagnant', value: pari.winner === 'draw' ? '🤝 Match nul' : pari.winner === 'a' ? `🅰️ ${pari.option_a}` : `🅱️ ${pari.option_b}`, inline: true });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'liste') {
       const parisList = db.db.prepare("SELECT * FROM paris WHERE guild_id=? AND status='open' ORDER BY created_at DESC LIMIT 15").all(guildId);
-      if (!parisList.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun pari ouvert. Créez-en un avec `/parier creer` !')] });
+      if (!parisList.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun pari ouvert. Créez-en un avec `/parier creer` !')] });
       const embed = new EmbedBuilder()
         .setColor('#3498db')
         .setTitle('🎲 Paris Ouverts')
         .setDescription(parisList.map(p => `**#${p.id}** — ${p.question.slice(0,60)}${p.question.length>60?'...':''}\n> 🅰️ ${p.option_a} vs 🅱️ ${p.option_b}`).join('\n\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'resoudre') {
@@ -171,11 +171,11 @@ module.exports = {
       const winner = interaction.options.getString('gagnant');
       const pari   = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
 
-      if (!pari) return interaction.editReply({ content: `❌ Pari #${id} introuvable.` });
-      if (pari.status !== 'open') return interaction.editReply({ content: '❌ Ce pari est déjà fermé.' });
+      if (!pari) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pari #${id} introuvable.` });
+      if (pari.status !== 'open') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce pari est déjà fermé.' });
 
       const canResolve = pari.creator_id === userId || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
-      if (!canResolve) return interaction.editReply({ content: '❌ Seul le créateur ou un admin peut résoudre ce pari.' });
+      if (!canResolve) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seul le créateur ou un admin peut résoudre ce pari.' });
 
       db.db.prepare("UPDATE paris SET status='resolved', winner=?, closed_at=strftime('%s','now') WHERE id=?").run(winner, id);
 
@@ -201,24 +201,24 @@ module.exports = {
           { name: '💰 Cagnotte distribuée', value: `${payouts} coins à ${winBets.length} gagnant(s)`, inline: true },
           { name: '👥 Total participants',  value: `${bets.length}`, inline: true },
         );
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'annuler') {
       const id   = parseInt(interaction.options.getString('id'));
       const pari = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!pari) return interaction.editReply({ content: `❌ Pari #${id} introuvable.` });
-      if (pari.status !== 'open') return interaction.editReply({ content: '❌ Ce pari est déjà fermé.' });
+      if (!pari) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pari #${id} introuvable.` });
+      if (pari.status !== 'open') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce pari est déjà fermé.' });
 
       const canCancel = pari.creator_id === userId || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
-      if (!canCancel) return interaction.editReply({ content: '❌ Seul le créateur ou un admin peut annuler ce pari.' });
+      if (!canCancel) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seul le créateur ou un admin peut annuler ce pari.' });
 
       db.db.prepare("UPDATE paris SET status='cancelled' WHERE id=?").run(id);
       const bets = db.db.prepare('SELECT * FROM paris_bets WHERE pari_id=? AND paid_out=0').all(id);
       bets.forEach(b => { db.addCoins(b.user_id, guildId, b.amount); });
       db.db.prepare('UPDATE paris_bets SET paid_out=1 WHERE pari_id=?').run(id);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`❌ Pari **#${id}** annulé. ${bets.length} participants remboursés.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`❌ Pari **#${id}** annulé. ${bets.length} participants remboursés.`)] });
     }
   }
 };

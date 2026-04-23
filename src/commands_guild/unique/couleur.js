@@ -47,14 +47,14 @@ module.exports = {
 
     async function sendColor(hex) {
       hex = hex.replace('#','');
-      if(!/^[0-9A-Fa-f]{6}$/.test(hex)) return interaction.editReply({ content: '❌ Code HEX invalide. Format : `#7B2FBE`', ephemeral: true });
+      if(!/^[0-9A-Fa-f]{6}$/.test(hex)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Code HEX invalide. Format : `#7B2FBE`', ephemeral: true });
       hex = hex.toUpperCase();
       const {r,g,b} = hexToRgb('#'+hex);
       const {h,s,l} = rgbToHsl(r,g,b);
       const name = getColorName(r,g,b);
       const imgUrl = `https://singlecolorimage.com/get/${hex}/100x100`;
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor(`#${hex}`)
           .setTitle(`🎨 Couleur — ${name}`)
           .setThumbnail(imgUrl)
@@ -83,7 +83,7 @@ module.exports = {
 
     if (sub === 'palette') {
       let hex = interaction.options.getString('hex').replace('#','');
-      if(!/^[0-9A-Fa-f]{6}$/.test(hex)) return interaction.editReply({ content: '❌ HEX invalide.', ephemeral: true });
+      if(!/^[0-9A-Fa-f]{6}$/.test(hex)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ HEX invalide.', ephemeral: true });
       const {r,g,b} = hexToRgb('#'+hex);
       const {h,s,l} = rgbToHsl(r,g,b);
 
@@ -107,7 +107,7 @@ module.exports = {
         return `${labels[i]} : \`${c}\``;
       }).join('\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor(`#${hex}`)
           .setTitle('🎨 Palette harmonieuse')
           .setDescription(lines)

@@ -13,7 +13,7 @@ module.exports = {
 
     const query = interaction.options.getString('recherche');
     if (!interaction.member.voice?.channel) {
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Rejoins un salon vocal d\'abord !')] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Rejoins un salon vocal d\'abord !')] });
     }
 
     let trackInfo;
@@ -44,7 +44,7 @@ module.exports = {
         // Recherche par nom
         results = await play.search(query, { source: { youtube: 'video' }, limit: 1 });
         if (!results.length) {
-          return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Aucun résultat trouvé.')] });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Aucun résultat trouvé.')] });
         }
         trackInfo = [{
           title: results[0].title,
@@ -55,12 +55,12 @@ module.exports = {
         }];
       }
     } catch (err) {
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`❌ Erreur: ${err.message}`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`❌ Erreur: ${err.message}`)] });
     }
 
     const queue = await getOrCreateQueue(interaction);
     if (!queue) {
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Impossible de rejoindre le salon vocal.')] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Impossible de rejoindre le salon vocal.')] });
     }
 
     for (const track of trackInfo) await queue.addTrack(track);
@@ -75,13 +75,13 @@ module.exports = {
           { name: '⏱️ Durée', value: formatDuration(trackInfo[0].duration), inline: true },
           { name: '📋 Position', value: `${queue.tracks.length === 0 ? 'En lecture' : `#${queue.tracks.length}`}`, inline: true },
         );
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } else {
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('✅ Playlist ajoutée')
         .setDescription(`**${trackInfo.length} titres** ajoutés à la file d'attente.`);
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

@@ -84,10 +84,10 @@ module.exports = {
     const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.ManageEvents) || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
 
     if (sub === 'creer') {
-      if (!isAdmin) return interaction.editReply({ content: '❌ Réservé aux organisateurs (Gérer les événements).', ephemeral: true });
+      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé aux organisateurs (Gérer les événements).', ephemeral: true });
       const titre  = interaction.options.getString('titre');
       const debut  = parseDate(interaction.options.getString('debut'));
-      if (!debut)  return interaction.editReply({ content: '❌ Format de date invalide. Utilise JJ/MM/AAAA HH:MM.' });
+      if (!debut)  return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format de date invalide. Utilise JJ/MM/AAAA HH:MM.' });
       const fin    = interaction.options.getString('fin') ? parseDate(interaction.options.getString('fin')) : null;
       const desc   = interaction.options.getString('description');
       const lieu   = interaction.options.getString('lieu');
@@ -108,13 +108,13 @@ module.exports = {
           { name: '🎁 Récompense', value: `${reward} 🪙`, inline: true },
         )
         .setFooter({ text: `Les membres peuvent s'inscrire avec /event participer ${result.lastInsertRowid}` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'liste') {
       const now   = Math.floor(Date.now() / 1000);
       const events = db.db.prepare("SELECT * FROM server_events WHERE guild_id=? AND status='upcoming' AND starts_at >= ? ORDER BY starts_at ASC LIMIT 10").all(guildId, now);
-      if (!events.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setTitle('📅 Événements à venir').setDescription('Aucun événement planifié pour l\'instant.\nUn admin peut en créer avec `/event creer`.').setFooter({ text: interaction.guild.name })] });
+      if (!events.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setTitle('📅 Événements à venir').setDescription('Aucun événement planifié pour l\'instant.\nUn admin peut en créer avec `/event creer`.').setFooter({ text: interaction.guild.name })] });
 
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')
@@ -134,13 +134,13 @@ module.exports = {
           inline: false,
         });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'info') {
       const id = parseInt(interaction.options.getString('id'));
       const ev = db.db.prepare('SELECT * FROM server_events WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!ev) return interaction.editReply({ content: `❌ Événement #${id} introuvable.` });
+      if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable.` });
 
       const rsvps = db.db.prepare('SELECT * FROM event_rsvp WHERE event_id=? ORDER BY joined_at ASC').all(id);
       const embed = new EmbedBuilder()
@@ -158,19 +158,19 @@ module.exports = {
       if (rsvps.length > 0) {
         embed.addFields({ name: '✅ Participants', value: rsvps.slice(0, 10).map(r => `<@${r.user_id}>`).join(', ') + (rsvps.length > 10 ? ` +${rsvps.length-10}...` : ''), inline: false });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'participer') {
       const id = parseInt(interaction.options.getString('id'));
       const ev = db.db.prepare("SELECT * FROM server_events WHERE id=? AND guild_id=? AND status='upcoming'").get(id, guildId);
-      if (!ev) return interaction.editReply({ content: `❌ Événement #${id} introuvable ou terminé.` });
+      if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable ou terminé.` });
 
       const count = db.db.prepare('SELECT COUNT(*) as c FROM event_rsvp WHERE event_id=?').get(id).c;
-      if (ev.max_players > 0 && count >= ev.max_players) return interaction.editReply({ content: '❌ Cet événement est complet !' });
+      if (ev.max_players > 0 && count >= ev.max_players) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cet événement est complet !' });
 
       const existing = db.db.prepare('SELECT * FROM event_rsvp WHERE event_id=? AND user_id=?').get(id, userId);
-      if (existing) return interaction.editReply({ content: '✅ Tu es déjà inscrit à cet événement !' });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Tu es déjà inscrit à cet événement !' });
 
       db.db.prepare('INSERT INTO event_rsvp (event_id, user_id) VALUES (?,?)').run(id, userId);
       const embed = new EmbedBuilder()
@@ -178,32 +178,32 @@ module.exports = {
         .setTitle(`✅ Inscrit à "${ev.title}"`)
         .setDescription(`📅 ${formatDate(ev.starts_at)}${ev.location ? `\n📍 ${ev.location}` : ''}${ev.reward_coins > 0 ? `\n🎁 Tu recevras **${ev.reward_coins} 🪙** à la fin !` : ''}`)
         .setFooter({ text: `${count + 1}${ev.max_players > 0 ? `/${ev.max_players}` : ''} inscrits` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'desister') {
       const id = parseInt(interaction.options.getString('id'));
       const existing = db.db.prepare('SELECT * FROM event_rsvp WHERE event_id=? AND user_id=?').get(id, userId);
-      if (!existing) return interaction.editReply({ content: '❌ Tu n\'es pas inscrit à cet événement.' });
+      if (!existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu n\'es pas inscrit à cet événement.' });
       db.db.prepare('DELETE FROM event_rsvp WHERE event_id=? AND user_id=?').run(id, userId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`✅ Désistement confirmé pour l\'événement **#${id}**.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`✅ Désistement confirmé pour l\'événement **#${id}**.`)] });
     }
 
     if (sub === 'mes_events') {
       const rsvps = db.db.prepare('SELECT er.*, se.title, se.starts_at, se.status FROM event_rsvp er JOIN server_events se ON se.id=er.event_id WHERE se.guild_id=? AND er.user_id=? ORDER BY se.starts_at ASC').all(guildId, userId);
-      if (!rsvps.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Tu n\'es inscrit à aucun événement.')] });
+      if (!rsvps.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Tu n\'es inscrit à aucun événement.')] });
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('👤 Mes Événements')
         .setDescription(rsvps.map(r => `${r.status === 'upcoming' ? '📅' : '✅'} **#${r.event_id}** — ${r.title} (${formatDate(r.starts_at)})`).join('\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'terminer') {
-      if (!isAdmin) return interaction.editReply({ content: '❌ Admin uniquement.' });
+      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.' });
       const id = parseInt(interaction.options.getString('id'));
       const ev = db.db.prepare('SELECT * FROM server_events WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!ev) return interaction.editReply({ content: `❌ Événement #${id} introuvable.` });
+      if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable.` });
 
       db.db.prepare("UPDATE server_events SET status='completed' WHERE id=?").run(id);
       const rsvps = db.db.prepare('SELECT * FROM event_rsvp WHERE event_id=?').all(id);
@@ -220,15 +220,15 @@ module.exports = {
         .setColor('#f39c12')
         .setTitle(`🏁 Événement terminé — ${ev.title}`)
         .setDescription(`${rsvps.length} participants${rewarded > 0 ? `\n💰 ${rewarded} membres ont reçu **${ev.reward_coins} 🪙** chacun` : ''}`);
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'annuler') {
-      if (!isAdmin) return interaction.editReply({ content: '❌ Admin uniquement.' });
+      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.' });
       const id = parseInt(interaction.options.getString('id'));
       db.db.prepare("UPDATE server_events SET status='cancelled' WHERE id=? AND guild_id=?").run(id, guildId);
       db.db.prepare('DELETE FROM event_rsvp WHERE event_id=?').run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Événement **#${id}** annulé.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Événement **#${id}** annulé.`)] });
     }
   }
 };

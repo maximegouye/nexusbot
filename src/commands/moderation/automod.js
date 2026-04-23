@@ -115,7 +115,7 @@ module.exports = {
           { name: '📋 Log channel',    value: cfg.log_channel ? `<#${cfg.log_channel}>` : 'Non configuré', inline: true },
         )
         .setFooter({ text: 'NexusBot AutoMod v2' });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'antispam') {
@@ -124,7 +124,7 @@ module.exports = {
       const fen    = parseInt(interaction.options.getString('fenetre')) ?? cfg.spam_window;
       db.db.prepare('UPDATE automod_config SET anti_spam=?, spam_threshold=?, spam_window=? WHERE guild_id=?')
         .run(actif ? 1 : 0, seuil, fen, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
         .setDescription(`✅ Anti-Spam ${actif ? `activé (${seuil} messages / ${fen}s)` : 'désactivé'}`)] });
     }
 
@@ -134,14 +134,14 @@ module.exports = {
       const allowed = exc ? exc.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : cfg.allowed_links;
       db.db.prepare('UPDATE automod_config SET anti_links=?, allowed_links=? WHERE guild_id=?')
         .run(actif ? 1 : 0, JSON.stringify(allowed), interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
         .setDescription(`✅ Anti-Liens ${actif ? `activé${allowed.length ? ` (exceptions: ${allowed.join(', ')})` : ''}` : 'désactivé'}`)] });
     }
 
     if (sub === 'antiinvites') {
       const actif = interaction.options.getBoolean('actif');
       db.db.prepare('UPDATE automod_config SET anti_invites=? WHERE guild_id=?').run(actif ? 1 : 0, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
         .setDescription(`✅ Anti-Invitations ${actif ? 'activé' : 'désactivé'}`)] });
     }
 
@@ -150,7 +150,7 @@ module.exports = {
       const pct   = parseInt(interaction.options.getString('pourcentage')) ?? cfg.caps_threshold;
       db.db.prepare('UPDATE automod_config SET anti_caps=?, caps_threshold=? WHERE guild_id=?')
         .run(actif ? 1 : 0, pct, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
         .setDescription(`✅ Anti-Caps ${actif ? `activé (seuil: ${pct}% de majuscules)` : 'désactivé'}`)] });
     }
 
@@ -159,7 +159,7 @@ module.exports = {
       const limite  = parseInt(interaction.options.getString('limite')) ?? cfg.mentions_limit;
       db.db.prepare('UPDATE automod_config SET anti_mentions=?, mentions_limit=? WHERE guild_id=?')
         .run(actif ? 1 : 0, limite, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red')
         .setDescription(`✅ Anti-Mentions ${actif ? `activé (max ${limite} mentions/message)` : 'désactivé'}`)] });
     }
 
@@ -169,25 +169,25 @@ module.exports = {
       let words = [...cfg.bad_words];
 
       if (action === 'list') {
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
           .setTitle('🤬 Mots interdits')
           .setDescription(words.length ? `\`${words.join('`, `')}\`` : 'Aucun mot interdit configuré.')
         ]});
       }
       if (action === 'clear') {
         db.db.prepare('UPDATE automod_config SET bad_words=? WHERE guild_id=?').run('[]', interaction.guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription('✅ Liste de mots interdits vidée.')] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription('✅ Liste de mots interdits vidée.')] });
       }
-      if (!mot) return interaction.editReply('❌ Précise un mot.');
+      if (!mot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Précise un mot.');
       if (action === 'add') {
         if (!words.includes(mot)) words.push(mot);
         db.db.prepare('UPDATE automod_config SET bad_words=? WHERE guild_id=?').run(JSON.stringify(words), interaction.guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Mot \`${mot}\` ajouté à la liste.`)] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Mot \`${mot}\` ajouté à la liste.`)] });
       }
       if (action === 'remove') {
         words = words.filter(w => w !== mot);
         db.db.prepare('UPDATE automod_config SET bad_words=? WHERE guild_id=?').run(JSON.stringify(words), interaction.guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Mot \`${mot}\` retiré de la liste.`)] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Mot \`${mot}\` retiré de la liste.`)] });
       }
     }
 
@@ -195,14 +195,14 @@ module.exports = {
       const type = interaction.options.getString('type');
       db.db.prepare('UPDATE automod_config SET action=? WHERE guild_id=?').run(type, interaction.guildId);
       const labels = { warn: '⚠️ Avertissement', delete: '🗑️ Suppression', mute: '🔇 Mute 5min', kick: '👢 Kick' };
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green')
         .setDescription(`✅ Action AutoMod définie : **${labels[type]}**`)] });
     }
 
     if (sub === 'log') {
       const ch = interaction.options.getChannel('salon');
       db.db.prepare('UPDATE automod_config SET log_channel=? WHERE guild_id=?').run(ch.id, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green')
         .setDescription(`✅ Logs AutoMod → <#${ch.id}>`)] });
     }
   }

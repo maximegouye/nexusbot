@@ -47,20 +47,20 @@ module.exports = {
     if (sub === 'bio') {
       const texte = interaction.options.getString('texte');
       db.db.prepare('UPDATE statuts_perso SET bio=?, updated_at=? WHERE guild_id=? AND user_id=?').run(texte, now, guildId, userId);
-      return interaction.editReply({ content: `✅ Bio mise à jour !`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Bio mise à jour !`, ephemeral: true });
     }
 
     if (sub === 'status') {
       const texte = interaction.options.getString('texte');
       db.db.prepare('UPDATE statuts_perso SET status_text=?, updated_at=? WHERE guild_id=? AND user_id=?').run(texte, now, guildId, userId);
-      return interaction.editReply({ content: `✅ Statut mis à jour : **${texte}**`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Statut mis à jour : **${texte}**`, ephemeral: true });
     }
 
     if (sub === 'couleur') {
       const hex = interaction.options.getString('hex').replace('#','');
-      if (!/^[0-9A-Fa-f]{6}$/.test(hex)) return interaction.editReply({ content: '❌ Code HEX invalide.', ephemeral: true });
+      if (!/^[0-9A-Fa-f]{6}$/.test(hex)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Code HEX invalide.', ephemeral: true });
       db.db.prepare('UPDATE statuts_perso SET color=? WHERE guild_id=? AND user_id=?').run(`#${hex.toUpperCase()}`, guildId, userId);
-      return interaction.editReply({ content: `✅ Couleur de profil mise à jour : **#${hex.toUpperCase()}**`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Couleur de profil mise à jour : **#${hex.toUpperCase()}**`, ephemeral: true });
     }
 
     if (sub === 'confidentialite') {
@@ -68,7 +68,7 @@ module.exports = {
       const showCoins = interaction.options.getBoolean('montrer_coins');
       if (showLevel !== null) db.db.prepare('UPDATE statuts_perso SET show_level=? WHERE guild_id=? AND user_id=?').run(showLevel ? 1 : 0, guildId, userId);
       if (showCoins !== null) db.db.prepare('UPDATE statuts_perso SET show_balance=? WHERE guild_id=? AND user_id=?').run(showCoins ? 1 : 0, guildId, userId);
-      return interaction.editReply({ content: '✅ Paramètres de confidentialité mis à jour.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Paramètres de confidentialité mis à jour.', ephemeral: true });
     }
 
     if (sub === 'voir') {
@@ -90,7 +90,7 @@ module.exports = {
 
       embed.addFields({ name: '📅 Sur Discord depuis', value: `<t:${Math.floor(target.createdAt.getTime()/1000)}:R>`, inline: true });
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

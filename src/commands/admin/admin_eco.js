@@ -22,7 +22,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator))
-      return interaction.editReply({ content: '🚫 Réservé aux admins.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🚫 Réservé aux admins.', ephemeral: true });
 
     await interaction.deferReply({ ephemeral: true });
     const sub = interaction.options.getSubcommand();
@@ -36,7 +36,7 @@ module.exports = {
       db.db.prepare('INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?, ?)').run(target.id, guildId);
       db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(montant, target.id, guildId);
       const row = db.db.prepare('SELECT balance, bank FROM users WHERE user_id = ? AND guild_id = ?').get(target.id, guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('💰 Coins donnés')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('💰 Coins donnés')
         .setDescription(`+**${montant.toLocaleString('fr-FR')}${sym}** à <@${target.id}>`)
         .addFields({ name: 'Nouveau solde', value: `**${(row?.balance||0).toLocaleString('fr-FR')}${sym}**` })
         .setTimestamp()] });
@@ -48,7 +48,7 @@ module.exports = {
       db.db.prepare('INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?, ?)').run(target.id, guildId);
       db.db.prepare('UPDATE users SET balance = MAX(0, balance - ?) WHERE user_id = ? AND guild_id = ?').run(montant, target.id, guildId);
       const row = db.db.prepare('SELECT balance FROM users WHERE user_id = ? AND guild_id = ?').get(target.id, guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('➖ Coins retirés')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('➖ Coins retirés')
         .setDescription(`-**${montant.toLocaleString('fr-FR')}${sym}** de <@${target.id}>`)
         .addFields({ name: 'Nouveau solde', value: `**${(row?.balance||0).toLocaleString('fr-FR')}${sym}**` })
         .setTimestamp()] });
@@ -57,22 +57,22 @@ module.exports = {
     if (sub === 'reset') {
       const target = interaction.options.getUser('membre');
       db.db.prepare('UPDATE users SET balance = 0, bank = 0 WHERE user_id = ? AND guild_id = ?').run(target.id, guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('🔄 Solde remis à zéro')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('🔄 Solde remis à zéro')
         .setDescription(`<@${target.id}> a été remis à zéro.`).setTimestamp()] });
     }
 
     if (sub === 'cooldown') {
       const target = interaction.options.getUser('membre');
       db.db.prepare('UPDATE users SET last_daily=0, last_work=0, last_crime=0, last_rob=0 WHERE user_id = ? AND guild_id = ?').run(target.id, guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('⏱️ Cooldowns remis à zéro')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('⏱️ Cooldowns remis à zéro')
         .setDescription(`Cooldowns de <@${target.id}> réinitialisés (daily, travail, crime, vol).`).setTimestamp()] });
     }
 
     if (sub === 'solde') {
       const target = interaction.options.getUser('membre');
       const row = db.db.prepare('SELECT * FROM users WHERE user_id = ? AND guild_id = ?').get(target.id, guildId);
-      if (!row) return interaction.editReply({ content: `❌ <@${target.id}> n'a pas de compte.` });
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle(`👁️ Solde de ${target.username}`)
+      if (!row) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${target.id}> n'a pas de compte.` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle(`👁️ Solde de ${target.username}`)
         .addFields(
           { name: '💵 Portefeuille', value: `**${(row.balance||0).toLocaleString('fr-FR')}${sym}**`, inline: true },
           { name: '🏦 Banque', value: `**${(row.bank||0).toLocaleString('fr-FR')}${sym}**`, inline: true },

@@ -15,9 +15,9 @@ module.exports = {
     const raison  = interaction.options.getString('raison') || 'Aucune raison fournie';
     const days    = parseInt(interaction.options.getString('jours')) || 0;
 
-    if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.bannable) return interaction.editReply({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas te bannir toi-même.', ephemeral: true });
+    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
+    if (!target.bannable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });
+    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te bannir toi-même.', ephemeral: true });
 
     // DM avant bannissement
     await target.user.send({
@@ -43,6 +43,6 @@ module.exports = {
       .setThumbnail(target.user.displayAvatarURL())
       .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

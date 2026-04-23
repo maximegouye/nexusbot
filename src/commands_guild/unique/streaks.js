@@ -50,7 +50,7 @@ module.exports = {
       }
 
       if (streak.last_claim === today) {
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           new EmbedBuilder().setColor('Orange')
             .setTitle('🔥 Streak quotidien')
             .setDescription(`Tu as déjà réclamé ta récompense aujourd'hui !\nReviens demain pour continuer ta série de **${streak.current_streak}** jour(s) !`)
@@ -85,7 +85,7 @@ module.exports = {
         ? `💔 Ta série précédente de **${streak.current_streak}** jour(s) est cassée. Nouvelle série : **1**`
         : `🔥 Série actuelle : **${newStreak}** jour(s) !`;
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor(newStreak >= 7 ? 'Gold' : newStreak >= 3 ? 'Orange' : 'Green')
           .setTitle('🔥 Récompense quotidienne réclamée !')
@@ -107,7 +107,7 @@ module.exports = {
       const isToday = streak?.last_claim === today;
       const status = isToday ? '✅ Réclamé aujourd\'hui' : '⏳ Pas encore réclamé aujourd\'hui';
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Orange')
           .setTitle(`🔥 Streak de ${target.username}`)
           .addFields(
@@ -121,12 +121,12 @@ module.exports = {
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM streaks WHERE guild_id=? ORDER BY current_streak DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.editReply({ content: '❌ Aucune donnée.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune donnée.', ephemeral: true });
 
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((s, i) => `${medals[i] || `**${i+1}.**`} <@${s.user_id}> — 🔥 **${s.current_streak}** jours (record: ${s.max_streak})`).join('\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Orange').setTitle('🏆 Meilleures Séries').setDescription(lines).setTimestamp()
       ]});
     }

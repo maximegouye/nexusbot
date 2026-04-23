@@ -159,7 +159,7 @@ module.exports = {
       const mois = parseInt(interaction.options.getString('mois'));
 
       if (!isValidDate(jour, mois)) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Date invalide ! Vérifiez le jour et le mois.')
@@ -180,7 +180,7 @@ module.exports = {
 
         const formattedDate = formatBirthdayDate(jour, mois);
 
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#2ECC71')
             .setDescription(`✅ Anniversaire enregistré : **${formattedDate}** 🎂`)
@@ -189,7 +189,7 @@ module.exports = {
         });
       } catch (error) {
         console.error('Anniversaire SET error:', error);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Une erreur est survenue lors de l\'enregistrement.')
@@ -212,7 +212,7 @@ module.exports = {
         `).get(interaction.guildId, user.id);
 
         if (!birthday) {
-          return interaction.editReply({
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             embeds: [new EmbedBuilder()
               .setColor('#95A5A6')
               .setDescription(`🤔 ${user.username} n'a pas enregistré son anniversaire.`)
@@ -233,7 +233,7 @@ module.exports = {
           daysMessage = `${daysUntil} jours ⏳`;
         }
 
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#3498DB')
             .setTitle(`🎂 Anniversaire de ${user.username}`)
@@ -244,7 +244,7 @@ module.exports = {
         });
       } catch (error) {
         console.error('Anniversaire VOIR error:', error);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Une erreur est survenue.')
@@ -266,7 +266,7 @@ module.exports = {
         `).all(interaction.guildId);
 
         if (!allBirthdays.length) {
-          return interaction.editReply({
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             embeds: [new EmbedBuilder()
               .setColor('#95A5A6')
               .setDescription('📭 Aucun anniversaire n\'a été enregistré sur ce serveur.')
@@ -327,11 +327,11 @@ module.exports = {
         };
 
         const embed = generateEmbed(0);
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
 
       } catch (error) {
         console.error('Anniversaire LISTE error:', error);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Une erreur est survenue.')
@@ -364,7 +364,7 @@ module.exports = {
           description += `🎁 **Rôle d'anniversaire :** Aucun`;
         }
 
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#2ECC71')
             .setDescription(description)
@@ -373,7 +373,7 @@ module.exports = {
         });
       } catch (error) {
         console.error('Anniversaire SETUP error:', error);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Une erreur est survenue lors de la configuration.')
@@ -394,7 +394,7 @@ module.exports = {
         `).run(interaction.guildId, interaction.user.id);
 
         if (!result.changes) {
-          return interaction.editReply({
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             embeds: [new EmbedBuilder()
               .setColor('#95A5A6')
               .setDescription('ℹ️ Vous n\'aviez pas d\'anniversaire enregistré.')
@@ -403,7 +403,7 @@ module.exports = {
           });
         }
 
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#F39C12')
             .setDescription('✅ Votre anniversaire a été supprimé du système.')
@@ -411,7 +411,7 @@ module.exports = {
         });
       } catch (error) {
         console.error('Anniversaire SUPPRIMER error:', error);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Une erreur est survenue.')
@@ -432,7 +432,7 @@ module.exports = {
         `).all(interaction.guildId);
 
         if (!allBirthdays.length) {
-          return interaction.editReply({
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             embeds: [new EmbedBuilder()
               .setColor('#95A5A6')
               .setDescription('📭 Aucun anniversaire n\'a été enregistré sur ce serveur.')
@@ -461,7 +461,7 @@ module.exports = {
           message = `⏳ Prochain anniversaire : <@${nextBirthday.userId}> le **${formattedDate}** (${nextBirthday.daysUntil} jours)`;
         }
 
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setTitle('🎉 Prochain Anniversaire')
@@ -471,7 +471,7 @@ module.exports = {
         });
       } catch (error) {
         console.error('Anniversaire PROCHAIN error:', error);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setDescription('❌ Une erreur est survenue.')

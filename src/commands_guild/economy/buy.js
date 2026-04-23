@@ -17,14 +17,14 @@ module.exports = {
 
     const item = db.db.prepare('SELECT * FROM shop WHERE id = ? AND guild_id = ? AND active = 1').get(id, interaction.guildId);
     if (!item) {
-      return interaction.editReply({ content: `❌ Article **#${id}** introuvable dans la boutique.`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article **#${id}** introuvable dans la boutique.`, ephemeral: true });
     }
 
     const user  = db.getUser(interaction.user.id, interaction.guildId);
     const total = item.price * qty;
 
     if (user.balance < total) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setDescription(`❌ Solde insuffisant ! Il te faut **${total.toLocaleString('fr-FR')} ${name}** mais tu n'as que **${user.balance.toLocaleString('fr-FR')}**.`)
@@ -37,7 +37,7 @@ module.exports = {
       const owned = db.db.prepare('SELECT SUM(quantity) as q FROM inventory WHERE user_id = ? AND guild_id = ? AND item_id = ?')
         .get(interaction.user.id, interaction.guildId, item.id)?.q || 0;
       if (owned + qty > item.max_per_user) {
-        return interaction.editReply({ content: `❌ Tu ne peux pas posséder plus de **${item.max_per_user}** × "${item.name}".`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu ne peux pas posséder plus de **${item.max_per_user}** × "${item.name}".`, ephemeral: true });
       }
     }
 
@@ -71,6 +71,6 @@ module.exports = {
         ...(item.duration_hours ? [{ name: '⏱️ Durée', value: `${item.duration_hours}h`, inline: true }] : []),
       );
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

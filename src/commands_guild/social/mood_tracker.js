@@ -88,12 +88,12 @@ module.exports = {
         );
       if (note) embed.addFields({ name: '📝 Ta note', value: note, inline: false });
       embed.setFooter({ text: msg });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'voir') {
       const logs = db.db.prepare('SELECT * FROM mood_logs WHERE user_id=? AND guild_id=? ORDER BY logged_at DESC LIMIT 14').all(userId, guildId);
-      if (!logs.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune entrée d\'humeur. Commence avec `/humeur noter` !')] });
+      if (!logs.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune entrée d\'humeur. Commence avec `/humeur noter` !')] });
 
       const embed = new EmbedBuilder()
         .setColor('#9b59b6')
@@ -113,12 +113,12 @@ module.exports = {
       }).join('\n');
       embed.addFields({ name: '📈 7 derniers jours', value: graph, inline: false });
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'stats') {
       const stats = db.db.prepare('SELECT AVG(mood) as avg, MIN(mood) as min, MAX(mood) as max, COUNT(*) as total FROM mood_logs WHERE user_id=? AND guild_id=?').get(userId, guildId);
-      if (!stats.total) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Pas encore de données.')] });
+      if (!stats.total) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Pas encore de données.')] });
 
       const avgMood = getMoodInfo(Math.round(stats.avg));
       const streak  = getMoodStreak(userId, guildId);
@@ -134,7 +134,7 @@ module.exports = {
           { name: '📝 Total entrées', value: `${stats.total}`, inline: true },
           { name: '🔥 Streak',     value: `${streak} jour(s) consécutifs`, inline: true },
         );
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'serveur') {
@@ -143,7 +143,7 @@ module.exports = {
       const todayTs = Math.floor(today.getTime() / 1000);
       const todayLogs = db.db.prepare('SELECT * FROM mood_logs WHERE guild_id=? AND logged_at>=?').all(guildId, todayTs);
 
-      if (!todayLogs.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Personne n\'a encore enregistré son humeur aujourd\'hui !')] });
+      if (!todayLogs.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Personne n\'a encore enregistré son humeur aujourd\'hui !')] });
 
       const avgMood = todayLogs.reduce((s, l) => s + l.mood, 0) / todayLogs.length;
       const avgInfo = getMoodInfo(Math.round(avgMood));
@@ -163,7 +163,7 @@ module.exports = {
           { name: '📊 Distribution',   value: distribution, inline: false },
         )
         .setFooter({ text: 'Enregistre la tienne avec /humeur noter !' });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

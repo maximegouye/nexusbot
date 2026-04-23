@@ -141,7 +141,7 @@ module.exports = {
         embed.addFields({ name: '📬 Récompenses à réclamer', value: `${unclaimed.length} récompense(s) — utilise \`/battlepass claim\``, inline: false });
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'recompenses') {
@@ -163,7 +163,7 @@ module.exports = {
           inline: false,
         });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'claim') {
@@ -172,7 +172,7 @@ module.exports = {
       const unclaimed = REWARDS.filter(r => r.level <= bp.level && !claimed.includes(r.level));
 
       if (!unclaimed.length) {
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune récompense à réclamer pour l\'instant. Continue à gagner de l\'XP !')] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune récompense à réclamer pour l\'instant. Continue à gagner de l\'XP !')] });
       }
 
       let totalCoins = 0, totalXP = 0;
@@ -193,7 +193,7 @@ module.exports = {
         .setTitle('🎉 Récompenses réclamées !')
         .setDescription(unclaimed.map(r => `${r.emoji} **Niveau ${r.level}** — ${r.label} : +${r.coins}🪙${r.xp > 0 ? ` +${r.xp}XP` : ''}`).join('\n'))
         .setFooter({ text: `Total : +${totalCoins} 🪙${totalXP > 0 ? ` +${totalXP} XP` : ''}` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'xp') {
@@ -215,12 +215,12 @@ module.exports = {
           ? `🎉 **LEVEL UP !** Tu es maintenant niveau **${newLevel}** !\n+${xpGain} XP Battle Pass — Utilise \`/battlepass claim\` pour tes récompenses !`
           : `✅ +**${xpGain} XP** Battle Pass !\nTotal : ${newXP} XP — Niveau **${newLevel}/30**`)
         .setTimestamp();
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM battlepass WHERE guild_id=? AND season=? ORDER BY xp_bp DESC LIMIT 10').all(guildId, season);
-      if (!top.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun joueur actif ce Battle Pass.')] });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun joueur actif ce Battle Pass.')] });
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle(`🏆 Classement Battle Pass — ${SEASON_NAME}`)
@@ -228,20 +228,20 @@ module.exports = {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
           return `${medal} <@${row.user_id}> — Niveau **${row.level}** (${row.xp_bp.toLocaleString('fr-FR')} XP)`;
         }).join('\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'admin_reset') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.editReply({ content: '❌ Admin uniquement.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.' });
       }
       const target = interaction.options.getUser('membre');
       if (target) {
         db.db.prepare('DELETE FROM battlepass WHERE user_id=? AND guild_id=? AND season=?').run(target.id, guildId, season);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`✅ Battle Pass de **${target.username}** réinitialisé.`)] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`✅ Battle Pass de **${target.username}** réinitialisé.`)] });
       }
       db.db.prepare('DELETE FROM battlepass WHERE guild_id=? AND season=?').run(guildId, season);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`✅ Battle Pass de tout le serveur réinitialisé pour la saison ${season}.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`✅ Battle Pass de tout le serveur réinitialisé pour la saison ${season}.`)] });
     }
   }
 };

@@ -24,10 +24,10 @@ module.exports = {
     }
 
     if (isNaN(amount) || amount <= 0) {
-      return interaction.editReply({ content: '❌ Montant invalide.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant invalide.', ephemeral: true });
     }
     if (amount > user.bank) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setDescription(`❌ Tu n'as que **${user.bank.toLocaleString('fr-FR')} ${name}** en banque.`)
@@ -49,6 +49,6 @@ module.exports = {
         { name: '🏦 Banque',             value: `**${updated.bank.toLocaleString('fr-FR')}** ${name}`, inline: true },
       );
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

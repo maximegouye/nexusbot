@@ -179,7 +179,7 @@ module.exports.execute = async function execute(interaction) {
       inline: true,
     });
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 
   if (sub === 'stats') {
@@ -198,7 +198,7 @@ module.exports.execute = async function execute(interaction) {
         { name: '📈 Taux de complétion',    value: totalDays > 0 ? `**${Math.round(fullDays / totalDays * 100)}%**` : 'N/A', inline: true },
       );
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };
 

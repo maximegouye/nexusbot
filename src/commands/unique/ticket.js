@@ -246,7 +246,7 @@ module.exports = {
     // ══════════════════════════════ SETUP ══════
     if (sub === 'setup') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
       const channel   = interaction.options.getChannel('salon');
       const staffRole = interaction.options.getRole('staff');
@@ -313,7 +313,7 @@ module.exports = {
 
       // Vérifier que le bot a la permission d'envoyer dans ce canal
       if (!channel.permissionsFor(botMember)?.has(['SendMessages', 'EmbedLinks'])) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setTitle('❌ Permission manquante')
@@ -327,7 +327,7 @@ module.exports = {
 
       await channel.send({ embeds: [panelEmbed], components: [row] });
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle('✅ Panneau de tickets créé !')
           .addFields(
@@ -344,9 +344,9 @@ module.exports = {
     if (sub === 'fermer') {
       const ticket = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND channel_id=? AND status='open'")
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket actif.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket actif.', ephemeral: true });
       if (!isStaff() && interaction.user.id !== ticket.user_id)
-        return interaction.editReply({ content: '❌ Seul le staff ou le créateur peut fermer ce ticket.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seul le staff ou le créateur peut fermer ce ticket.', ephemeral: true });
 
       const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
       db.db.prepare('UPDATE tickets SET close_reason=? WHERE id=?').run(raison, ticket.id);
@@ -355,7 +355,7 @@ module.exports = {
         new ButtonBuilder().setCustomId(`ticket_confirm_close_${ticket.id}`).setLabel('Fermer + Transcript').setEmoji('🔒').setStyle(ButtonStyle.Danger),
         new ButtonBuilder().setCustomId(`ticket_cancel_close_${ticket.id}`).setLabel('Annuler').setStyle(ButtonStyle.Secondary),
       );
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#FF6B6B')
           .setTitle('🔒 Fermer ce ticket ?')
           .addFields({ name: '📝 Raison', value: raison })
@@ -366,18 +366,18 @@ module.exports = {
 
     // ══════════════════════════════ CLAIM ══════
     if (sub === 'claim') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
       const ticket = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND channel_id=? AND status='open'")
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
 
       if (ticket.claimed_by)
-        return interaction.editReply({ content: `⚠️ Ce ticket est déjà pris en charge par <@${ticket.claimed_by}>.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⚠️ Ce ticket est déjà pris en charge par <@${ticket.claimed_by}>.`, ephemeral: true });
 
       db.db.prepare('UPDATE tickets SET claimed_by=? WHERE id=?').run(interaction.user.id, ticket.id);
       await interaction.channel.setTopic(`Ticket de <@${ticket.user_id}> | Pris en charge par ${interaction.user.tag}`).catch(() => {});
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setDescription(`✋ **${interaction.member.displayName}** a pris en charge ce ticket.\n<@${ticket.user_id}>, tu recevras une réponse sous peu !`)
         ]
@@ -388,12 +388,12 @@ module.exports = {
     if (sub === 'ajouter') {
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
       const target = interaction.options.getMember('membre');
       await interaction.channel.permissionOverwrites.edit(target, {
         ViewChannel: true, SendMessages: true, ReadMessageHistory: true
       });
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setDescription(`✅ **${target.displayName}** a été ajouté au ticket.`)
         ]
@@ -404,10 +404,10 @@ module.exports = {
     if (sub === 'retirer') {
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
       const target = interaction.options.getMember('membre');
       await interaction.channel.permissionOverwrites.edit(target, { ViewChannel: false });
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#FFA500')
           .setDescription(`✅ **${target.displayName}** a été retiré du ticket.`)
         ]
@@ -421,7 +421,7 @@ module.exports = {
         : db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='open'").all(interaction.guildId, interaction.user.id);
 
       if (!tickets.length)
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setDescription('📋 Aucun ticket ouvert en ce moment.')], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setDescription('📋 Aucun ticket ouvert en ce moment.')], ephemeral: true });
 
       const lines = tickets.map(t => {
         const cat = getCatInfo(t.category);
@@ -431,7 +431,7 @@ module.exports = {
         return `${pri.emoji} ${cat.emoji} <#${t.channel_id}> — <@${t.user_id}> • ${age}h${claim}`;
       });
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#7B2FBE')
           .setTitle(`📋 Tickets ouverts (${tickets.length})`)
@@ -442,20 +442,20 @@ module.exports = {
 
     // ══════════════════════════════ RENOMMER ══════
     if (sub === 'renommer') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
       const nom = interaction.options.getString('nom').replace(/[^a-z0-9\-]/gi, '-').toLowerCase().slice(0, 50);
       await interaction.channel.setName(`ticket-${nom}`).catch(() => {});
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Ticket renommé en **ticket-${nom}**.`)]
       });
     }
 
     // ══════════════════════════════ REOPEN ══════
     if (sub === 'reopen') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const userOpt = interaction.options.getUser('membre');
       const targetId = userOpt.id;
@@ -463,10 +463,10 @@ module.exports = {
       const ticket = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='closed' ORDER BY closed_at DESC LIMIT 1")
         .get(interaction.guildId, targetId);
 
-      if (!ticket) return interaction.editReply({ content: `❌ Aucun ticket fermé trouvé pour <@${targetId}>.`, ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Aucun ticket fermé trouvé pour <@${targetId}>.`, ephemeral: true });
 
       const closedHoursAgo = ticket.closed_at ? (Date.now() / 1000 - ticket.closed_at) / 3600 : 999;
-      if (closedHoursAgo > 24) return interaction.editReply({
+      if (closedHoursAgo > 24) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         content: `❌ Ce ticket a été fermé il y a **${Math.floor(closedHoursAgo)}h**. On ne peut rouvrir que dans les 24h suivant la fermeture.`,
         ephemeral: true
       });
@@ -522,7 +522,7 @@ module.exports = {
         components: [controlRow],
       });
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle('✅ Ticket rouvert !')
           .setDescription(`Le ticket de <@${targetId}> est rouvert ici : ${ticketChannel}`)
@@ -532,15 +532,15 @@ module.exports = {
 
     // ══════════════════════════════ NOTE (Staff interne) ══════
     if (sub === 'note') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
 
       const noteText = interaction.options.getString('texte');
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle('📝 Note interne — Staff')
@@ -554,13 +554,13 @@ module.exports = {
     // ══════════════════════════════ PANEL (purge + repost) ══════
     if (sub === 'panel') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
       const channel = interaction.options.getChannel('salon') ||
         (cfg.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null);
 
       if (!channel)
-        return interaction.editReply({ content: '❌ Aucun salon. Configure d\'abord avec `/ticket setup` ou précise un salon.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun salon. Configure d\'abord avec `/ticket setup` ou précise un salon.', ephemeral: true });
 
       await interaction.deferReply({ ephemeral: true });
 
@@ -601,7 +601,7 @@ module.exports = {
       // Vérifier les permissions avant d'envoyer
       const botMemberPanel = interaction.guild.members.me;
       if (!channel.permissionsFor(botMemberPanel)?.has(['SendMessages', 'EmbedLinks'])) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setTitle('❌ Permission manquante dans ce salon')
@@ -616,7 +616,7 @@ module.exports = {
       await channel.send({ embeds: [panelEmbed], components: [row] });
       db.setConfig(interaction.guildId, 'ticket_channel', channel.id);
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle('✅ Panneau republié !')
           .setDescription(`${channel} a été purgé (**${purged}** message(s) supprimé(s)) et le nouveau panneau est en place.`)
@@ -626,15 +626,15 @@ module.exports = {
 
     // ══════════════════════════════ ASSIGN ══════
     if (sub === 'assign') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const ticket = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND channel_id=? AND status='open'")
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket actif.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket actif.', ephemeral: true });
 
       const targetUser = interaction.options.getUser('staff');
       const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-      if (!targetMember) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
+      if (!targetMember) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
 
       // Mettre à jour en DB
       db.db.prepare('UPDATE tickets SET claimed_by=? WHERE id=?').run(targetUser.id, ticket.id);
@@ -650,7 +650,7 @@ module.exports = {
       ).catch(() => {});
 
       // Envoyer un message dans le ticket
-      await interaction.editReply({
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setDescription(`👤 Ce ticket a été assigné à **${targetMember.displayName}** par <@${interaction.user.id}>.`)
@@ -683,11 +683,11 @@ module.exports = {
 
     // ══════════════════════════════ PRIORITY ══════
     if (sub === 'priority') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const ticket = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND channel_id=? AND status='open'")
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket actif.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket actif.', ephemeral: true });
 
       const newPriority = interaction.options.getString('niveau');
       const oldPri = getPriInfo(ticket.priority || 'normale');
@@ -703,7 +703,7 @@ module.exports = {
 
       const embedColor = newPriority === 'urgente' ? '#E74C3C' : newPriority === 'elevee' ? '#E67E22' : newPriority === 'faible' ? '#2ECC71' : '#7B2FBE';
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(embedColor)
           .setAuthor({ name: `Priorité modifiée par ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
@@ -719,11 +719,11 @@ module.exports = {
 
     // ══════════════════════════════ INFO ══════
     if (sub === 'info') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
 
       const cat = getCatInfo(ticket.category);
       const pri = getPriInfo(ticket.priority || 'normale');
@@ -738,7 +738,7 @@ module.exports = {
         if (last) lastActivity = `<t:${Math.floor(last.createdTimestamp / 1000)}:R>`;
       } catch {}
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(embedColor)
           .setTitle(`🔍 Informations — Ticket #${ticket.id}`)
@@ -766,7 +766,7 @@ module.exports = {
     // ══════════════════════════════ BLACKLIST ══════
     if (sub === 'blacklist') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Réservé aux admins (Gérer le serveur).', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé aux admins (Gérer le serveur).', ephemeral: true });
 
       const targetUser = interaction.options.getUser('membre');
       const raison = interaction.options.getString('raison') || 'Aucune raison précisée';
@@ -775,7 +775,7 @@ module.exports = {
       const existing = db.db.prepare('SELECT * FROM ticket_blacklist WHERE guild_id=? AND user_id=?')
         .get(interaction.guildId, targetUser.id);
       if (existing) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder()
             .setColor('#E67E22')
             .setDescription(`⚠️ **${targetUser.tag}** est déjà dans la blacklist.\n> Raison actuelle : ${existing.reason || 'Aucune'}`)
@@ -804,7 +804,7 @@ module.exports = {
         }
       }
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('🚫 Membre blacklisté')
@@ -823,20 +823,20 @@ module.exports = {
     // ══════════════════════════════ UNBLACKLIST ══════
     if (sub === 'unblacklist') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Réservé aux admins (Gérer le serveur).', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé aux admins (Gérer le serveur).', ephemeral: true });
 
       const targetUser = interaction.options.getUser('membre');
       const result = db.db.prepare('DELETE FROM ticket_blacklist WHERE guild_id=? AND user_id=?')
         .run(interaction.guildId, targetUser.id);
 
       if (result.changes === 0) {
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: `❌ **${targetUser.tag}** n'est pas dans la blacklist.`,
           ephemeral: true
         });
       }
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✅ Blacklist levée')
@@ -850,7 +850,7 @@ module.exports = {
     // ══════════════════════════════ DASHBOARD ══════
     if (sub === 'dashboard') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Réservé aux admins.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé aux admins.', ephemeral: true });
 
       await interaction.deferReply({ ephemeral: true });
 
@@ -922,21 +922,21 @@ module.exports = {
       const logCh = cfg.ticket_log_channel ? interaction.guild.channels.cache.get(cfg.ticket_log_channel) : null;
       if (logCh) {
         await logCh.send({ embeds: [dashEmbed] });
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder().setColor('#2ECC71')
             .setDescription(`✅ Tableau de bord publié dans ${logCh} !`)
           ]
         });
       } else {
         // Pas de salon logs → envoyer ici en réponse visible
-        await interaction.editReply({ embeds: [dashEmbed] });
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [dashEmbed] });
         return;
       }
     }
 
     // ══════════════════════════════ STATS ══════
     if (sub === 'stats') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const open   = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='open'").get(interaction.guildId).c;
       const closed = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='closed'").get(interaction.guildId).c;
@@ -965,7 +965,7 @@ module.exports = {
 
       const urgents = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND priority='urgente' AND status='open'").get(interaction.guildId).c;
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#7B2FBE')
           .setTitle('📊 Statistiques des tickets')
@@ -986,11 +986,11 @@ module.exports = {
 
     // ══════════════════════════════ TAG ══════
     if (sub === 'tag') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
 
       const action  = interaction.options.getString('action');
       const tagRaw  = interaction.options.getString('tag')
@@ -1005,21 +1005,21 @@ module.exports = {
 
       if (action === 'add') {
         if (tags.includes(tagRaw))
-          return interaction.editReply({ content: `⚠️ Le tag \`${tagRaw}\` est déjà présent sur ce ticket.`, ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⚠️ Le tag \`${tagRaw}\` est déjà présent sur ce ticket.`, ephemeral: true });
         if (tags.length >= 5)
-          return interaction.editReply({ content: '❌ Maximum **5 tags** par ticket.', ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum **5 tags** par ticket.', ephemeral: true });
         tags.push(tagRaw);
       } else {
         const idx = tags.indexOf(tagRaw);
         if (idx === -1)
-          return interaction.editReply({ content: `❌ Tag \`${tagRaw}\` introuvable sur ce ticket.`, ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tag \`${tagRaw}\` introuvable sur ce ticket.`, ephemeral: true });
         tags.splice(idx, 1);
       }
 
       db.db.prepare('UPDATE tickets SET tags=? WHERE id=?').run(JSON.stringify(tags), ticket.id);
 
       const tagDisplay = tags.length > 0 ? tags.map(t => `\`${t}\``).join(' ') : '*Aucun tag*';
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(action === 'add' ? '#7B2FBE' : '#95A5A6')
           .setDescription(
@@ -1032,11 +1032,11 @@ module.exports = {
 
     // ══════════════════════════════ QUICKREPLY ══════
     if (sub === 'quickreply') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
 
       const { StringSelectMenuBuilder } = require('discord.js');
 
@@ -1066,7 +1066,7 @@ module.exports = {
         .setPlaceholder('💬 Choisir une réponse rapide à envoyer...')
         .addOptions(allOpts);
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#7B2FBE')
           .setTitle('💬 Réponses rapides')
@@ -1082,7 +1082,7 @@ module.exports = {
 
     // ══════════════════════════════ ADDREPLY ══════
     if (sub === 'addreply') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const titre   = interaction.options.getString('titre');
       const contenu = interaction.options.getString('contenu');
@@ -1092,10 +1092,10 @@ module.exports = {
           'INSERT INTO ticket_quick_replies (guild_id, title, content, created_by) VALUES (?, ?, ?, ?)'
         ).run(interaction.guildId, titre, contenu, interaction.user.id);
       } catch {
-        return interaction.editReply({ content: `❌ Une réponse rapide avec ce titre existe déjà.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Une réponse rapide avec ce titre existe déjà.`, ephemeral: true });
       }
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✅ Réponse rapide ajoutée !')
@@ -1111,18 +1111,18 @@ module.exports = {
 
     // ══════════════════════════════ PROFILE ══════
     if (sub === 'profile') {
-      if (!isStaff()) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
 
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND channel_id=?')
         .get(interaction.guildId, interaction.channelId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
+      if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
 
       await interaction.deferReply({ ephemeral: true });
 
       const targetMember = await interaction.guild.members.fetch(ticket.user_id).catch(() => null);
       const targetUser   = targetMember?.user || await interaction.client.users.fetch(ticket.user_id).catch(() => null);
 
-      if (!targetUser) return interaction.editReply({ content: '❌ Utilisateur introuvable.' });
+      if (!targetUser) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Utilisateur introuvable.' });
 
       const prevTickets  = db.db.prepare(
         "SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND id!=? ORDER BY created_at DESC LIMIT 5"
@@ -1167,7 +1167,7 @@ module.exports = {
         ? latestNotes.map(n => `> <@${n.mod_id}> : ${n.note.slice(0, 80)}`).join('\n')
         : '*Aucune note*';
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(warnings >= 3 ? '#E74C3C' : warnings >= 1 ? '#E67E22' : '#7B2FBE')
           .setTitle(`👤 Profil — ${targetUser.username}`)

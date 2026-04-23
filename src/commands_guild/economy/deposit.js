@@ -24,10 +24,10 @@ module.exports = {
     }
 
     if (isNaN(amount) || amount <= 0) {
-      return interaction.editReply({ content: '❌ Montant invalide.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant invalide.', ephemeral: true });
     }
     if (amount > user.balance) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setDescription(`❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}** en portefeuille.`)
@@ -50,6 +50,6 @@ module.exports = {
       )
       .setFooter({ text: 'Les coins en banque sont protégés du vol !' });
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

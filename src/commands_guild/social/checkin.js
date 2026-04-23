@@ -65,7 +65,7 @@ module.exports = {
 
       if (lastCheck && lastCheck.checked_at >= todayTs) {
         const nextTs = todayTs + 86400;
-        return interaction.editReply({ embeds: [new EmbedBuilder()
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
           .setColor('#95a5a6')
           .setDescription(`⏳ Tu as déjà pointé aujourd'hui !\nProchain check-in : <t:${nextTs}:R>`)
         ]});
@@ -109,12 +109,12 @@ module.exports = {
         embed.setColor('#f39c12');
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'profil') {
       const logs = db.db.prepare('SELECT * FROM checkin_log WHERE user_id=? AND guild_id=? ORDER BY checked_at DESC LIMIT 1').get(userId, guildId);
-      if (!logs) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun check-in. Commence avec `/checkin pointer` !')] });
+      if (!logs) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun check-in. Commence avec `/checkin pointer` !')] });
 
       const today = new Date(); today.setHours(0,0,0,0);
       const todayTs = Math.floor(today.getTime()/1000);
@@ -136,7 +136,7 @@ module.exports = {
           { name: '🎯 Prochain milestone', value: nextMilestone ? `Streak de ${nextMilestone} (${nextMilestone - logs.streak} restants)` : '🏆 Tous les milestones débloqués !', inline: false },
         )
         .setFooter({ text: `Dernier check-in : ${new Date(logs.checked_at * 1000).toLocaleDateString('fr-FR')}` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'classement') {
@@ -146,14 +146,14 @@ module.exports = {
         ORDER BY streak DESC LIMIT 10
       `).all(guildId);
 
-      if (!top.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Personne n\'a encore pointé !')] });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Personne n\'a encore pointé !')] });
 
       const medals = ['🥇','🥈','🥉'];
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('🏆 Classement Streaks Check-in')
         .setDescription(top.map((r, i) => `${medals[i] || `**${i+1}.**`} <@${r.user_id}> — 🔥 **${r.streak}** jours streak — ${r.total} total`).join('\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

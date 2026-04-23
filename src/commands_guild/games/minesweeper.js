@@ -113,7 +113,7 @@ module.exports = {
       )
       .setFooter({ text: `Joueur : ${interaction.user.username} • Démineur Discord (spoilers)` });
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
 
     // Since Discord minesweeper works via spoilers that the user reveals manually,
     // we give reward based on honor system + add a "I won !" button interaction

@@ -42,7 +42,7 @@ module.exports = {
 
       // Valider la couleur HEX
       if (!/^#[0-9A-Fa-f]{6}$/.test(couleur)) {
-        return interaction.editReply({ content: '❌ Format couleur invalide. Utilise `#RRGGBB` (ex: `#FFD700`)', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format couleur invalide. Utilise `#RRGGBB` (ex: `#FFD700`)', ephemeral: true });
       }
 
       // Construire l'embed
@@ -88,11 +88,11 @@ module.exports = {
         .setDescription(`Message posté dans ${salon}`)
         .setFooter({ text: 'Merci de l\'avoir utilisé !' });
 
-      return interaction.editReply({ embeds: [confirmEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [confirmEmbed], ephemeral: true });
 
     } catch (error) {
       console.error('Erreur announce:', error);
-      return interaction.editReply({ content: '❌ Erreur lors de l\'envoi de l\'annonce.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors de l\'envoi de l\'annonce.', ephemeral: true });
     }
   }
 };

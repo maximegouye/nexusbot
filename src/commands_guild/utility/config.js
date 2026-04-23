@@ -21,7 +21,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         content: '❌ Tu dois avoir la permission **Gérer le serveur** pour accéder à la configuration.',
         ephemeral: true,
       });
@@ -30,6 +30,6 @@ module.exports = {
     const cfg   = db.getConfig(interaction.guildId);
     const panel = buildMainMenu(cfg, interaction.guild, interaction.user.id);
 
-    return interaction.editReply({ ...panel, ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true });
   },
 };

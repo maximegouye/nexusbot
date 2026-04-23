@@ -15,7 +15,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageRoles))
-      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const sub = interaction.options.getSubcommand();
 
@@ -23,15 +23,15 @@ module.exports = {
       const niveau = parseInt(interaction.options.getString('niveau'));
       const role   = interaction.options.getRole('role');
 
-      if (role.managed) return interaction.editReply({ content: '❌ Ce rôle est géré par une intégration externe.', ephemeral: true });
-      if (role.id === interaction.guild.id) return interaction.editReply({ content: '❌ Tu ne peux pas utiliser le rôle @everyone.', ephemeral: true });
+      if (role.managed) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce rôle est géré par une intégration externe.', ephemeral: true });
+      if (role.id === interaction.guild.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas utiliser le rôle @everyone.', ephemeral: true });
 
       db.db.prepare(`
         INSERT INTO level_roles (guild_id, level, role_id) VALUES (?, ?, ?)
         ON CONFLICT(guild_id, level) DO UPDATE SET role_id = ?
       `).run(interaction.guildId, niveau, role.id, role.id);
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✅ Level Role Ajouté')
@@ -43,10 +43,10 @@ module.exports = {
     if (sub === 'supprimer') {
       const niveau = parseInt(interaction.options.getString('niveau'));
       const lr = db.db.prepare('SELECT * FROM level_roles WHERE guild_id = ? AND level = ?').get(interaction.guildId, niveau);
-      if (!lr) return interaction.editReply({ content: `❌ Aucun level role configuré pour le niveau ${niveau}.`, ephemeral: true });
+      if (!lr) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Aucun level role configuré pour le niveau ${niveau}.`, ephemeral: true });
 
       db.db.prepare('DELETE FROM level_roles WHERE guild_id = ? AND level = ?').run(interaction.guildId, niveau);
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription(`🗑️ Level role du niveau **${niveau}** supprimé.`)]
       });
     }
@@ -54,10 +54,10 @@ module.exports = {
     if (sub === 'liste') {
       const roles = db.getLevelRoles(interaction.guildId);
       if (!roles.length)
-        return interaction.editReply({ content: '❌ Aucun level role configuré sur ce serveur.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun level role configuré sur ce serveur.', ephemeral: true });
 
       const list = roles.map(lr => `**Niveau ${lr.level}** → <@&${lr.role_id}>`).join('\n');
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#9B59B6')
           .setTitle('🎭 Level Roles')

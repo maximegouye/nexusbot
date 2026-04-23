@@ -42,14 +42,14 @@ async function handleDonner(interaction) {
   const cfg = db.getConfig(interaction.guildId);
 
   if (target.bot) {
-    return interaction.editReply({
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       content: '❌ Les bots ne peuvent pas recevoir de réputation.',
       ephemeral: true
     });
   }
 
   if (target.id === interaction.user.id) {
-    return interaction.editReply({
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       content: '❌ Tu ne peux pas te donner de la réputation à toi-même.',
       ephemeral: true
     });
@@ -63,7 +63,7 @@ async function handleDonner(interaction) {
 
   if (lastRep) {
     const nextAt = lastRep.created_at + 86400;
-    return interaction.editReply({
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       embeds: [new EmbedBuilder()
         .setColor('#FF6B6B')
         .setDescription(`❌ Tu as déjà donné une rep à **${target.username}** aujourd'hui. Prochain dans <t:${nextAt}:R>.`)
@@ -114,7 +114,7 @@ async function handleDonner(interaction) {
     .setThumbnail(target.displayAvatarURL({ size: 128 }))
     .setFooter({ text: `Donnée par ${interaction.user.username}` });
 
-  await interaction.editReply({ embeds: [embed] });
+  await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
 }
 
 // ──── SUBCOMMAND: voir ────
@@ -126,7 +126,7 @@ async function handleVoir(interaction) {
 
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
     if (!member) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         content: '❌ Utilisateur non trouvé sur ce serveur.',
         ephemeral: true
       });
@@ -171,10 +171,10 @@ async function handleVoir(interaction) {
       )
       .setFooter({ text: targetUser.id });
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (err) {
     console.error('[Rep voir] Erreur:', err);
-    await interaction.editReply({
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       content: '❌ Une erreur est survenue.',
       ephemeral: true
     });
@@ -195,7 +195,7 @@ async function handleClassement(interaction) {
     ).all(interaction.guildId);
 
     if (topUsers.length === 0) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setDescription('❌ Aucune donnée de réputation sur ce serveur.')
@@ -220,10 +220,10 @@ async function handleClassement(interaction) {
       .setFooter({ text: `Serveur: ${interaction.guild.name}` })
       .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (err) {
     console.error('[Rep classement] Erreur:', err);
-    await interaction.editReply({
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       content: '❌ Une erreur est survenue.',
       ephemeral: true
     });

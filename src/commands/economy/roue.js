@@ -46,9 +46,9 @@ module.exports = {
     const raw     = miseRaw ? String(miseRaw.value) : null;
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null) return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (bet < 1n)    return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (bet > BigInt(user.balance)) return interaction.editReply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
+    if (bet == null) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide.', ephemeral: true });
+    if (bet < 1n)    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (bet > BigInt(user.balance)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
 
     const mise = Number(bet);
     db.removeCoins(interaction.user.id, interaction.guildId, mise);
@@ -74,10 +74,10 @@ module.exports = {
         ].join('\n'));
     };
 
-    await interaction.editReply({ embeds: [buildSpinEmbed(0)] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildSpinEmbed(0)] });
     for (let i = 1; i <= 6; i++) {
       await new Promise(r => setTimeout(r, 450));
-      await interaction.editReply({ embeds: [buildSpinEmbed(i)] }).catch(() => {});
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildSpinEmbed(i)] }).catch(() => {});
     }
 
     const pick = POOL[Math.floor(Math.random() * POOL.length)];
@@ -107,6 +107,6 @@ module.exports = {
       new ButtonBuilder().setCustomId(`roue_double:${encodeURIComponent(String(mise))}`).setLabel('✖️ Rejouer ×2').setStyle(ButtonStyle.Success),
     );
 
-    await interaction.editReply({ embeds: [embed], components: [row] }).catch(() => {});
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row] }).catch(() => {});
   },
 };

@@ -16,7 +16,7 @@ module.exports = {
     const items = db.db.prepare('SELECT * FROM shop WHERE guild_id = ? AND active = 1 ORDER BY price ASC').all(interaction.guildId);
 
     if (!items.length) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#7B2FBE')
           .setTitle('🛒 Boutique')
@@ -59,7 +59,7 @@ module.exports = {
       );
     };
 
-    const msg = await interaction.editReply({ embeds: [buildEmbed(0)], components: pages > 1 ? [buildRow(0)] : [], fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildEmbed(0)], components: pages > 1 ? [buildRow(0)] : [], fetchReply: true });
 
     if (pages <= 1) return;
 

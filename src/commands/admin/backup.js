@@ -45,7 +45,7 @@ module.exports = {
         ).get(interaction.guildId).count;
 
         if (backupCount >= maxBackups) {
-          return interaction.editReply({
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             content: `❌ Limite de backups atteinte (${maxBackups}). Supprime-en pour en créer un nouveau.`
           });
         }
@@ -97,10 +97,10 @@ module.exports = {
             { name: '📍 Salons', value: `${channels.length}`, inline: true }
           );
 
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       } catch (error) {
         console.error('Erreur backup creer:', error);
-        return interaction.editReply({ content: '❌ Erreur lors de la sauvegarde.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors de la sauvegarde.' });
       }
     }
 
@@ -114,7 +114,7 @@ module.exports = {
         ).get(backupId, interaction.guildId);
 
         if (!backup) {
-          return interaction.editReply({ content: '❌ Sauvegarde non trouvée.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Sauvegarde non trouvée.' });
         }
 
         const data = JSON.parse(backup.data);
@@ -135,10 +135,10 @@ module.exports = {
             { name: '⚠️ Note', value: 'Seule la configuration a été restaurée. Les rôles, canaux et messages ne sont pas modifiés.' }
           );
 
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       } catch (error) {
         console.error('Erreur backup restaurer:', error);
-        return interaction.editReply({ content: '❌ Erreur lors de la restauration.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors de la restauration.' });
       }
     }
 
@@ -165,7 +165,7 @@ module.exports = {
         embed.setDescription('Aucune sauvegarde trouvée.');
       }
 
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'supprimer') {
@@ -175,7 +175,7 @@ module.exports = {
       ).get(backupId, interaction.guildId);
 
       if (!backup) {
-        return interaction.editReply({ content: '❌ Sauvegarde non trouvée.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Sauvegarde non trouvée.', ephemeral: true });
       }
 
       db.db.prepare('DELETE FROM backups WHERE id = ?').run(backupId);
@@ -185,7 +185,7 @@ module.exports = {
         .setTitle('✅ Sauvegarde Supprimée')
         .setDescription(`**${backup.name}** a été supprimée.`);
 
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
   }
 };

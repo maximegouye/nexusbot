@@ -47,6 +47,6 @@ module.exports = {
       );
     }
 
-    return interaction.editReply({ embeds: [embed], components: [row] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row] });
   }
 };

@@ -50,13 +50,13 @@ module.exports = {
     const msg    = interaction.options.getString('message');
     const data   = ACTION_DATA[type];
 
-    if (!data) return interaction.editReply({ content: '❌ Action inconnue.' });
+    if (!data) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Action inconnue.' });
 
     // Cooldown 5s
     const key = makeCooldownKey(interaction.user.id, type);
     const last = cooldowns.get(key) || 0;
     if (Date.now() - last < 5000) {
-      return interaction.editReply({ content: `⏳ Attends encore quelques secondes !` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Attends encore quelques secondes !` });
     }
     cooldowns.set(key, Date.now());
 
@@ -70,6 +70,6 @@ module.exports = {
 
     if (gif) embed.setImage(gif);
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

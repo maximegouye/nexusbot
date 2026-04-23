@@ -65,7 +65,7 @@ module.exports = {
       const buyout   = parseInt(interaction.options.getString('achat_immediat'));
       const endsAt   = now + duree * 60;
 
-      if (buyout && buyout <= start) return interaction.editReply({ content: '❌ Le prix d\'achat immédiat doit être supérieur au prix de départ.' });
+      if (buyout && buyout <= start) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le prix d\'achat immédiat doit être supérieur au prix de départ.' });
 
       const result = db.db.prepare('INSERT INTO encheres_v2 (guild_id, seller_id, item_name, description, start_price, current_bid, buyout_price, ends_at) VALUES (?,?,?,?,?,?,?,?)')
         .run(guildId, userId, item, desc || null, start, start, buyout || null, endsAt);
@@ -111,7 +111,7 @@ module.exports = {
         }
       }, duree * 60 * 1000);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Enchère **#${id}** créée ! Elle se termine <t:${endsAt}:R>.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Enchère **#${id}** créée ! Elle se termine <t:${endsAt}:R>.`)] });
     }
 
     if (sub === 'miser') {
@@ -119,17 +119,17 @@ module.exports = {
       const amount = parseInt(interaction.options.getString('montant'));
       const enc    = db.db.prepare("SELECT * FROM encheres_v2 WHERE id=? AND guild_id=? AND status='active'").get(id, guildId);
 
-      if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable ou terminée.` });
-      if (enc.seller_id === userId) return interaction.editReply({ content: '❌ Tu ne peux pas enchérir sur ta propre vente !' });
-      if (now > enc.ends_at) return interaction.editReply({ content: '❌ Cette enchère est terminée !' });
+      if (!enc) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Enchère #${id} introuvable ou terminée.` });
+      if (enc.seller_id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas enchérir sur ta propre vente !' });
+      if (now > enc.ends_at) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette enchère est terminée !' });
 
       const minBid = enc.current_bid + Math.max(1, Math.round(enc.current_bid * 0.05));
       if (amount < minBid && !(enc.buyout_price && amount >= enc.buyout_price)) {
-        return interaction.editReply({ content: `❌ L'enchère minimum est **${minBid}** coins (5% au-dessus de la mise actuelle).` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ L'enchère minimum est **${minBid}** coins (5% au-dessus de la mise actuelle).` });
       }
 
       const user = db.getUser(userId, guildId);
-      if (user.coins < amount) return interaction.editReply({ content: `❌ Tu n'as que **${user.coins}** coins.` });
+      if (user.coins < amount) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${user.coins}** coins.` });
 
       // Rembourser le précédent enchérisseur
       if (enc.bidder_id && enc.bidder_id !== userId) {
@@ -148,14 +148,14 @@ module.exports = {
       if (enc.buyout_price && amount >= enc.buyout_price) {
         db.db.prepare("UPDATE encheres_v2 SET status='ended' WHERE id=?").run(id);
         db.addCoins(enc.seller_id, guildId, amount);
-        return interaction.editReply({ embeds: [new EmbedBuilder()
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
           .setColor('#f39c12')
           .setTitle('⚡ Achat Immédiat !')
           .setDescription(`Tu as acheté **${enc.item_name}** au prix immédiat de **${amount} coins** !`)
         ]});
       }
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`✅ Enchère placée sur #${id}`)
         .addFields(
@@ -168,7 +168,7 @@ module.exports = {
     if (sub === 'voir') {
       const id  = parseInt(interaction.options.getString('id'));
       const enc = db.db.prepare('SELECT * FROM encheres_v2 WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!enc) return interaction.editReply({ content: `❌ Enchère #${id} introuvable.` });
+      if (!enc) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Enchère #${id} introuvable.` });
 
       const history = db.db.prepare('SELECT * FROM encheres_v2_history WHERE enchere_id=? ORDER BY amount DESC LIMIT 5').all(id);
 
@@ -187,17 +187,17 @@ module.exports = {
       if (history.length) {
         embed.addFields({ name: '📜 Historique', value: history.map(h => `<@${h.bidder_id}> — **${h.amount} 🪙** <t:${h.bid_at}:R>`).join('\n'), inline: false });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'liste') {
       const list = db.db.prepare("SELECT * FROM encheres_v2 WHERE guild_id=? AND status='active' AND ends_at>=? ORDER BY ends_at ASC LIMIT 10").all(guildId, now);
-      if (!list.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune enchère active !')] });
+      if (!list.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune enchère active !')] });
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('🔨 Enchères Actives')
         .setDescription(list.map(e => `**#${e.id}** — **${e.item_name}** — Mise actuelle : **${e.current_bid} 🪙** — Fin <t:${e.ends_at}:R>`).join('\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'mes_encheres') {
@@ -212,7 +212,7 @@ module.exports = {
         embed.addFields({ name: '💰 Mes Enchères', value: myBids.map(e => `**#${e.id}** ${e.item_name} — Ma mise : ${e.current_bid} 🪙 — Fin <t:${e.ends_at}:R>`).join('\n'), inline: false });
       }
       if (!mySales.length && !myBids.length) embed.setDescription('Aucune enchère pour le moment.');
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

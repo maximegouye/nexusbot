@@ -38,7 +38,7 @@ module.exports = {
       const noXpCh   = db.db.prepare('SELECT target_id FROM no_xp WHERE guild_id=? AND type="channel"').all(interaction.guildId);
       const noXpR    = db.db.prepare('SELECT target_id FROM no_xp WHERE guild_id=? AND type="role"').all(interaction.guildId);
       const mults    = db.db.prepare('SELECT role_id, multiplier FROM xp_multipliers WHERE guild_id=?').all(interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('⚙️ Configuration XP')
         .addFields(
@@ -56,7 +56,7 @@ module.exports = {
     if (sub === 'activer') {
       const actif = interaction.options.getBoolean('actif');
       db.db.prepare('UPDATE guild_config SET xp_enabled=? WHERE guild_id=?').run(actif ? 1 : 0, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red').setDescription(`✅ Système XP ${actif ? 'activé' : 'désactivé'}.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(actif ? 'Green' : 'Red').setDescription(`✅ Système XP ${actif ? 'activé' : 'désactivé'}.`)], ephemeral: true });
     }
 
     if (sub === 'taux') {
@@ -64,7 +64,7 @@ module.exports = {
       const coins = parseInt(interaction.options.getString('coins'));
       if (xpMin !== null) db.db.prepare('UPDATE guild_config SET xp_rate=? WHERE guild_id=?').run(xpMin, interaction.guildId);
       if (coins !== null) db.db.prepare('UPDATE guild_config SET coins_per_msg=? WHERE guild_id=?').run(coins, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Taux XP mis à jour.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Taux XP mis à jour.`)], ephemeral: true });
     }
 
     if (sub === 'noxp_canal') {
@@ -72,10 +72,10 @@ module.exports = {
       const ajouter = interaction.options.getBoolean('ajouter');
       if (ajouter) {
         db.db.prepare('INSERT OR IGNORE INTO no_xp (guild_id,type,target_id) VALUES (?,?,?)').run(interaction.guildId, 'channel', canal.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <#${canal.id}> ajouté aux canaux sans XP.`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <#${canal.id}> ajouté aux canaux sans XP.`)], ephemeral: true });
       } else {
         db.db.prepare('DELETE FROM no_xp WHERE guild_id=? AND type=? AND target_id=?').run(interaction.guildId, 'channel', canal.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <#${canal.id}> retiré des canaux sans XP.`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <#${canal.id}> retiré des canaux sans XP.`)], ephemeral: true });
       }
     }
 
@@ -84,10 +84,10 @@ module.exports = {
       const ajouter = interaction.options.getBoolean('ajouter');
       if (ajouter) {
         db.db.prepare('INSERT OR IGNORE INTO no_xp (guild_id,type,target_id) VALUES (?,?,?)').run(interaction.guildId, 'role', role.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@&${role.id}> ajouté aux rôles sans XP.`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@&${role.id}> ajouté aux rôles sans XP.`)], ephemeral: true });
       } else {
         db.db.prepare('DELETE FROM no_xp WHERE guild_id=? AND type=? AND target_id=?').run(interaction.guildId, 'role', role.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@&${role.id}> retiré des rôles sans XP.`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@&${role.id}> retiré des rôles sans XP.`)], ephemeral: true });
       }
     }
 
@@ -96,22 +96,22 @@ module.exports = {
       const valeur = parseFloat(interaction.options.getString('valeur'));
       if (valeur <= 0) {
         db.db.prepare('DELETE FROM xp_multipliers WHERE guild_id=? AND role_id=?').run(interaction.guildId, role.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Multiplicateur de <@&${role.id}> supprimé.`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Multiplicateur de <@&${role.id}> supprimé.`)], ephemeral: true });
       }
       db.db.prepare('INSERT OR REPLACE INTO xp_multipliers (guild_id,role_id,multiplier) VALUES (?,?,?)').run(interaction.guildId, role.id, valeur);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@&${role.id}> → **x${valeur}** XP.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@&${role.id}> → **x${valeur}** XP.`)], ephemeral: true });
     }
 
     if (sub === 'message_levelup') {
       const msg = interaction.options.getString('message');
       db.db.prepare('UPDATE guild_config SET level_msg=? WHERE guild_id=?').run(msg, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Message de level-up mis à jour:\n${msg}`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Message de level-up mis à jour:\n${msg}`)], ephemeral: true });
     }
 
     if (sub === 'canal_levelup') {
       const canal = interaction.options.getChannel('canal');
       db.db.prepare('UPDATE guild_config SET level_channel=? WHERE guild_id=?').run(canal?.id || null, interaction.guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(canal ? `✅ Level-up → <#${canal.id}>` : '✅ Level-up dans le canal actuel.')], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(canal ? `✅ Level-up → <#${canal.id}>` : '✅ Level-up dans le canal actuel.')], ephemeral: true });
     }
   }
 };

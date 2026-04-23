@@ -123,7 +123,7 @@ module.exports = {
     if (sub === 'unites') {
       const cat = CONVERSIONS[interaction.options.getString('categorie')];
       const lines = Object.entries(cat.units).map(([k, v]) => `\`${k}\` — ${v.name}`).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle(`${cat.label} — Unités disponibles`).setDescription(lines)
       ], ephemeral: true });
     }
@@ -135,8 +135,8 @@ module.exports = {
       const vers = interaction.options.getString('vers').toLowerCase();
       const conv = CONVERSIONS[cat];
 
-      if (!conv.units[de]) return interaction.editReply({ content: `❌ Unité **${de}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
-      if (!conv.units[vers]) return interaction.editReply({ content: `❌ Unité **${vers}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
+      if (!conv.units[de]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Unité **${de}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
+      if (!conv.units[vers]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Unité **${vers}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
 
       let result;
       if (cat === 'temperature') {
@@ -148,7 +148,7 @@ module.exports = {
 
       const rounded = Math.round(result * 10000) / 10000;
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle(`${conv.label} — Conversion`)
           .setDescription(`**${valeur} ${conv.units[de].name}** = **${rounded} ${conv.units[vers].name}**`)
           .addFields(

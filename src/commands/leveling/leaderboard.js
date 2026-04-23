@@ -97,7 +97,7 @@ module.exports = {
         ])
     );
 
-    const msg = await interaction.editReply({ embeds: [embed], components: [menu], fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [menu], fetchReply: true });
 
     const collector = msg.createMessageComponentCollector({ time: 120000 });
     collector.on('collect', async i => {

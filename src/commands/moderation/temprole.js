@@ -54,13 +54,13 @@ module.exports = {
       const raison  = interaction.options.getString('raison') || 'Aucune raison';
 
       const ms = parseDuration(duree);
-      if (!ms) return interaction.editReply('❌ Durée invalide. Ex: `30m`, `2h`, `7d`');
+      if (!ms) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Durée invalide. Ex: `30m`, `2h`, `7d`');
 
       const expires = Math.floor((Date.now() + ms) / 1000); // stocké en secondes
 
       // Donner le rôle
       await member.roles.add(role, raison).catch(e => {
-        return interaction.editReply(`❌ Impossible d'ajouter le rôle : ${e.message}`);
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(`❌ Impossible d'ajouter le rôle : ${e.message}`);
       });
 
       // Enregistrer en BDD
@@ -68,7 +68,7 @@ module.exports = {
         .run(interaction.guildId, member.id, role.id, expires);
 
       const expiresTs = expires; // déjà en secondes
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('Green')
           .setTitle('✅ Rôle temporaire attribué')
@@ -90,20 +90,20 @@ module.exports = {
       db.db.prepare('DELETE FROM temp_roles WHERE guild_id=? AND user_id=? AND role_id=?')
         .run(interaction.guildId, member.id, role.id);
 
-      return interaction.editReply(`✅ Rôle <@&${role.id}> retiré de <@${member.id}>.`);
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(`✅ Rôle <@&${role.id}> retiré de <@${member.id}>.`);
     }
 
     if (sub === 'liste') {
       const rows = db.db.prepare('SELECT * FROM temp_roles WHERE guild_id=? AND expires_at > ?')
         .all(interaction.guildId, Math.floor(Date.now() / 1000));
 
-      if (!rows.length) return interaction.editReply('Aucun rôle temporaire actif.');
+      if (!rows.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('Aucun rôle temporaire actif.');
 
       const lines = rows.map(r =>
         `<@${r.user_id}> → <@&${r.role_id}> — expire <t:${Math.floor(r.expires_at / 1000)}:R>`
       ).join('\n');
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#7B2FBE')
           .setTitle(`⏳ Rôles temporaires actifs (${rows.length})`)

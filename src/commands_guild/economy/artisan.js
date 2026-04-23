@@ -76,7 +76,7 @@ module.exports = {
       const u = db.getUser(userId, guildId);
       const lastCollect = u.last_collect_artisan || 0;
       const cd = 30 - (now - lastCollect);
-      if (cd > 0) return interaction.editReply({ content: `⏳ Réessayez dans **${cd}s**.`, ephemeral: true });
+      if (cd > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Réessayez dans **${cd}s**.`, ephemeral: true });
 
       // Collecter 1-3 ressources aléatoires
       const amount = Math.floor(Math.random() * 3) + 1;
@@ -98,7 +98,7 @@ module.exports = {
       }
 
       const collectedStr = Object.entries(collected).map(([k, v]) => `${RESOURCE_EMOJIS[k]} ${v}x ${k}`).join(', ');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('🌿 Ressources collectées !')
           .setDescription(collectedStr)
       ]});
@@ -106,7 +106,7 @@ module.exports = {
 
     if (sub === 'ressources') {
       const lines = RESOURCES.map(r => `${RESOURCE_EMOJIS[r]} **${r}** : ${res[r] || 0}`).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('📦 Votre Stock de Ressources').setDescription(lines)
       ], ephemeral: true });
     }
@@ -116,7 +116,7 @@ module.exports = {
         const ing = Object.entries(r.ingredients).map(([res, q]) => `${RESOURCE_EMOJIS[res]} ${q}x ${res}`).join(', ');
         return `${r.name}\n> Recette: ${ing}\n> Résultat: **${r.result.coins} ${coin}** + **${r.result.xp} XP**\n> ${r.desc}`;
       }).join('\n\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('📋 Recettes d\'Artisanat').setDescription(lines)
       ], ephemeral: true });
     }
@@ -128,7 +128,7 @@ module.exports = {
       // Vérifier les ressources
       for (const [r, q] of Object.entries(recette.ingredients)) {
         if ((res[r] || 0) < q) {
-          return interaction.editReply({ content: `❌ Ressources insuffisantes ! Vous manquez de **${RESOURCE_EMOJIS[r]} ${r}** (besoin: ${q}, avez: ${res[r] || 0}).`, ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Ressources insuffisantes ! Vous manquez de **${RESOURCE_EMOJIS[r]} ${r}** (besoin: ${q}, avez: ${res[r] || 0}).`, ephemeral: true });
         }
       }
 
@@ -138,7 +138,7 @@ module.exports = {
       db.addCoins(userId, guildId, recette.result.coins);
       db.addXP(userId, guildId, recette.result.xp);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🔨 Objet fabriqué !')
           .setDescription(`Vous avez fabriqué **${recette.name}** !\n${recette.desc}`)
           .addFields(

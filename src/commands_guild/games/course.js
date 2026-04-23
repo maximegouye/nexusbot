@@ -37,7 +37,7 @@ module.exports = {
 
     if (sub === 'cotes') {
       const lines = HORSES.map(h => `${h.emoji} **${h.name}** — Cote: **x${h.odds}** | Vitesse estimée: ${Math.round(h.speed * 100)}%`).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('🏇 Cotes des chevaux').setDescription(lines)
           .setFooter({ text: 'Cotes × mise = gain potentiel' })
       ]});
@@ -59,18 +59,18 @@ module.exports = {
       const miseRaw = interaction.options.get('mise')?.value;
       const mise = parseBet(miseRaw, u.balance);
       if (!Number.isFinite(mise) || mise < 10) {
-        return interaction.editReply({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
       }
       const chosen = HORSES.find(h => h.name === chosenName);
 
-      if (u.balance < mise) return interaction.editReply({ content: `❌ Solde insuffisant.`, ephemeral: true });
+      if (u.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -mise);
       await interaction.deferReply();
 
       // Animation de course
       const lines = HORSES.map(h => `${h.emoji} **${h.name}** : ${'🟫'.repeat(3)}`);
-      await interaction.editReply({ embeds: [
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('🏇 DÉPART !').setDescription(lines.join('\n'))
       ]});
 
@@ -91,7 +91,7 @@ module.exports = {
         resultMsg = `😔 Votre cheval ${chosen.emoji} **${chosen.name}** est arrivé **${pos}ème**. Perdu **${mise} ${coin}**.`;
       }
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor(pos === 1 ? '#F1C40F' : '#E74C3C').setTitle('🏇 Résultat de la course !')
           .addFields(
             { name: '🏆 Podium', value: podium, inline: true },

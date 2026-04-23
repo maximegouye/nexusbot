@@ -33,13 +33,13 @@ module.exports = {
     const cfg = ai.getAIConfig(interaction.guildId, db);
 
     if (!cfg.enabled) {
-      return interaction.editReply({ content: '❌ L\'IA n\'est pas activée sur ce serveur. Un admin peut l\'activer via `/config` → 🧠 IA.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ L\'IA n\'est pas activée sur ce serveur. Un admin peut l\'activer via `/config` → 🧠 IA.', ephemeral: true });
     }
     if (!ai.isAvailable()) {
-      return interaction.editReply({ content: '❌ Aucune clé API IA configurée côté hébergement. Ajoute `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` dans les variables Railway.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA configurée côté hébergement. Ajoute `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` dans les variables Railway.', ephemeral: true });
     }
-    const cA = checkAllowed(interaction.member, cfg);       if (!cA.ok) return interaction.editReply({ content: cA.msg, ephemeral: true });
-    const cC = checkChannel(interaction.channelId, cfg);    if (!cC.ok) return interaction.editReply({ content: cC.msg, ephemeral: true });
+    const cA = checkAllowed(interaction.member, cfg);       if (!cA.ok) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: cA.msg, ephemeral: true });
+    const cC = checkChannel(interaction.channelId, cfg);    if (!cC.ok) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: cC.msg, ephemeral: true });
 
     await interaction.deferReply({ ephemeral: priv });
 
@@ -60,13 +60,13 @@ module.exports = {
         .setFooter({ text: `${res.provider} • ${res.model} • ${(res.usage?.output_tokens || res.usage?.completion_tokens || 0)} tokens` })
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (e) {
       if (e.code === 'RATE_LIMIT') {
-        return interaction.editReply({ content: `⏱️ ${e.message}` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏱️ ${e.message}` });
       }
       console.error('[/ia] Erreur:', e.message);
-      await interaction.editReply({ content: `❌ Erreur IA : ${e.message?.slice(0, 200)}` });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur IA : ${e.message?.slice(0, 200)}` });
     }
   },
 };

@@ -34,7 +34,7 @@ module.exports = {
 
     if (now - (user.last_dig || 0) < cd) {
       const rem = cd - (now - (user.last_dig || 0));
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#FF6B6B').setDescription(`⛏️ Ta pelle est fatiguée ! Attends encore **${Math.floor(rem/60)} min** avant de recreuser.`)],
         ephemeral: true
       });
@@ -63,6 +63,6 @@ module.exports = {
         : `Tu n'as trouvé que de la terre... Mieux vaut creuser ailleurs la prochaine fois.`)
       .setFooter({ text: found.rarity ? `Rareté : ${found.rarity}` : 'Raté !' });
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

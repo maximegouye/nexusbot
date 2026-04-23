@@ -130,10 +130,10 @@ module.exports = {
           )
           .setFooter({ text: 'Mis à jour toutes les 10 minutes' });
 
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       } catch (error) {
         console.error('Erreur statschannel setup:', error);
-        return interaction.editReply({ content: '❌ Erreur lors de la création des canaux.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors de la création des canaux.' });
       }
     }
 
@@ -143,7 +143,7 @@ module.exports = {
       ).get(interaction.guildId);
 
       if (!stats) {
-        return interaction.editReply({ content: '❌ Aucun canal de stats configuré.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun canal de stats configuré.', ephemeral: true });
       }
 
       try {
@@ -161,10 +161,10 @@ module.exports = {
           .setTitle('✅ Configuration Supprimée')
           .setDescription('Les canaux de stats ont été supprimés.');
 
-        return interaction.editReply({ embeds: [embed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
       } catch (error) {
         console.error('Erreur statschannel retirer:', error);
-        return interaction.editReply({ content: '❌ Erreur lors de la suppression.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors de la suppression.', ephemeral: true });
       }
     }
 
@@ -174,7 +174,7 @@ module.exports = {
       ).get(interaction.guildId);
 
       if (!stats) {
-        return interaction.editReply({ content: '❌ Aucun canal de stats configuré.\nUtilise `/statschannel setup` pour en créer.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun canal de stats configuré.\nUtilise `/statschannel setup` pour en créer.', ephemeral: true });
       }
 
       const embed = new EmbedBuilder()
@@ -189,7 +189,7 @@ module.exports = {
         )
         .setFooter({ text: 'Mis à jour toutes les 10 minutes' });
 
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
   }
 };

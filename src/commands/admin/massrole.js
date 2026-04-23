@@ -39,13 +39,13 @@ module.exports = {
         .setTitle('📊 Info Rôle')
         .setDescription(`Le rôle <@&${role.id}> est attribué à **${count}** membre(s).`)
         .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'ajouter' || sub === 'retirer') {
       // Vérifier que le bot peut gérer ce rôle
       if (!interaction.guild.members.me.roles.highest.comparePositionTo(role) > 0) {
-        return interaction.editReply({ content: '❌ Je ne peux pas gérer ce rôle (trop élevé).', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas gérer ce rôle (trop élevé).', ephemeral: true });
       }
 
       const isAdd = sub === 'ajouter';
@@ -54,7 +54,7 @@ module.exports = {
       );
 
       if (targetMembers.size === 0) {
-        return interaction.editReply({ content: `❌ Aucun membre à traiter.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Aucun membre à traiter.`, ephemeral: true });
       }
 
       // Defer si plus de 50 membres
@@ -77,7 +77,7 @@ module.exports = {
         } catch (err) {
           ignored++;
           if (interaction.isRepliable() && !interaction.replied) {
-            interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+            (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
           }
         }
 
@@ -87,13 +87,13 @@ module.exports = {
         if (targetMembers.size > 50 && processed % 10 === 0) {
           const progress = Math.round((processed / targetMembers.size) * 100);
           try {
-            await interaction.editReply({
+            await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
               content: `⏳ Traitement en cours... **${processed}/${targetMembers.size}** (${progress}%)`
             });
           } catch (err) {
             // Ignore les erreurs d'update
             if (interaction.isRepliable() && !interaction.replied) {
-              interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+              (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
             }
           }
         }
@@ -109,9 +109,9 @@ module.exports = {
         .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
 
       if (targetMembers.size > 50) {
-        return interaction.editReply({ content: '', embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '', embeds: [embed] });
       } else {
-        return interaction.editReply({ embeds: [embed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
       }
     }
   }

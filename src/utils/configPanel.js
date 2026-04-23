@@ -1123,7 +1123,7 @@ async function handleConfigInteraction(interaction, db, client) {
   function checkOwner() {
     const uid = getUserId();
     if (interaction.user.id !== uid) {
-      interaction.reply({ content: '❌ Ce panneau de configuration ne t\'appartient pas.', ephemeral: true });
+      (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau de configuration ne t\'appartient pas.', ephemeral: true });
       return false;
     }
     return true;
@@ -1202,7 +1202,7 @@ async function handleConfigInteraction(interaction, db, client) {
     const panel = category
       ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
-    return interaction.editReply(panel);
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(panel);
   }
 
   // ── cfg_role:key:userId — Sélection de rôle ──────────────────
@@ -1219,7 +1219,7 @@ async function handleConfigInteraction(interaction, db, client) {
     const panel = category
       ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
-    return interaction.editReply(panel);
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(panel);
   }
 
   // ── cfg_modal:key:userId — Soumission de modal ────────────────
@@ -1228,7 +1228,7 @@ async function handleConfigInteraction(interaction, db, client) {
     const key    = parts[1];
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
     }
 
     const cfg = db.getConfig(interaction.guildId);
@@ -1238,7 +1238,7 @@ async function handleConfigInteraction(interaction, db, client) {
       const trigger  = interaction.fields.getTextInputValue('trigger').toLowerCase().trim().replace(/\s+/g, '_');
       const response = interaction.fields.getTextInputValue('response').trim();
       if (!trigger || !response) {
-        return interaction.reply({ content: '❌ Déclencheur ou réponse vide.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Déclencheur ou réponse vide.', ephemeral: true });
       }
       db.db.prepare(
         `INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, created_by, created_at)
@@ -1262,7 +1262,7 @@ async function handleConfigInteraction(interaction, db, client) {
           await interaction.followUp({ content: `❌ Commande \`&${trigger}\` introuvable.`, ephemeral: true }).catch(() => {});
         }
       } catch {
-        await interaction.reply({ ...panel, ephemeral: true }).catch(() => {});
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {});
       }
       return;
     }
@@ -1276,7 +1276,7 @@ async function handleConfigInteraction(interaction, db, client) {
       const category = getCategoryForKey(key);
       const panel    = buildCategoryPanel(category, newCfg, interaction.guild, userId, db);
       try { return await interaction.update(panel); }
-      catch { return interaction.reply({ ...panel, ephemeral: true }).catch(() => {}); }
+      catch { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {}); }
     }
 
     // Clés numériques entières
@@ -1286,23 +1286,23 @@ async function handleConfigInteraction(interaction, db, client) {
     if (INTEGER_KEYS.includes(key)) {
       const num = parseInt(value, 10);
       if (isNaN(num) || num < 0) {
-        return interaction.reply({ content: '❌ Valeur invalide. Entre un nombre entier positif.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur invalide. Entre un nombre entier positif.', ephemeral: true });
       }
       value = num;
     } else if (key === 'xp_multiplier') {
       const num = parseFloat(value.replace(',', '.'));
       if (isNaN(num) || num <= 0) {
-        return interaction.reply({ content: '❌ Valeur invalide. Entre un nombre positif (ex: 1.5).', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur invalide. Entre un nombre positif (ex: 1.5).', ephemeral: true });
       }
       value = num;
     } else if (key === 'color') {
       if (!value.startsWith('#')) value = '#' + value;
       if (!/^#[0-9A-Fa-f]{6}$/.test(value)) {
-        return interaction.reply({ content: '❌ Format invalide. Utilise `#RRGGBB` (ex: `#7B2FBE`).', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format invalide. Utilise `#RRGGBB` (ex: `#7B2FBE`).', ephemeral: true });
       }
     } else if (key === 'prefix') {
       if (!value || value.length > 3) {
-        return interaction.reply({ content: '❌ Le préfixe doit faire entre 1 et 3 caractères.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le préfixe doit faire entre 1 et 3 caractères.', ephemeral: true });
       }
     }
 
@@ -1314,7 +1314,7 @@ async function handleConfigInteraction(interaction, db, client) {
       : buildMainMenu(newCfg, interaction.guild, userId);
 
     try { return await interaction.update(panel); }
-    catch { return interaction.reply({ ...panel, ephemeral: true }).catch(() => {}); }
+    catch { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {}); }
   }
 
   return false;

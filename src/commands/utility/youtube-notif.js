@@ -50,7 +50,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Vous avez besoin de la permission "Gérer le serveur" pour utiliser cette commande.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const subcommand = interaction.options.getSubcommand();
@@ -68,7 +68,7 @@ module.exports = {
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors du traitement de votre demande.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };
@@ -100,7 +100,7 @@ function handleAdd(interaction) {
           .setColor('#FF0000')
           .setDescription('❌ Cette chaîne YouTube est déjà surveillée sur ce serveur.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
       throw error;
     }
@@ -123,14 +123,14 @@ function handleAdd(interaction) {
         }
       );
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleAdd:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de l\'ajout de la chaîne.');
 
-    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
   }
 }
 
@@ -158,7 +158,7 @@ function handleRemove(interaction) {
         .setColor('#FF0000')
         .setDescription('❌ Cette chaîne n\'est pas surveillée sur ce serveur.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
 
     const embed = new EmbedBuilder()
@@ -166,14 +166,14 @@ function handleRemove(interaction) {
       .setTitle('✅ Notification YouTube supprimée')
       .setDescription(`La chaîne **${channelId}** n'est plus surveillée.`);
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleRemove:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de la suppression de la chaîne.');
 
-    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
   }
 }
 
@@ -190,7 +190,7 @@ function handleList(interaction) {
         .setColor('#FF0000')
         .setDescription('❌ Aucune notification YouTube configurée sur ce serveur.');
 
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     let description = '**Chaînes surveillées:**\n\n';
@@ -208,13 +208,13 @@ function handleList(interaction) {
         text: `Total: ${subscriptions.length} chaîne(s)`
       });
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleList:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de la récupération de la liste.');
 
-    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
   }
 }

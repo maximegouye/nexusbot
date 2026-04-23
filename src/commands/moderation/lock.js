@@ -17,7 +17,7 @@ module.exports = {
 
     if (action === 'lock' || (action === undefined && !isLocked)) {
       await interaction.channel.permissionOverwrites.edit(everyone, { SendMessages: false });
-      await interaction.editReply({
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF0000')
           .setTitle('🔒 Salon verrouillé')
@@ -26,7 +26,7 @@ module.exports = {
       });
     } else {
       await interaction.channel.permissionOverwrites.edit(everyone, { SendMessages: null });
-      await interaction.editReply({
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('🔓 Salon déverrouillé')

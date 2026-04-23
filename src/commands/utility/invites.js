@@ -23,7 +23,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Cet utilisateur n\'a pas de statistiques d\'invitation.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const embed = new EmbedBuilder()
@@ -58,14 +58,14 @@ module.exports = {
         })
         .setTimestamp();
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande invites:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors de la récupération des statistiques.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

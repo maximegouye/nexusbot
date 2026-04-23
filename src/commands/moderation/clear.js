@@ -25,13 +25,13 @@ module.exports = {
     const toDelete = messages.filter(m => m.createdTimestamp > twoWeeksAgo);
 
     if (!toDelete.size) {
-      return interaction.editReply('❌ Aucun message récent à supprimer (les messages de plus de 14 jours ne peuvent pas être supprimés en masse).');
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Aucun message récent à supprimer (les messages de plus de 14 jours ne peuvent pas être supprimés en masse).');
     }
 
     const deleted = await interaction.channel.bulkDelete(toDelete, true).catch(() => null);
 
     const count = deleted?.size ?? 0;
-    await interaction.editReply({
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setDescription(`✅ **${count} message${count > 1 ? 's' : ''}** supprimé${count > 1 ? 's' : ''}${filter ? ` de ${filter.username}` : ''}.`)

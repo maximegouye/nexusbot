@@ -49,7 +49,7 @@ module.exports = {
         const d = Math.floor(t.duration / 86400);
         return `Niv.**${t.level}+** — Max: ${t.max} ${coin} | Durée: ${d} jour(s) | Intérêt: ${t.interest * 100}%`;
       }).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🏦 Taux de prêts')
           .setDescription(lines)
           .addFields({ name: '🎯 Votre niveau', value: `Niv.**${level}** → Max **${tier.max} ${coin}** à **${tier.interest * 100}%**`, inline: false })
@@ -58,10 +58,10 @@ module.exports = {
 
     if (sub === 'emprunter') {
       const active = db.db.prepare("SELECT * FROM prets WHERE guild_id=? AND user_id=? AND repaid=0").get(guildId, userId);
-      if (active) return interaction.editReply({ content: '❌ Vous avez déjà un prêt actif ! Remboursez-le d\'abord.', ephemeral: true });
+      if (active) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà un prêt actif ! Remboursez-le d\'abord.', ephemeral: true });
 
       const montant = parseInt(interaction.options.getString('montant'));
-      if (montant > tier.max) return interaction.editReply({ content: `❌ Maximum **${tier.max} ${coin}** pour votre niveau (${level}).`, ephemeral: true });
+      if (montant > tier.max) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Maximum **${tier.max} ${coin}** pour votre niveau (${level}).`, ephemeral: true });
 
       const dueAt = now + tier.duration;
       const toRepay = Math.floor(montant * (1 + tier.interest));
@@ -69,7 +69,7 @@ module.exports = {
       db.db.prepare('INSERT INTO prets (guild_id, user_id, amount, interest, due_at) VALUES (?,?,?,?,?)').run(guildId, userId, toRepay, tier.interest, dueAt);
       db.addCoins(userId, guildId, montant);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('💸 Prêt accordé !')
           .addFields(
             { name: '💰 Reçu', value: `+${montant} ${coin}`, inline: true },
@@ -83,7 +83,7 @@ module.exports = {
 
     if (sub === 'rembourser') {
       const pret = db.db.prepare("SELECT * FROM prets WHERE guild_id=? AND user_id=? AND repaid=0").get(guildId, userId);
-      if (!pret) return interaction.editReply({ content: '✅ Vous n\'avez aucun prêt actif.', ephemeral: true });
+      if (!pret) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Vous n\'avez aucun prêt actif.', ephemeral: true });
 
       // Pénalité si en retard
       let toRepay = pret.amount;
@@ -95,12 +95,12 @@ module.exports = {
         penaltyMsg = ` (+${penalty} ${coin} de pénalité de retard)`;
       }
 
-      if (u.balance < toRepay) return interaction.editReply({ content: `❌ Solde insuffisant. Vous devez **${toRepay} ${coin}**${penaltyMsg}.`, ephemeral: true });
+      if (u.balance < toRepay) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant. Vous devez **${toRepay} ${coin}**${penaltyMsg}.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -toRepay);
       db.db.prepare('UPDATE prets SET repaid=1 WHERE id=?').run(pret.id);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Prêt remboursé !')
           .setDescription(`Vous avez remboursé **${toRepay} ${coin}**${penaltyMsg}.`)
           .addFields({ name: '👛 Nouveau solde', value: `${u.balance - toRepay} ${coin}`, inline: true })
@@ -109,10 +109,10 @@ module.exports = {
 
     if (sub === 'statut') {
       const pret = db.db.prepare("SELECT * FROM prets WHERE guild_id=? AND user_id=? AND repaid=0").get(guildId, userId);
-      if (!pret) return interaction.editReply({ content: '✅ Aucun prêt actif.', ephemeral: true });
+      if (!pret) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Aucun prêt actif.', ephemeral: true });
 
       const isOverdue = now > pret.due_at;
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor(isOverdue ? '#E74C3C' : '#F1C40F').setTitle('🏦 Votre prêt actif')
           .addFields(
             { name: '💳 À rembourser', value: `**${pret.amount} ${coin}**`, inline: true },

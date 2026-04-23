@@ -14,9 +14,9 @@ module.exports = {
     const target = interaction.options.getMember('membre');
     const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
 
-    if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.kickable) return interaction.editReply({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas t\'expulser toi-même.', ephemeral: true });
+    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
+    if (!target.kickable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
+    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'expulser toi-même.', ephemeral: true });
 
     await target.user.send({
       embeds: [new EmbedBuilder()
@@ -39,6 +39,6 @@ module.exports = {
       .setThumbnail(target.user.displayAvatarURL())
       .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

@@ -34,10 +34,10 @@ module.exports = {
           { name: '🎫 Tes tickets',       value: `**${myTickets}**`, inline: true },
         )
         .setFooter({ text: `Ticket = ${price} ${name} • Tirage lundi 00:00` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
-    if (user.balance < total) return interaction.editReply({ content: `❌ Tu as besoin de **${total.toLocaleString('fr-FR')} ${name}** pour ${qty} ticket(s).`, ephemeral: true });
+    if (user.balance < total) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu as besoin de **${total.toLocaleString('fr-FR')} ${name}** pour ${qty} ticket(s).`, ephemeral: true });
 
     db.removeCoins(interaction.user.id, interaction.guildId, total);
 
@@ -60,6 +60,6 @@ module.exports = {
       )
       .setFooter({ text: 'Plus tu as de tickets, plus tu as de chances de gagner !' });
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

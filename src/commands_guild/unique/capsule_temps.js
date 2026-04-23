@@ -56,9 +56,9 @@ module.exports = {
       const salon   = interaction.options.getChannel('salon') || interaction.channel;
 
       const delaySec = parseDelay(delayStr);
-      if (!delaySec) return interaction.editReply({ content: '❌ Format invalide. Exemples : `1h`, `3d`, `2w`, `1m`, `6mo`' });
-      if (delaySec > 365 * 86400) return interaction.editReply({ content: '❌ Maximum 365 jours !' });
-      if (delaySec < 60) return interaction.editReply({ content: '❌ Minimum 1 minute !' });
+      if (!delaySec) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format invalide. Exemples : `1h`, `3d`, `2w`, `1m`, `6mo`' });
+      if (delaySec > 365 * 86400) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 365 jours !' });
+      if (delaySec < 60) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Minimum 1 minute !' });
 
       const deliverAt = Math.floor(Date.now() / 1000) + delaySec;
       const result = db.db.prepare('INSERT INTO time_capsules (guild_id, user_id, message, channel_id, deliver_at) VALUES (?,?,?,?,?)').run(guildId, userId, message, salon.id, deliverAt);
@@ -74,26 +74,26 @@ module.exports = {
           { name: '🔢 ID',            value: `#${result.lastInsertRowid}`, inline: true },
         )
         .setFooter({ text: 'Utilise /capsule mes_capsules pour voir tes capsules' });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'mes_capsules') {
       const capsules = db.db.prepare("SELECT * FROM time_capsules WHERE guild_id=? AND user_id=? AND delivered=0 ORDER BY deliver_at ASC").all(guildId, userId);
-      if (!capsules.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune capsule en attente.')] });
+      if (!capsules.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune capsule en attente.')] });
       const embed = new EmbedBuilder()
         .setColor('#9b59b6')
         .setTitle('⏳ Mes Capsules Temporelles')
         .setDescription(capsules.map(c => `**#${c.id}** — <t:${c.deliver_at}:R> → ${c.message.slice(0, 50)}${c.message.length > 50 ? '...' : ''}`).join('\n'))
         .setFooter({ text: `${capsules.length} capsule(s) en attente` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'annuler') {
       const id = parseInt(interaction.options.getString('id'));
       const cap = db.db.prepare('SELECT * FROM time_capsules WHERE id=? AND guild_id=? AND user_id=? AND delivered=0').get(id, guildId, userId);
-      if (!cap) return interaction.editReply({ content: `❌ Capsule #${id} introuvable ou déjà livrée.` });
+      if (!cap) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Capsule #${id} introuvable ou déjà livrée.` });
       db.db.prepare('DELETE FROM time_capsules WHERE id=?').run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Capsule **#${id}** annulée.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Capsule **#${id}** annulée.`)] });
     }
   }
 };

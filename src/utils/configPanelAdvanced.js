@@ -1659,7 +1659,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
   function checkOwner() {
     const uid = getUserId();
     if (interaction.user.id !== uid) {
-      interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+      (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
       return false;
     }
     return true;
@@ -1700,7 +1700,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'edit_start' && arg) {
         const tpl = db.getEmbedTemplate(interaction.guildId, arg);
-        if (!tpl) return interaction.reply({ content: '❌ Template introuvable.', ephemeral: true });
+        if (!tpl) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Template introuvable.', ephemeral: true });
         const d = safeJsonParse(tpl.data_json, {});
         const modal = buildSimpleModal(`adv_modal:embeds:update:${userId}:${encodeURIComponent(arg)}`, '✏️ Modifier l\'embed', [
           { id: 'title',       label: 'Titre',       value: d.title,       style: TextInputStyle.Short,     required: false, maxLength: 256 },
@@ -1713,7 +1713,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'send_start' && arg) {
         const tpl = db.getEmbedTemplate(interaction.guildId, arg);
-        if (!tpl) return interaction.reply({ content: '❌ Template introuvable.', ephemeral: true });
+        if (!tpl) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Template introuvable.', ephemeral: true });
         const sel = new ChannelSelectMenuBuilder()
           .setCustomId(`adv_chan:embeds_send:${userId}:${encodeURIComponent(arg)}`)
           .setPlaceholder(`📤 Salon où envoyer l\'embed "${arg}"`)
@@ -1812,7 +1812,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'edit_resp' && arg) {
         const c = db.getCustomCommand(interaction.guildId, arg);
-        if (!c) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
         const modal = buildSimpleModal(`adv_modal:cmds_adv:save_resp:${userId}:${encodeURIComponent(arg)}`, '✏️ Modifier la réponse', [
           { id: 'response', label: 'Nouvelle réponse (texte)', value: c.response, style: TextInputStyle.Paragraph, maxLength: 2000 },
         ]);
@@ -2026,7 +2026,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 📋 LOGS PRO ──────────────────────────────────────────
     if (section === 'logs_pro' && action === 'toggle') {
       const key = arg; // ex: log_message_delete
-      if (!LOG_EVENTS.find(e => e.key === key)) return interaction.reply({ content: '❌ Event inconnu.', ephemeral: true });
+      if (!LOG_EVENTS.find(e => e.key === key)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Event inconnu.', ephemeral: true });
       const c = db.getConfig(interaction.guildId);
       db.setConfig(interaction.guildId, key, (c[key] ?? 1) ? 0 : 1);
       return interaction.update(buildLogsProPanel(cfg, interaction.guild, userId, db));
@@ -2363,7 +2363,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 🧠 IA ─────────────────────────────────────────────────
     if (section === 'ai') {
       const aiMod = _getAiModule();
-      if (!aiMod) return interaction.reply({ content: '❌ Module IA non chargé.', ephemeral: true });
+      if (!aiMod) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Module IA non chargé.', ephemeral: true });
       if (action === 'toggle') {
         const current = aiMod.getAIConfig(interaction.guildId, db);
         aiMod.setAIConfig(interaction.guildId, db, { enabled: current.enabled ? 0 : 1 });
@@ -2413,20 +2413,20 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'test') {
         const current = aiMod.getAIConfig(interaction.guildId, db);
-        if (!aiMod.isAvailable()) return interaction.reply({ content: '❌ Aucune clé API IA configurée côté Railway.', ephemeral: true });
+        if (!aiMod.isAvailable()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA configurée côté Railway.', ephemeral: true });
         await interaction.deferReply({ ephemeral: true });
         try {
           const res = await aiMod.askAI({
             prompt: 'En UNE seule phrase, présente-toi et dis que tu es prêt à aider.',
             guildId: interaction.guildId, userId: interaction.user.id, cfg: current,
           });
-          return interaction.editReply({
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('🧪 Test IA')
               .setDescription(res.text || '*(vide)*')
               .setFooter({ text: `${res.provider} • ${res.model} • ${res.usage?.output_tokens || res.usage?.completion_tokens || '?'} tokens` })],
           });
         } catch (e) {
-          return interaction.editReply({ content: `❌ ${e.message}` });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}` });
         }
       }
     }
@@ -2559,11 +2559,11 @@ async function handleAdvancedInteraction(interaction, db, client) {
         // Limite Discord 25 MB pour attachements ; le JSON reste petit
         const buf = Buffer.from(json, 'utf8');
         if (buf.length > 8_000_000) {
-          return interaction.reply({ content: '❌ Config trop volumineuse pour être envoyée (>8 MB).', ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Config trop volumineuse pour être envoyée (>8 MB).', ephemeral: true });
         }
         const { AttachmentBuilder } = require('discord.js');
         const file = new AttachmentBuilder(buf, { name: `nexusbot_config_${interaction.guild.name.replace(/[^a-z0-9_\-]/gi, '_')}.json` });
-        return interaction.reply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '✅ Voici ta sauvegarde complète. Garde-la précieusement — tu pourras la ré-importer plus tard.',
           files: [file],
           ephemeral: true,
@@ -2603,7 +2603,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const which = parts[1];
     const uid   = parts[2];
     if (interaction.user.id !== uid) {
-      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
     }
     const val = interaction.values[0];
     if (which === 'embeds_pick') {
@@ -2630,7 +2630,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const which = parts[1];
     const uid   = parts[2];
     if (interaction.user.id !== uid) {
-      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
     }
     const channelId = interaction.values[0] || null;
 
@@ -2645,7 +2645,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         channel_id: channelId,
       });
       await interaction.deferUpdate();
-      return interaction.editReply(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey));
     }
 
     if (which === 'ai_channels') {
@@ -2653,7 +2653,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       const ids = Array.isArray(interaction.values) ? interaction.values : [];
       if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { allowed_channels: ids });
       await interaction.deferUpdate();
-      return interaction.editReply(buildAIPanel(cfg, interaction.guild, uid, db));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAIPanel(cfg, interaction.guild, uid, db));
     }
 
     if (which === 'cmds_chans') {
@@ -2668,7 +2668,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         });
       }
       await interaction.deferUpdate();
-      return interaction.editReply(buildCmdDetailPanel(cfg, interaction.guild, uid, db, trigger));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildCmdDetailPanel(cfg, interaction.guild, uid, db, trigger));
     }
 
     if (which === 'autoresp_chans') {
@@ -2682,14 +2682,14 @@ async function handleAdvancedInteraction(interaction, db, client) {
         });
       }
       await interaction.deferUpdate();
-      return interaction.editReply(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, trigger));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, trigger));
     }
 
     if (which === 'embeds_send') {
       const name = parts[3] ? decodeURIComponent(parts[3]) : null;
       const tpl = name ? db.getEmbedTemplate(interaction.guildId, name) : null;
       if (!tpl || !channelId) {
-        return interaction.reply({ content: '❌ Impossible d\'envoyer : template ou salon manquant.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer : template ou salon manquant.', ephemeral: true });
       }
       const data = safeJsonParse(tpl.data_json, {});
       const ctx = {
@@ -2700,14 +2700,14 @@ async function handleAdvancedInteraction(interaction, db, client) {
       };
       const eb = rebuildEmbedFromData(applyVarsToTemplate(data, ctx));
       const chan = interaction.guild.channels.cache.get(channelId);
-      if (!chan) return interaction.reply({ content: '❌ Salon introuvable.', ephemeral: true });
+      if (!chan) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Salon introuvable.', ephemeral: true });
       try {
         await chan.send({ embeds: [eb] });
       } catch (e) {
-        return interaction.reply({ content: `❌ Envoi impossible : ${e.message?.slice(0, 150)}`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Envoi impossible : ${e.message?.slice(0, 150)}`, ephemeral: true });
       }
       await interaction.deferUpdate();
-      return interaction.editReply(buildEmbedsPanel(cfg, interaction.guild, uid, db));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildEmbedsPanel(cfg, interaction.guild, uid, db));
     }
   }
 
@@ -2718,7 +2718,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const which = parts[1];
     const uid   = parts[2];
     if (interaction.user.id !== uid) {
-      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
     }
     const roleId = interaction.values[0] || null;
 
@@ -2734,7 +2734,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         });
       }
       await interaction.deferUpdate();
-      return interaction.editReply(buildCmdDetailPanel(cfg, interaction.guild, uid, db, trigger));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildCmdDetailPanel(cfg, interaction.guild, uid, db, trigger));
     }
 
     if (which === 'level_roles') {
@@ -2744,14 +2744,14 @@ async function handleAdvancedInteraction(interaction, db, client) {
         db.addLevelRole(interaction.guildId, level, roleId);
       }
       await interaction.deferUpdate();
-      return interaction.editReply(buildLevelRolesPanel(cfg, interaction.guild, uid, db));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildLevelRolesPanel(cfg, interaction.guild, uid, db));
     }
 
     if (which === 'ai_required') {
       const aiMod = _getAiModule();
       if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { required_role: roleId });
       await interaction.deferUpdate();
-      return interaction.editReply(buildAIPanel(cfg, interaction.guild, uid, db));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAIPanel(cfg, interaction.guild, uid, db));
     }
 
     if (which === 'autoresp_role') {
@@ -2765,7 +2765,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         });
       }
       await interaction.deferUpdate();
-      return interaction.editReply(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, trigger));
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAutorespDetailPanel(cfg, interaction.guild, uid, db, trigger));
     }
   }
 
@@ -2777,7 +2777,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const act  = parts[2];
     const uid  = parts[3];
     if (interaction.user.id !== uid) {
-      return interaction.reply({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
     }
     const extra = parts[4] ? decodeURIComponent(parts[4]) : null;
     const field = (id, def = '') => { try { return interaction.fields.getTextInputValue(id); } catch { return def; } };
@@ -2786,7 +2786,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'embeds') {
       if (act === 'create') {
         const name = field('name').toLowerCase().trim().replace(/\s+/g, '_');
-        if (!name) return interaction.reply({ content: '❌ Nom requis.', ephemeral: true });
+        if (!name) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Nom requis.', ephemeral: true });
         const data = {
           title:       field('title').trim() || null,
           description: field('description').trim() || null,
@@ -2794,7 +2794,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
           footer_text: field('footer_text').trim() || null,
         };
         if (!data.title && !data.description) {
-          return interaction.reply({ content: '❌ Ajoute au moins un titre ou une description.', ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ajoute au moins un titre ou une description.', ephemeral: true });
         }
         db.upsertEmbedTemplate(interaction.guildId, name, data, interaction.user.id);
         return interaction.update(buildEmbedsPanel(cfg, interaction.guild, uid, db));
@@ -2813,19 +2813,19 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (act === 'edit_name') {
         const name = field('name').toLowerCase().trim();
         const tpl = db.getEmbedTemplate(interaction.guildId, name);
-        if (!tpl) return interaction.reply({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
+        if (!tpl) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
         return interaction.update(buildEmbedPreviewPanel(cfg, interaction.guild, uid, db, name));
       }
       if (act === 'send_name') {
         const name = field('name').toLowerCase().trim();
         const tpl = db.getEmbedTemplate(interaction.guildId, name);
-        if (!tpl) return interaction.reply({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
+        if (!tpl) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
         return interaction.update(buildEmbedPreviewPanel(cfg, interaction.guild, uid, db, name));
       }
       if (act === 'del_name') {
         const name = field('name').toLowerCase().trim();
         const n = db.deleteEmbedTemplate(interaction.guildId, name);
-        if (!n) return interaction.reply({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Template \`${name}\` introuvable.`, ephemeral: true });
         return interaction.update(buildEmbedsPanel(cfg, interaction.guild, uid, db));
       }
     }
@@ -2836,7 +2836,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const trigger  = field('trigger').toLowerCase().trim().replace(/\s+/g, '_').replace(/^&+/, '');
         const response = field('response').trim();
         const cooldown = parseInt(field('cooldown', '0'), 10) || 0;
-        if (!trigger || !response) return interaction.reply({ content: '❌ Déclencheur et réponse obligatoires.', ephemeral: true });
+        if (!trigger || !response) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Déclencheur et réponse obligatoires.', ephemeral: true });
         db.upsertCustomCommand(interaction.guildId, trigger, {
           response, response_type: 'text',
           cooldown, enabled: 1, created_by: interaction.user.id,
@@ -2849,8 +2849,8 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const description = field('description').trim();
         const color       = field('color').trim() || null;
         const cooldown    = parseInt(field('cooldown', '0'), 10) || 0;
-        if (!trigger) return interaction.reply({ content: '❌ Déclencheur obligatoire.', ephemeral: true });
-        if (!title && !description) return interaction.reply({ content: '❌ Ajoute au moins un titre ou une description.', ephemeral: true });
+        if (!trigger) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Déclencheur obligatoire.', ephemeral: true });
+        if (!title && !description) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ajoute au moins un titre ou une description.', ephemeral: true });
         const embedJson = JSON.stringify({ title: title || null, description: description || null, color });
         db.upsertCustomCommand(interaction.guildId, trigger, {
           response: title || description || '',
@@ -2863,7 +2863,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (act === 'edit_pick' || act === 'toggle_pick' || act === 'del_pick') {
         const trigger = field('trigger').toLowerCase().trim().replace(/^&+/, '');
         const c = db.getCustomCommand(interaction.guildId, trigger);
-        if (!c) return interaction.reply({ content: `❌ \`&${trigger}\` introuvable.`, ephemeral: true });
+        if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ \`&${trigger}\` introuvable.`, ephemeral: true });
         if (act === 'del_pick') {
           db.deleteCustomCommand(interaction.guildId, trigger);
           return interaction.update(buildCmdsAdvPanel(cfg, interaction.guild, uid, db, 0));
@@ -2880,7 +2880,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (act === 'save_resp' && extra) {
         const c = db.getCustomCommand(interaction.guildId, extra);
-        if (!c) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
         const response = field('response').trim();
         db.upsertCustomCommand(interaction.guildId, extra, {
           ...c, allowed_channels: safeJsonParse(c.allowed_channels, []),
@@ -2890,7 +2890,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (act === 'save_cd' && extra) {
         const c = db.getCustomCommand(interaction.guildId, extra);
-        if (!c) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
         const cd = Math.max(0, parseInt(field('seconds', '0'), 10) || 0);
         db.upsertCustomCommand(interaction.guildId, extra, {
           ...c, allowed_channels: safeJsonParse(c.allowed_channels, []),
@@ -2903,7 +2903,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── MESSAGES SYSTÈME ──────────────────────────────────────
     if (sect === 'sys_msgs') {
       const eventKey = extra;
-      if (!eventKey) return interaction.reply({ content: '❌ Événement manquant.', ephemeral: true });
+      if (!eventKey) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Événement manquant.', ephemeral: true });
       const m = db.getSystemMessage(interaction.guildId, eventKey);
 
       if (act === 'save_text') {
@@ -2918,7 +2918,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const raw = field('embed_json').trim() || null;
         if (raw) {
           const parsed = safeJsonParse(raw, null);
-          if (!parsed) return interaction.reply({ content: '❌ JSON invalide.', ephemeral: true });
+          if (!parsed) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ JSON invalide.', ephemeral: true });
         }
         db.upsertSystemMessage(interaction.guildId, eventKey, {
           enabled: m?.enabled ?? 1, mode: m?.mode === 'text' ? 'embed' : (m?.mode || 'embed'),
@@ -2936,7 +2936,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         if (raw === '' || cd === 0) {
           db.removeCooldownOverride(interaction.guildId, extra);
         } else {
-          if (isNaN(cd) || cd < 0) return interaction.reply({ content: '❌ Nombre entier positif attendu.', ephemeral: true });
+          if (isNaN(cd) || cd < 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Nombre entier positif attendu.', ephemeral: true });
           db.setCooldownOverride(interaction.guildId, extra, cd);
         }
         return interaction.update(buildCmdCtrlDetailPanel(cfg, interaction.guild, uid, db, extra));
@@ -2989,7 +2989,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'xp_pro' && act === 'save' && extra) {
       const raw = field('value').trim().replace(/[\s,_]/g, '');
       const n = /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : NaN;
-      if (isNaN(n)) return interaction.reply({ content: '❌ Valeur numérique requise.', ephemeral: true });
+      if (isNaN(n)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur numérique requise.', ephemeral: true });
       db.setConfig(interaction.guildId, extra, extra === 'xp_multiplier' ? n : Math.trunc(n));
       return interaction.update(buildXpProPanel(cfg, interaction.guild, uid, db));
     }
@@ -3018,8 +3018,8 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (act === 'save_thresh') {
         const t = parseInt(field('threshold'), 10);
         const w = parseInt(field('window'), 10);
-        if (isNaN(t) || t < 2) return interaction.reply({ content: '❌ Seuil invalide (>=2).', ephemeral: true });
-        if (isNaN(w) || w < 5) return interaction.reply({ content: '❌ Fenêtre invalide (>=5s).', ephemeral: true });
+        if (isNaN(t) || t < 2) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seuil invalide (>=2).', ephemeral: true });
+        if (isNaN(w) || w < 5) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Fenêtre invalide (>=5s).', ephemeral: true });
         db.setAntiraidField(interaction.guildId, 'join_threshold', t);
         db.setAntiraidField(interaction.guildId, 'join_window_secs', w);
         return interaction.update(buildAntiraidPanel(cfg, interaction.guild, uid, db));
@@ -3027,8 +3027,8 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (act === 'save_newacc') {
         const d = parseInt(field('days'), 10);
         const a = field('action', 'kick').toLowerCase().trim();
-        if (isNaN(d) || d < 0) return interaction.reply({ content: '❌ Jours invalides.', ephemeral: true });
-        if (!['kick', 'ban', 'mute'].includes(a)) return interaction.reply({ content: '❌ Action : kick, ban ou mute.', ephemeral: true });
+        if (isNaN(d) || d < 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Jours invalides.', ephemeral: true });
+        if (!['kick', 'ban', 'mute'].includes(a)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Action : kick, ban ou mute.', ephemeral: true });
         db.setAntiraidField(interaction.guildId, 'new_account_days', d);
         db.setAntiraidField(interaction.guildId, 'new_account_action', a);
         return interaction.update(buildAntiraidPanel(cfg, interaction.guild, uid, db));
@@ -3041,16 +3041,16 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const channel_id = field('channel_id').trim();
         const target     = field('target').trim();
         const message    = field('message').trim() || null;
-        if (!channel_id || !target) return interaction.reply({ content: '❌ Salon + cible requis.', ephemeral: true });
+        if (!channel_id || !target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Salon + cible requis.', ephemeral: true });
         if (sect === 'youtube') db.addYoutubeSub(interaction.guildId, { channel_id, yt_channel_id: target, message });
         else                    db.addTwitchSub(interaction.guildId, { channel_id, twitch_login: target.toLowerCase(), message });
         return interaction.update(sect === 'youtube' ? buildYoutubePanel(cfg, interaction.guild, uid, db) : buildTwitchPanel(cfg, interaction.guild, uid, db));
       }
       if (act === 'del_pick') {
         const id = parseInt(field('id'), 10);
-        if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+        if (isNaN(id)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ ID invalide.', ephemeral: true });
         const n = sect === 'youtube' ? db.removeYoutubeSub(interaction.guildId, id) : db.removeTwitchSub(interaction.guildId, id);
-        if (!n) return interaction.reply({ content: `❌ #${id} introuvable.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ #${id} introuvable.`, ephemeral: true });
         return interaction.update(sect === 'youtube' ? buildYoutubePanel(cfg, interaction.guild, uid, db) : buildTwitchPanel(cfg, interaction.guild, uid, db));
       }
     }
@@ -3058,7 +3058,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 🎁 GIVEAWAYS ──────────────────────────────────────────
     if (sect === 'giveaways') {
       const id = parseInt(field('id'), 10);
-      if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+      if (isNaN(id)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ ID invalide.', ephemeral: true });
       if (act === 'end_pick')    { db.endGiveaway(interaction.guildId, id);    return interaction.update(buildGiveawaysPanel(cfg, interaction.guild, uid, db)); }
       if (act === 'cancel_pick') { db.cancelGiveaway(interaction.guildId, id); return interaction.update(buildGiveawaysPanel(cfg, interaction.guild, uid, db)); }
     }
@@ -3069,21 +3069,21 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const channel_id = field('channel_id').trim();
         const cron       = field('cron').trim();
         const content    = field('content').trim();
-        if (!channel_id || !cron || !content) return interaction.reply({ content: '❌ Tous les champs requis.', ephemeral: true });
+        if (!channel_id || !cron || !content) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tous les champs requis.', ephemeral: true });
         // Validation basique du cron (5 tokens)
-        if (cron.split(/\s+/).length !== 5) return interaction.reply({ content: '❌ Expression CRON invalide (5 tokens).', ephemeral: true });
+        if (cron.split(/\s+/).length !== 5) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Expression CRON invalide (5 tokens).', ephemeral: true });
         db.createScheduledMessage(interaction.guildId, { channel_id, cron, content, enabled: 1, created_by: interaction.user.id });
         return interaction.update(buildScheduledPanel(cfg, interaction.guild, uid, db));
       }
       if (act === 'toggle_pick') {
         const id = parseInt(field('id'), 10);
-        if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+        if (isNaN(id)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ ID invalide.', ephemeral: true });
         db.toggleScheduledMessage(interaction.guildId, id);
         return interaction.update(buildScheduledPanel(cfg, interaction.guild, uid, db));
       }
       if (act === 'del_pick') {
         const id = parseInt(field('id'), 10);
-        if (isNaN(id)) return interaction.reply({ content: '❌ ID invalide.', ephemeral: true });
+        if (isNaN(id)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ ID invalide.', ephemeral: true });
         db.deleteScheduledMessage(interaction.guildId, id);
         return interaction.update(buildScheduledPanel(cfg, interaction.guild, uid, db));
       }
@@ -3117,17 +3117,17 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 🗣️ TEXTES UI — save / reset_one ──────────────────────
     if (sect === 'ui_texts') {
       const i18n = (() => { try { return require('./i18n'); } catch { return null; } })();
-      if (!i18n) return interaction.reply({ content: '❌ Module i18n indisponible.', ephemeral: true });
+      if (!i18n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Module i18n indisponible.', ephemeral: true });
       if (act === 'save') {
         const key = field('key').trim();
-        if (!key) return interaction.reply({ content: '❌ Identifiant requis.', ephemeral: true });
+        if (!key) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Identifiant requis.', ephemeral: true });
         const value = field('value').trim();
         i18n.setText(interaction.guildId, db, key, value || null);
         return interaction.update(buildUiTextsPanel(cfg, interaction.guild, uid, db, 0));
       }
       if (act === 'reset_one') {
         const key = field('key').trim();
-        if (!key) return interaction.reply({ content: '❌ Identifiant requis.', ephemeral: true });
+        if (!key) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Identifiant requis.', ephemeral: true });
         i18n.setText(interaction.guildId, db, key, null);
         return interaction.update(buildUiTextsPanel(cfg, interaction.guild, uid, db, 0));
       }
@@ -3137,20 +3137,20 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'kv') {
       const source = extra || 'kv'; // 'kv' ou 'gc'
       const key = field('key', '').trim();
-      if (!key) return interaction.reply({ content: '❌ Clé requise.', ephemeral: true });
+      if (!key) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Clé requise.', ephemeral: true });
 
       if (act === 'do_view') {
         let val;
         if (source === 'gc') {
           const gc = db.getConfig(interaction.guildId);
-          if (!(key in gc)) return interaction.reply({ content: `❌ Colonne \`${key}\` inexistante.`, ephemeral: true });
+          if (!(key in gc)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Colonne \`${key}\` inexistante.`, ephemeral: true });
           val = gc[key];
         } else {
           val = db.kvGet(interaction.guildId, key);
-          if (val === null || val === undefined) return interaction.reply({ content: `❌ Clé \`${key}\` inexistante.`, ephemeral: true });
+          if (val === null || val === undefined) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Clé \`${key}\` inexistante.`, ephemeral: true });
         }
         const display = typeof val === 'object' ? JSON.stringify(val, null, 2) : String(val);
-        return interaction.reply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle(`🔍 ${key}`)
             .setDescription('```' + truncate(display, 3800) + '```')
             .setFooter({ text: `Source: ${source === 'gc' ? 'guild_config' : 'guild_kv'}` })],
@@ -3174,7 +3174,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
           }
           return interaction.update(buildKvPanel(cfg, interaction.guild, uid, db, 0, source));
         } catch (e) {
-          return interaction.reply({ content: `❌ ${e.message}`, ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}`, ephemeral: true });
         }
       }
 
@@ -3187,7 +3187,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
           }
           return interaction.update(buildKvPanel(cfg, interaction.guild, uid, db, 0, source));
         } catch (e) {
-          return interaction.reply({ content: `❌ ${e.message}`, ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}`, ephemeral: true });
         }
       }
     }
@@ -3196,7 +3196,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'shop') {
       if (act === 'create') {
         const price = parseInt(field('price'), 10);
-        if (isNaN(price) || price < 0) return interaction.reply({ content: '❌ Prix invalide.', ephemeral: true });
+        if (isNaN(price) || price < 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Prix invalide.', ephemeral: true });
         const item = db.createShopItem(interaction.guildId, {
           name: field('name').trim(),
           description: field('description').trim() || null,
@@ -3209,20 +3209,20 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (act === 'del_pick') {
         const id = parseInt(field('id'), 10);
         const n = isNaN(id) ? 0 : db.deleteShopItem(interaction.guildId, id);
-        if (!n) return interaction.reply({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
         return interaction.update(buildShopPanel(cfg, interaction.guild, uid, db, 0));
       }
       if (act === 'toggle_pick') {
         const id = parseInt(field('id'), 10);
         const it = isNaN(id) ? null : db.getShopItem(interaction.guildId, id);
-        if (!it) return interaction.reply({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
+        if (!it) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
         db.updateShopItem(interaction.guildId, id, { active: it.active ? 0 : 1 });
         return interaction.update(buildShopPanel(cfg, interaction.guild, uid, db, 0));
       }
       if (act === 'edit_pick') {
         const id = parseInt(field('id'), 10);
         const it = isNaN(id) ? null : db.getShopItem(interaction.guildId, id);
-        if (!it) return interaction.reply({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
+        if (!it) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Item #${id} introuvable.`, ephemeral: true });
         const modal = buildSimpleModal(`adv_modal:shop:save_edit:${userId}:${id}`, `✏️ Modifier #${id}`, [
           { id: 'name',        label: 'Nom',          value: it.name,            style: TextInputStyle.Short,     maxLength: 100 },
           { id: 'description', label: 'Description',  value: it.description || '', style: TextInputStyle.Paragraph, required: false, maxLength: 500 },
@@ -3252,14 +3252,14 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const cid = field('channel_id').trim();
         const emoji = field('emoji').trim();
         const rid = field('role_id').trim();
-        if (!mid || !cid || !emoji || !rid) return interaction.reply({ content: '❌ Tous les champs requis.', ephemeral: true });
+        if (!mid || !cid || !emoji || !rid) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tous les champs requis.', ephemeral: true });
         db.addReactionRole(interaction.guildId, mid, cid, emoji, rid);
         return interaction.update(buildReactionRolesPanel(cfg, interaction.guild, uid, db));
       }
       if (act === 'del_pick') {
         const id = parseInt(field('id'), 10);
         const n = isNaN(id) ? 0 : db.removeReactionRole(interaction.guildId, id);
-        if (!n) return interaction.reply({ content: `❌ Reaction role #${id} introuvable.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Reaction role #${id} introuvable.`, ephemeral: true });
         return interaction.update(buildReactionRolesPanel(cfg, interaction.guild, uid, db));
       }
     }
@@ -3268,7 +3268,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'role_menus') {
       if (act === 'create') {
         const ids = field('role_ids').split(',').map(s => s.trim()).filter(Boolean);
-        if (!ids.length) return interaction.reply({ content: '❌ Au moins un rôle requis.', ephemeral: true });
+        if (!ids.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Au moins un rôle requis.', ephemeral: true });
         db.createRoleMenu(interaction.guildId, {
           title: field('title').trim(),
           description: field('description').trim() || null,
@@ -3280,7 +3280,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (act === 'del_pick') {
         const id = parseInt(field('id'), 10);
         const n = isNaN(id) ? 0 : db.deleteRoleMenu(interaction.guildId, id);
-        if (!n) return interaction.reply({ content: `❌ Menu #${id} introuvable.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Menu #${id} introuvable.`, ephemeral: true });
         return interaction.update(buildRoleMenusPanel(cfg, interaction.guild, uid, db));
       }
     }
@@ -3289,7 +3289,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'autoresp') {
       if (act === 'save_resp' && extra) {
         const a = db.getAutoresponder(interaction.guildId, extra);
-        if (!a) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        if (!a) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
         db.upsertAutoresponder(interaction.guildId, extra, {
           ...a,
           allowed_channels: safeJsonParse(a.allowed_channels, []),
@@ -3299,7 +3299,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (act === 'save_cd' && extra) {
         const a = db.getAutoresponder(interaction.guildId, extra);
-        if (!a) return interaction.reply({ content: '❌ Introuvable.', ephemeral: true });
+        if (!a) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
         const cd = Math.max(0, parseInt(field('seconds', '0'), 10) || 0);
         db.upsertAutoresponder(interaction.guildId, extra, {
           ...a,
@@ -3313,7 +3313,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 📢 SYS MSGS CUSTOM ───────────────────────────────────
     if (sect === 'sys_msgs' && act === 'create_custom') {
       const ev = field('event').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-      if (!ev) return interaction.reply({ content: '❌ Nom d\'événement invalide.', ephemeral: true });
+      if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Nom d\'événement invalide.', ephemeral: true });
       const content = field('content').trim() || null;
       db.upsertSystemMessage(interaction.guildId, ev, {
         enabled: 1, mode: 'text', content, embed_json: null, channel_id: null,
@@ -3324,7 +3324,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 🧠 IA : save model / tokens / prompt ─────────────────
     if (sect === 'ai') {
       const aiMod = _getAiModule();
-      if (!aiMod) return interaction.reply({ content: '❌ Module IA introuvable.', ephemeral: true });
+      if (!aiMod) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Module IA introuvable.', ephemeral: true });
       if (act === 'save_model') {
         const v = field('model').trim() || 'claude-3-5-haiku-20241022';
         aiMod.setAIConfig(interaction.guildId, db, { model: v });
@@ -3332,7 +3332,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (act === 'save_tokens') {
         const n = parseInt(field('max_tokens'), 10);
-        if (isNaN(n) || n < 64 || n > 2048) return interaction.reply({ content: '❌ Valeur invalide (64-2048).', ephemeral: true });
+        if (isNaN(n) || n < 64 || n > 2048) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur invalide (64-2048).', ephemeral: true });
         aiMod.setAIConfig(interaction.guildId, db, { max_tokens: n });
         return interaction.update(buildAIPanel(cfg, interaction.guild, uid, db));
       }
@@ -3376,21 +3376,21 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const name   = field('name').trim();
         const value  = field('value').trim();
         const inline = /^(oui|yes|y|o|true|1)$/i.test(field('inline', 'non').trim());
-        if (!name || !value) return interaction.reply({ content: '❌ Nom ET valeur requis.', ephemeral: true });
+        if (!name || !value) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Nom ET valeur requis.', ephemeral: true });
         const tpl = db.getEmbedTemplate(interaction.guildId, extra);
         const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
         if (!Array.isArray(d.fields)) d.fields = [];
-        if (d.fields.length >= 25) return interaction.reply({ content: '❌ Max 25 fields atteint.', ephemeral: true });
+        if (d.fields.length >= 25) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Max 25 fields atteint.', ephemeral: true });
         d.fields.push({ name, value, inline });
         db.upsertEmbedTemplate(interaction.guildId, extra, d, interaction.user.id);
         return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, uid, db, extra));
       }
       if (act === 'rm_field' && extra) {
         const idx = parseInt(field('index'), 10);
-        if (isNaN(idx) || idx < 1) return interaction.reply({ content: '❌ Numéro invalide.', ephemeral: true });
+        if (isNaN(idx) || idx < 1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Numéro invalide.', ephemeral: true });
         const tpl = db.getEmbedTemplate(interaction.guildId, extra);
         const d = tpl ? safeJsonParse(tpl.data_json, {}) : {};
-        if (!Array.isArray(d.fields) || idx > d.fields.length) return interaction.reply({ content: '❌ Field inexistant.', ephemeral: true });
+        if (!Array.isArray(d.fields) || idx > d.fields.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Field inexistant.', ephemeral: true });
         d.fields.splice(idx - 1, 1);
         db.upsertEmbedTemplate(interaction.guildId, extra, d, interaction.user.id);
         return interaction.update(buildEmbedEditorFull(cfg, interaction.guild, uid, db, extra));
@@ -3404,14 +3404,14 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const response = field('response').trim();
         const exact    = /^(oui|yes|y|o|true|1)$/i.test(field('exact', 'non').trim());
         const cd       = Math.max(0, parseInt(field('cooldown', '0'), 10) || 0);
-        if (!trigger || !response) return interaction.reply({ content: '❌ Trigger et réponse requis.', ephemeral: true });
+        if (!trigger || !response) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Trigger et réponse requis.', ephemeral: true });
         db.upsertAutoresponder(interaction.guildId, trigger, { response, exact_match: exact, cooldown: cd });
         return interaction.update(buildAutorespPanel(cfg, interaction.guild, uid, db, 0));
       }
       if (act === 'del_pick') {
         const trigger = field('trigger').toLowerCase().trim();
         const n = db.deleteAutoresponder(interaction.guildId, trigger);
-        if (!n) return interaction.reply({ content: `❌ Trigger \`${trigger}\` introuvable.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Trigger \`${trigger}\` introuvable.`, ephemeral: true });
         return interaction.update(buildAutorespPanel(cfg, interaction.guild, uid, db, 0));
       }
     }
@@ -3420,7 +3420,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'level_roles') {
       if (act === 'set_level') {
         const level = parseInt(field('level'), 10);
-        if (isNaN(level) || level < 1 || level > 500) return interaction.reply({ content: '❌ Niveau invalide (1-500).', ephemeral: true });
+        if (isNaN(level) || level < 1 || level > 500) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Niveau invalide (1-500).', ephemeral: true });
         // Ouvrir un sélecteur de rôle
         const sel = new RoleSelectMenuBuilder()
           .setCustomId(`adv_role:level_roles:${uid}:${level}`)
@@ -3434,9 +3434,9 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (act === 'del_pick') {
         const level = parseInt(field('level'), 10);
-        if (isNaN(level) || level < 1) return interaction.reply({ content: '❌ Niveau invalide.', ephemeral: true });
+        if (isNaN(level) || level < 1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Niveau invalide.', ephemeral: true });
         const n = db.removeLevelRole(interaction.guildId, level);
-        if (!n) return interaction.reply({ content: `❌ Aucun rôle pour le niveau ${level}.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Aucun rôle pour le niveau ${level}.`, ephemeral: true });
         return interaction.update(buildLevelRolesPanel(cfg, interaction.guild, uid, db));
       }
     }
@@ -3445,13 +3445,13 @@ async function handleAdvancedInteraction(interaction, db, client) {
     if (sect === 'backup' && act === 'do_import') {
       const json    = field('json').trim();
       const confirm = field('confirm').trim();
-      if (confirm !== 'CONFIRMER') return interaction.reply({ content: '❌ Tape CONFIRMER pour valider l\'import.', ephemeral: true });
+      if (confirm !== 'CONFIRMER') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tape CONFIRMER pour valider l\'import.', ephemeral: true });
       const parsed = safeJsonParse(json, null);
-      if (!parsed || typeof parsed !== 'object') return interaction.reply({ content: '❌ JSON invalide.', ephemeral: true });
+      if (!parsed || typeof parsed !== 'object') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ JSON invalide.', ephemeral: true });
       try {
         db.importGuildConfig(interaction.guildId, parsed);
       } catch (e) {
-        return interaction.reply({ content: `❌ Erreur import : ${e.message?.slice(0, 150)}`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur import : ${e.message?.slice(0, 150)}`, ephemeral: true });
       }
       return interaction.update(buildBackupPanel(cfg, interaction.guild, uid, db));
     }
@@ -3461,15 +3461,15 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (act === 'create') {
         const alias  = field('alias').toLowerCase().trim().replace(/\s+/g, '').replace(/^&+/, '');
         const target = field('target').toLowerCase().trim().replace(/\s+/g, '').replace(/^&+/, '');
-        if (!alias || !target) return interaction.reply({ content: '❌ Alias et cible requis.', ephemeral: true });
-        if (alias === target) return interaction.reply({ content: '❌ L\'alias doit être différent de la cible.', ephemeral: true });
+        if (!alias || !target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Alias et cible requis.', ephemeral: true });
+        if (alias === target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ L\'alias doit être différent de la cible.', ephemeral: true });
         db.setAlias(interaction.guildId, alias, target, interaction.user.id);
         return interaction.update(buildAliasesPanel(cfg, interaction.guild, uid, db));
       }
       if (act === 'del_pick') {
         const alias = field('alias').toLowerCase().trim().replace(/^&+/, '');
         const n = db.deleteAlias(interaction.guildId, alias);
-        if (!n) return interaction.reply({ content: `❌ Alias \`${alias}\` introuvable.`, ephemeral: true });
+        if (!n) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Alias \`${alias}\` introuvable.`, ephemeral: true });
         return interaction.update(buildAliasesPanel(cfg, interaction.guild, uid, db));
       }
     }

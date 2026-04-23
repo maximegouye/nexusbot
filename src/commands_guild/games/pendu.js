@@ -66,7 +66,7 @@ module.exports = {
     const key = `${guildId}_${userId}`;
 
     if (sub === 'jouer') {
-      if (activeGames.has(key)) return interaction.editReply({ content: '❌ Vous avez déjà une partie en cours ! Cliquez sur les boutons pour jouer.', ephemeral: true });
+      if (activeGames.has(key)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà une partie en cours ! Cliquez sur les boutons pour jouer.', ephemeral: true });
 
       const word = WORDS[Math.floor(Math.random() * WORDS.length)];
       const game = { word, guessed: [], errors: 0, time: Date.now() };
@@ -86,7 +86,7 @@ module.exports = {
         .setDescription(HANGMAN[0])
         .setFooter({ text: `${word.length} lettres • Cliquez une lettre` });
 
-      return interaction.editReply({ embeds: [embed], components: buildKeyboard([]) });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: buildKeyboard([]) });
     }
   },
 
@@ -101,9 +101,9 @@ module.exports = {
     const key = `${guildId}_${userId}`;
 
     const game = activeGames.get(key);
-    if (!game) return interaction.editReply({ content: '❌ Aucune partie en cours. Lancez `/pendu jouer`.', ephemeral: true });
+    if (!game) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune partie en cours. Lancez `/pendu jouer`.', ephemeral: true });
 
-    if (game.guessed.includes(letter)) return interaction.editReply({ content: `❌ Vous avez déjà essayé **${letter.toUpperCase()}**.`, ephemeral: true });
+    if (game.guessed.includes(letter)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous avez déjà essayé **${letter.toUpperCase()}**.`, ephemeral: true });
 
     game.guessed.push(letter);
     if (!game.word.includes(letter)) game.errors++;

@@ -127,42 +127,42 @@ module.exports = {
     const sub  = interaction.options.getSubcommand();
 
     if (sub === 'marche') {
-      return interaction.editReply({ embeds: [buildMarketEmbed(cfg, interaction.user.id, interaction.guildId)], components: buildButtons(interaction.user.id) });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildMarketEmbed(cfg, interaction.user.id, interaction.guildId)], components: buildButtons(interaction.user.id) });
     }
     if (sub === 'portefeuille') {
-      return interaction.editReply({ embeds: [buildWalletEmbed(cfg, interaction.user.id, interaction.guildId, user)], components: buildButtons(interaction.user.id) });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildWalletEmbed(cfg, interaction.user.id, interaction.guildId, user)], components: buildButtons(interaction.user.id) });
     }
     if (sub === 'acheter') {
       const sym = interaction.options.getString('crypto').toUpperCase();
       const raw = interaction.options.getString('montant');
       const amt = parseAmount(raw, user.balance);
-      if (amt == null || amt < 1) return interaction.editReply({ content: '❌ Montant invalide.', ephemeral: true });
+      if (amt == null || amt < 1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant invalide.', ephemeral: true });
       try {
         const res = db.buyCrypto(interaction.user.id, interaction.guildId, sym, amt);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle('🟢 Achat effectué')
           .setDescription(`Tu as acheté **${res.qty.toFixed(6)} ${res.symbol}** au prix de **${fmtPrice(res.price)}${cfg.currency_emoji || '€'}** pour un total de **${amt.toLocaleString('fr-FR')}${cfg.currency_emoji || '€'}**.`)
           .setFooter({ text: '/crypto portefeuille pour voir ton solde' })
         ], components: buildButtons(interaction.user.id) });
       } catch (e) {
-        return interaction.editReply({ content: `❌ ${e.message}`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}`, ephemeral: true });
       }
     }
     if (sub === 'vendre') {
       const sym = interaction.options.getString('crypto').toUpperCase();
       const raw = interaction.options.getString('quantite');
       const item = db.getWalletItem(interaction.user.id, interaction.guildId, sym);
-      if (!item) return interaction.editReply({ content: `❌ Tu ne possèdes pas de ${sym}.`, ephemeral: true });
+      if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu ne possèdes pas de ${sym}.`, ephemeral: true });
       const qty = parseQty(raw, item.amount);
-      if (qty == null || qty <= 0) return interaction.editReply({ content: '❌ Quantité invalide.', ephemeral: true });
+      if (qty == null || qty <= 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Quantité invalide.', ephemeral: true });
       try {
         const res = db.sellCrypto(interaction.user.id, interaction.guildId, sym, qty);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setTitle('🔴 Vente effectuée')
           .setDescription(`Tu as vendu **${res.qtySold.toFixed(6)} ${sym}** à **${fmtPrice(res.price)}${cfg.currency_emoji || '€'}** = **+${res.coins.toLocaleString('fr-FR')}${cfg.currency_emoji || '€'}** dans ton solde.`)
         ], components: buildButtons(interaction.user.id) });
       } catch (e) {
-        return interaction.editReply({ content: `❌ ${e.message}`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}`, ephemeral: true });
       }
     }
   },

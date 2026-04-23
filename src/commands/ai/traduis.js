@@ -18,8 +18,8 @@ module.exports = {
     const lang = interaction.options.getString('langue') ?? 'français';
     const cfg = ai.getAIConfig(interaction.guildId, db);
 
-    if (!cfg.enabled)    return interaction.editReply({ content: '❌ IA désactivée.', ephemeral: true });
-    if (!ai.isAvailable()) return interaction.editReply({ content: '❌ Aucune clé API IA.', ephemeral: true });
+    if (!cfg.enabled)    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ IA désactivée.', ephemeral: true });
+    if (!ai.isAvailable()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA.', ephemeral: true });
 
     await interaction.deferReply();
     try {
@@ -36,11 +36,11 @@ module.exports = {
         .setFooter({ text: `${res.provider} • ${res.model}` })
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (e) {
-      if (e.code === 'RATE_LIMIT') return interaction.editReply({ content: `⏱️ ${e.message}` });
+      if (e.code === 'RATE_LIMIT') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏱️ ${e.message}` });
       console.error('[/traduis]', e.message);
-      await interaction.editReply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}` });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur : ${e.message?.slice(0, 200)}` });
     }
   },
 };

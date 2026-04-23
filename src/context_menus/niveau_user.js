@@ -9,7 +9,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
     const target = interaction.targetMember || await interaction.guild.members.fetch(interaction.targetId).catch(() => null);
-    if (!target) return interaction.editReply('❌ Membre introuvable.');
+    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Membre introuvable.');
 
     const u = db.getUser(target.id, interaction.guildId);
     const level = db.getLevel(u.xp);
@@ -20,7 +20,7 @@ module.exports = {
 
     const rank = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=? AND xp > ?').get(interaction.guildId, u.xp)?.c ?? 0;
 
-    return interaction.editReply({ embeds: [
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
       new EmbedBuilder()
         .setColor('#00D4FF')
         .setTitle(`📊 Niveau — ${target.displayName}`)

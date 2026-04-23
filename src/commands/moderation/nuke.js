@@ -9,7 +9,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
-      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const nbMessages = parseInt(interaction.options.getString('messages'));
 
@@ -18,9 +18,9 @@ module.exports = {
       await interaction.deferReply({ ephemeral: true });
       try {
         const deleted = await interaction.channel.bulkDelete(nbMessages, true);
-        return interaction.editReply({ content: `🗑️ **${deleted.size}** message${deleted.size > 1 ? 's' : ''} supprimé${deleted.size > 1 ? 's' : ''}.` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `🗑️ **${deleted.size}** message${deleted.size > 1 ? 's' : ''} supprimé${deleted.size > 1 ? 's' : ''}.` });
       } catch (e) {
-        return interaction.editReply({ content: `❌ Erreur : ${e.message}` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur : ${e.message}` });
       }
     }
 
@@ -36,7 +36,7 @@ module.exports = {
       .setDescription(`Tu es sur le point de **nuker** le salon <#${interaction.channelId}>.\n\nCela va :\n• Cloner le salon (même paramètres)\n• Supprimer l'original\n• Tous les messages seront **définitivement perdus**\n\n**Es-tu sûr ?**`)
       .setFooter({ text: '15 secondes pour confirmer' });
 
-    const msg = await interaction.editReply({ embeds: [embed], components: [row], fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row], fetchReply: true });
 
     const filter  = i => i.user.id === interaction.user.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 15000, max: 1 });

@@ -56,10 +56,10 @@ function getAuditLogs(guildId, limit = 20) { return db.db.prepare('SELECT * FROM
 async function securityCheck(interaction, opts = {}) {
   const { requireAdmin = false, cmdName = interaction.commandName, skipGlobalRate = false } = opts;
   const userId = interaction.user.id, guildId = interaction.guildId;
-  if (isBlacklisted(userId, guildId)) { await interaction.reply({ content: '🚫 Vous êtes blacklisté sur ce serveur.', ephemeral: true }); return false; }
-  if (!skipGlobalRate) { const rate = checkGlobalRate(userId); if (!rate.ok) { await interaction.reply({ content: `⏳ Trop de commandes ! Réessaie dans **${rate.waitSec}s**.`, ephemeral: true }); return false; } }
-  if (requireAdmin && !interaction.member.permissions.has('Administrator')) { await interaction.reply({ content: '🔒 Réservé aux administrateurs.', ephemeral: true }); return false; }
-  if (!lockCmd(userId, cmdName)) { await interaction.reply({ content: '⚠️ Commande déjà en cours.', ephemeral: true }); return false; }
+  if (isBlacklisted(userId, guildId)) { await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🚫 Vous êtes blacklisté sur ce serveur.', ephemeral: true }); return false; }
+  if (!skipGlobalRate) { const rate = checkGlobalRate(userId); if (!rate.ok) { await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Trop de commandes ! Réessaie dans **${rate.waitSec}s**.`, ephemeral: true }); return false; } }
+  if (requireAdmin && !interaction.member.permissions.has('Administrator')) { await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🔒 Réservé aux administrateurs.', ephemeral: true }); return false; }
+  if (!lockCmd(userId, cmdName)) { await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⚠️ Commande déjà en cours.', ephemeral: true }); return false; }
   return true;
 }
 function releaseCmd(interaction, opts = {}) { unlockCmd(interaction.user.id, opts.cmdName || interaction.commandName); }

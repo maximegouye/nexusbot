@@ -17,8 +17,8 @@ module.exports = {
     const delDays = parseInt(interaction.options.getString('supprimer_messages')) ?? 1;
 
     const ids = idsRaw.split(/[\s,]+/).map(s => s.trim()).filter(s => /^\d{17,19}$/.test(s));
-    if (!ids.length) return interaction.editReply({ content: '❌ Aucun ID valide fourni.' });
-    if (ids.length > 50) return interaction.editReply({ content: '❌ Maximum 50 IDs à la fois.' });
+    if (!ids.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun ID valide fourni.' });
+    if (ids.length > 50) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 50 IDs à la fois.' });
 
     let banned = 0, failed = 0, skipped = 0;
     const results = [];
@@ -34,7 +34,7 @@ module.exports = {
         results.push(`❌ \`${id}\` (${e.message.slice(0, 30)})`);
         failed++;
         if (interaction.isRepliable() && !interaction.replied) {
-          interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+          (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
         }
       }
     }
@@ -56,7 +56,7 @@ module.exports = {
       ]}).catch(() => {});
     }
 
-    return interaction.editReply({ embeds: [new EmbedBuilder()
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
       .setColor(banned > 0 ? 'Red' : 'Yellow')
       .setTitle('🔨 Résultat du MassBan')
       .addFields(

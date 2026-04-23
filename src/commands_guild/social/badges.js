@@ -64,7 +64,7 @@ module.exports = {
       const target = interaction.options.getUser('membre') || interaction.user;
       const userBadges = db.db.prepare('SELECT * FROM user_badges WHERE guild_id=? AND user_id=? ORDER BY earned_at DESC').all(guildId, target.id);
 
-      if (!userBadges.length) return interaction.editReply({ content: `❌ ${target.id === userId ? 'Vous n\'avez' : `<@${target.id}> n'a`} aucun badge.`, ephemeral: true });
+      if (!userBadges.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${target.id === userId ? 'Vous n\'avez' : `<@${target.id}> n'a`} aucun badge.`, ephemeral: true });
 
       const earned = userBadges.map(ub => {
         const b = BADGES[ub.badge_id];
@@ -72,7 +72,7 @@ module.exports = {
         return `${b.emoji} **${b.name}** — ${b.desc}`;
       }).filter(Boolean).join('\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle(`🏅 Badges de ${target.username}`)
           .setDescription(earned)
           .setThumbnail(target.displayAvatarURL())
@@ -89,7 +89,7 @@ module.exports = {
       }
 
       const desc = Object.entries(categories).map(([cat, items]) => `**${cat}**\n${items.join('\n')}`).join('\n\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🏅 Badges disponibles')
           .setDescription(desc.slice(0, 4000))
           .setFooter({ text: 'Certains badges secrets ne sont pas listés' })
@@ -97,25 +97,25 @@ module.exports = {
     }
 
     if (sub === 'donner') {
-      if (!interaction.member.permissions.has(8n)) return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
+      if (!interaction.member.permissions.has(8n)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
       const target = interaction.options.getUser('membre');
       const badgeId = interaction.options.getString('badge');
-      if (!BADGES[badgeId]) return interaction.editReply({ content: `❌ Badge \`${badgeId}\` inconnu.`, ephemeral: true });
+      if (!BADGES[badgeId]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Badge \`${badgeId}\` inconnu.`, ephemeral: true });
 
       try {
         db.db.prepare('INSERT INTO user_badges (guild_id, user_id, badge_id) VALUES (?,?,?)').run(guildId, target.id, badgeId);
-      } catch { return interaction.editReply({ content: '❌ Ce membre possède déjà ce badge.', ephemeral: true }); }
+      } catch { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce membre possède déjà ce badge.', ephemeral: true }); }
 
-      return interaction.editReply({ content: `✅ Badge **${BADGES[badgeId].emoji} ${BADGES[badgeId].name}** donné à <@${target.id}> !` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Badge **${BADGES[badgeId].emoji} ${BADGES[badgeId].name}** donné à <@${target.id}> !` });
     }
 
     if (sub === 'retirer') {
-      if (!interaction.member.permissions.has(8n)) return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
+      if (!interaction.member.permissions.has(8n)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
       const target = interaction.options.getUser('membre');
       const badgeId = interaction.options.getString('badge');
       const r = db.db.prepare('DELETE FROM user_badges WHERE guild_id=? AND user_id=? AND badge_id=?').run(guildId, target.id, badgeId);
-      if (!r.changes) return interaction.editReply({ content: `❌ <@${target.id}> ne possède pas ce badge.`, ephemeral: true });
-      return interaction.editReply({ content: `✅ Badge \`${badgeId}\` retiré à <@${target.id}>.` });
+      if (!r.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${target.id}> ne possède pas ce badge.`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Badge \`${badgeId}\` retiré à <@${target.id}>.` });
     }
   }
 };

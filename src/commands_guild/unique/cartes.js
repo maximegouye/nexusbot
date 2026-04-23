@@ -105,7 +105,7 @@ module.exports = {
       const packType = interaction.options.getString('pack');
       const cost = PACK_PRICE[packType];
       const u = db.getUser(userId, guildId);
-      if ((u.balance||0) < cost) return interaction.editReply({ content: `❌ Ce pack coûte **${cost} ${coin}**.`, ephemeral: true });
+      if ((u.balance||0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Ce pack coûte **${cost} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
       const cards = drawCard(packType);
@@ -121,7 +121,7 @@ module.exports = {
       const best = cards.reduce((a, b) => (RARITY_RATES[a.rarity] < RARITY_RATES[b.rarity]) ? a : b);
       const desc = cards.map(c => `${c.emoji} **${c.name}** — ${c.rarity} ⚔️${c.atk}/🛡️${c.def}`).join('\n');
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(RARITY_COLORS[best.rarity])
         .setTitle(`📦 Pack ${packType} ouvert !`)
         .setDescription(desc)
@@ -132,7 +132,7 @@ module.exports = {
     if (sub === 'collection') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const cards = db.db.prepare('SELECT card_id, quantity FROM user_cards WHERE guild_id=? AND user_id=? ORDER BY quantity DESC').all(guildId, target.id);
-      if (!cards.length) return interaction.editReply({ content: `❌ **${target.username}** n'a aucune carte. Ouvrez des packs avec \`/cartes ouvrir\` !`, ephemeral: true });
+      if (!cards.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${target.username}** n'a aucune carte. Ouvrez des packs avec \`/cartes ouvrir\` !`, ephemeral: true });
 
       const grouped = {};
       for (const row of cards) {
@@ -146,39 +146,39 @@ module.exports = {
       for (const [rarity, list] of Object.entries(grouped)) {
         embed.addFields({ name: `${rarity.charAt(0).toUpperCase()+rarity.slice(1)}`, value: list.join('\n').slice(0,1024) });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'vendre') {
       const cardId = interaction.options.getString('carte_id');
       const prix = parseInt(interaction.options.getString('prix'));
       const owned = db.db.prepare('SELECT * FROM user_cards WHERE guild_id=? AND user_id=? AND card_id=?').get(guildId, userId, cardId);
-      if (!owned || owned.quantity < 1) return interaction.editReply({ content: `❌ Vous ne possédez pas la carte \`${cardId}\`.`, ephemeral: true });
+      if (!owned || owned.quantity < 1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous ne possédez pas la carte \`${cardId}\`.`, ephemeral: true });
 
       db.db.prepare('INSERT INTO card_market (guild_id,seller_id,card_id,price) VALUES(?,?,?,?)').run(guildId, userId, cardId, prix);
       db.db.prepare('UPDATE user_cards SET quantity=quantity-1 WHERE guild_id=? AND user_id=? AND card_id=?').run(guildId, userId, cardId);
       const cardData = CARTES.find(c => c.id === cardId);
-      return interaction.editReply({ content: `✅ **${cardData?.name || cardId}** mise en vente pour **${prix} ${coin}** !` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ **${cardData?.name || cardId}** mise en vente pour **${prix} ${coin}** !` });
     }
 
     if (sub === 'marche') {
       const listings = db.db.prepare('SELECT cm.*, cm.id as lid FROM card_market cm WHERE cm.guild_id=? ORDER BY cm.listed_at DESC LIMIT 15').all(guildId);
-      if (!listings.length) return interaction.editReply({ content: '❌ Aucune carte en vente en ce moment.', ephemeral: true });
+      if (!listings.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune carte en vente en ce moment.', ephemeral: true });
       const desc = listings.map(l => {
         const card = CARTES.find(c => c.id === l.card_id);
         return `**#${l.lid}** ${card?.emoji||'🃏'} **${card?.name||l.card_id}** (${card?.rarity||'?'}) — **${l.price} ${coin}** par <@${l.seller_id}>`;
       }).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏪 Marché des Cartes').setDescription(desc)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏪 Marché des Cartes').setDescription(desc)] });
     }
 
     if (sub === 'acheter') {
       const lid = parseInt(interaction.options.getString('id_annonce'));
       const listing = db.db.prepare('SELECT * FROM card_market WHERE id=? AND guild_id=?').get(lid, guildId);
-      if (!listing) return interaction.editReply({ content: '❌ Annonce introuvable.', ephemeral: true });
-      if (listing.seller_id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas acheter votre propre carte.', ephemeral: true });
+      if (!listing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Annonce introuvable.', ephemeral: true });
+      if (listing.seller_id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas acheter votre propre carte.', ephemeral: true });
 
       const u = db.getUser(userId, guildId);
-      if ((u.balance||0) < listing.price) return interaction.editReply({ content: `❌ Vous avez besoin de **${listing.price} ${coin}**.`, ephemeral: true });
+      if ((u.balance||0) < listing.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous avez besoin de **${listing.price} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -listing.price);
       db.addCoins(listing.seller_id, guildId, listing.price);
@@ -190,26 +190,26 @@ module.exports = {
       db.db.prepare('DELETE FROM card_market WHERE id=?').run(lid);
 
       const card = CARTES.find(c => c.id === listing.card_id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Achat réussi !').setDescription(`Vous avez acheté **${card?.name||listing.card_id}** pour **${listing.price} ${coin}** !`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Achat réussi !').setDescription(`Vous avez acheté **${card?.name||listing.card_id}** pour **${listing.price} ${coin}** !`)] });
     }
 
     if (sub === 'duel') {
       const opponent = interaction.options.getUser('adversaire');
       const myCardId = interaction.options.getString('votre_carte');
-      if (opponent.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous défier vous-même.', ephemeral: true });
+      if (opponent.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous défier vous-même.', ephemeral: true });
 
       const myCard = CARTES.find(c => c.id === myCardId);
-      if (!myCard) return interaction.editReply({ content: `❌ Carte \`${myCardId}\` introuvable.`, ephemeral: true });
+      if (!myCard) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Carte \`${myCardId}\` introuvable.`, ephemeral: true });
 
       const owned = db.db.prepare('SELECT * FROM user_cards WHERE guild_id=? AND user_id=? AND card_id=?').get(guildId, userId, myCardId);
-      if (!owned) return interaction.editReply({ content: '❌ Vous ne possédez pas cette carte.', ephemeral: true });
+      if (!owned) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne possédez pas cette carte.', ephemeral: true });
 
       // L'adversaire utilise sa meilleure carte
       const theirCards = db.db.prepare('SELECT card_id FROM user_cards WHERE guild_id=? AND user_id=?').all(guildId, opponent.id);
-      if (!theirCards.length) return interaction.editReply({ content: `❌ <@${opponent.id}> n'a aucune carte.`, ephemeral: true });
+      if (!theirCards.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${opponent.id}> n'a aucune carte.`, ephemeral: true });
 
       const theirBest = theirCards.map(r => CARTES.find(c => c.id === r.card_id)).filter(Boolean).sort((a,b) => (b.atk+b.def) - (a.atk+a.def))[0];
-      if (!theirBest) return interaction.editReply({ content: '❌ Impossible de trouver la carte adverse.', ephemeral: true });
+      if (!theirBest) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible de trouver la carte adverse.', ephemeral: true });
 
       const myScore = myCard.atk + myCard.def + Math.floor(Math.random()*30);
       const theirScore = theirBest.atk + theirBest.def + Math.floor(Math.random()*30);
@@ -219,7 +219,7 @@ module.exports = {
       if (iWin) db.addCoins(userId, guildId, reward);
       else db.addCoins(opponent.id, guildId, reward);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(iWin ? '#2ECC71' : '#E74C3C')
         .setTitle(`⚔️ Duel de Cartes`)
         .addFields(

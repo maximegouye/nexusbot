@@ -60,7 +60,7 @@ module.exports = {
 
     if (sub === 'configurer') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Permission **Gérer le serveur** requise.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission **Gérer le serveur** requise.', ephemeral: true });
 
       const role     = interaction.options.getRole('role');
       const montant  = parseInt(interaction.options.getString('montant'));
@@ -70,7 +70,7 @@ module.exports = {
         ON CONFLICT(guild_id,role_id) DO UPDATE SET montant=?,intervalle=?`)
         .run(guildId, role.id, montant, intervalle, montant, intervalle);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle('✅ Salaire configuré')
         .addFields(
           { name: '🎭 Rôle',      value: `${role}`,                    inline: true },
@@ -82,20 +82,20 @@ module.exports = {
 
     if (sub === 'supprimer') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Permission requise.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission requise.', ephemeral: true });
       const role = interaction.options.getRole('role');
       db.db.prepare('DELETE FROM salaires WHERE guild_id=? AND role_id=?').run(guildId, role.id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setDescription(`🗑️ Salaire de ${role} supprimé.`)] });
     }
 
     if (sub === 'liste') {
       const salaires = db.db.prepare('SELECT * FROM salaires WHERE guild_id=? ORDER BY montant DESC').all(guildId);
-      if (!salaires.length) return interaction.editReply({ content: '💼 Aucun salaire configuré. Utilisez `/salaire configurer`.', ephemeral: true });
+      if (!salaires.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '💼 Aucun salaire configuré. Utilisez `/salaire configurer`.', ephemeral: true });
       const lines = salaires.map(s =>
         `🎭 <@&${s.role_id}> → **${s.montant} ${coin}** / ${intervalLabels[s.intervalle] || s.intervalle}`
       );
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle('💼 Salaires configurés')
         .setDescription(lines.join('\n'))] });
     }
@@ -103,7 +103,7 @@ module.exports = {
     if (sub === 'reclamer') {
       // Récupère tous les salaires du serveur
       const allSalaires = db.db.prepare('SELECT * FROM salaires WHERE guild_id=?').all(guildId);
-      if (!allSalaires.length) return interaction.editReply({ content: '💼 Aucun salaire configuré sur ce serveur.', ephemeral: true });
+      if (!allSalaires.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '💼 Aucun salaire configuré sur ce serveur.', ephemeral: true });
 
       // Récupère les rôles du membre
       const member = interaction.member;
@@ -133,7 +133,7 @@ module.exports = {
           ON CONFLICT(guild_id,user_id) DO UPDATE SET last_claim=?`).run(guildId, userId, now, now);
       }
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(totalGain > 0 ? '#2ECC71' : '#F59E0B')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(totalGain > 0 ? '#2ECC71' : '#F59E0B')
         .setTitle(`💼 Salaire${totalGain > 0 ? ` reçu : +${totalGain} ${coin}` : ' — Pas encore disponible'}`)
         .setDescription(gains.join('\n') || '*Vous n\'avez aucun rôle avec un salaire.*')
         .setThumbnail(interaction.user.displayAvatarURL())], ephemeral: true });
@@ -154,7 +154,7 @@ module.exports = {
         }
       }
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('💼 Votre salaire')
         .setDescription(myRoles.length ? myRoles.join('\n') : '*Vous n\'avez aucun rôle avec un salaire.*')
         .addFields(

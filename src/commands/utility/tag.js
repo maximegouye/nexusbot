@@ -39,55 +39,55 @@ module.exports = {
 
     if (sub === 'utiliser') {
       const tag = db.db.prepare('SELECT * FROM tags WHERE guild_id=? AND name=?').get(interaction.guildId, nom);
-      if (!tag) return interaction.editReply({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
+      if (!tag) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
       db.db.prepare('UPDATE tags SET uses=uses+1 WHERE id=?').run(tag.id);
-      return interaction.editReply({ content: tag.content });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: tag.content });
     }
 
     if (sub === 'creer') {
       const content = interaction.options.getString('contenu');
       const clean   = nom.toLowerCase().replace(/[^a-z0-9-_]/g, '');
-      if (!clean) return interaction.editReply({ content: '❌ Nom invalide.', ephemeral: true });
+      if (!clean) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Nom invalide.', ephemeral: true });
       try {
         db.db.prepare('INSERT INTO tags (guild_id,name,content,author_id) VALUES (?,?,?,?)').run(interaction.guildId, clean, content, interaction.user.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Tag \`${clean}\` créé !`)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Tag \`${clean}\` créé !`)], ephemeral: true });
       } catch {
-        return interaction.editReply({ content: `❌ Le tag \`${clean}\` existe déjà.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Le tag \`${clean}\` existe déjà.`, ephemeral: true });
       }
     }
 
     if (sub === 'modifier') {
       const tag = db.db.prepare('SELECT * FROM tags WHERE guild_id=? AND name=?').get(interaction.guildId, nom);
-      if (!tag) return interaction.editReply({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
+      if (!tag) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
       const canEdit = tag.author_id === interaction.user.id || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!canEdit) return interaction.editReply({ content: '❌ Tu ne peux pas modifier ce tag.', ephemeral: true });
+      if (!canEdit) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas modifier ce tag.', ephemeral: true });
       const content = interaction.options.getString('contenu');
       db.db.prepare('UPDATE tags SET content=? WHERE id=?').run(content, tag.id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Tag \`${nom}\` modifié.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Tag \`${nom}\` modifié.`)], ephemeral: true });
     }
 
     if (sub === 'supprimer') {
       const tag = db.db.prepare('SELECT * FROM tags WHERE guild_id=? AND name=?').get(interaction.guildId, nom);
-      if (!tag) return interaction.editReply({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
+      if (!tag) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
       const canDelete = tag.author_id === interaction.user.id || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!canDelete) return interaction.editReply({ content: '❌ Tu ne peux pas supprimer ce tag.', ephemeral: true });
+      if (!canDelete) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas supprimer ce tag.', ephemeral: true });
       db.db.prepare('DELETE FROM tags WHERE id=?').run(tag.id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Tag \`${nom}\` supprimé.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Tag \`${nom}\` supprimé.`)], ephemeral: true });
     }
 
     if (sub === 'liste') {
       const tags = db.db.prepare('SELECT name, uses FROM tags WHERE guild_id=? ORDER BY uses DESC').all(interaction.guildId);
-      if (!tags.length) return interaction.editReply({ content: 'Aucun tag sur ce serveur.', ephemeral: true });
+      if (!tags.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: 'Aucun tag sur ce serveur.', ephemeral: true });
       const lines = tags.map((t, i) => `**${i+1}.** \`${t.name}\` — ${t.uses} utilisations`).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
         .setTitle(`🏷️ Tags du serveur (${tags.length})`)
         .setDescription(lines.slice(0, 4000))], ephemeral: false });
     }
 
     if (sub === 'info') {
       const tag = db.db.prepare('SELECT * FROM tags WHERE guild_id=? AND name=?').get(interaction.guildId, nom);
-      if (!tag) return interaction.editReply({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
+      if (!tag) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tag \`${nom}\` introuvable.`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#7B2FBE')
         .setTitle(`🏷️ Tag: ${tag.name}`)
         .setDescription(tag.content.slice(0, 500))
         .addFields(

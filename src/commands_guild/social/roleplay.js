@@ -77,7 +77,7 @@ module.exports = {
 
     if (sub === 'stats') {
       const stats = db.db.prepare('SELECT action, count FROM rp_stats WHERE user_id=? AND guild_id=? ORDER BY count DESC LIMIT 10').all(userId, guildId);
-      if (!stats.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune action RP effectuée.')], ephemeral: true });
+      if (!stats.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune action RP effectuée.')], ephemeral: true });
       const embed = new EmbedBuilder()
         .setColor('#9b59b6')
         .setTitle(`🎭 Tes Stats de Roleplay — ${interaction.user.username}`)
@@ -86,17 +86,17 @@ module.exports = {
           const action = ACTIONS[s.action];
           return `${action?.emoji || '🎭'} **${s.action}** : ${s.count} fois`;
         }).join('\n'));
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     const action = ACTIONS[sub];
-    if (!action) return interaction.editReply({ content: '❌ Action inconnue.', ephemeral: true });
+    if (!action) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Action inconnue.', ephemeral: true });
 
     let target = null;
     if (action.needsTarget) {
       target = interaction.options.getUser('membre');
-      if (!target) return interaction.editReply({ content: '❌ Tu dois mentionner une personne !', ephemeral: true });
-      if (target.id === userId) return interaction.editReply({ content: '❌ Tu ne peux pas faire ça à toi-même !', ephemeral: true });
+      if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu dois mentionner une personne !', ephemeral: true });
+      if (target.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas faire ça à toi-même !', ephemeral: true });
     }
 
     // Mise à jour des stats
@@ -113,6 +113,6 @@ module.exports = {
       .setImage(action.gif)
       .setFooter({ text: `${interaction.user.username} • /rp ${sub}` });
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

@@ -68,7 +68,7 @@ module.exports = {
         return `${done ? '✅' : '⏳'} **${d.label}** — ${d.desc}\n> Récompense: **${d.reward} ${coin}**`;
       }).join('\n\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('⚡ Défis du Jour')
           .setDescription(lines)
           .addFields(
@@ -80,27 +80,27 @@ module.exports = {
     }
 
     if (sub === 'valider') {
-      if (!interaction.member.permissions.has(0x4000n)) return interaction.editReply({ content: '❌ Staff uniquement.', ephemeral: true });
+      if (!interaction.member.permissions.has(0x4000n)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Staff uniquement.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
       const defiId = interaction.options.getString('defi');
       const defi = DAILY_DEFIS.find(d => d.id === defiId);
 
-      if (!dailyDefis.find(d => d.id === defiId)) return interaction.editReply({ content: '❌ Ce défi n\'est pas disponible aujourd\'hui.', ephemeral: true });
+      if (!dailyDefis.find(d => d.id === defiId)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce défi n\'est pas disponible aujourd\'hui.', ephemeral: true });
 
       try {
         db.db.prepare('INSERT INTO defis (guild_id, user_id, defi_id, completed_at, date) VALUES (?,?,?,?,?)').run(guildId, target.id, defiId, Math.floor(Date.now()/1000), today);
       } catch {
-        return interaction.editReply({ content: `❌ <@${target.id}> a déjà complété ce défi aujourd'hui.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${target.id}> a déjà complété ce défi aujourd'hui.`, ephemeral: true });
       }
 
       db.addCoins(target.id, guildId, defi.reward);
-      return interaction.editReply({ content: `✅ Défi **${defi.label}** validé pour <@${target.id}> ! +${defi.reward} ${coin}` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Défi **${defi.label}** validé pour <@${target.id}> ! +${defi.reward} ${coin}` });
     }
 
     if (sub === 'stats') {
       const total = db.db.prepare('SELECT COUNT(*) as c, SUM(d2.reward) as earned FROM defis d JOIN (SELECT id, reward FROM (VALUES ' + DAILY_DEFIS.map(d => `('${d.id}', ${d.reward})`).join(',') + ') as v(id, reward)) d2 ON d.defi_id=d2.id WHERE d.guild_id=? AND d.user_id=?').get(guildId, userId);
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('📊 Statistiques Défis')
           .addFields({ name: '✅ Défis complétés', value: `**${total?.c || 0}**`, inline: true })
       ], ephemeral: true });

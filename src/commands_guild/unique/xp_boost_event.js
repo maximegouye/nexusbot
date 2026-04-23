@@ -88,12 +88,12 @@ module.exports = {
         if (logCh) await logCh.send({ embeds: [embed] }).catch(() => {});
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'voir') {
       const boosts = db.db.prepare("SELECT * FROM boost_events WHERE guild_id=? AND active=1 AND ends_at>=? ORDER BY ends_at ASC").all(guildId, now);
-      if (!boosts.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun boost actif en ce moment.')] });
+      if (!boosts.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun boost actif en ce moment.')] });
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('⚡ Boosts Actifs')
@@ -101,20 +101,20 @@ module.exports = {
           const typeLabel = b.type === 'xp' ? '⭐ XP' : b.type === 'coins' ? '🪙 Coins' : '⚡ XP+Coins';
           return `**#${b.id}** ${typeLabel} ×${b.multiplier} — Fin <t:${b.ends_at}:R>\n> ${b.reason}`;
         }).join('\n\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'arreter') {
       const id = parseInt(interaction.options.getString('id'));
       const b  = db.db.prepare('SELECT * FROM boost_events WHERE id=? AND guild_id=? AND active=1').get(id, guildId);
-      if (!b) return interaction.editReply({ content: `❌ Boost #${id} introuvable ou déjà terminé.` });
+      if (!b) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Boost #${id} introuvable ou déjà terminé.` });
       db.db.prepare('UPDATE boost_events SET active=0 WHERE id=?').run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`⏹️ Boost **#${id}** arrêté.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`⏹️ Boost **#${id}** arrêté.`)] });
     }
 
     if (sub === 'historique') {
       const hist = db.db.prepare('SELECT * FROM boost_events WHERE guild_id=? ORDER BY created_at DESC LIMIT 15').all(guildId);
-      if (!hist.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun historique de boost.')] });
+      if (!hist.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun historique de boost.')] });
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('📜 Historique des Boosts')
@@ -122,7 +122,7 @@ module.exports = {
           const status = b.active && b.ends_at >= now ? '✅' : '⏹️';
           return `${status} **#${b.id}** — ${b.type} ×${b.multiplier} — ${b.reason}`;
         }).join('\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

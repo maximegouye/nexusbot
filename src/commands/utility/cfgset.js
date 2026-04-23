@@ -33,7 +33,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-      return interaction.editReply({ embeds: [ef.error('Permission manquante', 'Tu dois avoir **Gérer le serveur**.')], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Permission manquante', 'Tu dois avoir **Gérer le serveur**.')], ephemeral: true });
     }
     const sub = interaction.options.getSubcommand();
 
@@ -49,7 +49,7 @@ module.exports = {
           inline: false,
         })),
       });
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'columns') {
@@ -57,12 +57,12 @@ module.exports = {
       try {
         const cols = db.listTableColumns(table);
         const lines = cols.map(c => `• \`${c.name}\` (${c.type}${c.pk ? ' · PK' : ''}${c.notnull ? ' · NOT NULL' : ''})`).join('\n');
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [ef.info(`📋 Colonnes de \`${table}\``, lines, { footer: `${cols.length} colonnes` })],
           ephemeral: true,
         });
       } catch (e) {
-        return interaction.editReply({ embeds: [ef.error('Erreur', e.message)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Erreur', e.message)], ephemeral: true });
       }
     }
 
@@ -71,12 +71,12 @@ module.exports = {
       try {
         const val = db.getArbitrary(interaction.guildId, chemin);
         const display = val === null || val === undefined ? '*(null)*' : typeof val === 'object' ? JSON.stringify(val, null, 2) : String(val);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [ef.info(`🔍 \`${chemin}\``, '```' + display.slice(0, 3800) + '```')],
           ephemeral: true,
         });
       } catch (e) {
-        return interaction.editReply({ embeds: [ef.error('Erreur', e.message)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Erreur', e.message)], ephemeral: true });
       }
     }
 
@@ -85,7 +85,7 @@ module.exports = {
       const valeur = interaction.options.getString('valeur');
       try {
         const res = db.setArbitrary(interaction.guildId, chemin, valeur);
-        return interaction.editReply({
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           embeds: [ef.success('Valeur modifiée', [
             `**Chemin :** \`${chemin}\``,
             `**Nouvelle valeur :** ${valeur.length > 100 ? valeur.slice(0, 100) + '…' : valeur}`,
@@ -94,7 +94,7 @@ module.exports = {
           ephemeral: true,
         });
       } catch (e) {
-        return interaction.editReply({ embeds: [ef.error('Erreur', e.message)], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Erreur', e.message)], ephemeral: true });
       }
     }
   },

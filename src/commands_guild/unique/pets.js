@@ -87,7 +87,7 @@ module.exports = {
 
     if (sub === 'adopter') {
       const existing = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.editReply({ content: '❌ Vous avez déjà un animal ! Utilisez `/pet voir` ou `/pet abandonner`.', ephemeral: true });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà un animal ! Utilisez `/pet voir` ou `/pet abandonner`.', ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       let type = interaction.options.getString('type');
@@ -106,12 +106,12 @@ module.exports = {
       const petData = PETS[type];
       const cost = petData.rarity === 'légendaire' ? 5000 : petData.rarity === 'épique' ? 2000 : petData.rarity === 'rare' ? 500 : 100;
       const u = db.getUser(userId, guildId);
-      if ((u.balance||0) < cost) return interaction.editReply({ content: `❌ Adopter un **${type}** (${petData.rarity}) coûte **${cost} ${coin}**. Votre solde : ${u.balance||0} ${coin}`, ephemeral: true });
+      if ((u.balance||0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Adopter un **${type}** (${petData.rarity}) coûte **${cost} ${coin}**. Votre solde : ${u.balance||0} ${coin}`, ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
       db.db.prepare('INSERT INTO pets (guild_id,user_id,name,type,emoji,rarity,hp,max_hp,atk,def) VALUES(?,?,?,?,?,?,?,?,?,?)').run(guildId, userId, nom, type, petData.emoji, petData.rarity, petData.baseStats.hp, petData.baseStats.hp, petData.baseStats.atk, petData.baseStats.def);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(RARITY_COLORS[petData.rarity])
         .setTitle(`${petData.emoji} ${nom} vous a rejoint !`)
         .setDescription(`Vous avez adopté un **${type}** de rareté **${petData.rarity}** !`)
@@ -128,7 +128,7 @@ module.exports = {
     if (sub === 'voir') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const pet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-      if (!pet) return interaction.editReply({ content: `❌ **${target.username}** n'a pas d'animal. Adoptez-en un avec \`/pet adopter\` !`, ephemeral: true });
+      if (!pet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${target.username}** n'a pas d'animal. Adoptez-en un avec \`/pet adopter\` !`, ephemeral: true });
 
       const petMeta = PETS[pet.type];
       const evolName = petMeta?.evolutions?.[pet.evolution_stage] || pet.type;
@@ -137,7 +137,7 @@ module.exports = {
       const hungerBar = '█'.repeat(Math.floor(pet.hunger/10)) + '░'.repeat(10-Math.floor(pet.hunger/10));
       const happyBar = '█'.repeat(Math.floor(pet.happiness/10)) + '░'.repeat(10-Math.floor(pet.happiness/10));
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(RARITY_COLORS[pet.rarity])
         .setTitle(`${pet.emoji} ${pet.name} (${evolName})`)
         .setDescription(`Propriétaire : <@${target.id}> • Statut : ${getPetStatus(pet)}`)
@@ -155,15 +155,15 @@ module.exports = {
 
     if (sub === 'nourrir') {
       const pet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!pet) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'animal. `/pet adopter`', ephemeral: true });
+      if (!pet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas d\'animal. `/pet adopter`', ephemeral: true });
 
       const foodKey = interaction.options.getString('nourriture');
       const food = FOODS[foodKey];
       const u = db.getUser(userId, guildId);
-      if ((u.balance||0) < food.price) return interaction.editReply({ content: `❌ **${foodKey}** coûte **${food.price} ${coin}**.`, ephemeral: true });
+      if ((u.balance||0) < food.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${foodKey}** coûte **${food.price} ${coin}**.`, ephemeral: true });
 
       const cdLeft = 300 - (now - (pet.last_fed||0));
-      if (cdLeft > 0) return interaction.editReply({ content: `⏳ Votre animal n'a pas encore faim ! Attendez **${Math.ceil(cdLeft/60)} min**.`, ephemeral: true });
+      if (cdLeft > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Votre animal n'a pas encore faim ! Attendez **${Math.ceil(cdLeft/60)} min**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -food.price);
       const newHunger = Math.min(100, pet.hunger + food.hunger);
@@ -175,7 +175,7 @@ module.exports = {
       db.db.prepare('UPDATE pets SET hunger=?,happiness=?,xp=?,level=?,last_fed=? WHERE guild_id=? AND user_id=?').run(newHunger, newHappy, newXp, newLevel, now, guildId, userId);
 
       const leveled = newLevel > pet.level;
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#2ECC71').setTitle(`🍖 ${pet.name} a mangé !`)
         .setDescription(`**${foodKey}** servi !${leveled ? `\n\n🎉 **NIVEAU ${newLevel} ATTEINT !**` : ''}`)
         .addFields(
@@ -188,9 +188,9 @@ module.exports = {
 
     if (sub === 'jouer') {
       const pet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!pet) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'animal.', ephemeral: true });
+      if (!pet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas d\'animal.', ephemeral: true });
       const cdLeft = 1800 - (now - (pet.last_played||0));
-      if (cdLeft > 0) return interaction.editReply({ content: `⏳ Votre animal est fatigué ! Revenez dans **${Math.ceil(cdLeft/60)} min**.`, ephemeral: true });
+      if (cdLeft > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Votre animal est fatigué ! Revenez dans **${Math.ceil(cdLeft/60)} min**.`, ephemeral: true });
 
       const xpGain = Math.floor(Math.random() * 30) + 20;
       const happyGain = Math.floor(Math.random() * 20) + 10;
@@ -201,14 +201,14 @@ module.exports = {
       db.db.prepare('UPDATE pets SET happiness=?,xp=?,level=?,last_played=? WHERE guild_id=? AND user_id=?').run(newHappy, newXp, newLevel, now, guildId, userId);
       const activities = ['joué à la balle','couru dans le jardin','sauté partout','chassé des papillons','fait des tours'];
       const act = activities[Math.floor(Math.random()*activities.length)];
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`🎾 ${pet.name} a ${act} !`).addFields({name:'😊 Bonheur',value:`+${happyGain}% → ${newHappy}%`,inline:true},{name:'✨ XP',value:`+${xpGain}`,inline:true})] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`🎾 ${pet.name} a ${act} !`).addFields({name:'😊 Bonheur',value:`+${happyGain}% → ${newHappy}%`,inline:true},{name:'✨ XP',value:`+${xpGain}`,inline:true})] });
     }
 
     if (sub === 'entrainer') {
       const pet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!pet) return interaction.editReply({ content: '❌ Pas d\'animal.', ephemeral: true });
+      if (!pet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Pas d\'animal.', ephemeral: true });
       const cdLeft = 3600 - (now - (pet.last_battle||0));
-      if (cdLeft > 0) return interaction.editReply({ content: `⏳ Votre animal est épuisé ! Revenez dans **${Math.ceil(cdLeft/60)} min**.`, ephemeral: true });
+      if (cdLeft > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Votre animal est épuisé ! Revenez dans **${Math.ceil(cdLeft/60)} min**.`, ephemeral: true });
       const atkGain = Math.floor(Math.random()*3)+1;
       const defGain = Math.floor(Math.random()*3)+1;
       const xpGain = 50;
@@ -216,16 +216,16 @@ module.exports = {
       const newXp = pet.xp + xpGain;
       while (newXp >= xpForLevel(newLevel)) newLevel++;
       db.db.prepare('UPDATE pets SET atk=atk+?,def=def+?,xp=?,level=?,last_battle=? WHERE guild_id=? AND user_id=?').run(atkGain, defGain, newXp, newLevel, now, guildId, userId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle(`⚔️ ${pet.name} s'est entraîné !`).addFields({name:'⚔️ ATK',value:`+${atkGain}`,inline:true},{name:'🛡️ DEF',value:`+${defGain}`,inline:true},{name:'✨ XP',value:`+${xpGain}`,inline:true})] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle(`⚔️ ${pet.name} s'est entraîné !`).addFields({name:'⚔️ ATK',value:`+${atkGain}`,inline:true},{name:'🛡️ DEF',value:`+${defGain}`,inline:true},{name:'✨ XP',value:`+${xpGain}`,inline:true})] });
     }
 
     if (sub === 'combat') {
       const opponent = interaction.options.getUser('adversaire');
-      if (opponent.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous battre contre vous-même.', ephemeral: true });
+      if (opponent.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous battre contre vous-même.', ephemeral: true });
       const myPet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
       const theirPet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, opponent.id);
-      if (!myPet) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'animal.', ephemeral: true });
-      if (!theirPet) return interaction.editReply({ content: `❌ <@${opponent.id}> n'a pas d'animal.`, ephemeral: true });
+      if (!myPet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas d\'animal.', ephemeral: true });
+      if (!theirPet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${opponent.id}> n'a pas d'animal.`, ephemeral: true });
 
       // Simuler le combat
       let myHp = myPet.hp, theirHp = theirPet.hp;
@@ -250,7 +250,7 @@ module.exports = {
       db.db.prepare('UPDATE pets SET losses=losses+1,xp=xp+20 WHERE guild_id=? AND user_id=?').run(guildId, loserId);
       db.addCoins(winnerId, guildId, 300);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(iWin ? '#2ECC71' : '#E74C3C')
         .setTitle(`⚔️ Combat : ${myPet.name} vs ${theirPet.name}`)
         .setDescription(`**${iWin ? myPet.name : theirPet.name}** remporte le combat !\n<@${winnerId}> gagne **+300 ${coin}** et +80 XP !`)
@@ -263,12 +263,12 @@ module.exports = {
 
     if (sub === 'evoluer') {
       const pet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!pet) return interaction.editReply({ content: '❌ Pas d\'animal.', ephemeral: true });
+      if (!pet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Pas d\'animal.', ephemeral: true });
       const petMeta = PETS[pet.type];
       const maxStage = (petMeta?.evolutions?.length || 4) - 1;
-      if (pet.evolution_stage >= maxStage) return interaction.editReply({ content: '✨ Votre animal est déjà à son évolution maximale !', ephemeral: true });
+      if (pet.evolution_stage >= maxStage) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✨ Votre animal est déjà à son évolution maximale !', ephemeral: true });
       const levelReq = (pet.evolution_stage + 1) * 10;
-      if (pet.level < levelReq) return interaction.editReply({ content: `❌ Niveau **${levelReq}** requis pour évoluer. Vous êtes niveau **${pet.level}**.`, ephemeral: true });
+      if (pet.level < levelReq) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Niveau **${levelReq}** requis pour évoluer. Vous êtes niveau **${pet.level}**.`, ephemeral: true });
 
       const newStage = pet.evolution_stage + 1;
       const newName = petMeta?.evolutions?.[newStage] || pet.type;
@@ -277,7 +277,7 @@ module.exports = {
       const hpBonus = 30 + newStage * 20;
       db.db.prepare('UPDATE pets SET evolution_stage=?,atk=atk+?,def=def+?,max_hp=max_hp+?,hp=hp+? WHERE guild_id=? AND user_id=?').run(newStage, atkBonus, defBonus, hpBonus, hpBonus, guildId, userId);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#FFD700').setTitle(`✨ ${pet.name} a évolué !`)
         .setDescription(`${pet.emoji} **${pet.name}** est maintenant un **${newName}** !`)
         .addFields({name:'⚔️ ATK',value:`+${atkBonus}`,inline:true},{name:'🛡️ DEF',value:`+${defBonus}`,inline:true},{name:'❤️ HP Max',value:`+${hpBonus}`,inline:true})
@@ -286,19 +286,19 @@ module.exports = {
 
     if (sub === 'top') {
       const top = db.db.prepare('SELECT * FROM pets WHERE guild_id=? ORDER BY wins DESC, level DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.editReply({ content: '❌ Aucun animal sur ce serveur.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun animal sur ce serveur.', ephemeral: true });
       const desc = top.map((p, i) => `${['🥇','🥈','🥉'][i]||`**${i+1}.**`} ${p.emoji} **${p.name}** (<@${p.user_id}>) — Niv.**${p.level}** • ${p.wins}W/${p.losses}L • ${p.rarity}`).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏆 Top Animaux').setDescription(desc)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏆 Top Animaux').setDescription(desc)] });
     }
 
     if (sub === 'abandonner') {
       const pet = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (!pet) return interaction.editReply({ content: '❌ Vous n\'avez pas d\'animal.', ephemeral: true });
+      if (!pet) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas d\'animal.', ephemeral: true });
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`pet_abandon_confirm_${userId}`).setLabel('💔 Confirmer l\'abandon').setStyle(ButtonStyle.Danger),
         new ButtonBuilder().setCustomId(`pet_abandon_cancel_${userId}`).setLabel('Annuler').setStyle(ButtonStyle.Secondary),
       );
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('⚠️ Abandon').setDescription(`Êtes-vous sûr de vouloir abandonner **${pet.name}** ? Cette action est **irréversible**.`)], components: [row], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('⚠️ Abandon').setDescription(`Êtes-vous sûr de vouloir abandonner **${pet.name}** ? Cette action est **irréversible**.`)], components: [row], ephemeral: true });
     }
   }
 };

@@ -52,7 +52,7 @@ module.exports = {
 
     if (sub === 'creer') {
       const existing = db.db.prepare('SELECT * FROM clan_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.editReply({ content: '❌ Vous êtes déjà dans un clan. Quittez-le d\'abord.', ephemeral: true });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous êtes déjà dans un clan. Quittez-le d\'abord.', ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       const tag = interaction.options.getString('tag').toUpperCase();
@@ -60,17 +60,17 @@ module.exports = {
       const desc = interaction.options.getString('description') || '';
 
       const u = db.getUser(userId, guildId);
-      if (u.balance < 500) return interaction.editReply({ content: `❌ Créer un clan coûte **500 ${coin}**.`, ephemeral: true });
+      if (u.balance < 500) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Créer un clan coûte **500 ${coin}**.`, ephemeral: true });
 
       try {
         const r = db.db.prepare('INSERT INTO clans (guild_id, name, tag, emoji, description, owner_id) VALUES (?,?,?,?,?,?)').run(guildId, nom, tag, emoji, desc, userId);
         db.db.prepare('INSERT INTO clan_members (guild_id, clan_id, user_id, rank) VALUES (?,?,?,?)').run(guildId, r.lastInsertRowid, userId, 'chef');
         db.addCoins(userId, guildId, -500);
       } catch {
-        return interaction.editReply({ content: `❌ Ce nom ou tag existe déjà.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Ce nom ou tag existe déjà.`, ephemeral: true });
       }
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🏆 Clan créé !')
           .setDescription(`Le clan **${emoji} ${nom}** [${tag}] a été créé ! Coût : **-500 ${coin}**`)
       ]});
@@ -78,29 +78,29 @@ module.exports = {
 
     if (sub === 'rejoindre') {
       const existing = db.db.prepare('SELECT * FROM clan_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.editReply({ content: '❌ Vous êtes déjà dans un clan.', ephemeral: true });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous êtes déjà dans un clan.', ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       const clan = db.db.prepare('SELECT * FROM clans WHERE guild_id=? AND LOWER(name)=LOWER(?)').get(guildId, nom);
-      if (!clan) return interaction.editReply({ content: `❌ Clan **${nom}** introuvable.`, ephemeral: true });
+      if (!clan) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Clan **${nom}** introuvable.`, ephemeral: true });
 
       const members = db.db.prepare('SELECT COUNT(*) as c FROM clan_members WHERE guild_id=? AND clan_id=?').get(guildId, clan.id);
       const maxSize = 5 + (clan.level - 1) * 5;
-      if (members.c >= maxSize) return interaction.editReply({ content: `❌ Ce clan est plein (${members.c}/${maxSize} membres).`, ephemeral: true });
+      if (members.c >= maxSize) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Ce clan est plein (${members.c}/${maxSize} membres).`, ephemeral: true });
 
       db.db.prepare('INSERT INTO clan_members (guild_id, clan_id, user_id) VALUES (?,?,?)').run(guildId, clan.id, userId);
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Vous avez rejoint le clan **${clan.emoji} ${clan.name}** !`)
       ]});
     }
 
     if (sub === 'quitter') {
       const m = db.db.prepare('SELECT cm.*, c.owner_id, c.name, c.emoji FROM clan_members cm JOIN clans c ON cm.clan_id=c.id WHERE cm.guild_id=? AND cm.user_id=?').get(guildId, userId);
-      if (!m) return interaction.editReply({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
-      if (m.owner_id === userId) return interaction.editReply({ content: '❌ Vous êtes chef ! Transférez la direction avant de partir.', ephemeral: true });
+      if (!m) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
+      if (m.owner_id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous êtes chef ! Transférez la direction avant de partir.', ephemeral: true });
 
       db.db.prepare('DELETE FROM clan_members WHERE guild_id=? AND user_id=?').run(guildId, userId);
-      return interaction.editReply({ content: `✅ Vous avez quitté le clan **${m.emoji} ${m.name}**.`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Vous avez quitté le clan **${m.emoji} ${m.name}**.`, ephemeral: true });
     }
 
     if (sub === 'info') {
@@ -108,18 +108,18 @@ module.exports = {
       let clan;
       if (!nom) {
         const m = db.db.prepare('SELECT clan_id FROM clan_members WHERE guild_id=? AND user_id=?').get(guildId, userId);
-        if (!m) return interaction.editReply({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
+        if (!m) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
         clan = db.db.prepare('SELECT * FROM clans WHERE id=?').get(m.clan_id);
       } else {
         clan = db.db.prepare('SELECT * FROM clans WHERE guild_id=? AND LOWER(name)=LOWER(?)').get(guildId, nom);
-        if (!clan) return interaction.editReply({ content: `❌ Clan **${nom}** introuvable.`, ephemeral: true });
+        if (!clan) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Clan **${nom}** introuvable.`, ephemeral: true });
       }
 
       const members = db.db.prepare('SELECT * FROM clan_members WHERE guild_id=? AND clan_id=? ORDER BY CASE rank WHEN \'chef\' THEN 1 WHEN \'officier\' THEN 2 ELSE 3 END').all(guildId, clan.id);
       const rankEmojis = { chef: '👑', officier: '⭐', membre: '👤' };
       const memberList = members.map(m => `${rankEmojis[m.rank]} <@${m.user_id}>`).join('\n') || 'Aucun';
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle(`${clan.emoji} ${clan.name} [${clan.tag}]`)
           .setDescription(clan.description || '*Pas de description*')
           .addFields(
@@ -134,56 +134,56 @@ module.exports = {
 
     if (sub === 'liste') {
       const clans = db.db.prepare('SELECT c.*, COUNT(cm.id) as member_count FROM clans c LEFT JOIN clan_members cm ON c.id=cm.clan_id WHERE c.guild_id=? GROUP BY c.id ORDER BY c.level DESC, member_count DESC LIMIT 15').all(guildId);
-      if (!clans.length) return interaction.editReply({ content: '❌ Aucun clan sur ce serveur.', ephemeral: true });
+      if (!clans.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun clan sur ce serveur.', ephemeral: true });
 
       const lines = clans.map((c, i) => `**${i+1}.** ${c.emoji} **${c.name}** [${c.tag}] — Niv.${c.level} | 👥 ${c.member_count} | 💰 ${c.treasury} ${coin}`).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🏆 Clans du serveur').setDescription(lines)
       ]});
     }
 
     if (sub === 'kick') {
       const m = db.db.prepare('SELECT cm.*, c.owner_id FROM clan_members cm JOIN clans c ON cm.clan_id=c.id WHERE cm.guild_id=? AND cm.user_id=?').get(guildId, userId);
-      if (!m) return interaction.editReply({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
-      if (m.rank !== 'chef' && m.rank !== 'officier') return interaction.editReply({ content: '❌ Chef ou officier uniquement.', ephemeral: true });
+      if (!m) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
+      if (m.rank !== 'chef' && m.rank !== 'officier') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Chef ou officier uniquement.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
-      if (target.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous exclure vous-même.', ephemeral: true });
+      if (target.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous exclure vous-même.', ephemeral: true });
 
       const targetM = db.db.prepare('SELECT * FROM clan_members WHERE guild_id=? AND user_id=? AND clan_id=?').get(guildId, target.id, m.clan_id);
-      if (!targetM) return interaction.editReply({ content: `❌ <@${target.id}> n'est pas dans votre clan.`, ephemeral: true });
-      if (targetM.rank === 'chef') return interaction.editReply({ content: '❌ Impossible d\'expulser le chef.', ephemeral: true });
+      if (!targetM) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${target.id}> n'est pas dans votre clan.`, ephemeral: true });
+      if (targetM.rank === 'chef') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'expulser le chef.', ephemeral: true });
 
       db.db.prepare('DELETE FROM clan_members WHERE guild_id=? AND user_id=?').run(guildId, target.id);
-      return interaction.editReply({ content: `✅ <@${target.id}> a été exclu du clan.` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ <@${target.id}> a été exclu du clan.` });
     }
 
     if (sub === 'promouvoir') {
       const m = db.db.prepare('SELECT cm.*, c.owner_id, c.id as cid FROM clan_members cm JOIN clans c ON cm.clan_id=c.id WHERE cm.guild_id=? AND cm.user_id=?').get(guildId, userId);
-      if (!m || m.rank !== 'chef') return interaction.editReply({ content: '❌ Chef uniquement.', ephemeral: true });
+      if (!m || m.rank !== 'chef') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Chef uniquement.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
       const rang = interaction.options.getString('rang');
 
       const targetM = db.db.prepare('SELECT * FROM clan_members WHERE guild_id=? AND user_id=? AND clan_id=?').get(guildId, target.id, m.cid);
-      if (!targetM) return interaction.editReply({ content: `❌ <@${target.id}> n'est pas dans votre clan.`, ephemeral: true });
+      if (!targetM) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${target.id}> n'est pas dans votre clan.`, ephemeral: true });
 
       db.db.prepare('UPDATE clan_members SET rank=? WHERE guild_id=? AND user_id=?').run(rang, guildId, target.id);
       const rankLabels = { officier: '⭐ Officier', chef: '👑 Chef' };
-      return interaction.editReply({ content: `✅ <@${target.id}> est maintenant **${rankLabels[rang]}** !` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ <@${target.id}> est maintenant **${rankLabels[rang]}** !` });
     }
 
     if (sub === 'don') {
       const m = db.db.prepare('SELECT cm.clan_id FROM clan_members cm WHERE cm.guild_id=? AND cm.user_id=?').get(guildId, userId);
-      if (!m) return interaction.editReply({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
+      if (!m) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes dans aucun clan.', ephemeral: true });
 
       const montant = parseInt(interaction.options.getString('montant'));
       const u = db.getUser(userId, guildId);
-      if (u.balance < montant) return interaction.editReply({ content: `❌ Solde insuffisant.`, ephemeral: true });
+      if (u.balance < montant) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -montant);
       db.db.prepare('UPDATE clans SET treasury=treasury+? WHERE id=?').run(montant, m.clan_id);
-      return interaction.editReply({ content: `✅ Vous avez donné **${montant} ${coin}** à la trésorerie du clan !` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Vous avez donné **${montant} ${coin}** à la trésorerie du clan !` });
     }
   }
 };

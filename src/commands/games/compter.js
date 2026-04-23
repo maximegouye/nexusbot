@@ -16,7 +16,7 @@ module.exports = {
 
     if (sub === 'setup') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
       const salon = interaction.options.getChannel('salon');
       db.db.prepare(`
@@ -25,7 +25,7 @@ module.exports = {
         ON CONFLICT(guild_id) DO UPDATE SET channel_id = ?
       `).run(interaction.guildId, salon.id, salon.id);
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('🔢 Jeu du Comptage Configuré !')
@@ -38,9 +38,9 @@ module.exports = {
     if (sub === 'info') {
       const counting = db.db.prepare('SELECT * FROM counting WHERE guild_id = ?').get(interaction.guildId);
       if (!counting || !counting.channel_id)
-        return interaction.editReply({ content: '❌ Le jeu du comptage n\'est pas configuré.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le jeu du comptage n\'est pas configuré.', ephemeral: true });
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle('🔢 Jeu du Comptage')
@@ -56,10 +56,10 @@ module.exports = {
 
     if (sub === 'reset') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
       db.db.prepare('UPDATE counting SET current = 0, last_user_id = NULL WHERE guild_id = ?').run(interaction.guildId);
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription('🔄 Compteur remis à zéro !')], ephemeral: true
       });
     }

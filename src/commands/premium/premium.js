@@ -43,7 +43,7 @@ module.exports = {
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors du traitement de votre demande.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };
@@ -58,7 +58,7 @@ async function handleActivate(interaction) {
         .setColor('#FF0000')
         .setDescription('❌ Vous avez besoin de la permission "Gérer le serveur" pour activer le premium.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
 
     // Valider le code
@@ -68,7 +68,7 @@ async function handleActivate(interaction) {
         .setColor('#FF0000')
         .setDescription('❌ Code premium invalide ou déjà utilisé.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
 
     // Activer le premium
@@ -79,7 +79,7 @@ async function handleActivate(interaction) {
         .setColor('#FF0000')
         .setDescription(`❌ ${result.message || 'Erreur lors de l\'activation du premium.'}`);
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
 
     const embed = new EmbedBuilder()
@@ -95,14 +95,14 @@ async function handleActivate(interaction) {
         value: `${validCode.duration_days || 30} jours`
       });
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleActivate:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de l\'activation du premium.');
 
-    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
   }
 }
 
@@ -115,7 +115,7 @@ async function handleInfo(interaction) {
         .setColor('#FF0000')
         .setDescription('❌ Ce serveur n\'a pas le premium activé.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
 
     const expiresAt = new Date(premium.expires_at);
@@ -144,14 +144,14 @@ async function handleInfo(interaction) {
         }
       );
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleInfo:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de la récupération des informations premium.');
 
-    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
   }
 }
 
@@ -177,13 +177,13 @@ async function handleBenefits(interaction) {
         text: 'Activez le premium pour débloquer tous ces avantages!'
       });
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     console.error('Erreur dans handleBenefits:', error);
     const errorEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setDescription('❌ Une erreur est survenue lors de l\'affichage des avantages.');
 
-    return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
   }
 }

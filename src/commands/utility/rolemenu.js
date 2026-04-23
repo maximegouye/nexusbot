@@ -68,26 +68,26 @@ module.exports = {
       const menuId = db.db.prepare('INSERT INTO role_menus (guild_id,channel_id,message_id,title,description,roles,max_choices) VALUES (?,?,?,?,?,?,?) RETURNING id')
         .get(interaction.guildId, salon.id, sent.id, titre, desc, JSON.stringify(roles.map(r => r.id)), maxC);
 
-      return interaction.editReply({ content: `✅ Menu de rôles créé dans <#${salon.id}> (ID: ${menuId?.id})` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Menu de rôles créé dans <#${salon.id}> (ID: ${menuId?.id})` });
     }
 
     if (sub === 'supprimer') {
       const id = parseInt(interaction.options.getString('id'));
       const menu = db.db.prepare('SELECT * FROM role_menus WHERE id=? AND guild_id=?').get(id, interaction.guildId);
-      if (!menu) return interaction.editReply({ content: '❌ Menu introuvable.', ephemeral: true });
+      if (!menu) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Menu introuvable.', ephemeral: true });
       try {
         const ch = interaction.guild.channels.cache.get(menu.channel_id);
         if (ch) { const m = await ch.messages.fetch(menu.message_id).catch(() => null); if (m) await m.delete(); }
       } catch {}
       db.db.prepare('DELETE FROM role_menus WHERE id=?').run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Menu #${id} supprimé.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Menu #${id} supprimé.`)], ephemeral: true });
     }
 
     if (sub === 'liste') {
       const menus = db.db.prepare('SELECT * FROM role_menus WHERE guild_id=?').all(interaction.guildId);
-      if (!menus.length) return interaction.editReply({ content: 'Aucun menu de rôles.', ephemeral: true });
+      if (!menus.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: 'Aucun menu de rôles.', ephemeral: true });
       const lines = menus.map(m => `**#${m.id}** — ${m.title} (<#${m.channel_id}>)`).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('🎭 Menus de rôles').setDescription(lines)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('🎭 Menus de rôles').setDescription(lines)], ephemeral: true });
     }
   }
 };

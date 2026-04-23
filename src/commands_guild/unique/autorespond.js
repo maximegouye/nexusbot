@@ -58,14 +58,14 @@ module.exports = {
 
       // Vérifie doublons
       const existing = db.db.prepare('SELECT id FROM auto_responses WHERE guild_id=? AND LOWER(trigger_word)=?').get(guildId, trigger);
-      if (existing) return interaction.editReply({ content: `❌ Une auto-réponse pour **"${trigger}"** existe déjà (#${existing.id}). Supprimez-la d'abord.`, ephemeral: true });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Une auto-réponse pour **"${trigger}"** existe déjà (#${existing.id}). Supprimez-la d'abord.`, ephemeral: true });
 
       const result = db.db.prepare(`
         INSERT INTO auto_responses (guild_id,trigger_word,response,exact_match,channel_id,role_required,created_by)
         VALUES(?,?,?,?,?,?,?)
       `).run(guildId, trigger, response, exact, salon?.id ?? null, role?.id ?? null, interaction.user.id);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle(`✅ Auto-réponse créée — ID #${result.lastInsertRowid}`)
         .addFields(
           { name: '🔑 Déclencheur', value: `\`${trigger}\``, inline: true },
@@ -79,19 +79,19 @@ module.exports = {
     if (sub === 'supprimer') {
       const id = parseInt(interaction.options.getString('id'));
       const entry = db.db.prepare('SELECT * FROM auto_responses WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!entry) return interaction.editReply({ content: `❌ Auto-réponse #${id} introuvable.`, ephemeral: true });
+      if (!entry) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Auto-réponse #${id} introuvable.`, ephemeral: true });
       db.db.prepare('DELETE FROM auto_responses WHERE id=?').run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setDescription(`🗑️ Auto-réponse **#${id}** (\`${entry.trigger_word}\`) supprimée.`)] });
     }
 
     if (sub === 'liste') {
       const entries = db.db.prepare('SELECT * FROM auto_responses WHERE guild_id=? ORDER BY id DESC LIMIT 20').all(guildId);
-      if (!entries.length) return interaction.editReply({ content: '💬 Aucune auto-réponse. Créez-en avec `/autorespond ajouter`.', ephemeral: true });
+      if (!entries.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '💬 Aucune auto-réponse. Créez-en avec `/autorespond ajouter`.', ephemeral: true });
       const lines = entries.map(e =>
         `${e.active ? '✅' : '❌'} **#${e.id}** \`${e.trigger_word}\` → ${e.response.slice(0,60)}${e.response.length>60?'...':''} | 🔢 ${e.uses} uses`
       );
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle(`💬 Auto-réponses (${entries.length})`)
         .setDescription(lines.join('\n'))], ephemeral: true });
     }
@@ -99,8 +99,8 @@ module.exports = {
     if (sub === 'voir') {
       const id = parseInt(interaction.options.getString('id'));
       const entry = db.db.prepare('SELECT * FROM auto_responses WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!entry) return interaction.editReply({ content: `❌ #${id} introuvable.`, ephemeral: true });
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      if (!entry) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ #${id} introuvable.`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`💬 Auto-réponse #${id}`)
         .addFields(
           { name: '🔑 Déclencheur', value: `\`${entry.trigger_word}\``, inline: true },
@@ -117,9 +117,9 @@ module.exports = {
       const id   = parseInt(interaction.options.getString('id'));
       const actif = interaction.options.getBoolean('actif');
       const entry = db.db.prepare('SELECT * FROM auto_responses WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!entry) return interaction.editReply({ content: `❌ #${id} introuvable.`, ephemeral: true });
+      if (!entry) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ #${id} introuvable.`, ephemeral: true });
       db.db.prepare('UPDATE auto_responses SET active=? WHERE id=?').run(actif ? 1 : 0, id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(actif ? '#2ECC71' : '#95A5A6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(actif ? '#2ECC71' : '#95A5A6')
         .setDescription(`${actif ? '✅ Activée' : '❌ Désactivée'} — Auto-réponse **#${id}** (\`${entry.trigger_word}\`)`)] });
     }
 
@@ -127,7 +127,7 @@ module.exports = {
       const total  = db.db.prepare('SELECT COUNT(*) as c, SUM(uses) as u FROM auto_responses WHERE guild_id=?').get(guildId);
       const top5   = db.db.prepare('SELECT * FROM auto_responses WHERE guild_id=? ORDER BY uses DESC LIMIT 5').all(guildId);
       const lines  = top5.map((e,i) => `**${i+1}.** \`${e.trigger_word}\` — **${e.uses}** utilisations`);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('📊 Statistiques Auto-réponses')
         .addFields(
           { name: '📝 Total configuré', value: `${total.c}`, inline: true },

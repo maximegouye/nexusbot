@@ -216,7 +216,7 @@ module.exports = {
 
     // Vérif permissions
     if (!isAdmin(interaction.member)) {
-      return interaction.editReply({ content: '❌ Vous devez être **administrateur** pour utiliser ce panneau.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous devez être **administrateur** pour utiliser ce panneau.', ephemeral: true });
     }
 
     const cfg  = db.getConfig(guildId);
@@ -247,18 +247,18 @@ module.exports = {
       const base = sub === 'retirer' ? targetUser.balance : (sub === 'banque_definir' ? targetUser.bank : targetUser.balance);
       const amount = parseAmount(rawMontant, base);
       if (!isFinite(amount) || amount < 0 || isNaN(amount)) {
-        return interaction.editReply({ content: '❌ Montant invalide. Accepte : nombres (500, 1_000_000_000), `all`, `50%`, `moitié`.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant invalide. Accepte : nombres (500, 1_000_000_000), `all`, `50%`, `moitié`.', ephemeral: true });
       }
       const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
 
       if (sub === 'donner') {
         // Vérifie blacklist
         const bl = db.db.prepare('SELECT 1 FROM eco_blacklist WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-        if (bl) return interaction.editReply({ content: `❌ **${target.username}** est blacklisté de l\'économie.`, ephemeral: true });
+        if (bl) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${target.username}** est blacklisté de l\'économie.`, ephemeral: true });
 
         db.addCoins(target.id, guildId, amount);
         const u = db.getUser(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle(`${coin} Coins donnés`)
           .addFields(
             { name: '👤 Joueur',      value: `<@${target.id}>`, inline: true },
@@ -275,7 +275,7 @@ module.exports = {
         const realAmount = Math.min(amount, avail);
         db.removeCoins(target.id, guildId, realAmount);
         const u2 = db.getUser(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setTitle(`${coin} Coins retirés`)
           .addFields(
             { name: '👤 Joueur',       value: `<@${target.id}>`, inline: true },
@@ -288,7 +288,7 @@ module.exports = {
 
       if (sub === 'definir') {
         db.db.prepare('UPDATE users SET balance=? WHERE user_id=? AND guild_id=?').run(amount, target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
           .setTitle(`${coin} Solde défini`)
           .setDescription(`Le solde de <@${target.id}> a été défini à **${formatNum(amount)} ${coin}**.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
@@ -296,17 +296,17 @@ module.exports = {
 
       if (sub === 'reset') {
         db.db.prepare('UPDATE users SET balance=0, bank=0, total_earned=0 WHERE user_id=? AND guild_id=?').run(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95A5A6')
           .setDescription(`🗑️ L\'économie de <@${target.id}> a été remise à **zéro** (solde + banque + historique).`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
 
       if (sub === 'reset_total') {
         const confirm = interaction.options.getString('confirmation');
-        if (confirm !== 'CONFIRMER') return interaction.editReply({ content: '❌ Vous devez taper exactement **CONFIRMER** pour valider cette action dangereuse.', ephemeral: true });
+        if (confirm !== 'CONFIRMER') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous devez taper exactement **CONFIRMER** pour valider cette action dangereuse.', ephemeral: true });
         const count = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=?').get(guildId);
         db.db.prepare('UPDATE users SET balance=0, bank=0, total_earned=0 WHERE guild_id=?').run(guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setTitle('☢️ Économie réinitialisée')
           .setDescription(`L\'économie de **${count.c} joueurs** a été remise à zéro.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
@@ -314,7 +314,7 @@ module.exports = {
 
       if (sub === 'banque_definir') {
         db.db.prepare('UPDATE users SET bank=? WHERE user_id=? AND guild_id=?').run(amount, target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
           .setDescription(`🏦 La banque de <@${target.id}> a été définie à **${formatNum(amount)} ${coin}**.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
@@ -322,7 +322,7 @@ module.exports = {
       if (sub === 'voir') {
         const u = db.getUser(target.id, guildId);
         const bl = db.db.prepare('SELECT * FROM eco_blacklist WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
           .setTitle(`💰 Fiche économique — ${target.username}`)
           .addFields(
             { name: '👛 Portefeuille',  value: `${formatNum(u.balance)} ${coin}`,  inline: true },
@@ -353,13 +353,13 @@ module.exports = {
       const rawAmount = interaction.options.getString('montant') ?? interaction.options.get('montant')?.value;
       const amount = parseXP(rawAmount);
       if (sub !== 'reset' && sub !== 'reset_serveur' && sub !== 'niveau_definir' && (!Number.isFinite(amount) || isNaN(amount))) {
-        return interaction.editReply({ content: '❌ Montant XP invalide. Accepte : nombres (500, 1_000_000_000).', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant XP invalide. Accepte : nombres (500, 1_000_000_000).', ephemeral: true });
       }
 
       if (sub === 'donner') {
         db.db.prepare('UPDATE users SET xp = xp + ? WHERE user_id=? AND guild_id=?').run(amount, target.id, guildId);
         const u = db.getUser(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
           .setTitle('⭐ XP donné')
           .addFields(
             { name: '👤 Joueur',   value: `<@${target.id}>`, inline: true },
@@ -372,7 +372,7 @@ module.exports = {
       if (sub === 'retirer') {
         db.db.prepare('UPDATE users SET xp = MAX(0, xp - ?) WHERE user_id=? AND guild_id=?').run(amount, target.id, guildId);
         const u = db.getUser(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setTitle('💔 XP retiré')
           .addFields(
             { name: '👤 Joueur',   value: `<@${target.id}>`, inline: true },
@@ -384,7 +384,7 @@ module.exports = {
 
       if (sub === 'definir') {
         db.db.prepare('UPDATE users SET xp=? WHERE user_id=? AND guild_id=?').run(amount, target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
           .setDescription(`⭐ L\'XP de <@${target.id}> a été défini à **${formatNum(amount)} XP**.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
@@ -395,7 +395,7 @@ module.exports = {
         // Calcule l'XP minimum pour ce niveau
         const xpNeeded = db.getXPForLevel ? db.getXPForLevel(niveau) : Math.floor(100 * Math.pow(1.35, niveau - 1));
         db.db.prepare('UPDATE users SET level=?, xp=? WHERE user_id=? AND guild_id=?').run(niveau, xpNeeded, target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
           .setTitle('🏆 Niveau défini')
           .setDescription(`<@${target.id}> est maintenant **Niveau ${niveau}** (${formatNum(xpNeeded)} XP).`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
@@ -403,17 +403,17 @@ module.exports = {
 
       if (sub === 'reset') {
         db.db.prepare('UPDATE users SET xp=0, level=1, voice_xp=0 WHERE user_id=? AND guild_id=?').run(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95A5A6')
           .setDescription(`🗑️ L\'XP de <@${target.id}> a été remis à zéro (Niveau 1).`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
 
       if (sub === 'reset_serveur') {
         const confirm = interaction.options.getString('confirmation');
-        if (confirm !== 'CONFIRMER') return interaction.editReply({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
+        if (confirm !== 'CONFIRMER') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
         const count = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=?').get(guildId);
         db.db.prepare('UPDATE users SET xp=0, level=1, voice_xp=0, message_count=0 WHERE guild_id=?').run(guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setTitle('☢️ XP du serveur réinitialisé')
           .setDescription(`L\'XP de **${count.c} joueurs** a été remis à zéro.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
@@ -433,7 +433,7 @@ module.exports = {
         const bl = db.db.prepare('SELECT * FROM eco_blacklist WHERE guild_id=? AND user_id=?').get(guildId, target.id);
         const inv = db.db.prepare('SELECT COUNT(*) as c, SUM(quantity) as total FROM inventory WHERE user_id=? AND guild_id=?').get(target.id, guildId);
 
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7C3AED')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#7C3AED')
           .setTitle(`🛡️ Fiche Admin — ${target.username}`)
           .setThumbnail(target.displayAvatarURL())
           .addFields(
@@ -469,10 +469,10 @@ module.exports = {
 
       if (sub === 'reset_profil') {
         const confirm = interaction.options.getString('confirmation');
-        if (confirm !== 'CONFIRMER') return interaction.editReply({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
+        if (confirm !== 'CONFIRMER') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
         db.db.prepare('UPDATE users SET balance=0,bank=0,total_earned=0,xp=0,level=1,voice_xp=0,voice_minutes=0,message_count=0,reputation=0,streak=0,last_daily=0,last_work=0,last_crime=0 WHERE user_id=? AND guild_id=?').run(target.id, guildId);
         db.db.prepare('DELETE FROM inventory WHERE user_id=? AND guild_id=?').run(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setDescription(`🗑️ Le profil complet de <@${target.id}> a été **réinitialisé** (coins, banque, XP, inventaire, réputation).`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
@@ -480,14 +480,14 @@ module.exports = {
       if (sub === 'blacklist') {
         const raison = interaction.options.getString('raison') || 'Non spécifiée';
         db.db.prepare('INSERT OR REPLACE INTO eco_blacklist (guild_id,user_id,reason,added_by) VALUES(?,?,?,?)').run(guildId, target.id, raison, adminId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setDescription(`🚫 <@${target.id}> a été **blacklisté de l'économie**.\n📝 Raison : ${raison}`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
 
       if (sub === 'unblacklist') {
         db.db.prepare('DELETE FROM eco_blacklist WHERE guild_id=? AND user_id=?').run(guildId, target.id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setDescription(`✅ <@${target.id}> a été **retiré de la blacklist** économique.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
@@ -496,7 +496,7 @@ module.exports = {
         const rawRep = interaction.options.getString('montant') ?? interaction.options.get('montant')?.value;
         const montant = Math.floor(Number(String(rawRep).replace(/[\s_,]/g, ''))) || 0;
         db.db.prepare('UPDATE users SET reputation=? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
           .setDescription(`⭐ La réputation de <@${target.id}> a été définie à **${montant}**.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
@@ -516,7 +516,7 @@ module.exports = {
         const totalInv     = db.db.prepare('SELECT COUNT(*) as c FROM inventory WHERE guild_id=?').get(guildId);
         const shopItems    = db.db.prepare('SELECT COUNT(*) as c FROM shop WHERE guild_id=? AND active=1').get(guildId);
 
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#7C3AED')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#7C3AED')
           .setTitle(`📊 Statistiques — ${interaction.guild.name}`)
           .addFields(
             { name: '👥 Joueurs enregistrés', value: `${totalUsers.c}`, inline: true },
@@ -533,7 +533,7 @@ module.exports = {
 
       if (sub === 'circulation') {
         const rows = db.db.prepare('SELECT SUM(balance) as sb, SUM(bank) as skb, SUM(total_earned) as ste, COUNT(*) as c FROM users WHERE guild_id=?').get(guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
           .setTitle(`💰 Économie en circulation — ${interaction.guild.name}`)
           .addFields(
             { name: '👛 Total en poche',  value: `${formatNum(rows.sb || 0)} ${coin}`, inline: true },
@@ -547,7 +547,7 @@ module.exports = {
         const top = db.db.prepare('SELECT user_id, balance+bank as total FROM users WHERE guild_id=? ORDER BY total DESC LIMIT 10').all(guildId);
         const medals = ['🥇','🥈','🥉'];
         const lines = top.map((r, i) => `${medals[i] || `**${i+1}.**`} <@${r.user_id}> — **${formatNum(r.total)} ${coin}**`).join('\n');
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
           .setTitle(`🏆 Top 10 des plus riches`)
           .setDescription(lines || 'Aucun joueur.')]});
       }
@@ -556,7 +556,7 @@ module.exports = {
         const top = db.db.prepare('SELECT user_id, xp, level FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT 10').all(guildId);
         const medals = ['🥇','🥈','🥉'];
         const lines = top.map((r, i) => `${medals[i] || `**${i+1}.**`} <@${r.user_id}> — Nv.**${r.level}** (${formatNum(r.xp)} XP)`).join('\n');
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
           .setTitle(`⭐ Top 10 XP`)
           .setDescription(lines || 'Aucun joueur.')]});
       }
@@ -565,7 +565,7 @@ module.exports = {
         const since = Math.floor(Date.now() / 1000) - 7 * 86400;
         const actives = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=? AND last_message > ?').get(guildId, since);
         const dailies = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=? AND last_daily > ?').get(guildId, since);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#10B981')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#10B981')
           .setTitle('📈 Rapport d\'activité — 7 derniers jours')
           .addFields(
             { name: '💬 Joueurs actifs (messages)', value: `${actives.c}`, inline: true },
@@ -585,25 +585,25 @@ module.exports = {
 
       if (sub === 'donner') {
         const shopItem = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(item_id, guildId);
-        if (!shopItem) return interaction.editReply({ content: `❌ Item #${item_id} introuvable dans la boutique.`, ephemeral: true });
+        if (!shopItem) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Item #${item_id} introuvable dans la boutique.`, ephemeral: true });
         db.addItem(target.id, guildId, item_id, qty);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setDescription(`🎁 **${qty}× ${shopItem.emoji} ${shopItem.name}** donné(s) à <@${target.id}>.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
 
       if (sub === 'retirer') {
         db.removeItem(target.id, guildId, item_id, qty);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setDescription(`❌ Item #${item_id} (×${qty}) retiré de l\'inventaire de <@${target.id}>.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
 
       if (sub === 'vider') {
         const confirm = interaction.options.getString('confirmation');
-        if (confirm !== 'CONFIRMER') return interaction.editReply({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
+        if (confirm !== 'CONFIRMER') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
         db.db.prepare('DELETE FROM inventory WHERE user_id=? AND guild_id=?').run(target.id, guildId);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setDescription(`🗑️ Inventaire de <@${target.id}> entièrement vidé.`)
           .setFooter({ text: `Action par ${interaction.user.username}` })] });
       }
@@ -614,9 +614,9 @@ module.exports = {
           LEFT JOIN shop s ON i.item_id = s.id
           WHERE i.user_id=? AND i.guild_id=? ORDER BY i.quantity DESC
         `).all(target.id, guildId);
-        if (!items.length) return interaction.editReply({ content: `🎒 <@${target.id}> a un inventaire vide.`, ephemeral: true });
+        if (!items.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `🎒 <@${target.id}> a un inventaire vide.`, ephemeral: true });
         const lines = items.slice(0, 20).map(it => `${it.emoji || '📦'} **${it.name || `Item #${it.item_id}`}** ×${it.quantity}`).join('\n');
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#8B5CF6')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#8B5CF6')
           .setTitle(`🎒 Inventaire de ${target.username}`)
           .setDescription(lines)
           .setFooter({ text: `${items.length} type(s) d'objet(s)` })], ephemeral: true });

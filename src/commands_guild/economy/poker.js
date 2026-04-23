@@ -87,14 +87,14 @@ module.exports = {
 
     const mise = parseAmount(miseRaw, user.balance);
     if (!Number.isFinite(mise) || mise < 10) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `tout`, `max`, `50%`, `moitié`.',
         ephemeral: true
       });
     }
 
     if (user.balance < mise) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('❌ Solde insuffisant')
@@ -149,7 +149,7 @@ module.exports = {
 
     db.removeCoins(interaction.user.id, interaction.guildId, mise);
 
-    const msg = await interaction.editReply({
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       embeds: [buildEmbed()],
       components: buildRow(),
       fetchReply: true,

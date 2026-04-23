@@ -35,16 +35,16 @@ module.exports = {
     const mines  = parseInt(interaction.options.getString('mines')) ?? 3;
 
     const bet = parseBet(raw, user.balance);
-    if (bet == null) return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
-    if (bet < 1n)    return interaction.editReply({ content: '❌ Mise minimum : 1.', ephemeral: true });
-    if (bet > BigInt(user.balance)) return interaction.editReply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
+    if (bet == null) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide.', ephemeral: true });
+    if (bet < 1n)    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise minimum : 1.', ephemeral: true });
+    if (bet > BigInt(user.balance)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true });
 
     db.removeCoins(interaction.user.id, interaction.guildId, Number(bet));
 
     const game = mi.createGame(bet, mines);
     const embedOpts = { symbol, color: cfg.color || '#F39C12', userName: interaction.user.username };
 
-    const msg = await interaction.editReply({
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       embeds: [mi.buildEmbed(game, embedOpts)],
       components: mi.buildButtons(game),
       fetchReply: true,

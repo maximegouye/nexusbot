@@ -51,7 +51,7 @@ module.exports = {
         const d = v.duration >= 86400 ? `${v.duration/86400}j` : `${v.duration/3600}h`;
         return `${v.label}\n> ${v.desc} | Durée: ${d} | Risque: ${v.risk === 0 ? '✅ Nul' : v.risk < 0.2 ? '🟡 Faible' : v.risk < 0.4 ? '🟠 Moyen' : '🔴 Élevé'}`;
       }).join('\n\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('📈 Types d\'Investissement').setDescription(lines)
       ], ephemeral: true });
     }
@@ -62,10 +62,10 @@ module.exports = {
       const inv = INVESTMENTS[type];
       const u = db.getUser(userId, guildId);
 
-      if (u.balance < montant) return interaction.editReply({ content: `❌ Solde insuffisant (**${u.balance} ${coin}**).`, ephemeral: true });
+      if (u.balance < montant) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant (**${u.balance} ${coin}**).`, ephemeral: true });
 
       const active = db.db.prepare("SELECT COUNT(*) as c FROM investissements WHERE guild_id=? AND user_id=? AND collected=0").get(guildId, userId);
-      if (active.c >= 5) return interaction.editReply({ content: '❌ Maximum 5 investissements simultanés.', ephemeral: true });
+      if (active.c >= 5) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 5 investissements simultanés.', ephemeral: true });
 
       // Simuler le risque : peut perdre une partie
       const isFailed = Math.random() < inv.risk;
@@ -78,7 +78,7 @@ module.exports = {
       db.db.prepare('INSERT INTO investissements (guild_id, user_id, type, amount, return_at, multiplier) VALUES (?,?,?,?,?,?)')
         .run(guildId, userId, type, montant, returnAt, actualMult);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Investissement placé !')
           .addFields(
             { name: inv.label, value: `**${montant} ${coin}** investis`, inline: true },
@@ -91,7 +91,7 @@ module.exports = {
 
     if (sub === 'portefeuille') {
       const invs = db.db.prepare("SELECT * FROM investissements WHERE guild_id=? AND user_id=? AND collected=0 ORDER BY return_at ASC").all(guildId, userId);
-      if (!invs.length) return interaction.editReply({ content: '📈 Aucun investissement actif.', ephemeral: true });
+      if (!invs.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📈 Aucun investissement actif.', ephemeral: true });
 
       let totalInvested = 0;
       const lines = invs.map(i => {
@@ -102,7 +102,7 @@ module.exports = {
         return `${inv.label}\n> Investi: **${i.amount} ${coin}** | Retour: **~${expected} ${coin}** | ${ready ? '✅ **PRÊT**' : `<t:${i.return_at}:R>`}`;
       }).join('\n\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('💼 Votre Portefeuille d\'Investissements')
           .setDescription(lines)
           .addFields({ name: '💰 Total investi', value: `${totalInvested} ${coin}`, inline: true })
@@ -111,7 +111,7 @@ module.exports = {
 
     if (sub === 'collecter') {
       const ready = db.db.prepare("SELECT * FROM investissements WHERE guild_id=? AND user_id=? AND collected=0 AND return_at<=?").all(guildId, userId, now);
-      if (!ready.length) return interaction.editReply({ content: '⏳ Aucun investissement arrivé à maturité.', ephemeral: true });
+      if (!ready.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⏳ Aucun investissement arrivé à maturité.', ephemeral: true });
 
       let total = 0;
       const lines = [];
@@ -125,7 +125,7 @@ module.exports = {
         lines.push(`${inv.label} : **+${returns} ${coin}** (${profit >= 0 ? '+' : ''}${profit} ${coin})`);
       }
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('💰 Investissements collectés !')
           .setDescription(lines.join('\n'))
           .addFields({ name: '💎 Total reçu', value: `**${total} ${coin}**`, inline: true })

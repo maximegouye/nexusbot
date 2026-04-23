@@ -70,7 +70,7 @@ module.exports = {
 
     if (sub === 'pecher') {
       const cd = COOLDOWN - (now - p.last_fish);
-      if (cd > 0) return interaction.editReply({ content: `⏳ Patience ! Réessayez dans **${cd}s**.`, ephemeral: true });
+      if (cd > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Patience ! Réessayez dans **${cd}s**.`, ephemeral: true });
 
       await interaction.deferReply();
       await new Promise(r => setTimeout(r, 1500)); // suspense
@@ -93,7 +93,7 @@ module.exports = {
         .run(gain, now, guildId, userId);
 
       const rarityColors = { commun: '#95A5A6', 'peu commun': '#2ECC71', rare: '#3498DB', épique: '#9B59B6', légendaire: '#F1C40F', mythique: '#E74C3C' };
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor(rarityColors[fish.rarity] || '#7B2FBE')
           .setTitle('🎣 Résultat de pêche')
@@ -105,7 +105,7 @@ module.exports = {
     if (sub === 'stats') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const stats = db.db.prepare('SELECT * FROM peche WHERE guild_id=? AND user_id=?').get(guildId, target.id) || { total_fish: 0, total_earned: 0, rod_level: 1 };
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle(`🎣 Stats de pêche — ${target.username}`)
           .setThumbnail(target.displayAvatarURL())
           .addFields(
@@ -118,10 +118,10 @@ module.exports = {
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM peche WHERE guild_id=? ORDER BY total_earned DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.editReply({ content: '❌ Aucun pêcheur.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun pêcheur.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((t, i) => `${medals[i] || `**${i+1}.**`} <@${t.user_id}> — 🐟 ${t.total_fish} | 💰 ${t.total_earned} ${coin}`).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle('🏆 Meilleurs Pêcheurs').setDescription(lines)
       ]});
     }
@@ -137,21 +137,21 @@ module.exports = {
           const isCurrent = p.rod_level === level - 1;
           return `${isCurrent ? '**→** ' : ''}Niv.${level} — ${cost} ${coin} | Bonus: +${(level - 1) * 10}%`;
         }).join('\n');
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           new EmbedBuilder().setColor('#F1C40F').setTitle('🎣 Améliorations de canne')
             .setDescription(`Niveau actuel : **${p.rod_level}** (+${(p.rod_level - 1) * 10}% de gain)\n\n${lines}`)
         ], ephemeral: true });
       }
 
       if (action === 'ameliorer') {
-        if (p.rod_level >= maxLevel) return interaction.editReply({ content: '✅ Canne déjà au niveau maximum !', ephemeral: true });
+        if (p.rod_level >= maxLevel) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Canne déjà au niveau maximum !', ephemeral: true });
         const cost = upgradeCosts[p.rod_level];
         const u = db.getUser(userId, guildId);
-        if (u.balance < cost) return interaction.editReply({ content: `❌ Insuffisant ! Coût: **${cost} ${coin}**.`, ephemeral: true });
+        if (u.balance < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Insuffisant ! Coût: **${cost} ${coin}**.`, ephemeral: true });
 
         db.addCoins(userId, guildId, -cost);
         db.db.prepare('UPDATE peche SET rod_level=rod_level+1 WHERE guild_id=? AND user_id=?').run(guildId, userId);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           new EmbedBuilder().setColor('#F1C40F').setTitle('✅ Canne améliorée !')
             .setDescription(`Niv.**${p.rod_level}** → Niv.**${p.rod_level + 1}** | Bonus: **+${p.rod_level * 10}%** sur les gains`)
         ]});

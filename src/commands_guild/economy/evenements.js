@@ -91,42 +91,42 @@ module.exports = {
 
       if (annoncer) {
         await annoncer.send({ embeds: [embed] }).catch(() => {});
-        return interaction.editReply({ content: `✅ Événement lancé et annoncé dans ${annoncer} !`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Événement lancé et annoncé dans ${annoncer} !`, ephemeral: true });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'terminer') {
       const id = parseInt(interaction.options.getString('id'));
       const evt = db.db.prepare('SELECT * FROM eco_events WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!evt) return interaction.editReply({ content: `❌ Événement #${id} introuvable.`, ephemeral: true });
+      if (!evt) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable.`, ephemeral: true });
       db.db.prepare('UPDATE eco_events SET active=0 WHERE id=?').run(id);
       const info = typeLabels[evt.type] || { emoji:'🎊', label: evt.type };
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95A5A6')
         .setDescription(`🛑 Événement **${info.emoji} ${evt.name}** terminé.`)] });
     }
 
     if (sub === 'liste') {
       const events = db.db.prepare('SELECT * FROM eco_events WHERE guild_id=? AND active=1 AND end_time>? ORDER BY end_time ASC').all(guildId, now);
-      if (!events.length) return interaction.editReply({ content: '📋 Aucun événement actif.', ephemeral: true });
+      if (!events.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📋 Aucun événement actif.', ephemeral: true });
       const lines = events.map(e => {
         const info = typeLabels[e.type] || { emoji:'🎊', label:e.type };
         return `**#${e.id}** ${info.emoji} **${e.name}** (${info.label}) — Fin : <t:${e.end_time}:R>`;
       });
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('🎊 Événements actifs')
         .setDescription(lines.join('\n'))] });
     }
 
     if (sub === 'historique') {
       const events = db.db.prepare('SELECT * FROM eco_events WHERE guild_id=? ORDER BY created_at DESC LIMIT 10').all(guildId);
-      if (!events.length) return interaction.editReply({ content: '📜 Aucun événement.', ephemeral: true });
+      if (!events.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📜 Aucun événement.', ephemeral: true });
       const lines = events.map(e => {
         const info = typeLabels[e.type] || { emoji:'🎊', label:e.type };
         const status = e.active && e.end_time > now ? '🟢' : '⚫';
         return `${status} **${info.emoji} ${e.name}** — <t:${e.created_at}:d>`;
       });
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#6B7280')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#6B7280')
         .setTitle('📜 Historique des événements')
         .setDescription(lines.join('\n'))], ephemeral: true });
     }

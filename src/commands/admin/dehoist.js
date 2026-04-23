@@ -42,7 +42,7 @@ module.exports = {
       });
 
       if (hoisted.size === 0) {
-        return interaction.editReply({ content: '✅ Aucun pseudo avec hoisting détecté !', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Aucun pseudo avec hoisting détecté !', ephemeral: true });
       }
 
       const list = hoisted
@@ -60,7 +60,7 @@ module.exports = {
         .setDescription(list || 'Aucun')
         .setFooter({ text: `${hoisted.size} pseudo(s) à nettoyer (affichage limité à 25)` });
 
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'appliquer') {
@@ -71,7 +71,7 @@ module.exports = {
       });
 
       if (hoisted.size === 0) {
-        return interaction.editReply({ content: '✅ Aucun pseudo avec hoisting à traiter !', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Aucun pseudo avec hoisting à traiter !', ephemeral: true });
       }
 
       await interaction.deferReply({ ephemeral: true });
@@ -91,20 +91,20 @@ module.exports = {
         } catch (err) {
           // Ignorer les erreurs (permissions)
           if (interaction.isRepliable() && !interaction.replied) {
-            interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+            (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
           }
         }
 
         processed++;
         if (processed % 10 === 0) {
           try {
-            await interaction.editReply({
+            await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
               content: `⏳ Traitement... **${processed}/${hoisted.size}**`
             });
           } catch (err) {
             // Ignore
             if (interaction.isRepliable() && !interaction.replied) {
-              interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+              (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
             }
           }
         }
@@ -116,7 +116,7 @@ module.exports = {
         .setDescription(`**${successful}** membre(s) ont été renommé(s).`)
         .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
 
-      return interaction.editReply({ content: '', embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '', embeds: [embed] });
     }
 
     if (sub === 'membre') {
@@ -124,14 +124,14 @@ module.exports = {
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
 
       if (!member) {
-        return interaction.editReply({ content: '❌ Utilisateur non trouvé.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Utilisateur non trouvé.', ephemeral: true });
       }
 
       const current = member.nickname || member.user.username;
       const cleaned = dehoist(current);
 
       if (cleaned === current) {
-        return interaction.editReply({ content: '✅ Ce pseudo n\'a pas de hoisting.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Ce pseudo n\'a pas de hoisting.', ephemeral: true });
       }
 
       try {
@@ -142,9 +142,9 @@ module.exports = {
           .setDescription(`${member} : **${current}** → **${cleaned}**`)
           .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
 
-        return interaction.editReply({ embeds: [embed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
       } catch (err) {
-        return interaction.editReply({ content: `❌ Erreur : impossible de renommer (permissions insuffisantes).`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur : impossible de renommer (permissions insuffisantes).`, ephemeral: true });
       }
     }
   }

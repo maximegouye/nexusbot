@@ -54,13 +54,13 @@ module.exports = {
         )
         .setFooter({ text: `Ajoutée par ${interaction.user.username}` })
         .setTimestamp();
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'voir') {
       const target = interaction.options.getUser('membre');
       const notes  = db.db.prepare('SELECT * FROM mod_notes WHERE guild_id=? AND user_id=? ORDER BY created_at DESC').all(guildId, target.id);
-      if (!notes.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription(`Aucune note pour **${target.username}**.`)] });
+      if (!notes.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription(`Aucune note pour **${target.username}**.`)] });
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle(`📝 Notes de modération — ${target.username}`)
@@ -70,20 +70,20 @@ module.exports = {
           return `**#${n.id}** • <@${n.mod_id}> — *${date}*\n> ${n.note}`;
         }).join('\n\n'))
         .setFooter({ text: `${notes.length} note(s) au total` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'supprimer') {
       const noteId = parseInt(interaction.options.getString('id'));
       const note   = db.db.prepare('SELECT * FROM mod_notes WHERE id=? AND guild_id=?').get(noteId, guildId);
-      if (!note) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`❌ Note #${noteId} introuvable.`)] });
+      if (!note) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`❌ Note #${noteId} introuvable.`)] });
       db.db.prepare('DELETE FROM mod_notes WHERE id=?').run(noteId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Note **#${noteId}** supprimée.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Note **#${noteId}** supprimée.`)] });
     }
 
     if (sub === 'recents') {
       const notes = db.db.prepare('SELECT * FROM mod_notes WHERE guild_id=? ORDER BY created_at DESC LIMIT 15').all(guildId);
-      if (!notes.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune note récente.')] });
+      if (!notes.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune note récente.')] });
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('📝 Notes récentes')
@@ -92,7 +92,7 @@ module.exports = {
           return `**#${n.id}** <@${n.user_id}> • par <@${n.mod_id}> (*${date}*)\n> ${n.note.slice(0, 80)}${n.note.length > 80 ? '...' : ''}`;
         }).join('\n\n'))
         .setTimestamp();
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

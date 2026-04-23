@@ -71,7 +71,7 @@ module.exports = {
     const coin = cfg.currency_emoji || '🪙';
 
     if (sub === 'jouer') {
-      if (activeQuizzes.has(`${guildId}_${userId}`)) return interaction.editReply({ content: '❌ Vous avez déjà une question en cours !', ephemeral: true });
+      if (activeQuizzes.has(`${guildId}_${userId}`)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà une question en cours !', ephemeral: true });
 
       const cat = interaction.options.getString('categorie') || 'aleatoire';
       let pool = QUESTIONS;
@@ -100,7 +100,7 @@ module.exports = {
         .setDescription(`**${q.q}**`)
         .setFooter({ text: `Bonne réponse = +${REWARD} ${coin} • 30 secondes` });
 
-      const msg = await interaction.editReply({ embeds: [embed], components: [row], fetchReply: true });
+      const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row], fetchReply: true });
 
       const collector = msg.createMessageComponentCollector({ time: 30000 });
       collector.on('collect', async i => {
@@ -161,12 +161,12 @@ module.exports = {
       const target = interaction.options.getUser('membre') || interaction.user;
       const stats = db.db.prepare('SELECT * FROM quiz_stats WHERE guild_id=? AND user_id=?').get(guildId, target.id);
 
-      if (!stats || (stats.correct + stats.wrong) === 0) return interaction.editReply({ content: `❌ ${target.id === userId ? 'Vous n\'avez' : `<@${target.id}> n'a`} pas encore joué au quiz !`, ephemeral: true });
+      if (!stats || (stats.correct + stats.wrong) === 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${target.id === userId ? 'Vous n\'avez' : `<@${target.id}> n'a`} pas encore joué au quiz !`, ephemeral: true });
 
       const total = stats.correct + stats.wrong;
       const pct = Math.round(stats.correct / total * 100);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle(`🧠 Stats Quiz — ${target.username}`)
           .addFields(
             { name: '✅ Bonnes réponses', value: `**${stats.correct}**`, inline: true },
@@ -179,13 +179,13 @@ module.exports = {
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM quiz_stats WHERE guild_id=? AND (correct+wrong)>0 ORDER BY correct DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.editReply({ content: '❌ Aucun joueur.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun joueur.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((s, i) => {
         const pct = Math.round(s.correct / (s.correct + s.wrong) * 100);
         return `${medals[i] || `**${i+1}.**`} <@${s.user_id}> — ✅ ${s.correct} | 📊 ${pct}% | 💰 ${s.total_earned} ${coin}`;
       }).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle('🏆 Champions du Quiz').setDescription(lines)
       ]});
     }

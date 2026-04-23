@@ -70,7 +70,7 @@ module.exports = {
       const closeAfter = parseInt(interaction.options.getString('auto_close') || '86400');
 
       if (!channel.isTextBased() || channel.isThread()) {
-        return interaction.editReply({ content: '❌ Utilise cette commande dans un salon texte principal.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Utilise cette commande dans un salon texte principal.' });
       }
 
       try {
@@ -96,33 +96,33 @@ module.exports = {
           .setTitle('✅ Thread créé !')
           .setDescription(`${thread}`)
           .addFields({ name: '📋 Catégorie', value: categorie, inline: true });
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       } catch (e) {
-        return interaction.editReply({ content: `❌ Impossible de créer le thread : ${e.message}` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Impossible de créer le thread : ${e.message}` });
       }
     }
 
     if (sub === 'fermer') {
-      if (!channel.isThread()) return interaction.editReply({ content: '❌ Cette commande doit être utilisée dans un thread.' });
+      if (!channel.isThread()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette commande doit être utilisée dans un thread.' });
       const canClose = interaction.member.permissions.has(PermissionFlagsBits.ManageThreads) || channel.ownerId === interaction.user.id;
-      if (!canClose) return interaction.editReply({ content: '❌ Tu ne peux pas fermer ce thread.' });
+      if (!canClose) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas fermer ce thread.' });
 
       await channel.setArchived(true, `Fermé par ${interaction.user.username}`);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('🔒 Thread fermé et archivé.')] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('🔒 Thread fermé et archivé.')] });
     }
 
     if (sub === 'rouvrir') {
-      if (!channel.isThread()) return interaction.editReply({ content: '❌ Cette commande doit être utilisée dans un thread.' });
+      if (!channel.isThread()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette commande doit être utilisée dans un thread.' });
       await channel.setArchived(false);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('🔓 Thread ré-ouvert !')] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('🔓 Thread ré-ouvert !')] });
     }
 
     if (sub === 'renommer') {
-      if (!channel.isThread()) return interaction.editReply({ content: '❌ Cette commande doit être utilisée dans un thread.' });
+      if (!channel.isThread()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette commande doit être utilisée dans un thread.' });
       const newTitle = interaction.options.getString('titre');
       await channel.setName(newTitle);
       db.db.prepare('UPDATE managed_threads SET title=? WHERE thread_id=?').run(newTitle, channel.id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Thread renommé en **${newTitle}**`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Thread renommé en **${newTitle}**`)] });
     }
 
     if (sub === 'liste') {
@@ -134,34 +134,34 @@ module.exports = {
         ? db.db.prepare(query).all(guildId, categorie)
         : db.db.prepare(query).all(guildId);
 
-      if (!threads.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun thread géré trouvé.')] });
+      if (!threads.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun thread géré trouvé.')] });
 
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle(`🧵 Threads${categorie ? ` — ${categorie}` : ''}`)
         .setDescription(threads.map(t => `• <#${t.thread_id}> — **${t.category}** — <@${t.created_by}>`).join('\n'))
         .setFooter({ text: `${threads.length} thread(s)` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'épingler') {
-      if (!channel.isThread()) return interaction.editReply({ content: '❌ Dans un thread uniquement.' });
+      if (!channel.isThread()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Dans un thread uniquement.' });
       const msgId = interaction.options.getString('message_id');
       try {
         const msg = await channel.messages.fetch(msgId);
-        if (msg.pinned) { await msg.unpin(); return interaction.editReply({ content: '📌 Message désépinglé.' }); }
+        if (msg.pinned) { await msg.unpin(); return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📌 Message désépinglé.' }); }
         await msg.pin();
-        return interaction.editReply({ content: '📌 Message épinglé !' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📌 Message épinglé !' });
       } catch {
-        return interaction.editReply({ content: '❌ Message introuvable.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Message introuvable.' });
       }
     }
 
     if (sub === 'inviter') {
-      if (!channel.isThread()) return interaction.editReply({ content: '❌ Dans un thread uniquement.' });
+      if (!channel.isThread()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Dans un thread uniquement.' });
       const membre = interaction.options.getMember('membre');
       await channel.members.add(membre.id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ **${membre.user.username}** ajouté au thread !`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ **${membre.user.username}** ajouté au thread !`)] });
     }
 
     if (sub === 'stats') {
@@ -174,7 +174,7 @@ module.exports = {
           { name: '🧵 Total créés', value: `${total}`, inline: true },
           { name: '📂 Catégories',  value: cats.length ? cats.map(c => `**${c.category}** : ${c.c}`).join('\n') : 'Aucune', inline: false },
         );
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

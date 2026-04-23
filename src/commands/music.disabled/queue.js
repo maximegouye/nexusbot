@@ -21,7 +21,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ La file d\'attente est vide.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const pageNum = parseInt(interaction.options.getString('page')) || 1;
@@ -34,7 +34,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription(`❌ La page ${pageNum} n'existe pas. Il y a ${totalPages} page(s).`);
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const startIndex = (pageNum - 1) * itemsPerPage;
@@ -77,14 +77,14 @@ module.exports = {
           text: queue.songs.length > 0 ? `Page ${pageNum}/${totalPages}` : 'Vide'
         });
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande queue:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors de l\'affichage de la file d\'attente.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

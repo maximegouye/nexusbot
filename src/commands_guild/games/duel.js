@@ -55,17 +55,17 @@ module.exports = {
       const miseRaw = interaction.options.get('mise')?.value;
       const mise = parseBet(miseRaw, _me.balance);
       if (!Number.isFinite(mise) || mise < 0) {
-        return interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide.', ephemeral: true });
       }
 
-      if (opponent.bot) return interaction.editReply({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
-      if (opponent.id === userId) return interaction.editReply({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });
+      if (opponent.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
+      if (opponent.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });
 
       if (mise > 0) {
         const u1 = db.getUser(userId, guildId);
         const u2 = db.getUser(opponent.id, guildId);
-        if (u1.balance < mise) return interaction.editReply({ content: `❌ Tu n'as pas assez de ${coin}.`, ephemeral: true });
-        if (u2.balance < mise) return interaction.editReply({ content: `❌ <@${opponent.id}> n'a pas assez de ${coin}.`, ephemeral: true });
+        if (u1.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as pas assez de ${coin}.`, ephemeral: true });
+        if (u2.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${opponent.id}> n'a pas assez de ${coin}.`, ephemeral: true });
       }
 
       const accept = new ButtonBuilder().setCustomId(`duel_accept_${userId}_${opponent.id}_${mise}`).setLabel('Accepter ⚔️').setStyle(ButtonStyle.Danger);
@@ -78,7 +78,7 @@ module.exports = {
         .setDescription(`<@${userId}> défie <@${opponent.id}> en duel !\n${mise > 0 ? `\n💰 Mise : **${mise} ${coin}** chacun\n` : ''}\n<@${opponent.id}>, acceptes-tu ce défi ?`)
         .setFooter({ text: 'Le défi expire dans 60 secondes' });
 
-      const msg = await interaction.editReply({ content: `<@${opponent.id}>`, embeds: [embed], components: [row], fetchReply: true });
+      const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `<@${opponent.id}>`, embeds: [embed], components: [row], fetchReply: true });
 
       const collector = msg.createMessageComponentCollector({ time: 60000 });
       collector.on('collect', async i => {
@@ -129,7 +129,7 @@ module.exports = {
       });
 
       collector.on('end', (_, reason) => {
-        if (reason === 'time') interaction.editReply({ components: [] }).catch(() => {});
+        if (reason === 'time') (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ components: [] }).catch(() => {});
       });
     }
 
@@ -139,7 +139,7 @@ module.exports = {
       const total = stats ? stats.wins + stats.losses : 0;
       const ratio = total > 0 ? ((stats.wins / total) * 100).toFixed(1) : '0';
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Gold')
           .setTitle(`⚔️ Stats de duel — ${target.username}`)
           .addFields(
@@ -154,12 +154,12 @@ module.exports = {
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM duel_stats WHERE guild_id=? ORDER BY wins DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.editReply({ content: '❌ Aucun duel enregistré.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun duel enregistré.', ephemeral: true });
 
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((s, i) => `${medals[i] || `**${i+1}.**`} <@${s.user_id}> — **${s.wins}W / ${s.losses}L** (🔥 ${s.streak})`).join('\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Gold').setTitle('🏆 Classement Duels').setDescription(lines).setTimestamp()
       ]});
     }

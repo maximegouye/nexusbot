@@ -22,7 +22,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Vous devez être dans un canal vocal pour utiliser cette commande.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Vérifier que le bot est dans le même canal
@@ -32,7 +32,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Je dois être dans le même canal vocal que vous.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const queue = getOrCreateQueue(interaction.guildId);
@@ -43,7 +43,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Il n\'y a rien à écouter en ce moment.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const timeString = interaction.options.getString('temps').trim();
@@ -60,7 +60,7 @@ module.exports = {
               .setColor('#FF0000')
               .setDescription('❌ Format de temps invalide. Utilisez MM:SS ou nombre de secondes.');
 
-            return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+            return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
           }
           seekSeconds = minutes * 60 + seconds;
         } else {
@@ -68,7 +68,7 @@ module.exports = {
             .setColor('#FF0000')
             .setDescription('❌ Format de temps invalide. Utilisez MM:SS ou nombre de secondes.');
 
-          return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
         }
       } else {
         seekSeconds = parseInt(timeString);
@@ -77,7 +77,7 @@ module.exports = {
             .setColor('#FF0000')
             .setDescription('❌ Format de temps invalide. Utilisez MM:SS ou nombre de secondes.');
 
-          return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
         }
       }
 
@@ -87,7 +87,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription(`❌ Le temps ${formatDuration(seekSeconds)} dépasse la durée de la piste (${formatDuration(queue.current.duration)}).`);
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       if (seekSeconds < 0) {
@@ -95,7 +95,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Le temps ne peut pas être négatif.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Mettre à jour le temps de démarrage pour simuler le seek
@@ -112,9 +112,9 @@ module.exports = {
         } catch (error) {
           console.error('Erreur lors du seek:', error);
           if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-            interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
+            (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
           } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
-            interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+            (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
           }
         }
       }
@@ -131,14 +131,14 @@ module.exports = {
           value: queue.current.title
         });
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande seek:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors du seek.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

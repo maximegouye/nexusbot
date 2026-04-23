@@ -15,8 +15,8 @@ module.exports = {
     const target = interaction.options.getUser('membre');
     const amount = parseInt(interaction.options.getString('montant'));
 
-    if (target.bot) return interaction.editReply({ content: '❌ Tu ne peux pas envoyer de coins à un bot.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas t\'envoyer des coins à toi-même.', ephemeral: true });
+    if (target.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas envoyer de coins à un bot.', ephemeral: true });
+    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'envoyer des coins à toi-même.', ephemeral: true });
 
     const sender = db.getUser(interaction.user.id, interaction.guildId);
 
@@ -25,7 +25,7 @@ module.exports = {
     const total = amount + fee;
 
     if (sender.balance < total) {
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setDescription(`❌ Solde insuffisant. Tu as **${sender.balance.toLocaleString('fr-FR')} ${name}** mais il te faut **${total.toLocaleString('fr-FR')}** (frais inclus).`)
@@ -47,6 +47,6 @@ module.exports = {
       )
       .setFooter({ text: `Solde restant : ${(sender.balance - total).toLocaleString('fr-FR')} ${name}` });
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

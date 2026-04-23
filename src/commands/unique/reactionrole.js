@@ -32,7 +32,7 @@ module.exports = {
       // Vérifie que le message existe
       let message;
       try { message = await interaction.channel.messages.fetch(msgId); } catch {
-        return interaction.editReply({ content: '❌ Message introuvable dans ce salon.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Message introuvable dans ce salon.', ephemeral: true });
       }
 
       // Extraire l'ID de l'emoji custom si applicable
@@ -41,7 +41,7 @@ module.exports = {
 
       const existing = db.db.prepare('SELECT * FROM reaction_roles WHERE guild_id = ? AND message_id = ? AND emoji = ?')
         .get(interaction.guildId, msgId, emojiKey);
-      if (existing) return interaction.editReply({ content: '❌ Ce reaction role existe déjà.', ephemeral: true });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce reaction role existe déjà.', ephemeral: true });
 
       db.db.prepare('INSERT INTO reaction_roles (guild_id, message_id, emoji, role_id) VALUES (?, ?, ?, ?)')
         .run(interaction.guildId, msgId, emojiKey, role.id);
@@ -49,7 +49,7 @@ module.exports = {
       // Ajouter la réaction au message
       await message.react(emoji).catch(() => {});
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setDescription(`✅ Reaction role ajouté ! ${emoji} → <@&${role.id}>`)
@@ -67,9 +67,9 @@ module.exports = {
       const result = db.db.prepare('DELETE FROM reaction_roles WHERE guild_id = ? AND message_id = ? AND emoji = ?')
         .run(interaction.guildId, msgId, emojiKey);
 
-      if (!result.changes) return interaction.editReply({ content: '❌ Reaction role introuvable.', ephemeral: true });
+      if (!result.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Reaction role introuvable.', ephemeral: true });
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#FFA500').setDescription(`✅ Reaction role **${emoji}** sur le message **${msgId}** supprimé.`)],
         ephemeral: true
       });
@@ -78,14 +78,14 @@ module.exports = {
     // ── LISTE ──
     if (sub === 'liste') {
       const rrs = db.db.prepare('SELECT * FROM reaction_roles WHERE guild_id = ? LIMIT 25').all(interaction.guildId);
-      if (!rrs.length) return interaction.editReply({ content: '❌ Aucun reaction role configuré.', ephemeral: true });
+      if (!rrs.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun reaction role configuré.', ephemeral: true });
 
       const embed = new EmbedBuilder()
         .setColor(cfg.color || '#7B2FBE')
         .setTitle('🎭 Reaction Roles')
         .setDescription(rrs.map(r => `Message \`${r.message_id}\` → ${r.emoji} → <@&${r.role_id}>`).join('\n'));
 
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     // ── CRÉER ──
@@ -101,7 +101,7 @@ module.exports = {
 
       const msg = await interaction.channel.send({ embeds: [embed] });
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         content: `✅ Message de rôles créé ! Utilisez \`/reactionrole ajouter message_id:${msg.id} emoji:... role:...\` pour configurer les rôles.`,
         ephemeral: true
       });

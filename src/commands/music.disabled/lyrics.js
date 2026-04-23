@@ -16,7 +16,7 @@ module.exports = {
     // Si pas de query, utiliser la musique en cours
     if (!query) {
       const queue = queues.get(interaction.guildId);
-      if (!queue?.current) return interaction.editReply({ content: '❌ Aucune musique en cours. Spécifie un titre avec `/lyrics chanson: ...`' });
+      if (!queue?.current) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune musique en cours. Spécifie un titre avec `/lyrics chanson: ...`' });
       query = queue.current.title;
     }
 
@@ -53,7 +53,7 @@ module.exports = {
         .setDescription(chunks[0])
         .setFooter({ text: `Page 1/${chunks.length} • Source: lyrics.ovh` });
 
-      await interaction.editReply({ embeds: [embed] });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
 
       // Pages supplémentaires
       for (let p = 1; p < Math.min(chunks.length, 5); p++) {
@@ -64,7 +64,7 @@ module.exports = {
         ]});
       }
     } catch {
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('Red')
         .setTitle('❌ Paroles introuvables')
         .setDescription(`Impossible de trouver les paroles pour **${query}**.\n\nEssaie avec le format: \`Artiste - Titre\``)

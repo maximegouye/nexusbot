@@ -33,34 +33,34 @@ module.exports={
     const sub=interaction.options.getSubcommand(); const {guildId}=interaction; const userId=interaction.user.id;
     if(sub==='ouvrir'){
       const cd=checkCooldown(userId,'collectibles_ouvrir',4*3600);
-      if(cd.onCooldown)return interaction.editReply({content:cooldownMessage(cd.remaining),ephemeral:true});
+      if(cd.onCooldown)return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:cooldownMessage(cd.remaining),ephemeral:true});
       const card=pickCard(); const owned=getUserCards(userId,guildId); const isNew=!owned.includes(card.id);
       try{db.db.prepare('INSERT OR IGNORE INTO collectibles(user_id,guild_id,card_id) VALUES(?,?,?)').run(userId,guildId,card.id);}catch{}
-      return interaction.editReply({embeds:[new EmbedBuilder().setColor(card.color).setTitle('🎴 Carte obtenue !').setDescription(`**${card.name}**\nRareté: **${card.rarity}**\n\n${isNew?'✨ **NOUVELLE carte !**':'🔄 Déjà possédée.'}`).addFields({name:'🆔 ID',value:`\`${card.id}\``,inline:true},{name:'📦 Collection',value:`${owned.length+(isNew?1:0)}/${LIST.length}`,inline:true}).setFooter({text:'Prochain tirage dans 4h'})]});
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[new EmbedBuilder().setColor(card.color).setTitle('🎴 Carte obtenue !').setDescription(`**${card.name}**\nRareté: **${card.rarity}**\n\n${isNew?'✨ **NOUVELLE carte !**':'🔄 Déjà possédée.'}`).addFields({name:'🆔 ID',value:`\`${card.id}\``,inline:true},{name:'📦 Collection',value:`${owned.length+(isNew?1:0)}/${LIST.length}`,inline:true}).setFooter({text:'Prochain tirage dans 4h'})]});
     }
     if(sub==='collection'){
       const t=interaction.options.getUser('membre')||interaction.user;
       const cards=getUserCards(t.id,guildId);
-      if(!cards.length)return interaction.editReply({content:`❌ ${t.id===userId?'Vous n\'avez':t.username+' n\'a'} aucune carte.`,ephemeral:true});
+      if(!cards.length)return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:`❌ ${t.id===userId?'Vous n\'avez':t.username+' n\'a'} aucune carte.`,ephemeral:true});
       const byR={'Légendaire':[],'Épique':[],'Rare':[],'Commun':[]};
       for(const cid of cards){const c=CARDS[cid];if(c)byR[c.rarity]?.push(c.name);}
       const fields=Object.entries(byR).filter(([,l])=>l.length>0).map(([r,l])=>({name:`${r} (${l.length})`,value:l.join('\n').slice(0,1024)}));
-      return interaction.editReply({embeds:[new EmbedBuilder().setColor('#9B59B6').setTitle(`🃏 Collection de ${t.username}`).setThumbnail(t.displayAvatarURL()).addFields(fields).setFooter({text:`${cards.length}/${LIST.length} cartes`})],ephemeral:true});
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[new EmbedBuilder().setColor('#9B59B6').setTitle(`🃏 Collection de ${t.username}`).setThumbnail(t.displayAvatarURL()).addFields(fields).setFooter({text:`${cards.length}/${LIST.length} cartes`})],ephemeral:true});
     }
     if(sub==='infos'){
       const cid=interaction.options.getString('carte').toLowerCase(); const card=CARDS[cid];
-      if(!card)return interaction.editReply({content:`❌ Carte \`${cid}\` introuvable. IDs: ${LIST.map(c=>c.id).join(', ')}`,ephemeral:true});
+      if(!card)return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:`❌ Carte \`${cid}\` introuvable. IDs: ${LIST.map(c=>c.id).join(', ')}`,ephemeral:true});
       const h=db.db.prepare('SELECT COUNT(*) as cnt FROM collectibles WHERE guild_id=? AND card_id=?').get(guildId,cid).cnt;
-      return interaction.editReply({embeds:[new EmbedBuilder().setColor(card.color).setTitle(card.name).addFields({name:'🎖️ Rareté',value:`**${card.rarity}**`,inline:true},{name:'🆔 ID',value:`\`${card.id}\``,inline:true},{name:'👥 Détenteurs',value:`**${h}**`,inline:true})]});
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[new EmbedBuilder().setColor(card.color).setTitle(card.name).addFields({name:'🎖️ Rareté',value:`**${card.rarity}**`,inline:true},{name:'🆔 ID',value:`\`${card.id}\``,inline:true},{name:'👥 Détenteurs',value:`**${h}**`,inline:true})]});
     }
     if(sub==='echanger'){
       const target=interaction.options.getUser('membre'); const cid=interaction.options.getString('carte').toLowerCase();
-      if(target.id===userId)return interaction.editReply({content:'❌ Impossible.',ephemeral:true});
-      const card=CARDS[cid]; if(!card)return interaction.editReply({content:`❌ Carte introuvable.`,ephemeral:true});
-      const owned=getUserCards(userId,guildId); if(!owned.includes(cid))return interaction.editReply({content:`❌ Vous ne possédez pas \`${cid}\`.`,ephemeral:true});
+      if(target.id===userId)return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:'❌ Impossible.',ephemeral:true});
+      const card=CARDS[cid]; if(!card)return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:`❌ Carte introuvable.`,ephemeral:true});
+      const owned=getUserCards(userId,guildId); if(!owned.includes(cid))return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:`❌ Vous ne possédez pas \`${cid}\`.`,ephemeral:true});
       db.db.prepare('DELETE FROM collectibles WHERE user_id=? AND guild_id=? AND card_id=?').run(userId,guildId,cid);
       db.db.prepare('INSERT OR IGNORE INTO collectibles(user_id,guild_id,card_id) VALUES(?,?,?)').run(target.id,guildId,cid);
-      return interaction.editReply({embeds:[new EmbedBuilder().setColor('#2ECC71').setTitle('🤝 Échange !').setDescription(`**${card.name}** (${card.rarity}) offert à ${target}.`)]});
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[new EmbedBuilder().setColor('#2ECC71').setTitle('🤝 Échange !').setDescription(`**${card.name}** (${card.rarity}) offert à ${target}.`)]});
     }
   }
 };

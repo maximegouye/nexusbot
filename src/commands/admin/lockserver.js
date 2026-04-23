@@ -40,7 +40,7 @@ module.exports = {
         );
 
         if (textChannels.size === 0) {
-          return interaction.editReply({ content: '❌ Aucun canal texte à verrouiller.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun canal texte à verrouiller.' });
         }
 
         const channelStates = {};
@@ -76,7 +76,7 @@ module.exports = {
           } catch (err) {
             // Ignorer les erreurs pour les canaux spécifiques
             if (interaction.isRepliable() && !interaction.replied) {
-              interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+              (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
             }
           }
         }
@@ -95,10 +95,10 @@ module.exports = {
             { name: '🕐 Heure', value: new Date().toLocaleString('fr-FR') }
           );
 
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       } catch (error) {
         console.error('Erreur lockserver verrouiller:', error);
-        return interaction.editReply({ content: '❌ Erreur lors du verrouillage.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors du verrouillage.' });
       }
     }
 
@@ -111,7 +111,7 @@ module.exports = {
         ).get(interaction.guildId);
 
         if (!state || !state.locked) {
-          return interaction.editReply({ content: '❌ Le serveur n\'est pas verrouillé.' });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le serveur n\'est pas verrouillé.' });
         }
 
         const channelStates = JSON.parse(state.channel_states || '{}');
@@ -153,7 +153,7 @@ module.exports = {
           } catch (err) {
             // Ignorer les erreurs
             if (interaction.isRepliable() && !interaction.replied) {
-              interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+              (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
             }
           }
         }
@@ -169,10 +169,10 @@ module.exports = {
           .setDescription(`**${processed}** canal(aux) déverrouillé(s)`)
           .setFooter({ text: new Date().toLocaleString('fr-FR') });
 
-        return interaction.editReply({ embeds: [embed] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       } catch (error) {
         console.error('Erreur lockserver deverrouiller:', error);
-        return interaction.editReply({ content: '❌ Erreur lors du déverrouillage.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur lors du déverrouillage.' });
       }
     }
   }

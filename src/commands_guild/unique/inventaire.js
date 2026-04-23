@@ -116,7 +116,7 @@ module.exports = {
     if (sub === 'voir') {
       const target = interaction.options.getUser('joueur') || interaction.user;
       const items = db.db.prepare('SELECT * FROM inventaires WHERE guild_id=? AND user_id=? ORDER BY quantity DESC').all(guildId, target.id);
-      if (!items.length) return interaction.editReply({ content: `🎒 **${target.username}** a un inventaire vide. Ouvrez des lootboxes avec \`/inventaire lootbox\` !`, ephemeral: true });
+      if (!items.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `🎒 **${target.username}** a un inventaire vide. Ouvrez des lootboxes avec \`/inventaire lootbox\` !`, ephemeral: true });
 
       // Grouper par type
       const groups = {};
@@ -134,7 +134,7 @@ module.exports = {
         inline: false,
       }));
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#8E44AD')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#8E44AD')
         .setTitle(`🎒 Inventaire de ${target.username}`)
         .addFields(...fields.slice(0,10))
         .setFooter({ text: `${items.length} types d\'objets` })] });
@@ -143,10 +143,10 @@ module.exports = {
     if (sub === 'item') {
       const id = interaction.options.getString('id');
       const item = ITEMS_CATALOGUE[id];
-      if (!item) return interaction.editReply({ content: '❌ Item introuvable.', ephemeral: true });
+      if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Item introuvable.', ephemeral: true });
       // Combien le joueur en possède
       const owned = db.db.prepare('SELECT quantity FROM inventaires WHERE guild_id=? AND user_id=? AND item_id=?').get(guildId, userId, id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(RARITY_COLORS[item.rarity] || '#95A5A6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(RARITY_COLORS[item.rarity] || '#95A5A6')
         .setTitle(`${item.emoji} ${item.name}`)
         .addFields(
           { name: '⭐ Rareté', value: item.rarity, inline: true },
@@ -168,7 +168,7 @@ module.exports = {
         value: byRarity[r].join('\n'),
         inline: false,
       }));
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('📚 Catalogue d\'items')
         .addFields(...fields)
         .setFooter({ text: 'Obtenez des items avec /inventaire lootbox !' })], ephemeral: true });
@@ -178,10 +178,10 @@ module.exports = {
       const target = interaction.options.getUser('joueur');
       const itemId = interaction.options.getString('item');
       const qty = parseInt(interaction.options.getString('quantite')) || 1;
-      if (target.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous donner un item à vous-même.', ephemeral: true });
+      if (target.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous donner un item à vous-même.', ephemeral: true });
 
       const owned = db.db.prepare('SELECT quantity FROM inventaires WHERE guild_id=? AND user_id=? AND item_id=?').get(guildId, userId, itemId);
-      if (!owned || owned.quantity < qty) return interaction.editReply({ content: `❌ Vous n\'avez pas assez de cet item (vous en avez ${owned?.quantity || 0}).`, ephemeral: true });
+      if (!owned || owned.quantity < qty) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous n\'avez pas assez de cet item (vous en avez ${owned?.quantity || 0}).`, ephemeral: true });
 
       // Retirer au donneur
       if (owned.quantity - qty <= 0) {
@@ -193,7 +193,7 @@ module.exports = {
       addItem(target.id, guildId, itemId, qty);
 
       const item = ITEMS_CATALOGUE[itemId];
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`🎁 <@${userId}> a donné **${qty}× ${item.emoji} ${item.name}** à <@${target.id}> !`)] });
     }
 
@@ -201,14 +201,14 @@ module.exports = {
       const itemId = interaction.options.getString('item');
       const prix = parseInt(interaction.options.getString('prix'));
       const owned = db.db.prepare('SELECT quantity FROM inventaires WHERE guild_id=? AND user_id=? AND item_id=?').get(guildId, userId, itemId);
-      if (!owned || owned.quantity < 1) return interaction.editReply({ content: '❌ Vous ne possédez pas cet item.', ephemeral: true });
+      if (!owned || owned.quantity < 1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne possédez pas cet item.', ephemeral: true });
 
       // Simple : vente directe au bot contre des coins
       db.db.prepare('DELETE FROM inventaires WHERE guild_id=? AND user_id=? AND item_id=?').run(guildId, userId, itemId);
       db.addCoins(userId, guildId, prix);
       const item = ITEMS_CATALOGUE[itemId] || { emoji:'📦', name: itemId };
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setDescription(`💰 Vous avez vendu **${item.emoji} ${item.name}** pour **${prix} ${coin}** !`)] });
     }
 
@@ -216,7 +216,7 @@ module.exports = {
       const qty = parseInt(interaction.options.getString('quantite')) || 1;
       const cost = 50 * qty;
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < cost) return interaction.editReply({ content: `❌ Il faut **${cost} ${coin}** pour ouvrir ${qty} lootbox(es).`, ephemeral: true });
+      if ((u.balance || 0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Il faut **${cost} ${coin}** pour ouvrir ${qty} lootbox(es).`, ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
 
@@ -235,7 +235,7 @@ module.exports = {
 
       const hasRare = Object.keys(obtained).some(id => ['Rare','Épique','Légendaire'].includes(ITEMS_CATALOGUE[id]?.rarity));
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(hasRare ? '#F1C40F' : '#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(hasRare ? '#F1C40F' : '#3498DB')
         .setTitle(`📦 ${qty} Lootbox${qty > 1 ? 'es' : ''} ouverte${qty > 1 ? 's' : ''} !`)
         .setDescription(lines.join('\n'))
         .setFooter({ text: `-${cost} ${coin}` })] });

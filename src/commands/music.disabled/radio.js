@@ -25,12 +25,12 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member?.voice?.channel) {
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Rejoins un salon vocal d\'abord !')], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Rejoins un salon vocal d\'abord !')], ephemeral: true });
     }
 
     const idx     = parseInt(interaction.options.getString('station'));
     const station = STATIONS[idx];
-    if (!station) return interaction.editReply({ content: '❌ Station inconnue.', ephemeral: true });
+    if (!station) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Station inconnue.', ephemeral: true });
 
     await interaction.deferReply();
 
@@ -44,7 +44,7 @@ module.exports = {
     };
 
     const queue = await getOrCreateQueue(interaction);
-    if (!queue) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Impossible de rejoindre le salon vocal.')] });
+    if (!queue) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ Impossible de rejoindre le salon vocal.')] });
 
     // Arrêter ce qui joue et jouer la radio directement
     queue.tracks = [];
@@ -60,6 +60,6 @@ module.exports = {
       )
       .setFooter({ text: 'Utilise /stop pour arrêter la radio' });
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

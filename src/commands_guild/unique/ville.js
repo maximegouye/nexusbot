@@ -68,18 +68,18 @@ module.exports = {
 
     if (sub === 'fonder') {
       const existing = db.db.prepare('SELECT id FROM villes WHERE guild_id=? AND mayor_id=?').get(guildId, userId);
-      if (existing) return interaction.editReply({ content: '❌ Vous avez déjà une ville.', ephemeral: true });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà une ville.', ephemeral: true });
 
       const cost = 2000;
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < cost) return interaction.editReply({ content: `❌ Fonder une ville coûte **${cost} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Fonder une ville coûte **${cost} ${coin}**.`, ephemeral: true });
 
       const nom = interaction.options.getString('nom');
       const slogan = interaction.options.getString('slogan') || 'Bienvenue dans ma ville !';
       db.addCoins(userId, guildId, -cost);
       db.db.prepare('INSERT INTO villes (guild_id,mayor_id,name,slogan) VALUES(?,?,?,?)').run(guildId, userId, nom, slogan);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`🏙️ ${nom} — Fondée !`)
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`🏙️ ${nom} — Fondée !`)
         .setDescription(`**Slogan :** *${slogan}*\n\nVotre ville génère **30 ${coin}/heure** en taxes.\nConstituez des bâtiments avec \`/ville construire\` !`)
         .addFields(
           { name: '👥 Population', value: '100', inline: true },
@@ -92,14 +92,14 @@ module.exports = {
     if (sub === 'voir') {
       const target = interaction.options.getUser('maire') || interaction.user;
       const ville = db.db.prepare('SELECT * FROM villes WHERE guild_id=? AND mayor_id=?').get(guildId, target.id);
-      if (!ville) return interaction.editReply({ content: `❌ **${target.username}** n'a pas de ville.`, ephemeral: true });
+      if (!ville) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${target.username}** n'a pas de ville.`, ephemeral: true });
 
       const buildings = JSON.parse(ville.buildings || '{}');
       const hoursElapsed = (now - ville.last_collect) / 3600;
       const pending = Math.floor(ville.income_per_hour * hoursElapsed);
       const bList = Object.entries(buildings).filter(([, v]) => v > 0).map(([k, v]) => `${BUILDINGS[k]?.emoji || '🏗️'} ${BUILDINGS[k]?.name || k}: ${v}`).join(', ') || 'Aucun bâtiment';
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle(`🏙️ ${ville.name}`)
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle(`🏙️ ${ville.name}`)
         .setDescription(`Maire : <@${target.id}>\n*"${ville.slogan}"*`)
         .addFields(
           { name: '👥 Population', value: `**${ville.population.toLocaleString()}**`, inline: true },
@@ -115,18 +115,18 @@ module.exports = {
 
     if (sub === 'construire') {
       const ville = db.db.prepare('SELECT * FROM villes WHERE guild_id=? AND mayor_id=?').get(guildId, userId);
-      if (!ville) return interaction.editReply({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
+      if (!ville) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
 
       const type = interaction.options.getString('batiment');
       const bld = BUILDINGS[type];
       const buildings = JSON.parse(ville.buildings || '{}');
       const current = buildings[type] || 0;
 
-      if (current >= bld.max) return interaction.editReply({ content: `❌ Vous avez déjà le maximum de **${bld.name}** (${bld.max}).`, ephemeral: true });
+      if (current >= bld.max) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous avez déjà le maximum de **${bld.name}** (${bld.max}).`, ephemeral: true });
 
       const cost = bld.cost * (current + 1);
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < cost) return interaction.editReply({ content: `❌ Cette construction coûte **${cost.toLocaleString()} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cette construction coûte **${cost.toLocaleString()} ${coin}**.`, ephemeral: true });
 
       buildings[type] = (buildings[type] || 0) + 1;
       const newPop = ville.population + bld.pop_bonus;
@@ -135,7 +135,7 @@ module.exports = {
       db.db.prepare('UPDATE villes SET buildings=?, population=?, income_per_hour=? WHERE guild_id=? AND mayor_id=?')
         .run(JSON.stringify(buildings), newPop, newIncome, guildId, userId);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`${bld.emoji} ${bld.name} construite !`)
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`${bld.emoji} ${bld.name} construite !`)
         .addFields(
           { name: '💰 Coût', value: `-${cost.toLocaleString()} ${coin}`, inline: true },
           { name: '👥 Population', value: bld.pop_bonus > 0 ? `+${bld.pop_bonus}` : '—', inline: true },
@@ -146,16 +146,16 @@ module.exports = {
 
     if (sub === 'collecter') {
       const ville = db.db.prepare('SELECT * FROM villes WHERE guild_id=? AND mayor_id=?').get(guildId, userId);
-      if (!ville) return interaction.editReply({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
+      if (!ville) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
 
       const hoursElapsed = (now - ville.last_collect) / 3600;
-      if (hoursElapsed < 0.083) return interaction.editReply({ content: '⏳ Attendez au moins 5 minutes avant de collecter.', ephemeral: true });
+      if (hoursElapsed < 0.083) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⏳ Attendez au moins 5 minutes avant de collecter.', ephemeral: true });
 
       const earned = Math.floor(ville.income_per_hour * hoursElapsed);
       db.addCoins(userId, guildId, earned);
       db.db.prepare('UPDATE villes SET last_collect=?, treasury=treasury+? WHERE guild_id=? AND mayor_id=?').run(now, earned, guildId, userId);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`💰 Taxes collectées — ${ville.name}`)
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`💰 Taxes collectées — ${ville.name}`)
         .setDescription(`**+${earned.toLocaleString()} ${coin}** de taxes collectées en **${hoursElapsed.toFixed(1)}h** !`)
         .addFields(
           { name: '📈 Taux/h', value: `${ville.income_per_hour} ${coin}/h`, inline: true },
@@ -166,33 +166,33 @@ module.exports = {
 
     if (sub === 'taxer') {
       const ville = db.db.prepare('SELECT * FROM villes WHERE guild_id=? AND mayor_id=?').get(guildId, userId);
-      if (!ville) return interaction.editReply({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
+      if (!ville) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
       const taux = parseInt(interaction.options.getString('taux'));
       const newIncome = Math.floor(ville.population * taux / 100);
       db.db.prepare('UPDATE villes SET tax_rate=?, income_per_hour=?, happiness=? WHERE guild_id=? AND mayor_id=?')
         .run(taux, newIncome, Math.max(0, Math.min(100, 80 - taux * 2)), guildId, userId);
-      return interaction.editReply({ content: `✅ Taux de taxe défini à **${taux}%**. Revenus/h : **${newIncome} ${coin}**. Bonheur : **${Math.max(0, 80 - taux * 2)}%**` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Taux de taxe défini à **${taux}%**. Revenus/h : **${newIncome} ${coin}**. Bonheur : **${Math.max(0, 80 - taux * 2)}%**` });
     }
 
     if (sub === 'slogan') {
       const ville = db.db.prepare('SELECT * FROM villes WHERE guild_id=? AND mayor_id=?').get(guildId, userId);
-      if (!ville) return interaction.editReply({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
+      if (!ville) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas de ville.', ephemeral: true });
       const texte = interaction.options.getString('texte');
       db.db.prepare('UPDATE villes SET slogan=? WHERE guild_id=? AND mayor_id=?').run(texte, guildId, userId);
-      return interaction.editReply({ content: `✅ Nouveau slogan : *"${texte}"*` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Nouveau slogan : *"${texte}"*` });
     }
 
     if (sub === 'batiments') {
       const lines = Object.entries(BUILDINGS).map(([k, v]) => `${v.emoji} **${v.name}** — ${v.cost.toLocaleString()} ${coin}\n> Pop: +${v.pop_bonus} • Revenus/h: +${v.income_bonus} • Max: ${v.max}\n> *${v.desc}*`).join('\n\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🏗️ Bâtiments disponibles').setDescription(lines)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🏗️ Bâtiments disponibles').setDescription(lines)] });
     }
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM villes WHERE guild_id=? ORDER BY treasury DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.editReply({ content: '❌ Aucune ville sur ce serveur.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune ville sur ce serveur.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const desc = top.map((v, i) => `${medals[i] || `**${i+1}.**`} 🏙️ **${v.name}** (<@${v.mayor_id}>) — Pop: ${v.population.toLocaleString()} • Tréso: ${v.treasury.toLocaleString()} ${coin}`).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏙️ Top Villes').setDescription(desc)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏙️ Top Villes').setDescription(desc)] });
     }
   }
 };

@@ -74,7 +74,7 @@ module.exports = {
     if (sub === 'voir') {
       const goals = db.db.prepare("SELECT * FROM server_goals WHERE guild_id=? AND status='active' ORDER BY created_at DESC").all(guildId);
       if (!goals.length) {
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setTitle('🎯 Objectifs communautaires').setDescription('Aucun objectif actif pour l\'instant.\nUn admin peut en créer avec `/objectifs creer`.').setFooter({ text: interaction.guild.name })] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setTitle('🎯 Objectifs communautaires').setDescription('Aucun objectif actif pour l\'instant.\nUn admin peut en créer avec `/objectifs creer`.').setFooter({ text: interaction.guild.name })] });
       }
 
       // Auto-mise à jour des objectifs auto
@@ -114,11 +114,11 @@ module.exports = {
           inline: false,
         });
       }
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (!isAdmin && ['creer', 'maj', 'terminer', 'supprimer'].includes(sub)) {
-      return interaction.editReply({ content: '❌ Réservé aux administrateurs.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé aux administrateurs.', ephemeral: true });
     }
 
     if (sub === 'creer') {
@@ -148,42 +148,42 @@ module.exports = {
           { name: '📊 Départ', value: current.toLocaleString('fr-FR'), inline: true },
         )
         .setFooter({ text: `ID: ${result.lastInsertRowid}` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'maj') {
       const id  = parseInt(interaction.options.getString('id'));
       const val = parseInt(interaction.options.getString('valeur'));
       const g   = db.db.prepare("SELECT * FROM server_goals WHERE id=? AND guild_id=? AND status='active'").get(id, guildId);
-      if (!g) return interaction.editReply({ content: `❌ Objectif #${id} introuvable.` });
+      if (!g) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Objectif #${id} introuvable.` });
       db.db.prepare('UPDATE server_goals SET current=? WHERE id=?').run(val, id);
       const pct = Math.min(100, Math.round((val / g.target) * 100));
 
       // Vérifier si complété
       if (val >= g.target) {
         db.db.prepare("UPDATE server_goals SET status='completed', completed_at=strftime('%s','now') WHERE id=?").run(id);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#f39c12').setTitle(`🎉 OBJECTIF ATTEINT — ${g.title} !`).setDescription(`✅ L'objectif a été atteint avec ${val}/${g.target} !`)] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#f39c12').setTitle(`🎉 OBJECTIF ATTEINT — ${g.title} !`).setDescription(`✅ L'objectif a été atteint avec ${val}/${g.target} !`)] });
       }
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Progression mise à jour : **${val}/${g.target}** (${pct}%)`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Progression mise à jour : **${val}/${g.target}** (${pct}%)`)] });
     }
 
     if (sub === 'terminer') {
       const id = parseInt(interaction.options.getString('id'));
       const g  = db.db.prepare("SELECT * FROM server_goals WHERE id=? AND guild_id=?").get(id, guildId);
-      if (!g) return interaction.editReply({ content: `❌ Objectif #${id} introuvable.` });
+      if (!g) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Objectif #${id} introuvable.` });
       db.db.prepare("UPDATE server_goals SET status='completed', completed_at=strftime('%s','now') WHERE id=?").run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Objectif **#${id} — ${g.title}** marqué comme terminé !`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Objectif **#${id} — ${g.title}** marqué comme terminé !`)] });
     }
 
     if (sub === 'supprimer') {
       const id = parseInt(interaction.options.getString('id'));
       db.db.prepare('DELETE FROM server_goals WHERE id=? AND guild_id=?').run(id, guildId);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Objectif **#${id}** supprimé.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Objectif **#${id}** supprimé.`)] });
     }
 
     if (sub === 'historique') {
       const done = db.db.prepare("SELECT * FROM server_goals WHERE guild_id=? AND status='completed' ORDER BY completed_at DESC LIMIT 10").all(guildId);
-      if (!done.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun objectif accompli pour l\'instant.')] });
+      if (!done.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun objectif accompli pour l\'instant.')] });
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('🏆 Objectifs accomplis')
@@ -191,7 +191,7 @@ module.exports = {
           const date = g.completed_at ? new Date(g.completed_at * 1000).toLocaleDateString('fr-FR') : '?';
           return `✅ **${g.title}** — ${GOAL_TYPES[g.type]?.name || g.type} (${date})`;
         }).join('\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

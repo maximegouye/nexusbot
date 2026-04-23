@@ -7,8 +7,8 @@ module.exports = {
 
   async execute(interaction) {
     const target = interaction.targetUser;
-    if (target.bot) return interaction.reply({ content: '❌ Impossible de donner des coins à un bot.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas te donner des coins à toi-même.', ephemeral: true });
+    if (target.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible de donner des coins à un bot.', ephemeral: true });
+    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te donner des coins à toi-même.', ephemeral: true });
 
     const modal = new ModalBuilder()
       .setCustomId(`give_coins_ctx_${target.id}`)

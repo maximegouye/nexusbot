@@ -84,9 +84,9 @@ module.exports = {
       const salon    = interaction.options.getChannel('salon');
       const targetTs = parseDate(dateStr);
 
-      if (!targetTs) return interaction.editReply({ content: '❌ Format de date invalide ! Utilisez : `JJ/MM/AAAA` ou `JJ/MM/AAAA HH:MM`' });
-      if (targetTs <= now) return interaction.editReply({ content: '❌ La date doit être dans le futur !' });
-      if (targetTs > now + 365 * 86400 * 5) return interaction.editReply({ content: '❌ Maximum 5 ans dans le futur !' });
+      if (!targetTs) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format de date invalide ! Utilisez : `JJ/MM/AAAA` ou `JJ/MM/AAAA HH:MM`' });
+      if (targetTs <= now) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ La date doit être dans le futur !' });
+      if (targetTs > now + 365 * 86400 * 5) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 5 ans dans le futur !' });
 
       const result = db.db.prepare('INSERT INTO countdowns (guild_id, creator_id, title, emoji, target_ts, channel_id) VALUES (?,?,?,?,?,?)')
         .run(guildId, userId, titre, emoji, targetTs, salon?.id || null);
@@ -109,13 +109,13 @@ module.exports = {
         if (msg) db.db.prepare('UPDATE countdowns SET msg_id=? WHERE id=?').run(msg.id, id);
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'voir') {
       const id = parseInt(interaction.options.getString('id'));
       const cd = db.db.prepare('SELECT * FROM countdowns WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!cd) return interaction.editReply({ content: `❌ Compte à rebours #${id} introuvable.` });
+      if (!cd) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Compte à rebours #${id} introuvable.` });
 
       const timeLeft = cd.target_ts - now;
       const pct      = Math.max(0, Math.min(100, Math.round((1 - timeLeft / (cd.target_ts - cd.created_at)) * 100)));
@@ -131,12 +131,12 @@ module.exports = {
           { name: '📊 Progression',   value: `\`${bar}\` ${pct}%`,      inline: false },
         )
         .setFooter({ text: `Créé par <@${cd.creator_id}> le ${new Date(cd.created_at*1000).toLocaleDateString('fr-FR')}` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'liste') {
       const list = db.db.prepare('SELECT * FROM countdowns WHERE guild_id=? AND active=1 AND target_ts>=? ORDER BY target_ts ASC LIMIT 10').all(guildId, now);
-      if (!list.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun compte à rebours actif !')] });
+      if (!list.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun compte à rebours actif !')] });
       const embed = new EmbedBuilder()
         .setColor('#3498db')
         .setTitle('⏳ Comptes à Rebours Actifs')
@@ -144,19 +144,19 @@ module.exports = {
           const tl = cd.target_ts - now;
           return `**#${cd.id}** ${cd.emoji} **${cd.title}**\n> ${formatTimeLeft(tl)} — <t:${cd.target_ts}:R>`;
         }).join('\n\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'supprimer') {
       const id = parseInt(interaction.options.getString('id'));
       const cd = db.db.prepare('SELECT * FROM countdowns WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!cd) return interaction.editReply({ content: `❌ Compte à rebours #${id} introuvable.` });
+      if (!cd) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Compte à rebours #${id} introuvable.` });
 
       const canDel = cd.creator_id === userId || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
-      if (!canDel) return interaction.editReply({ content: '❌ Seul le créateur ou un admin peut supprimer ce compte à rebours.' });
+      if (!canDel) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seul le créateur ou un admin peut supprimer ce compte à rebours.' });
 
       db.db.prepare('UPDATE countdowns SET active=0 WHERE id=?').run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Compte à rebours **#${id}** supprimé.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Compte à rebours **#${id}** supprimé.`)] });
     }
   }
 };

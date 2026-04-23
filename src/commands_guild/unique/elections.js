@@ -45,7 +45,7 @@ module.exports = {
 
     if (sub === 'creer') {
       if (!interaction.member.permissions.has(0x8n) && !interaction.member.permissions.has(0x20n)) {
-        return interaction.editReply({ content: '❌ Seuls les admins et modérateurs peuvent créer des élections.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seuls les admins et modérateurs peuvent créer des élections.', ephemeral: true });
       }
       const titre = interaction.options.getString('titre');
       const candidatsRaw = interaction.options.getString('candidats');
@@ -53,13 +53,13 @@ module.exports = {
       const desc = interaction.options.getString('description') || '';
       const endTime = now + duree * 3600;
       const candidats = candidatsRaw.split(',').map(c => c.trim()).filter(c => c.length > 0);
-      if (candidats.length < 2) return interaction.editReply({ content: '❌ Il faut au moins 2 candidats (séparés par des virgules).', ephemeral: true });
+      if (candidats.length < 2) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Il faut au moins 2 candidats (séparés par des virgules).', ephemeral: true });
 
       const result = db.db.prepare('INSERT INTO elections (guild_id,creator_id,title,description,candidates,end_time) VALUES(?,?,?,?,?,?)')
         .run(guildId, userId, titre, desc, JSON.stringify(candidats), endTime);
 
       const candidatsList = candidats.map((c, i) => `**${i+1}.** ${c}`).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle(`🗳️ Élection : ${titre}`)
         .setDescription(desc || '*Aucune description*')
         .addFields(
@@ -74,18 +74,18 @@ module.exports = {
       const id = parseInt(interaction.options.getString('id'));
       const choix = interaction.options.getString('choix');
       const elec = db.db.prepare('SELECT * FROM elections WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!elec) return interaction.editReply({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
-      if (elec.status !== 'active' || now > elec.end_time) return interaction.editReply({ content: '❌ Cette élection est terminée.', ephemeral: true });
+      if (!elec) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
+      if (elec.status !== 'active' || now > elec.end_time) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette élection est terminée.', ephemeral: true });
 
       const candidats = JSON.parse(elec.candidates);
       const votes = JSON.parse(elec.votes || '{}');
 
-      if (votes[userId]) return interaction.editReply({ content: '❌ Vous avez déjà voté dans cette élection.', ephemeral: true });
+      if (votes[userId]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà voté dans cette élection.', ephemeral: true });
 
       // Trouver le candidat correspondant (insensible à la casse)
       const candidat = candidats.find(c => c.toLowerCase().includes(choix.toLowerCase()) || choix.toLowerCase().includes(c.toLowerCase().split(' ')[0]));
       if (!candidat) {
-        return interaction.editReply({ content: `❌ Candidat "${choix}" introuvable. Disponibles : ${candidats.join(', ')}`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Candidat "${choix}" introuvable. Disponibles : ${candidats.join(', ')}`, ephemeral: true });
       }
 
       votes[userId] = candidat;
@@ -94,13 +94,13 @@ module.exports = {
       // Récompense participation
       db.addCoins(userId, guildId, 10);
 
-      return interaction.editReply({ content: `✅ Vote enregistré pour **${candidat}** dans l\'élection "${elec.title}" ! (+10 🪙)`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Vote enregistré pour **${candidat}** dans l\'élection "${elec.title}" ! (+10 🪙)`, ephemeral: true });
     }
 
     if (sub === 'resultats') {
       const id = parseInt(interaction.options.getString('id'));
       const elec = db.db.prepare('SELECT * FROM elections WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!elec) return interaction.editReply({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
+      if (!elec) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
 
       const candidats = JSON.parse(elec.candidates);
       const votes = JSON.parse(elec.votes || '{}');
@@ -119,7 +119,7 @@ module.exports = {
       }).join('\n\n');
 
       const isActive = elec.status === 'active' && now < elec.end_time;
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle(`📊 Résultats : ${elec.title}`)
         .setDescription(desc || '*Aucun vote encore*')
         .addFields(
@@ -131,24 +131,24 @@ module.exports = {
 
     if (sub === 'liste') {
       const elections = db.db.prepare('SELECT * FROM elections WHERE guild_id=? AND status=? AND end_time>? ORDER BY end_time ASC LIMIT 10').all(guildId, 'active', now);
-      if (!elections.length) return interaction.editReply({ content: '📋 Aucune élection active.', ephemeral: true });
+      if (!elections.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📋 Aucune élection active.', ephemeral: true });
       const desc = elections.map(e => {
         const votes = Object.keys(JSON.parse(e.votes || '{}')).length;
         return `**[#${e.id}] ${e.title}** — ${votes} vote(s) | Fin : <t:${e.end_time}:R>`;
       }).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle('🗳️ Élections actives')
         .setDescription(desc)] });
     }
 
     if (sub === 'cloturer') {
       if (!interaction.member.permissions.has(0x8n)) {
-        return interaction.editReply({ content: '❌ Seuls les administrateurs peuvent clôturer.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seuls les administrateurs peuvent clôturer.', ephemeral: true });
       }
       const id = parseInt(interaction.options.getString('id'));
       const elec = db.db.prepare('SELECT * FROM elections WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!elec) return interaction.editReply({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
-      if (elec.status !== 'active') return interaction.editReply({ content: '❌ Cette élection est déjà clôturée.', ephemeral: true });
+      if (!elec) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
+      if (elec.status !== 'active') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette élection est déjà clôturée.', ephemeral: true });
 
       db.db.prepare('UPDATE elections SET status=? WHERE id=?').run('terminee', id);
 
@@ -159,7 +159,7 @@ module.exports = {
       Object.values(votes).forEach(v => { if (scores[v] !== undefined) scores[v]++; });
       const winner = Object.entries(scores).sort((a,b) => b[1]-a[1])[0];
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle(`🏆 Élection terminée — ${elec.title}`)
         .setDescription(`**Vainqueur : ${winner ? winner[0] : 'Aucun vote'}** ${winner ? `(${winner[1]} vote(s))` : ''}\n\nTotal : ${Object.keys(votes).length} votes`)
         .setFooter({ text: 'Félicitations au gagnant !' })] });
@@ -167,7 +167,7 @@ module.exports = {
 
     if (sub === 'referendum') {
       if (!interaction.member.permissions.has(0x8n) && !interaction.member.permissions.has(0x20n)) {
-        return interaction.editReply({ content: '❌ Seuls les admins/modérateurs peuvent créer des référendums.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seuls les admins/modérateurs peuvent créer des référendums.', ephemeral: true });
       }
       const question = interaction.options.getString('question');
       const duree = parseInt(interaction.options.getString('duree_heures')) || 24;
@@ -176,7 +176,7 @@ module.exports = {
       const result = db.db.prepare('INSERT INTO elections (guild_id,creator_id,title,description,candidates,end_time) VALUES(?,?,?,?,?,?)')
         .run(guildId, userId, question, 'Référendum', JSON.stringify(['✅ Oui','❌ Non']), endTime);
 
-      const msg = await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle('📊 RÉFÉRENDUM')
         .setDescription(`**${question}**`)
         .addFields(

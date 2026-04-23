@@ -59,24 +59,24 @@ module.exports = {
           value: `💰 Prix : **${p.price.toLocaleString()}** 🪙\n🏡 Loyer : **${p.rent}** 🪙 / ${p.rentCooldown >= 3600 ? Math.round(p.rentCooldown/3600)+'h' : p.rentCooldown+'min'}\n📊 Rendement : ${((p.rent / p.price) * (86400/p.rentCooldown) * 100).toFixed(1)}%/jour`,
           inline: true,
         })));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'acheter') {
       const propId = parseInt(interaction.options.getString('id'));
       const prop   = PROPERTIES.find(p => p.id === propId);
-      if (!prop) return interaction.editReply({ content: '❌ Propriété introuvable.' });
+      if (!prop) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Propriété introuvable.' });
 
       const already = db.db.prepare('SELECT * FROM immo_portfolio WHERE user_id=? AND guild_id=? AND property_id=?').get(userId, guildId, propId);
-      if (already) return interaction.editReply({ content: '❌ Tu possèdes déjà cette propriété !' });
+      if (already) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu possèdes déjà cette propriété !' });
 
       const user = db.getUser(userId, guildId);
-      if (user.coins < prop.price) return interaction.editReply({ content: `❌ Tu n'as que **${user.coins.toLocaleString()}** 🪙. Il te faut **${prop.price.toLocaleString()}** 🪙.` });
+      if (user.coins < prop.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${user.coins.toLocaleString()}** 🪙. Il te faut **${prop.price.toLocaleString()}** 🪙.` });
 
       db.removeCoins(userId, guildId, prop.price);
       db.db.prepare('INSERT INTO immo_portfolio (user_id, guild_id, property_id, bought_at, buy_price) VALUES (?,?,?,?,?)').run(userId, guildId, propId, now, prop.price);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`🏠 Propriété Achetée !`)
         .setDescription(`Tu possèdes maintenant **${prop.name}** !\n\n💰 Achat : **${prop.price.toLocaleString()}** 🪙\n🏡 Loyer : **${prop.rent}** 🪙 toutes les ${Math.round(prop.rentCooldown/3600)}h\n\nCollecte avec \`/immo loyer\``)
@@ -85,7 +85,7 @@ module.exports = {
 
     if (sub === 'portfolio') {
       const props = db.db.prepare('SELECT * FROM immo_portfolio WHERE user_id=? AND guild_id=?').all(userId, guildId);
-      if (!props.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Tu ne possèdes aucune propriété. Commence avec `/immo marche` !')] });
+      if (!props.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Tu ne possèdes aucune propriété. Commence avec `/immo marche` !')] });
 
       let totalValue = 0, totalDailyRent = 0;
       const embed = new EmbedBuilder().setColor('#27ae60').setTitle(`🏠 Portfolio Immobilier — ${interaction.user.username}`);
@@ -107,12 +107,12 @@ module.exports = {
       }
 
       embed.setFooter({ text: `Valeur totale : ${totalValue.toLocaleString()} 🪙 | Revenu quotidien ~${totalDailyRent.toLocaleString()} 🪙` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'loyer') {
       const props = db.db.prepare('SELECT * FROM immo_portfolio WHERE user_id=? AND guild_id=?').all(userId, guildId);
-      if (!props.length) return interaction.editReply({ content: '❌ Tu ne possèdes aucune propriété.' });
+      if (!props.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne possèdes aucune propriété.' });
 
       let totalCollected = 0;
       const collected = [];
@@ -137,10 +137,10 @@ module.exports = {
       }
 
       if (collected.length === 0) {
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('⏳ Aucun loyer disponible pour le moment. Reviens plus tard !')] });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('⏳ Aucun loyer disponible pour le moment. Reviens plus tard !')] });
       }
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#27ae60')
         .setTitle('🏡 Loyers Collectés !')
         .setDescription(collected.join('\n'))
@@ -151,10 +151,10 @@ module.exports = {
     if (sub === 'vendre') {
       const propId = parseInt(interaction.options.getString('id'));
       const prop   = PROPERTIES.find(p => p.id === propId);
-      if (!prop) return interaction.editReply({ content: '❌ Propriété introuvable.' });
+      if (!prop) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Propriété introuvable.' });
 
       const item = db.db.prepare('SELECT * FROM immo_portfolio WHERE user_id=? AND guild_id=? AND property_id=?').get(userId, guildId, propId);
-      if (!item) return interaction.editReply({ content: '❌ Tu ne possèdes pas cette propriété !' });
+      if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne possèdes pas cette propriété !' });
 
       // Prix de revente = 70-90% du prix d'achat
       const sellPct   = 0.70 + Math.random() * 0.20;
@@ -164,7 +164,7 @@ module.exports = {
       db.addCoins(userId, guildId, sellPrice);
       db.db.prepare('DELETE FROM immo_portfolio WHERE user_id=? AND guild_id=? AND property_id=?').run(userId, guildId, propId);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(profit >= 0 ? '#2ecc71' : '#e74c3c')
         .setTitle(`📉 Propriété Vendue — ${prop.name}`)
         .addFields(

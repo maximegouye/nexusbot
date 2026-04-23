@@ -65,7 +65,7 @@ module.exports = {
     const isStaff = interaction.member.permissions.has(0x4000n);
 
     if (sub === 'creer') {
-      if (!isStaff) return interaction.editReply({ content: '❌ Staff uniquement.', ephemeral: true });
+      if (!isStaff) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Staff uniquement.', ephemeral: true });
       const nom = interaction.options.getString('nom');
       const jeu = interaction.options.getString('jeu');
       const prix = interaction.options.getString('prix');
@@ -90,36 +90,36 @@ module.exports = {
         new ButtonBuilder().setCustomId(`tournoi_join_${id}`).setLabel('✋ S\'inscrire').setStyle(ButtonStyle.Success)
       );
 
-      return interaction.editReply({ embeds: [embed], components: [row] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row] });
     }
 
     if (sub === 'inscrire') {
       const id = parseInt(interaction.options.getString('id'));
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!tournoi) return interaction.editReply({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
-      if (tournoi.status !== 'inscription') return interaction.editReply({ content: '❌ Les inscriptions sont fermées.', ephemeral: true });
+      if (!tournoi) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
+      if (tournoi.status !== 'inscription') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Les inscriptions sont fermées.', ephemeral: true });
 
       const count = db.db.prepare('SELECT COUNT(*) as c FROM tournoi_players WHERE tournoi_id=?').get(id);
-      if (count.c >= tournoi.max_players) return interaction.editReply({ content: '❌ Le tournoi est complet.', ephemeral: true });
+      if (count.c >= tournoi.max_players) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le tournoi est complet.', ephemeral: true });
 
       try {
         db.db.prepare('INSERT INTO tournoi_players (tournoi_id, guild_id, user_id) VALUES (?,?,?)').run(id, guildId, userId);
       } catch {
-        return interaction.editReply({ content: '❌ Vous êtes déjà inscrit.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous êtes déjà inscrit.', ephemeral: true });
       }
 
-      return interaction.editReply({ content: `✅ Inscrit au tournoi **${tournoi.name}** ! (${count.c + 1}/${tournoi.max_players})`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Inscrit au tournoi **${tournoi.name}** ! (${count.c + 1}/${tournoi.max_players})`, ephemeral: true });
     }
 
     if (sub === 'lancer') {
-      if (!isStaff) return interaction.editReply({ content: '❌ Staff uniquement.', ephemeral: true });
+      if (!isStaff) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Staff uniquement.', ephemeral: true });
       const id = parseInt(interaction.options.getString('id'));
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!tournoi) return interaction.editReply({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
-      if (tournoi.status !== 'inscription') return interaction.editReply({ content: '❌ Ce tournoi a déjà commencé ou est terminé.', ephemeral: true });
+      if (!tournoi) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
+      if (tournoi.status !== 'inscription') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce tournoi a déjà commencé ou est terminé.', ephemeral: true });
 
       const players = db.db.prepare('SELECT user_id FROM tournoi_players WHERE tournoi_id=? AND eliminated=0').all(id);
-      if (players.length < 2) return interaction.editReply({ content: '❌ Au moins 2 joueurs requis pour lancer.', ephemeral: true });
+      if (players.length < 2) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Au moins 2 joueurs requis pour lancer.', ephemeral: true });
 
       const bracket = generateBracket(players.map(p => p.user_id));
       db.db.prepare('UPDATE tournois SET status=?, bracket=? WHERE id=?').run('en_cours', JSON.stringify(bracket), id);
@@ -131,23 +131,23 @@ module.exports = {
         .setDescription(`Le tournoi **${tournoi.name}** a commencé !\n\n**Premier match :**\n<@${match.p1}> ⚔️ ${match.p2 ? `<@${match.p2}>` : 'BYE (passe automatiquement)'}`)
         .addFields({ name: '👥 Joueurs', value: `${players.length}`, inline: true }, { name: '🏅 Prix', value: tournoi.prize, inline: true });
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'resultat') {
-      if (!isStaff) return interaction.editReply({ content: '❌ Staff uniquement.', ephemeral: true });
+      if (!isStaff) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Staff uniquement.', ephemeral: true });
       const id = parseInt(interaction.options.getString('id'));
       const winner = interaction.options.getUser('gagnant');
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!tournoi || tournoi.status !== 'en_cours') return interaction.editReply({ content: '❌ Tournoi introuvable ou non actif.', ephemeral: true });
+      if (!tournoi || tournoi.status !== 'en_cours') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tournoi introuvable ou non actif.', ephemeral: true });
 
       const bracket = JSON.parse(tournoi.bracket || '[]');
       const round = bracket[tournoi.current_round - 1];
-      if (!round) return interaction.editReply({ content: '❌ Erreur de bracket.', ephemeral: true });
+      if (!round) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur de bracket.', ephemeral: true });
 
       // Trouver le match avec ce joueur
       const matchIdx = round.findIndex(m => !m.winner && (m.p1 === winner.id || m.p2 === winner.id));
-      if (matchIdx === -1) return interaction.editReply({ content: '❌ Match introuvable pour ce joueur dans ce tour.', ephemeral: true });
+      if (matchIdx === -1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Match introuvable pour ce joueur dans ce tour.', ephemeral: true });
 
       round[matchIdx].winner = winner.id;
       const loserId = round[matchIdx].p1 === winner.id ? round[matchIdx].p2 : round[matchIdx].p1;
@@ -195,13 +195,13 @@ module.exports = {
           .setDescription(`<@${winner.id}> avance au tour suivant !${loserId ? `\n<@${loserId}> est éliminé.` : ''}`);
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'bracket') {
       const id = parseInt(interaction.options.getString('id'));
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!tournoi) return interaction.editReply({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
+      if (!tournoi) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
 
       const bracket = JSON.parse(tournoi.bracket || '[]');
       const players = db.db.prepare('SELECT user_id, eliminated FROM tournoi_players WHERE tournoi_id=?').all(id);
@@ -214,7 +214,7 @@ module.exports = {
         return `**Tour ${ri + 1}**\n${roundLines}`;
       }).join('\n\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle(`🏆 Bracket — ${tournoi.name}`)
           .setDescription(desc || '*Pas encore commencé.*')
           .addFields(
@@ -226,7 +226,7 @@ module.exports = {
 
     if (sub === 'liste') {
       const tournois = db.db.prepare("SELECT * FROM tournois WHERE guild_id=? AND status != 'termine' ORDER BY created_at DESC LIMIT 10").all(guildId);
-      if (!tournois.length) return interaction.editReply({ content: '❌ Aucun tournoi actif.', ephemeral: true });
+      if (!tournois.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun tournoi actif.', ephemeral: true });
 
       const desc = tournois.map(t => {
         const statusEmoji = t.status === 'inscription' ? '📝' : t.status === 'en_cours' ? '⚔️' : '🏁';
@@ -234,7 +234,7 @@ module.exports = {
         return `${statusEmoji} **#${t.id} — ${t.name}** (${t.game}) — ${count.c}/${t.max_players} joueurs`;
       }).join('\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🏆 Tournois').setDescription(desc)
       ]});
     }

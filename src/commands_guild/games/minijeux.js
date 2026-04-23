@@ -93,11 +93,11 @@ module.exports = {
     const miseRaw = interaction.options.get('mise')?.value;
     const mise    = Number.isFinite(parseBet(miseRaw, _me0.balance)) ? parseBet(miseRaw, _me0.balance) : 0;
 
-    if (activeGames.has(userId)) return interaction.editReply({ content: '⚠️ Tu as déjà un jeu en cours !', ephemeral: true });
+    if (activeGames.has(userId)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⚠️ Tu as déjà un jeu en cours !', ephemeral: true });
 
     if (mise > 0) {
       const user = db.getUser(userId, guildId);
-      if (user.coins < mise) return interaction.editReply({ content: `❌ Pas assez de coins ! Tu as **${user.coins}** 🪙`, ephemeral: true });
+      if (user.coins < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pas assez de coins ! Tu as **${user.coins}** 🪙`, ephemeral: true });
       db.removeCoins(userId, guildId, mise);
     }
 
@@ -111,7 +111,7 @@ module.exports = {
         .setTitle('🔢 Plus ou Moins !')
         .setDescription(`J'ai choisi un nombre entre **1** et **100**.\nEnvoie tes propositions dans le chat !\nTu as **10 essais** pour le trouver.`)
         .setFooter({ text: `Mise : ${mise} coins` });
-      await interaction.editReply({ embeds: [embed] });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
 
       const collector = interaction.channel.createMessageCollector({
         filter: m => m.author.id === userId && /^\d+$/.test(m.content.trim()),
@@ -163,7 +163,7 @@ module.exports = {
       const game = startAnagramme();
       activeGames.set(userId, { ...game, mise, guildId });
 
-      await interaction.editReply({ embeds: [new EmbedBuilder()
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#9b59b6')
         .setTitle('🔤 Anagramme !')
         .setDescription(`Reconstituez ce mot :\n\n**\`${game.anagram}\`**\n\nEnvoyez votre réponse dans le chat ! ⏱️ 30 secondes.`)
@@ -207,7 +207,7 @@ module.exports = {
       const game = startReaction();
       activeGames.set(userId, { ...game, mise, guildId });
 
-      await interaction.editReply({ embeds: [new EmbedBuilder()
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#e67e22')
         .setTitle('⚡ Test de Réaction !')
         .setDescription(`Prépare-toi... L'emoji apparaîtra dans **1–5 secondes**.\nQuand il apparaît, **tapez-le exactement** dans le chat !`)
@@ -258,7 +258,7 @@ module.exports = {
       game.startTime = Date.now();
       activeGames.set(userId, { ...game, mise, guildId });
 
-      await interaction.editReply({ embeds: [new EmbedBuilder()
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#e74c3c')
         .setTitle('➕ Calcul Rapide !')
         .setDescription(`Résoudre :\n\n**\`${game.question} = ?\`**\n\nEnvoyez la réponse dans le chat ! ⏱️ 20 secondes.`)

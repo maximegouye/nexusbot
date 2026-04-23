@@ -53,7 +53,7 @@ module.exports = {
       if (footer) embed.setFooter({ text: footer });
 
       await target.send({ embeds: [embed] });
-      return interaction.editReply({ content: `✅ Embed envoyé dans <#${target.id}>`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Embed envoyé dans <#${target.id}>`, ephemeral: true });
     }
 
     if (sub === 'annonce') {
@@ -69,7 +69,7 @@ module.exports = {
         .setTimestamp();
 
       await target.send({ embeds: [embed] });
-      return interaction.editReply({ content: `✅ Annonce envoyée dans <#${target.id}>`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Annonce envoyée dans <#${target.id}>`, ephemeral: true });
     }
 
     if (sub === 'regles') {
@@ -88,7 +88,7 @@ module.exports = {
         .setTimestamp();
 
       await target.send({ embeds: [embed] });
-      return interaction.editReply({ content: `✅ Règles envoyées dans <#${target.id}>`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Règles envoyées dans <#${target.id}>`, ephemeral: true });
     }
   }
 };

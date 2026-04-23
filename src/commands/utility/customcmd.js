@@ -16,7 +16,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const sub = interaction.options.getSubcommand();
 
@@ -29,7 +29,7 @@ module.exports = {
         ON CONFLICT(guild_id, trigger) DO UPDATE SET response = ?, created_by = ?
       `).run(interaction.guildId, declencheur, reponse, interaction.user.id, reponse, interaction.user.id);
 
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✅ Commande Personnalisée Créée !')
@@ -45,19 +45,19 @@ module.exports = {
     if (sub === 'supprimer') {
       const declencheur = interaction.options.getString('declencheur').toLowerCase().trim();
       const cmd = db.getCustomCommand(interaction.guildId, declencheur);
-      if (!cmd) return interaction.editReply({ content: `❌ Aucune commande pour \`${declencheur}\`.`, ephemeral: true });
+      if (!cmd) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Aucune commande pour \`${declencheur}\`.`, ephemeral: true });
       db.db.prepare('DELETE FROM custom_commands WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').run(interaction.guildId, declencheur);
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription(`🗑️ Commande \`${declencheur}\` supprimée.`)], ephemeral: true
       });
     }
 
     if (sub === 'liste') {
       const cmds = db.getCustomCommands(interaction.guildId);
-      if (!cmds.length) return interaction.editReply({ content: '❌ Aucune commande personnalisée configurée.', ephemeral: true });
+      if (!cmds.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune commande personnalisée configurée.', ephemeral: true });
 
       const list = cmds.map(c => `• \`${c.trigger}\` → ${c.response.slice(0, 50)}${c.response.length > 50 ? '...' : ''}`).join('\n');
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle('🤖 Commandes Personnalisées')

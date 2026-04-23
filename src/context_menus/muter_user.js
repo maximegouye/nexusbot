@@ -10,8 +10,8 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
     const target = interaction.targetMember || await interaction.guild.members.fetch(interaction.targetId).catch(() => null);
-    if (!target) return interaction.editReply('❌ Membre introuvable.');
-    if (!target.moderatable) return interaction.editReply('❌ Je ne peux pas mettre ce membre en timeout.');
+    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Membre introuvable.');
+    if (!target.moderatable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Je ne peux pas mettre ce membre en timeout.');
 
     try {
       const duration = 10 * 60 * 1000; // 10 minutes
@@ -23,7 +23,7 @@ module.exports = {
           .run(interaction.guildId, target.id, interaction.user.id, 'Timeout rapide 10min (menu contextuel)', 'timeout');
       } catch {}
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Orange')
           .setTitle('🔇 Timeout appliqué')
           .setDescription(`<@${target.id}> est en timeout pour **10 minutes**.`)
@@ -31,7 +31,7 @@ module.exports = {
           .setTimestamp()
       ]});
     } catch (e) {
-      return interaction.editReply(`❌ Erreur : ${e.message}`);
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(`❌ Erreur : ${e.message}`);
     }
   }
 };

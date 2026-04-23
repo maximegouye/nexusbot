@@ -12,14 +12,14 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers))
-      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const userId = interaction.options.getString('userid').trim();
     const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
 
     // Vérifier que l'utilisateur est bien banni
     const ban = await interaction.guild.bans.fetch(userId).catch(() => null);
-    if (!ban) return interaction.editReply({ content: `❌ L'utilisateur \`${userId}\` n'est pas banni sur ce serveur.`, ephemeral: true });
+    if (!ban) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ L'utilisateur \`${userId}\` n'est pas banni sur ce serveur.`, ephemeral: true });
 
     try {
       await interaction.guild.bans.remove(userId, `${raison} — par ${interaction.user.tag}`);
@@ -45,14 +45,14 @@ module.exports = {
         }).catch(() => {});
       }
 
-      await interaction.editReply({
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setDescription(`✅ **${ban.user.tag}** a été débanni avec succès.\n📋 Raison : ${raison}`)
         ]
       });
     } catch (e) {
-      await interaction.editReply({ content: `❌ Impossible de débannir cet utilisateur : ${e.message}`, ephemeral: true });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Impossible de débannir cet utilisateur : ${e.message}`, ephemeral: true });
     }
   }
 };

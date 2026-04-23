@@ -16,7 +16,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Vous devez être dans un canal vocal pour utiliser cette commande.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Vérifier que le bot est dans le même canal
@@ -26,7 +26,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Je dois être dans le même canal vocal que vous.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       const queue = getOrCreateQueue(interaction.guildId);
@@ -37,7 +37,7 @@ module.exports = {
           .setColor('#FF0000')
           .setDescription('❌ Il faut au moins 2 pistes dans la file pour la mélanger.');
 
-        return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
       }
 
       // Algorithme de Fisher-Yates pour mélanger
@@ -55,14 +55,14 @@ module.exports = {
         .setDescription(`✅ La file d'attente avec ${queue.songs.length} piste(s) a été mélangée aléatoirement.`)
         .setTimestamp();
 
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (error) {
       console.error('Erreur dans la commande shuffle:', error);
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('❌ Une erreur est survenue lors du mélange de la file d\'attente.');
 
-      return interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [errorEmbed], ephemeral: true });
     }
   }
 };

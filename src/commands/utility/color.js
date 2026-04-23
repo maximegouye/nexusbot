@@ -40,7 +40,7 @@ module.exports = {
   async execute(interaction) {
     let hex = interaction.options.getString('hex').trim().replace(/^#/, '');
     if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
-      return interaction.editReply({ content: '❌ Format invalide. Exemple: `#7B2FBE` ou `FF5500`', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format invalide. Exemple: `#7B2FBE` ou `FF5500`', ephemeral: true });
     }
     hex = hex.toUpperCase();
     const { r, g, b } = hexToRgb('#' + hex);
@@ -77,8 +77,8 @@ module.exports = {
 
     if (attachment) {
       embed.setThumbnail('attachment://color.png');
-      return interaction.editReply({ embeds: [embed], files: [attachment] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], files: [attachment] });
     }
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

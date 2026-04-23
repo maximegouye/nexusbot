@@ -30,7 +30,7 @@ module.exports = {
 
     if (now - (user.last_hunt || 0) < cd) {
       const rem = cd - (now - (user.last_hunt || 0));
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#FF6B6B').setDescription(`🏹 La forêt doit se reposer ! Reviens dans **${Math.floor(rem/60)} min**.`)],
         ephemeral: true
       });
@@ -60,6 +60,6 @@ module.exports = {
         : `${prey.emoji} **${prey.name}**... La forêt était vide aujourd'hui.`)
       .setFooter({ text: 'Prochaine chasse dans 45 minutes' });
 
-    await interaction.editReply({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

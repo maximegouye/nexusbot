@@ -60,7 +60,7 @@ module.exports = {
 
     if (sub === 'creer') {
       const active = db.db.prepare('SELECT COUNT(*) as c FROM histoires WHERE guild_id=? AND status=?').get(guildId, 'active');
-      if (active.c >= 5) return interaction.editReply({ content: '❌ Maximum 5 histoires actives par serveur. Terminez-en une d\'abord.', ephemeral: true });
+      if (active.c >= 5) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 5 histoires actives par serveur. Terminez-en une d\'abord.', ephemeral: true });
 
       const titre = interaction.options.getString('titre');
       const genre = interaction.options.getString('genre');
@@ -77,7 +77,7 @@ module.exports = {
       // Récompense pour création
       db.addCoins(userId, guildId, 50);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`${g.emoji} Nouvelle histoire : ${titre}`)
         .setDescription(`**L'histoire commence...**\n\n*${debut}*`)
         .addFields(
@@ -93,20 +93,20 @@ module.exports = {
       const id = parseInt(interaction.options.getString('id'));
       const phrase = interaction.options.getString('phrase');
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!story) return interaction.editReply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
-      if (story.status !== 'active') return interaction.editReply({ content: '❌ Cette histoire est terminée.', ephemeral: true });
+      if (!story) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
+      if (story.status !== 'active') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette histoire est terminée.', ephemeral: true });
 
       const content = JSON.parse(story.content || '[]');
       const contributors = JSON.parse(story.contributors || '[]');
 
       // Anti-spam : pas deux phrases consécutives du même auteur
       if (content.length > 0 && content[content.length - 1].user_id === userId) {
-        return interaction.editReply({ content: '❌ Vous avez déjà écrit la dernière phrase. Attendez qu\'un autre membre contribue !', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà écrit la dernière phrase. Attendez qu\'un autre membre contribue !', ephemeral: true });
       }
 
       if (content.length >= story.max_length) {
         db.db.prepare('UPDATE histoires SET status=? WHERE id=?').run('terminee', id);
-        return interaction.editReply({ content: `📖 L'histoire #${id} a atteint sa longueur maximale et est maintenant **terminée** !` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `📖 L'histoire #${id} a atteint sa longueur maximale et est maintenant **terminée** !` });
       }
 
       content.push({ user_id: userId, text: phrase, timestamp: now });
@@ -119,7 +119,7 @@ module.exports = {
       db.addCoins(userId, guildId, 15);
       const g = GENRES[story.genre] || GENRES.aventure;
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`${g.emoji} ${story.title} — Phrase ajoutée`)
         .setDescription(`**...**\n\n*${phrase}*`)
         .addFields(
@@ -135,12 +135,12 @@ module.exports = {
       const id = parseInt(interaction.options.getString('id'));
       const page = (parseInt(interaction.options.getString('page')) || 1) - 1;
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!story) return interaction.editReply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
+      if (!story) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
 
       const content = JSON.parse(story.content || '[]');
       const perPage = 8;
       const totalPages = Math.ceil(content.length / perPage) || 1;
-      if (page >= totalPages) return interaction.editReply({ content: `❌ Page invalide (max: ${totalPages}).`, ephemeral: true });
+      if (page >= totalPages) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Page invalide (max: ${totalPages}).`, ephemeral: true });
 
       const slice = content.slice(page * perPage, (page + 1) * perPage);
       const g = GENRES[story.genre] || GENRES.aventure;
@@ -148,7 +148,7 @@ module.exports = {
 
       const text = slice.map((s, i) => `**${page * perPage + i + 1}.** ${s.text} *(par <@${s.user_id}>)*`).join('\n\n');
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`${g.emoji} ${story.title} ${statusEmoji}`)
         .setDescription(text || '*Aucune phrase encore.*')
         .setFooter({ text: `Page ${page + 1}/${totalPages} • ${content.length} phrases au total • Histoire #${id}` })
@@ -157,7 +157,7 @@ module.exports = {
 
     if (sub === 'liste') {
       const stories = db.db.prepare('SELECT * FROM histoires WHERE guild_id=? AND status=? ORDER BY id DESC LIMIT 10').all(guildId, 'active');
-      if (!stories.length) return interaction.editReply({ content: '📚 Aucune histoire active pour l\'instant. Créez-en une avec `/histoire creer` !', ephemeral: true });
+      if (!stories.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📚 Aucune histoire active pour l\'instant. Créez-en une avec `/histoire creer` !', ephemeral: true });
 
       const desc = stories.map(s => {
         const g = GENRES[s.genre] || GENRES.aventure;
@@ -166,7 +166,7 @@ module.exports = {
         return `${g.emoji} **[#${s.id}] ${s.title}** — ${content.length}/${s.max_length} phrases • ${contributors.length} contributeurs`;
       }).join('\n');
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle('📚 Histoires en cours')
         .setDescription(desc)
         .setFooter({ text: 'Utilisez /histoire lire pour lire • /histoire ecrire pour contribuer' })
@@ -176,9 +176,9 @@ module.exports = {
     if (sub === 'terminer') {
       const id = parseInt(interaction.options.getString('id'));
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!story) return interaction.editReply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
+      if (!story) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
       if (story.creator_id !== userId && !interaction.member.permissions.has(0x8n)) {
-        return interaction.editReply({ content: '❌ Seul le créateur ou un administrateur peut terminer cette histoire.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seul le créateur ou un administrateur peut terminer cette histoire.', ephemeral: true });
       }
       db.db.prepare('UPDATE histoires SET status=? WHERE id=?').run('terminee', id);
       const content = JSON.parse(story.content || '[]');
@@ -186,7 +186,7 @@ module.exports = {
       // Récompenser le créateur
       db.addCoins(story.creator_id, guildId, 100);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle(`📖 Histoire terminée — ${story.title}`)
         .setDescription(`L'histoire **${story.title}** est maintenant archivée avec **${content.length} phrases** !\n\nMerci à tous les contributeurs ! 🎉\n+100 ${coin} pour le créateur.`)
         .setFooter({ text: `Histoire #${id} archivée` })
@@ -196,14 +196,14 @@ module.exports = {
     if (sub === 'info') {
       const id = parseInt(interaction.options.getString('id'));
       const story = db.db.prepare('SELECT * FROM histoires WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!story) return interaction.editReply({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
+      if (!story) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Histoire #${id} introuvable.`, ephemeral: true });
 
       const content = JSON.parse(story.content || '[]');
       const contributors = JSON.parse(story.contributors || '[]');
       const g = GENRES[story.genre] || GENRES.aventure;
       const statusEmoji = story.status === 'active' ? '🟢 Active' : '🔒 Terminée';
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`${g.emoji} Infos — ${story.title}`)
         .addFields(
           { name: '🆔 ID', value: `#${id}`, inline: true },

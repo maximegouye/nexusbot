@@ -77,14 +77,14 @@ module.exports = {
 
     if (sub === 'rejoindre') {
       const existing = db.db.prepare('SELECT id FROM agents WHERE guild_id=? AND user_id=?').get(guildId, userId);
-      if (existing) return interaction.editReply({ content: '❌ Vous êtes déjà un agent enregistré.', ephemeral: true });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous êtes déjà un agent enregistré.', ephemeral: true });
 
       const codename = interaction.options.getString('codename');
       const nameExists = db.db.prepare('SELECT id FROM agents WHERE guild_id=? AND codename=?').get(guildId, codename);
-      if (nameExists) return interaction.editReply({ content: '❌ Ce nom de code est déjà pris.', ephemeral: true });
+      if (nameExists) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce nom de code est déjà pris.', ephemeral: true });
 
       db.db.prepare('INSERT INTO agents (guild_id,user_id,codename) VALUES(?,?,?)').run(guildId, userId, codename);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle('🔵 Bienvenue, Agent !')
         .setDescription(`Dossier créé. Nom de code : **${codename}**\nVotre rang actuel : 🔵 **Recrue**\n\nEffectuez des missions avec \`/espion mission\` pour monter en grade.`)
         .setFooter({ text: 'Bureau des Opérations Secrètes — NexusBot' })
@@ -96,7 +96,7 @@ module.exports = {
     if (sub === 'profil') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const agent = getAgent(target.id);
-      if (!agent) return interaction.editReply({ content: `❌ **${target.username}** n'est pas un agent enregistré.`, ephemeral: true });
+      if (!agent) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${target.username}** n'est pas un agent enregistré.`, ephemeral: true });
 
       const rank = getAgentRank(agent.missions_done);
       const nextRank = RANKS.find(r => r.level === rank.level + 1);
@@ -104,7 +104,7 @@ module.exports = {
         ? Math.round(agent.missions_done / (agent.missions_done + agent.missions_failed) * 100)
         : 100;
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2C3E50')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2C3E50')
         .setTitle(`${rank.emoji} Dossier Agent — ${agent.codename}`)
         .setDescription(`Agent : <@${target.id}>`)
         .addFields(
@@ -122,7 +122,7 @@ module.exports = {
 
     if (sub === 'missions') {
       const agent = getAgent(userId);
-      if (!agent) return interaction.editReply({ content: '❌ Vous n\'êtes pas enregistré. Utilisez `/espion rejoindre`.', ephemeral: true });
+      if (!agent) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes pas enregistré. Utilisez `/espion rejoindre`.', ephemeral: true });
 
       const rank = getAgentRank(agent.missions_done);
       const lines = MISSIONS.map(m => {
@@ -131,7 +131,7 @@ module.exports = {
         return `${m.emoji} **${m.name}** ${diff}\n> ${m.description}\n> Récompense : ${m.reward[0]}–${m.reward[1]} ${coin} • Intel : +${m.intel[0]}–${m.intel[1]} • CD : ${cd} • Succès : ${Math.round(m.successRate * 100 + rank.mission_bonus * 0.3)}%`;
       }).join('\n\n');
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2C3E50')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2C3E50')
         .setTitle('📋 Missions Disponibles')
         .setDescription(lines)
         .setFooter({ text: `Votre rang : ${rank.emoji} ${rank.name} • Bonus : +${rank.mission_bonus}%` })
@@ -140,7 +140,7 @@ module.exports = {
 
     if (sub === 'mission') {
       const agent = getAgent(userId);
-      if (!agent) return interaction.editReply({ content: '❌ Vous n\'êtes pas enregistré.', ephemeral: true });
+      if (!agent) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes pas enregistré.', ephemeral: true });
 
       const missionId = interaction.options.getString('type');
       const mission = MISSIONS.find(m => m.id === missionId);
@@ -152,7 +152,7 @@ module.exports = {
       const requiredCd = mission.cooldown;
       if (elapsed < requiredCd) {
         const remaining = requiredCd - elapsed;
-        return interaction.editReply({ content: `⏳ Vous êtes en repos. Prochaine mission disponible dans **${Math.floor(remaining / 60)}min ${remaining % 60}s**.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Vous êtes en repos. Prochaine mission disponible dans **${Math.floor(remaining / 60)}min ${remaining % 60}s**.`, ephemeral: true });
       }
 
       const rank = getAgentRank(agent.missions_done);
@@ -172,7 +172,7 @@ module.exports = {
         const newRank = getAgentRank(newMissions);
         const rankUp = newRank.level > rank.level;
 
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle(`${mission.emoji} Mission Réussie — ${mission.name}`)
           .setDescription(
             `✅ **Opération accomplie avec succès.**\n\n` +
@@ -191,7 +191,7 @@ module.exports = {
         const fineLoss = detected ? Math.floor(50 + Math.random() * 100) : 0;
         if (fineLoss > 0) db.addCoins(userId, guildId, -fineLoss);
 
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
           .setTitle(`${mission.emoji} Mission Échouée — ${mission.name}`)
           .setDescription(
             `❌ **L'opération a échoué.**\n\n` +
@@ -208,18 +208,18 @@ module.exports = {
 
     if (sub === 'voler') {
       const agent = getAgent(userId);
-      if (!agent) return interaction.editReply({ content: '❌ Vous n\'êtes pas enregistré.', ephemeral: true });
+      if (!agent) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes pas enregistré.', ephemeral: true });
       const target = interaction.options.getUser('cible');
-      if (target.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous voler vous-même !', ephemeral: true });
+      if (target.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous voler vous-même !', ephemeral: true });
       const targetAgent = getAgent(target.id);
-      if (!targetAgent) return interaction.editReply({ content: `❌ <@${target.id}> n'est pas un agent.`, ephemeral: true });
+      if (!targetAgent) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${target.id}> n'est pas un agent.`, ephemeral: true });
 
       const cooldown = 3600;
       if (now - agent.last_mission < cooldown) {
-        return interaction.editReply({ content: `⏳ Vous ne pouvez pas encore effectuer d'opération. Cooldown : **${Math.floor((cooldown - (now - agent.last_mission)) / 60)}min**.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Vous ne pouvez pas encore effectuer d'opération. Cooldown : **${Math.floor((cooldown - (now - agent.last_mission)) / 60)}min**.`, ephemeral: true });
       }
 
-      if (targetAgent.intel < 10) return interaction.editReply({ content: `❌ <@${target.id}> n'a pas assez d'intel à voler.`, ephemeral: true });
+      if (targetAgent.intel < 10) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ <@${target.id}> n'a pas assez d'intel à voler.`, ephemeral: true });
 
       const success = Math.random() < 0.50;
       db.db.prepare('UPDATE agents SET last_mission=? WHERE guild_id=? AND user_id=?').run(now, guildId, userId);
@@ -228,23 +228,23 @@ module.exports = {
         const stolen = Math.floor(targetAgent.intel * 0.15 + Math.random() * 20);
         db.db.prepare('UPDATE agents SET intel=intel+? WHERE guild_id=? AND user_id=?').run(stolen, guildId, userId);
         db.db.prepare('UPDATE agents SET intel=MAX(0,intel-?) WHERE guild_id=? AND user_id=?').run(stolen, guildId, target.id);
-        return interaction.editReply({ content: `✅ Vol d'intel réussi ! Vous avez dérobé **${stolen} pts d'intel** à <@${target.id}> !` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Vol d'intel réussi ! Vous avez dérobé **${stolen} pts d'intel** à <@${target.id}> !` });
       } else {
         const fine = Math.floor(30 + Math.random() * 50);
         db.addCoins(userId, guildId, -fine);
         db.db.prepare('UPDATE agents SET detected=detected+1 WHERE guild_id=? AND user_id=?').run(guildId, userId);
-        return interaction.editReply({ content: `❌ Vol raté ! <@${target.id}> vous a repéré. Amende : **-${fine} ${coin}**.` });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vol raté ! <@${target.id}> vous a repéré. Amende : **-${fine} ${coin}**.` });
       }
     }
 
     if (sub === 'proteger') {
       const agent = getAgent(userId);
-      if (!agent) return interaction.editReply({ content: '❌ Vous n\'êtes pas enregistré.', ephemeral: true });
+      if (!agent) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'êtes pas enregistré.', ephemeral: true });
       const cost = 200;
       const u = db.getUser(userId, guildId);
-      if ((u.balance || 0) < cost) return interaction.editReply({ content: `❌ La protection coûte **${cost} ${coin}**.`, ephemeral: true });
+      if ((u.balance || 0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ La protection coûte **${cost} ${coin}**.`, ephemeral: true });
       db.addCoins(userId, guildId, -cost);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498DB')
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle('🛡️ Protection activée !')
         .setDescription(`Votre dossier est sécurisé pendant **2 heures**. Aucun agent ne peut voler votre intel.\n-${cost} ${coin}`)
       ]});
@@ -252,13 +252,13 @@ module.exports = {
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM agents WHERE guild_id=? ORDER BY missions_done DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.editReply({ content: '❌ Aucun agent enregistré.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun agent enregistré.', ephemeral: true });
       const medals = ['🥇', '🥈', '🥉'];
       const desc = top.map((a, i) => {
         const rank = getAgentRank(a.missions_done);
         return `${medals[i] || `**${i+1}.**`} ${rank.emoji} **${a.codename}** (<@${a.user_id}>) — ${a.missions_done} missions • ${a.intel} intel`;
       }).join('\n');
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2C3E50').setTitle('🕵️ Classement des Agents').setDescription(desc)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2C3E50').setTitle('🕵️ Classement des Agents').setDescription(desc)] });
     }
   }
 };

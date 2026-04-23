@@ -38,7 +38,7 @@ module.exports = {
     const key = `${guildId}_${userId}`;
 
     if (sub === 'jouer') {
-      if (activeEnigmes.has(key)) return interaction.editReply({ content: '❌ Vous avez déjà une énigme en cours ! Répondez avec `/enigme reponse`.', ephemeral: true });
+      if (activeEnigmes.has(key)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà une énigme en cours ! Répondez avec `/enigme reponse`.', ephemeral: true });
 
       const enigme = ENIGMES[Math.floor(Math.random() * ENIGMES.length)];
       activeEnigmes.set(key, { ...enigme, hintUsed: false, time: Date.now() });
@@ -50,7 +50,7 @@ module.exports = {
         }
       }, 300000);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#9B59B6').setTitle('🧩 Énigme !')
           .setDescription(`**${enigme.q}**`)
           .addFields(
@@ -63,7 +63,7 @@ module.exports = {
 
     if (sub === 'reponse') {
       const game = activeEnigmes.get(key);
-      if (!game) return interaction.editReply({ content: '❌ Aucune énigme en cours. Lancez-en une avec `/enigme jouer` !', ephemeral: true });
+      if (!game) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune énigme en cours. Lancez-en une avec `/enigme jouer` !', ephemeral: true });
 
       const texte = interaction.options.getString('texte').toLowerCase().trim();
       const isCorrect = game.a.some(a => texte.includes(a.toLowerCase()));
@@ -74,23 +74,23 @@ module.exports = {
         activeEnigmes.delete(key);
 
         const timeTaken = ((Date.now() - game.time) / 1000).toFixed(1);
-        return interaction.editReply({ embeds: [
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           new EmbedBuilder().setColor('#2ECC71').setTitle('🎉 Bonne réponse !')
             .setDescription(`La réponse était : **${game.a[0]}**\nVous avez gagné **+${reward} ${coin}** !`)
             .addFields({ name: '⏱️ Temps', value: `${timeTaken}s`, inline: true })
         ]});
       } else {
-        return interaction.editReply({ content: `❌ Mauvaise réponse ! Réessayez ou demandez un \`/enigme indice\`.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Mauvaise réponse ! Réessayez ou demandez un \`/enigme indice\`.`, ephemeral: true });
       }
     }
 
     if (sub === 'indice') {
       const game = activeEnigmes.get(key);
-      if (!game) return interaction.editReply({ content: '❌ Aucune énigme en cours.', ephemeral: true });
-      if (game.hintUsed) return interaction.editReply({ content: '❌ Vous avez déjà utilisé votre indice.', ephemeral: true });
+      if (!game) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune énigme en cours.', ephemeral: true });
+      if (game.hintUsed) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà utilisé votre indice.', ephemeral: true });
 
       game.hintUsed = true;
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🔍 Indice')
           .setDescription(`**${game.hint}**\n⚠️ La récompense est réduite à **${REWARD/2} ${coin}**`)
       ], ephemeral: true });

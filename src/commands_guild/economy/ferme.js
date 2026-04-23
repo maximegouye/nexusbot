@@ -77,7 +77,7 @@ module.exports = {
     }
 
     if (sub === 'voir') {
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('🌱 Votre Ferme')
           .addFields(
             { name: 'Slot 1', value: getSlotDisplay(1), inline: true },
@@ -98,17 +98,17 @@ module.exports = {
         const existCrop = CROPS[existType];
         const elapsed = now - ferme[`slot${slot}_planted_at`];
         if (elapsed < existCrop.growTime) {
-          return interaction.editReply({ content: `❌ Slot ${slot} occupé par **${existCrop.emoji} ${existCrop.name}**. Récoltez d'abord !`, ephemeral: true });
+          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Slot ${slot} occupé par **${existCrop.emoji} ${existCrop.name}**. Récoltez d'abord !`, ephemeral: true });
         }
       }
 
       const u = db.getUser(userId, guildId);
-      if (u.balance < crop.cost) return interaction.editReply({ content: `❌ Solde insuffisant. Coût : **${crop.cost} ${coin}**.`, ephemeral: true });
+      if (u.balance < crop.cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant. Coût : **${crop.cost} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -crop.cost);
       db.db.prepare(`UPDATE ferme SET slot${slot}=?, slot${slot}_planted_at=? WHERE guild_id=? AND user_id=?`).run(culture, now, guildId, userId);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#27AE60').setTitle('🌱 Culture plantée !')
           .setDescription(`**${crop.emoji} ${crop.name}** planté(e) dans le slot **${slot}** !\nCoût : **${crop.cost} ${coin}** | Récolte dans **${formatTime(crop.growTime)}** | Gain : **${crop.reward} ${coin}**`)
       ]});
@@ -130,10 +130,10 @@ module.exports = {
         }
       }
 
-      if (!recoltes.length) return interaction.editReply({ content: '❌ Aucune culture prête à récolter.', ephemeral: true });
+      if (!recoltes.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune culture prête à récolter.', ephemeral: true });
 
       db.addCoins(userId, guildId, totalGain);
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🌾 Récolte effectuée !')
           .setDescription(recoltes.join('\n'))
           .addFields({ name: '💰 Total gagné', value: `**+${totalGain} ${coin}**`, inline: true })
@@ -144,7 +144,7 @@ module.exports = {
       const lines = Object.entries(CROPS).map(([, c]) => {
         return `${c.emoji} **${c.name}** — Coût: ${c.cost} ${coin} | Durée: ${formatTime(c.growTime)} | Gain: **${c.reward} ${coin}**`;
       }).join('\n');
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#27AE60').setTitle('🌱 Cultures disponibles').setDescription(lines)
       ], ephemeral: true });
     }

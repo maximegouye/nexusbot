@@ -25,10 +25,10 @@ module.exports = {
     const lang = interaction.options.getString('langue') ?? 'français';
     const cfg = ai.getAIConfig(interaction.guildId, db);
 
-    if (!cfg.enabled) return interaction.editReply({ content: '❌ IA désactivée. Active-la via `/config` → 🧠 IA.', ephemeral: true });
-    if (!ai.isAvailable()) return interaction.editReply({ content: '❌ Aucune clé API IA.', ephemeral: true });
+    if (!cfg.enabled) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ IA désactivée. Active-la via `/config` → 🧠 IA.', ephemeral: true });
+    if (!ai.isAvailable()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA.', ephemeral: true });
     if (cfg.required_role && !interaction.member.roles.cache.has(cfg.required_role)) {
-      return interaction.editReply({ content: `❌ Rôle requis : <@&${cfg.required_role}>`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Rôle requis : <@&${cfg.required_role}>`, ephemeral: true });
     }
 
     await interaction.deferReply();
@@ -36,7 +36,7 @@ module.exports = {
     try {
       const collection = await chan.messages.fetch({ limit: Math.min(n, 100) }).catch(() => null);
       if (!collection || collection.size === 0) {
-        return interaction.editReply({ content: '❌ Aucun message à résumer dans ce salon.' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message à résumer dans ce salon.' });
       }
 
       const msgs = [...collection.values()]
@@ -45,7 +45,7 @@ module.exports = {
         .map(m => ({ authorName: m.member?.displayName || m.author.username, content: m.content.slice(0, 500) }));
 
       if (msgs.length < 3) {
-        return interaction.editReply({ content: '❌ Pas assez de messages (min 3 non-bot et non-commandes).' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Pas assez de messages (min 3 non-bot et non-commandes).' });
       }
 
       const res = await ai.summarize({
@@ -65,11 +65,11 @@ module.exports = {
         .setFooter({ text: `${res.provider} • ${res.model} • demandé par ${interaction.user.username}` })
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (e) {
-      if (e.code === 'RATE_LIMIT') return interaction.editReply({ content: `⏱️ ${e.message}` });
+      if (e.code === 'RATE_LIMIT') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏱️ ${e.message}` });
       console.error('[/resume]', e.message);
-      await interaction.editReply({ content: `❌ Erreur : ${e.message?.slice(0, 200)}` });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur : ${e.message?.slice(0, 200)}` });
     }
   },
 };

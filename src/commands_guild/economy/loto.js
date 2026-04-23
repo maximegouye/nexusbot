@@ -44,7 +44,7 @@ module.exports = {
       const prix = (lotoCfg.ticket_price || 100) * qte;
       const u = db.getUser(userId, guildId);
 
-      if (u.balance < prix) return interaction.editReply({ content: `❌ Il te faut **${prix} ${coin}** pour acheter ${qte} ticket(s).`, ephemeral: true });
+      if (u.balance < prix) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Il te faut **${prix} ${coin}** pour acheter ${qte} ticket(s).`, ephemeral: true });
 
       db.addCoins(userId, guildId, -prix);
       // Ajouter les tickets
@@ -58,7 +58,7 @@ module.exports = {
       db.db.prepare('UPDATE loto_config SET jackpot=jackpot+? WHERE guild_id=?').run(Math.floor(prix * 0.8), guildId);
 
       const newTickets = (existing?.ticket_count || 0) + qte;
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Gold')
           .setTitle('🎟️ Tickets achetés !')
           .setDescription(`Tu possèdes maintenant **${newTickets} ticket(s)** pour cette semaine !\nJackpot actuel : **${lotoCfg.jackpot + Math.floor(prix * 0.8)} ${coin}**`)
@@ -72,7 +72,7 @@ module.exports = {
       const total = totalTickets?.t || 0;
       const myChance = total > 0 && myTickets ? ((myTickets.ticket_count / total) * 100).toFixed(1) : '0';
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Gold')
           .setTitle('🎰 Loterie Hebdomadaire')
           .addFields(
@@ -90,12 +90,12 @@ module.exports = {
 
     if (sub === 'classement') {
       const top = db.db.prepare('SELECT * FROM loto WHERE guild_id=? AND week=? ORDER BY ticket_count DESC LIMIT 10').all(guildId, week);
-      if (!top.length) return interaction.editReply({ content: '❌ Personne n\'a encore acheté de ticket cette semaine.', ephemeral: true });
+      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Personne n\'a encore acheté de ticket cette semaine.', ephemeral: true });
 
       const total = top.reduce((a, r) => a + r.ticket_count, 0);
       const lines = top.map((r, i) => `**${i+1}.** <@${r.user_id}> — **${r.ticket_count}** ticket(s) (${((r.ticket_count/total)*100).toFixed(1)}%)`).join('\n');
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Gold')
           .setTitle('📊 Classement Loto de la semaine')
           .setDescription(lines)
@@ -105,10 +105,10 @@ module.exports = {
     }
 
     if (sub === 'tirage') {
-      if (!interaction.member.permissions.has('ManageGuild')) return interaction.editReply({ content: '❌ Réservé aux admins.', ephemeral: true });
+      if (!interaction.member.permissions.has('ManageGuild')) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé aux admins.', ephemeral: true });
 
       const participants = db.db.prepare('SELECT * FROM loto WHERE guild_id=? AND week=? AND ticket_count > 0').all(guildId, week);
-      if (!participants.length) return interaction.editReply({ content: '❌ Personne n\'a participé cette semaine.', ephemeral: true });
+      if (!participants.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Personne n\'a participé cette semaine.', ephemeral: true });
 
       // Tirage pondéré
       const pool = [];
@@ -122,7 +122,7 @@ module.exports = {
       db.db.prepare('UPDATE loto_config SET jackpot=10000, last_draw=datetime("now") WHERE guild_id=?').run(guildId);
       db.db.prepare('DELETE FROM loto WHERE guild_id=? AND week=?').run(guildId, week);
 
-      return interaction.editReply({ embeds: [
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Gold')
           .setTitle('🎰 Résultat du Tirage Loto !')
           .setDescription(`🎉 **Le grand gagnant est <@${winner}>** !\n\nIl/Elle remporte **${prize} ${coin}** !`)

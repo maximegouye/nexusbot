@@ -42,7 +42,7 @@ module.exports = {
       )
       .addFields({name:'📌 Conseil',value:ev.tip})
       .setFooter({text:'Météo économique change chaque jour à minuit UTC'}).setTimestamp();
-    return interaction.editReply({embeds:[embed]});
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[embed]});
   },
   getMarketMultiplier
 };

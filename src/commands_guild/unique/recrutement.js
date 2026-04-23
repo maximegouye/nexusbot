@@ -76,7 +76,7 @@ module.exports = {
     const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
 
     if (sub === 'ouvrir') {
-      if (!isAdmin) return interaction.editReply({ content: '❌ Permission insuffisante.' });
+      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.' });
 
       const titre       = interaction.options.getString('titre');
       const description = interaction.options.getString('description');
@@ -105,7 +105,7 @@ module.exports = {
         if (msg) db.db.prepare('UPDATE recrutement_posts SET msg_id=? WHERE id=?').run(msg.id, id);
       }
 
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Poste de recrutement **#${id}** ouvert !${salon ? ` Annoncé dans <#${salon.id}>` : ''}`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Poste de recrutement **#${id}** ouvert !${salon ? ` Annoncé dans <#${salon.id}>` : ''}`)] });
     }
 
     if (sub === 'postuler') {
@@ -113,16 +113,16 @@ module.exports = {
       const motivation = interaction.options.getString('motivation');
       const post       = db.db.prepare('SELECT * FROM recrutement_posts WHERE id=? AND guild_id=?').get(id, guildId);
 
-      if (!post) return interaction.editReply({ content: `❌ Poste #${id} introuvable.` });
-      if (post.status !== 'open') return interaction.editReply({ content: '❌ Ce poste est fermé.' });
-      if (post.slots > 0 && post.filled >= post.slots) return interaction.editReply({ content: '❌ Plus de places disponibles !' });
+      if (!post) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Poste #${id} introuvable.` });
+      if (post.status !== 'open') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce poste est fermé.' });
+      if (post.slots > 0 && post.filled >= post.slots) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Plus de places disponibles !' });
 
       const existing = db.db.prepare('SELECT * FROM recrutement_candidatures WHERE post_id=? AND user_id=?').get(id, userId);
-      if (existing) return interaction.editReply({ content: '❌ Tu as déjà postulé à ce poste !' });
+      if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu as déjà postulé à ce poste !' });
 
       const result = db.db.prepare('INSERT INTO recrutement_candidatures (post_id, guild_id, user_id, motivation) VALUES (?,?,?,?)').run(id, guildId, userId, motivation);
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`✅ Candidature #${result.lastInsertRowid} envoyée !`)
         .setDescription(`Pour le poste **${post.title}** (#${id}).\nUn admin examinera ta candidature.`)
@@ -131,29 +131,29 @@ module.exports = {
     }
 
     if (sub === 'candidatures') {
-      if (!isAdmin) return interaction.editReply({ content: '❌ Permission insuffisante.' });
+      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.' });
       const id   = parseInt(interaction.options.getString('id'));
       const post = db.db.prepare('SELECT * FROM recrutement_posts WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!post) return interaction.editReply({ content: `❌ Poste #${id} introuvable.` });
+      if (!post) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Poste #${id} introuvable.` });
 
       const cands = db.db.prepare('SELECT * FROM recrutement_candidatures WHERE post_id=? ORDER BY created_at DESC').all(id);
-      if (!cands.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune candidature pour ce poste.')] });
+      if (!cands.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune candidature pour ce poste.')] });
 
       const statusEmoji = { pending: '⏳', accepted: '✅', rejected: '❌' };
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle(`👥 Candidatures — Poste #${id} : ${post.title}`)
         .setDescription(cands.map(c => `${statusEmoji[c.status]} **Candidature #${c.id}** — <@${c.user_id}>\n> ${c.motivation.slice(0,80)}${c.motivation.length>80?'...':''}\n> <t:${c.created_at}:R>`).join('\n\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'decider') {
-      if (!isAdmin) return interaction.editReply({ content: '❌ Permission insuffisante.' });
+      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.' });
       const candId   = parseInt(interaction.options.getString('candidature_id'));
       const decision = interaction.options.getString('decision');
       const cand     = db.db.prepare('SELECT * FROM recrutement_candidatures WHERE id=? AND guild_id=?').get(candId, guildId);
-      if (!cand) return interaction.editReply({ content: `❌ Candidature #${candId} introuvable.` });
-      if (cand.status !== 'pending') return interaction.editReply({ content: '❌ Candidature déjà traitée.' });
+      if (!cand) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Candidature #${candId} introuvable.` });
+      if (cand.status !== 'pending') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Candidature déjà traitée.' });
 
       db.db.prepare('UPDATE recrutement_candidatures SET status=?, reviewed_by=? WHERE id=?').run(decision, userId, candId);
 
@@ -186,7 +186,7 @@ module.exports = {
         }
       }
 
-      return interaction.editReply({ embeds: [new EmbedBuilder()
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(decision === 'accepted' ? '#2ecc71' : '#e74c3c')
         .setDescription(`${decision === 'accepted' ? '✅' : '❌'} Candidature **#${candId}** ${decision === 'accepted' ? 'acceptée' : 'refusée'}. Le candidat a été notifié.`)
       ]});
@@ -194,7 +194,7 @@ module.exports = {
 
     if (sub === 'liste') {
       const posts = db.db.prepare("SELECT * FROM recrutement_posts WHERE guild_id=? AND status='open' ORDER BY created_at DESC LIMIT 10").all(guildId);
-      if (!posts.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun poste de recrutement ouvert.')] });
+      if (!posts.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucun poste de recrutement ouvert.')] });
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle('📋 Postes de Recrutement Ouverts')
@@ -202,16 +202,16 @@ module.exports = {
           const places = p.slots > 0 ? `${p.filled}/${p.slots} places` : 'Places illimitées';
           return `**#${p.id}** — **${p.title}**\n> ${p.description.slice(0,80)}...\n> ${places} — <t:${p.created_at}:R>`;
         }).join('\n\n'));
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'fermer') {
-      if (!isAdmin) return interaction.editReply({ content: '❌ Permission insuffisante.' });
+      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.' });
       const id   = parseInt(interaction.options.getString('id'));
       const post = db.db.prepare('SELECT * FROM recrutement_posts WHERE id=? AND guild_id=?').get(id, guildId);
-      if (!post) return interaction.editReply({ content: `❌ Poste #${id} introuvable.` });
+      if (!post) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Poste #${id} introuvable.` });
       db.db.prepare("UPDATE recrutement_posts SET status='closed' WHERE id=?").run(id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🔒 Poste de recrutement **#${id}** fermé.`)] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🔒 Poste de recrutement **#${id}** fermé.`)] });
     }
   }
 };

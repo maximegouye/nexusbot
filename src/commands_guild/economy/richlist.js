@@ -26,7 +26,7 @@ module.exports = {
     }
 
     const rows = db.db.prepare(query).all(interaction.guildId);
-    if (!rows.length) return interaction.editReply({ content: 'Aucune donnée économique.' });
+    if (!rows.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: 'Aucune donnée économique.' });
 
     const medals = ['🥇', '🥈', '🥉'];
     const lines = await Promise.all(rows.map(async (r, i) => {
@@ -53,6 +53,6 @@ module.exports = {
       .setFooter({ text: `Monnaie: ${cfg.currency_emoji || '€'} ${cfg.currency_name || 'Euros'}` })
       .setTimestamp();
 
-    return interaction.editReply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   }
 };

@@ -25,6 +25,6 @@ module.exports = {
       .setTimestamp();
 
     if (msg.content) embed.setDescription(`\`\`\`${msg.content.slice(0, 300)}\`\`\``);
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
   }
 };

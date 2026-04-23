@@ -82,7 +82,7 @@ module.exports = {
     const guildId = interaction.guildId;
 
     if (sub === 'start') {
-      if (activeSessions.has(channel.id)) return interaction.editReply({ content: '⚠️ Une partie est déjà en cours !', ephemeral: true });
+      if (activeSessions.has(channel.id)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⚠️ Une partie est déjà en cours !', ephemeral: true });
       const duree = parseInt(interaction.options.getString('duree')) || 10;
       const sess = {
         scores: {},
@@ -103,30 +103,30 @@ module.exports = {
         .setTitle('🎮 JEOPARDY ! Partie commencée')
         .setDescription(`Durée : **${duree} minutes** | Fin <t:${Math.floor(sess.endsAt/1000)}:R>\n\n**Tableau des catégories :**\n${CATEGORIES.join(' | ')}\n\nValeurs : 200, 400, 600, 800, 1000\n\nUtilise \`/jeopardy question [catégorie] [valeur]\` pour jouer !`)
         .setFooter({ text: `Lancé par ${interaction.user.username}` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     if (sub === 'question') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.editReply({ content: '❌ Aucune partie en cours ! Lance avec `/jeopardy start`', ephemeral: true });
+      if (!sess) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune partie en cours ! Lance avec `/jeopardy start`', ephemeral: true });
       if (Date.now() > sess.endsAt) {
         activeSessions.delete(channel.id);
-        return interaction.editReply({ content: '⏱️ La partie est terminée !' });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⏱️ La partie est terminée !' });
       }
 
       const cat  = interaction.options.getString('categorie');
       const val  = parseInt(interaction.options.getString('valeur'));
       const key  = `${cat}-${val}`;
 
-      if (sess.used.has(key)) return interaction.editReply({ content: `❌ Cette question a déjà été utilisée !`, ephemeral: true });
+      if (sess.used.has(key)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cette question a déjà été utilisée !`, ephemeral: true });
 
       const qData = QUESTIONS[cat]?.[val];
-      if (!qData) return interaction.editReply({ content: '❌ Question introuvable.', ephemeral: true });
+      if (!qData) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Question introuvable.', ephemeral: true });
 
       sess.used.add(key);
       sess.currentQ = { key, cat, val, ...qData, asker: interaction.user.id };
 
-      await interaction.editReply({ embeds: [new EmbedBuilder()
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle(`❓ ${cat} — ${val} points`)
         .setDescription(qData.q)
@@ -168,19 +168,19 @@ module.exports = {
 
     if (sub === 'scores') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.editReply({ content: '❌ Aucune partie en cours.', ephemeral: true });
+      if (!sess) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune partie en cours.', ephemeral: true });
       const scores = Object.entries(sess.scores).sort((a, b) => b[1] - a[1]);
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('🏆 Scores Jeopardy')
         .setDescription(scores.length ? scores.map(([id, pts], i) => `${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} <@${id}> — **${pts} pts**`).join('\n') : 'Personne n\'a encore répondu.')
         .setFooter({ text: `Questions utilisées : ${sess.used.size}/25` });
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'stop') {
       const sess = activeSessions.get(channel.id);
-      if (!sess) return interaction.editReply({ content: '❌ Aucune partie en cours.', ephemeral: true });
+      if (!sess) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune partie en cours.', ephemeral: true });
       activeSessions.delete(channel.id);
       const scores = Object.entries(sess.scores).sort((a, b) => b[1] - a[1]);
       const embed = new EmbedBuilder()
@@ -188,7 +188,7 @@ module.exports = {
         .setTitle('🏁 Jeopardy — Partie terminée !')
         .setDescription(scores.length ? scores.map(([id, pts], i) => `${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} <@${id}> — **${pts} points**`).join('\n') : 'Aucun point marqué.')
         .setFooter({ text: `${sess.used.size}/25 questions utilisées` });
-      return interaction.editReply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
   }
 };

@@ -73,7 +73,7 @@ module.exports = {
       )
     );
 
-    const msg = await interaction.editReply({
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       embeds: [buildPollEmbed({})],
       components: [buildRow()],
       fetchReply: true,
