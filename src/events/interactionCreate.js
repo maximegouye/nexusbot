@@ -36,7 +36,6 @@ module.exports = {
       }
 
       try {
-        await interaction.deferReply({ ephemeral: false }).catch(() => {});
         await command.execute(interaction);
       } catch (error) {
         console.error(`[SLASH /${interaction.commandName}] Erreur:`, error?.message || error);
