@@ -130,8 +130,8 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
           value: `## ×${current.toFixed(2)}`,
           inline: false,
         },
-        { name: '✈️ Altitude', value: `\\`${alt}\\``, inline: false },
-        { name: '📊 Danger', value: `\\`${bar}\\``, inline: false },
+        { name: '✈️ Altitude', value: '`' + alt + '`', inline: false },
+        { name: '📊 Danger', value: '`' + bar + '`', inline: false },
         { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
       );
 

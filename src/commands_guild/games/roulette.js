@@ -101,10 +101,10 @@ async function playRoulette(source, userId, guildId, mise, betType) {
   db.addCoins(userId, guildId, -mise);
 
   // Embed de départ
-  const spinEmbed = () => new EmbedBuilder()
+  const startEmbed = new EmbedBuilder()
     .setColor('#C0392B')
     .setTitle('🎡 ・ Roulette ・')
-    .setDescription('**La bille tourne...**\n\n' + SPIN_FRAMES[Math.floor(Math.random() * SPIN_FRAMES.length)])
+    .setDescription('**⚡ La bille s\'élance !**\n\n🎡 ══════════════════════════')
     .addFields(
       { name: '🎲 Paris', value: `${bet.label} — mise **${mise} ${coin}**`, inline: false },
       { name: '💵 Gain potentiel', value: `**${mise * (bet.payout + 1)} ${coin}** (×${bet.payout + 1})`, inline: false },
@@ -112,19 +112,19 @@ async function playRoulette(source, userId, guildId, mise, betType) {
 
   let msg;
   if (isInteraction) {
-    msg = await source.editReply({ embeds: [spinEmbed()] });
+    msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.reply({ embeds: [spinEmbed()] });
+    msg = await source.reply({ embeds: [startEmbed] });
   }
 
   // Animation améliorée : bille qui tourne sur la vraie roue
   const startIdx = Math.floor(Math.random() * WHEEL_ORDER.length);
   const spinPhases = [
-    { frames:4, delay:140, color:'#C0392B', speed:'⚡ La bille s'élance !' },
-    { frames:4, delay:200, color:'#E74C3C', speed:'🌀 Elle tourne à grande vitesse...' },
+    { frames:4, delay:140, color:'#C0392B', speed:'⚡ La bille s\u2019élance !' },
+    { frames:4, delay:200, color:'#E74C3C', speed:'🌀 Elle tourne vite...' },
     { frames:3, delay:290, color:'#D35400', speed:'💨 Ralentissement...' },
     { frames:2, delay:420, color:'#E67E22', speed:'⏳ Elle ralentit encore...' },
-    { frames:1, delay:600, color:'#F39C12', speed:'🎯 Presque arrêtée !' },
+    { frames:1, delay:600, color:'#F39C12', speed:'🎯 Presque arretée !' },
   ];
 
   let frameIdx = startIdx;

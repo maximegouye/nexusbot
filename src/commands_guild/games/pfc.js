@@ -62,7 +62,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
     const e = new EmbedBuilder()
       .setColor(color)
       .setTitle('🪙 ・ Pile ou Face ・')
-      .setDescription(`# ${emoji}  ${label}\n\n\\`[${progress}]\\``)
+      .setDescription(`# ${emoji}  ${label}\n\n` + '`' + `[${progress}]` + '`')
       .addFields({name:'🎯 Ton choix',value:chosen ? (chosen==='pile'?'🟡 Pile':'⚪ Face'):'🎲 Aléatoire',inline:true});
     await msg.edit({ embeds: [e] });
     await sleep(delay);

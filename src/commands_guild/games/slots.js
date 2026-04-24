@@ -162,9 +162,9 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
 
   // Phase 1 : démarrage rapide (3 frames à 180ms) — symboles aléatoires
   const startData = [
-    { color:'#F39C12', text:'⚡ Les rouleaux s'emballent...' },
+    { color:'#F39C12', text:'⚡ Les rouleaux demarrent !' },
     { color:'#E67E22', text:'🌀 En pleine rotation !' },
-    { color:'#D35400', text:'💨 Ça tourne à toute vitesse !' },
+    { color:'#D35400', text:'💨 Ca tourne a toute vitesse !' },
   ];
   for (const { color, text } of startData) {
     const r1=rndRow(), r2=rndRow(), r3=rndRow();
