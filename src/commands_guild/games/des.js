@@ -29,10 +29,10 @@ const EXACT_SUMS_2D = {
 async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
-  if (!u || u.solde < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -80,7 +80,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [animEmbed] });
   } else {
-    msg = await source.editReply({ embeds: [animEmbed] });
+    msg = await source.reply({ embeds: [animEmbed] });
   }
 
   for (let f = 0; f < 4; f++) {
@@ -119,7 +119,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     .addFields(
       { name: '🎯 Pari', value: betLabel, inline: true },
       { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
-      { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.solde || 0} ${coin}`, inline: true },
+      { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
     )
     .setTimestamp();
 
@@ -135,6 +135,9 @@ module.exports = {
     .addIntegerOption(o => o.setName('des').setDescription('Nombre de dés (1 ou 2)').setMinValue(1).setMaxValue(2)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playDice(
       interaction,
       interaction.user.id,
@@ -155,3 +158,4 @@ module.exports = {
     await playDice(message, message.author.id, message.guildId, mise, pari, numD);
   },
 };
+

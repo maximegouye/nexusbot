@@ -13,10 +13,10 @@ const SPIN_FRAMES = ['🌀', '💫', '🌀', '💫', '🌀'];
 async function playCoinFlip(source, userId, guildId, mise, choix) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
-  if (!u || u.solde < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -42,7 +42,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [animEmbed] });
   } else {
-    msg = await source.editReply({ embeds: [animEmbed] });
+    msg = await source.reply({ embeds: [animEmbed] });
   }
 
   for (const frame of SPIN_FRAMES) {
@@ -76,7 +76,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
     .setDescription(`# ${emoji}\n\n${desc}`)
     .addFields(
       { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
-      { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.solde || 0} ${coin}`, inline: true },
+      { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
     )
     .setTimestamp();
 
@@ -111,6 +111,9 @@ module.exports = {
     )),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playCoinFlip(
       interaction,
       interaction.user.id,
@@ -129,3 +132,4 @@ module.exports = {
     await playCoinFlip(message, message.author.id, message.guildId, mise, choix);
   },
 };
+

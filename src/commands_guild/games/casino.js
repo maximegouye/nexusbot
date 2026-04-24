@@ -28,6 +28,9 @@ module.exports = {
     .addSubcommand(s => s.setName('top').setDescription('👑 Classement des plus grands gagnants')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     const sub = interaction.options.getSubcommand();
     await handleCasino(interaction, interaction.user.id, interaction.guildId, sub);
   },
@@ -42,7 +45,7 @@ module.exports = {
 
 async function handleCasino(source, userId, guildId, sub) {
   const isInteraction = !!source.editReply;
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
   if (sub === 'jeux' || sub === 'list' || sub === 'aide') {
     const gameList = GAMES.map(g =>
@@ -58,7 +61,7 @@ async function handleCasino(source, userId, guildId, sub) {
       .setTimestamp();
 
     if (isInteraction) return source.editReply({ embeds: [embed], ephemeral: true });
-    return source.editReply({ embeds: [embed] });
+    return source.reply({ embeds: [embed] });
   }
 
   if (sub === 'jackpot') {
@@ -77,7 +80,7 @@ async function handleCasino(source, userId, guildId, sub) {
       .setTimestamp();
 
     if (isInteraction) return source.editReply({ embeds: [embed] });
-    return source.editReply({ embeds: [embed] });
+    return source.reply({ embeds: [embed] });
   }
 
   if (sub === 'top' || sub === 'classement') {
@@ -108,6 +111,7 @@ async function handleCasino(source, userId, guildId, sub) {
       .setTimestamp();
 
     if (isInteraction) return source.editReply({ embeds: [embed] });
-    return source.editReply({ embeds: [embed] });
+    return source.reply({ embeds: [embed] });
   }
 }
+

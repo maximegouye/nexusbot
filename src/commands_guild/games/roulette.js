@@ -85,7 +85,7 @@ const BET_HELP = `
 async function playRoulette(source, userId, guildId, mise, betType) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
   // Parse bet
   const bet = parseBet(betType);
@@ -94,8 +94,8 @@ async function playRoulette(source, userId, guildId, mise, betType) {
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
-  if (!u || u.solde < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -121,7 +121,7 @@ async function playRoulette(source, userId, guildId, mise, betType) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [spinEmbed()] });
   } else {
-    msg = await source.editReply({ embeds: [spinEmbed()] });
+    msg = await source.reply({ embeds: [spinEmbed()] });
   }
 
   // Animation spinning
@@ -185,7 +185,7 @@ async function playRoulette(source, userId, guildId, mise, betType) {
     .addFields(
       { name: '🎲 Ton pari', value: bet.label, inline: true },
       { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
-      { name: '🏦 Solde après', value: `${db.getUser(userId, guildId)?.solde || 0} ${coin}`, inline: true },
+      { name: '🏦 Solde après', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
     )
     .setFooter({ text: 'Jouez de manière responsable · /roulette pour rejouer' })
     .setTimestamp();
@@ -207,6 +207,9 @@ module.exports = {
     .addSubcommand ? undefined : undefined, // pas de subcommands ici
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playRoulette(
       interaction,
       interaction.user.id,
@@ -230,3 +233,4 @@ module.exports = {
   // Commande info séparée
   betHelp: BET_HELP,
 };
+

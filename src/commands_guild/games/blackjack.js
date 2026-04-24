@@ -81,8 +81,8 @@ function buildEmbed(state, status = '') {
   }
 
   const mise = state.mise;
-  const cfg  = db.getConfig ? db.getConfig(state.guildId) : { coin: '🪙' };
-  const coin  = cfg?.coin || '🪙';
+  const cfg  = db.getConfig ? db.getConfig(state.guildId) : { currency_emoji: '€' };
+  const coin  = cfg?.currency_emoji || '🪙';
 
   embed.addFields({ name: '💰 Mise', value: `**${mise} ${coin}**`, inline: true });
 
@@ -131,7 +131,7 @@ function disabledButtons() {
 async function endGame(msg, state, status, winMult = 0) {
   state.revealed = true;
   const u    = db.getUser(state.userId, state.guildId);
-  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '🪙';
   let payout = 0;
 
   if (winMult > 0) {
@@ -180,10 +180,10 @@ async function startGame(source, userId, guildId, mise) {
 
   // Vérif mise
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
-  if (!u || u.solde < mise) {
-    const errMsg = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const errMsg = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
@@ -218,7 +218,7 @@ async function startGame(source, userId, guildId, mise) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [tempEmbed], components: [] });
   } else {
-    msg = await source.editReply({ embeds: [tempEmbed] });
+    msg = await source.reply({ embeds: [tempEmbed] });
   }
   await sleep(500);
 
@@ -276,7 +276,7 @@ async function startGame(source, userId, guildId, mise) {
 
     } else if (i.customId === 'bj_double') {
       const u2 = db.getUser(userId, guildId);
-      if (u2.solde < st.mise) {
+      if (u2.balance < st.mise) {
         return msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
       }
       db.addCoins(userId, guildId, -st.mise);
@@ -292,7 +292,7 @@ async function startGame(source, userId, guildId, mise) {
 
     } else if (i.customId === 'bj_split') {
       const u2 = db.getUser(userId, guildId);
-      if (u2.solde < st.mise) return;
+      if (u2.balance < st.mise) return;
       db.addCoins(userId, guildId, -st.mise);
       st.split  = [st.player.pop(), st.deck.pop()];
       st.player.push(st.deck.pop());
@@ -301,7 +301,7 @@ async function startGame(source, userId, guildId, mise) {
     } else if (i.customId === 'bj_insure') {
       const insureCost = Math.floor(st.mise / 2);
       const u2 = db.getUser(userId, guildId);
-      if (u2.solde < insureCost) return;
+      if (u2.balance < insureCost) return;
       db.addCoins(userId, guildId, -insureCost);
       st.insurance = true;
       // Si le croupier a blackjack → assurance paie 2:1
@@ -347,6 +347,9 @@ module.exports = {
       .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true).setMinValue(10)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     const mise    = interaction.options.getInteger('mise');
     const userId  = interaction.user.id;
     const guildId = interaction.guildId;
@@ -362,3 +365,4 @@ module.exports = {
     await startGame(message, message.author.id, message.guildId, mise);
   },
 };
+

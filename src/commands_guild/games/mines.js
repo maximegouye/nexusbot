@@ -96,7 +96,7 @@ function buildGridComponents(state) {
 }
 
 function buildEmbed(state, status = '') {
-  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '🪙';
   const mult  = calcMult(TOTAL_CELLS, state.minesCount, state.safeRevealed);
   const color = status === 'win'  ? '#2ECC71'
               : status === 'lose' ? '#E74C3C'
@@ -134,10 +134,10 @@ function buildEmbed(state, status = '') {
 async function playMines(source, userId, guildId, mise, minesCount) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
-  if (!u || u.solde < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -172,7 +172,7 @@ async function playMines(source, userId, guildId, mise, minesCount) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
   } else {
-    msg = await source.editReply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
+    msg = await source.reply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
   }
 
   // Collecteur
@@ -274,6 +274,9 @@ module.exports = {
       .setName('mines').setDescription('Nombre de mines 1-24 (défaut 3)').setMinValue(1).setMaxValue(24)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playMines(
       interaction,
       interaction.user.id,
@@ -292,3 +295,4 @@ module.exports = {
     await playMines(message, message.author.id, message.guildId, mise, mines);
   },
 };
+

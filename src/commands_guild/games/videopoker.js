@@ -61,10 +61,10 @@ const sessions = new Map();
 async function playVideoPoker(source, userId, guildId, mise) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
-  if (!u || u.solde < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -120,7 +120,7 @@ async function playVideoPoker(source, userId, guildId, mise) {
   if (isInteraction) {
     msg = await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
   } else {
-    msg = await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+    msg = await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
   }
 
   const filter = i => i.user.id === userId && i.customId.startsWith(`vp_`);
@@ -175,7 +175,7 @@ async function playVideoPoker(source, userId, guildId, mise) {
         .addFields(
           { name: '🏆 Combinaison', value: name, inline: true },
           { name: '📈 Multiplicateur', value: `×${mult}`, inline: true },
-          { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.solde || 0} ${coin}`, inline: true },
+          { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
         )
         .addFields({ name: '📋 Table de paiement', value:
           '`Royal Flush ×800` · `Quinte Flush ×50` · `Carré ×25`\n`Full House ×9` · `Couleur ×6` · `Quinte ×4`\n`Brelan ×3` · `2 Paires ×2` · `Paire J+ ×1`',
@@ -203,6 +203,9 @@ module.exports = {
     .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playVideoPoker(interaction, interaction.user.id, interaction.guildId, interaction.options.getInteger('mise'));
   },
 
@@ -214,3 +217,4 @@ module.exports = {
     await playVideoPoker(message, message.author.id, message.guildId, mise);
   },
 };
+

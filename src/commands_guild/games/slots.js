@@ -193,12 +193,12 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
 async function playSlots(source, userId, guildId, mise, lines = 1) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
   const jackpot = getJackpot(guildId);
 
   const totalMise = mise * lines;
-  if (!u || u.solde < totalMise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}** (mise totale : ${totalMise}).`;
+  if (!u || u.balance < totalMise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}** (mise totale : ${totalMise}).`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -225,7 +225,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
     if (!source.deferred && !source.replied) await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.editReply({ embeds: [startEmbed] });
+    msg = await source.reply({ embeds: [startEmbed] });
   }
 
   const grid = spinGrid();
@@ -291,7 +291,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
       { name: totalGain > 0 ? '✅ Gain' : '❌ Perte', value: `${totalGain > 0 ? '+' : '-'}${totalGain > 0 ? totalGain : totalMise} ${coin}`, inline: true },
       { name: '🏆 Nouveau Jackpot', value: `${getJackpot(guildId)} ${coin}`, inline: true },
     )
-    .setFooter({ text: `Solde actuel : ${db.getUser(userId, guildId)?.solde || 0} ${coin}` })
+    .setFooter({ text: `Solde actuel : ${db.getUser(userId, guildId)?.balance || 0} ${coin}` })
     .setTimestamp();
 
   // Bouton rejouer
@@ -352,6 +352,9 @@ module.exports = {
       .setName('lignes').setDescription('Nombre de lignes (1-3, défaut 1)').setMinValue(1).setMaxValue(3)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     const mise   = interaction.options.getInteger('mise');
     const lignes = interaction.options.getInteger('lignes') || 1;
     await playSlots(interaction, interaction.user.id, interaction.guildId, mise, lignes);
@@ -366,3 +369,4 @@ module.exports = {
     await playSlots(message, message.author.id, message.guildId, mise, Math.min(3, Math.max(1, lignes)));
   },
 };
+

@@ -64,10 +64,10 @@ const activeGames = new Map(); // userId → { cashedOut, mult, interval, msg }
 async function playCrash(source, userId, guildId, mise, autoCashout = null) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
-  if (!u || u.solde < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -146,7 +146,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     if (!source.deferred && !source.replied) await source.deferReply();
     msg = await source.editReply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   } else {
-    msg = await source.editReply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
+    msg = await source.reply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   }
 
   activeGames.set(userId, { cashedOut: false, mult: 1.0, msg });
@@ -240,6 +240,9 @@ module.exports = {
       .setName('auto').setDescription('Cash-out automatique à ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playCrash(
       interaction,
       interaction.user.id,
@@ -258,3 +261,4 @@ module.exports = {
     await playCrash(message, message.author.id, message.guildId, mise, auto);
   },
 };
+

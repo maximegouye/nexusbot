@@ -60,7 +60,7 @@ function renderBoard(currentPath, step, mults, finalSlot = null) {
 async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.coin || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
 
   const riskKey = risk.toLowerCase();
   if (!MULTIPLIERS[riskKey]) {
@@ -68,8 +68,8 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
-  if (!u || u.solde < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u?.solde || 0} ${coin}**.`;
+  if (!u || u.balance < mise) {
+    const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -100,7 +100,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     if (!source.deferred && !source.replied) await source.deferReply();
     msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.editReply({ embeds: [startEmbed] });
+    msg = await source.reply({ embeds: [startEmbed] });
   }
 
   // Animation bille tombe rangée par rangée
@@ -139,7 +139,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
       { name: '⚠️ Risque', value: RISK_LABELS[riskKey], inline: true },
       { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
       { name: '📈 Multiplicateur', value: `×${mult}`, inline: true },
-      { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.solde || 0} ${coin}`, inline: true },
+      { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
     )
     .setTimestamp();
 
@@ -164,6 +164,9 @@ module.exports = {
     )),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playPlinko(
       interaction,
       interaction.user.id,
@@ -182,3 +185,4 @@ module.exports = {
     await playPlinko(message, message.author.id, message.guildId, mise, risk);
   },
 };
+
