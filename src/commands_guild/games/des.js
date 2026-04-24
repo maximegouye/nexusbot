@@ -1,30 +1,41 @@
 // ============================================================
-// des.js — Dés améliorés avec animations et modes de jeu
+// des.js — Dés améliorés avec animations et bouton rejouer
 // Emplacement : src/commands_guild/games/des.js
 // ============================================================
 
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
 const DICE_EMOJIS = ['⚀','⚁','⚂','⚃','⚄','⚅'];
-const SPIN_DICE   = ['🎲','🎯','🎲','🎯'];
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function rollDie()  { return Math.floor(Math.random() * 6) + 1; }
 function diceEmoji(n) { return DICE_EMOJIS[n - 1]; }
 
 // Modes de pari
-// - "haut"  : 4-6 (×1.8)
-// - "bas"   : 1-3 (×1.8)
-// - "pair"  : 2,4,6 (×1.8)
-// - "impair": 1,3,5 (×1.8)
-// - "1" à "6": exact (×5.5)
-// - "2d-X"  : somme de 2 dés = X (×3 à ×30 selon proba)
-
 const EXACT_SUMS_2D = {
   2: 35, 3: 17, 4: 11, 5: 8, 6: 6, 7: 5,
   8: 6, 9: 8, 10: 11, 11: 17, 12: 35,
 };
+
+const BET_HELP = [
+  '**═══ TABLE DE MISE (Dés) ═══**',
+  '⬆️ `haut` (4-6)      → ×1.8',
+  '⬇️ `bas` (1-3)       → ×1.8',
+  '🔢 `pair`            → ×1.8',
+  '🔢 `impair`          → ×1.8',
+  '🎯 `1` à `6` (exact) → ×5.5',
+  '➕ `somme7` (2 dés)  → ×variable',
+].join('\n');
+
+// Phases d'animation des dés
+const ROLL_PHASES = [
+  { delay:130, color:'#F39C12', text:'🎲 Lancement !' },
+  { delay:170, color:'#E67E22', text:'💨 Les dés roulent...' },
+  { delay:230, color:'#D35400', text:'🎯 Presque...' },
+  { delay:310, color:'#C0392B', text:'⏳ Dernière rotation...' },
+  { delay:400, color:'#922B21', text:'🤞 Résultat...' },
+];
 
 async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   const isInteraction = !!source.editReply;
@@ -40,15 +51,15 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   let payout = 0, winCondition, betLabel;
   const bet = betStr.toLowerCase().trim();
 
-  if (bet === 'haut' || bet === 'high')    { winCondition = r => r >= 4; payout = 1.8; betLabel = '⬆️ Haut (4-6)'; }
-  else if (bet === 'bas' || bet === 'low') { winCondition = r => r <= 3; payout = 1.8; betLabel = '⬇️ Bas (1-3)'; }
-  else if (bet === 'pair' || bet === 'even')   { winCondition = r => r % 2 === 0; payout = 1.8; betLabel = '🔢 Pair'; }
-  else if (bet === 'impair' || bet === 'odd')  { winCondition = r => r % 2 !== 0; payout = 1.8; betLabel = '🔢 Impair'; }
+  if (bet === 'haut' || bet === 'high')         { winCondition = r => r >= 4; payout = 1.8; betLabel = '⬆️ Haut (4-6)'; }
+  else if (bet === 'bas' || bet === 'low')       { winCondition = r => r <= 3; payout = 1.8; betLabel = '⬇️ Bas (1-3)'; }
+  else if (bet === 'pair' || bet === 'even')     { winCondition = r => r % 2 === 0; payout = 1.8; betLabel = '🔢 Pair'; }
+  else if (bet === 'impair' || bet === 'odd')    { winCondition = r => r % 2 !== 0; payout = 1.8; betLabel = '🔢 Impair'; }
   else if (/^\d+$/.test(bet) && parseInt(bet) >= 1 && parseInt(bet) <= 6) {
     const n = parseInt(bet);
     winCondition = r => r === n;
     payout = 5.5;
-    betLabel = `🎯 Exact ${diceEmoji(n)}`;
+    betLabel = `🎯 Exact ${diceEmoji(n)} (${n})`;
   } else if (bet.startsWith('somme') || bet.startsWith('sum')) {
     const n = parseInt(bet.replace(/[^0-9]/g, ''));
     if (!n || n < 2 || n > 12 || numDice < 2) {
@@ -61,42 +72,41 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     betLabel = `➕ Somme ${n}`;
     numDice = 2;
   } else {
-    const help = '**Paris disponibles :**\n`haut` (4-6) ×1.8\n`bas` (1-3) ×1.8\n`pair` ×1.8\n`impair` ×1.8\n`1` à `6` (exact) ×5.5\n`somme7` (2 dés, somme exacte) ×variable';
-    const err = `❌ Pari invalide.\n\n${help}`;
+    const err = `❌ Pari invalide.\n\n${BET_HELP}`;
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
 
   db.addCoins(userId, guildId, -mise);
 
-  // Animation lancer
-  const animEmbed = new EmbedBuilder()
+  // Embed de départ
+  const startEmbed = new EmbedBuilder()
     .setColor('#F39C12')
-    .setTitle('🎲 ・ Dés ・')
-    .setDescription(`${SPIN_DICE.join(' ')} *Lancer en cours...*`)
-    .addFields({ name: '🎯 Pari', value: betLabel, inline: true }, { name: '💰 Mise', value: `${mise} ${coin}`, inline: true });
+    .setTitle('🎲 Lancé de Dés')
+    .setDescription('🎲 🎲 *Les dés sont lancés...*')
+    .addFields(
+      { name: '🎯 Pari', value: betLabel, inline: true },
+      { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
+    );
 
   let msg;
   if (isInteraction) {
-    msg = await source.editReply({ embeds: [animEmbed] });
+    msg = await source.editReply({ embeds: [startEmbed] });
   } else {
-    msg = await source.reply({ embeds: [animEmbed] });
+    msg = await source.reply({ embeds: [startEmbed] });
   }
 
-  // Animation améliorée : dés qui s'agitent de plus en plus lentement
-  const rollPhases = [
-    { delay:160, color:'#F39C12', text:'🎲 Lancement !', mult:1 },
-    { delay:200, color:'#E67E22', text:'💨 Les dés roulent...', mult:1 },
-    { delay:260, color:'#D35400', text:'🎯 Presque...', mult:1 },
-    { delay:320, color:'#C0392B', text:'⏳ Dernière rotation...', mult:1 },
-    { delay:400, color:'#922B21', text:'🤞 Résultat dans 1 sec...', mult:1 },
-  ];
-  for (const { delay, color, text } of rollPhases) {
-    const fakeRolls = Array.from({length:numDice}, () => DICE_EMOJIS[Math.floor(Math.random()*6)]).join('  ');
+  // Animation : dés qui s'agitent
+  for (const { delay, color, text } of ROLL_PHASES) {
+    const fakeRolls = Array.from({ length: numDice }, () => DICE_EMOJIS[Math.floor(Math.random() * 6)]).join('  ');
     const e = new EmbedBuilder()
-      .setColor(color).setTitle('🎲 ・ Dés ・')
+      .setColor(color)
+      .setTitle('🎲 Lancé de Dés')
       .setDescription(`# ${fakeRolls}\n\n*${text}*`)
-      .addFields({name:'🎯 Pari',value:betLabel,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
+      .addFields(
+        { name: '🎯 Pari', value: betLabel, inline: true },
+        { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
+      );
     await msg.edit({ embeds: [e] });
     await sleep(delay);
   }
@@ -104,7 +114,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
 
   // Résultat
   const rolls = Array.from({ length: numDice }, () => rollDie());
-  const rollStr = rolls.map(diceEmoji).join(' ');
+  const rollStr = rolls.map(diceEmoji).join('  ');
   const sum = rolls.reduce((a, b) => a + b, 0);
 
   let won;
@@ -118,22 +128,72 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   if (won) db.addCoins(userId, guildId, gain);
 
   const color  = won ? '#2ECC71' : '#E74C3C';
-  const result = won
-    ? `🎉 **Gagné !** ${rollStr} — +**${gain} ${coin}**`
-    : `💸 **Perdu.** ${rollStr}${numDice === 2 ? ` (somme: ${sum})` : ''} — -**${mise} ${coin}**`;
+  const newBal = db.getUser(userId, guildId)?.balance || 0;
+
+  let resultBox;
+  if (won) {
+    resultBox = [
+      '```',
+      '╔══════════════════════════╗',
+      '║   🎉  GAGNÉ !  🎉         ║',
+      `║  +${String(gain).padEnd(6,' ')} ${coin}        ║`,
+      '╚══════════════════════════╝',
+      '```',
+    ].join('\n');
+  } else {
+    resultBox = [
+      '```',
+      '╔══════════════════════════╗',
+      '║   ❌  PERDU !  ❌          ║',
+      `║  -${String(mise).padEnd(6,' ')} ${coin}        ║`,
+      '╚══════════════════════════╝',
+      '```',
+    ].join('\n');
+  }
+
+  const desc = [
+    `# ${rollStr}`,
+    numDice === 2 ? `*(somme : ${sum})*` : '',
+    '',
+    resultBox,
+  ].filter(Boolean).join('\n');
+
+  // Bouton rejouer
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`des_replay_${userId}_${mise}_${betStr}_${numDice}`)
+      .setLabel('🎲 Rejouer')
+      .setStyle(ButtonStyle.Primary),
+  );
 
   const finalEmbed = new EmbedBuilder()
     .setColor(color)
-    .setTitle('🎲 ・ Résultat des Dés ・')
-    .setDescription(`# ${rollStr}\n\n${result}`)
+    .setTitle('🎲 Lancé de Dés — Résultat')
+    .setDescription(desc)
     .addFields(
       { name: '🎯 Pari', value: betLabel, inline: true },
       { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
-      { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
+      { name: '🏦 Solde', value: `${newBal} ${coin}`, inline: true },
     )
     .setTimestamp();
 
-  await msg.edit({ embeds: [finalEmbed] });
+  await msg.edit({ embeds: [finalEmbed], components: [row] });
+
+  // Collector rejouer
+  const filter = i => i.user.id === userId && i.customId.startsWith(`des_replay_${userId}`);
+  const collector = msg.createMessageComponentCollector({ filter, time: 30_000 });
+
+  collector.on('collect', async i => {
+    await i.deferUpdate();
+    collector.stop();
+    const parts    = i.customId.split('_');
+    const newMise  = parseInt(parts[3]);
+    const newBet   = parts[4];
+    const newNumD  = parseInt(parts[5]) || 1;
+    await playDice(source, userId, guildId, newMise, newBet, newNumD);
+  });
+
+  collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));
 }
 
 module.exports = {
