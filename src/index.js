@@ -61,7 +61,11 @@ function loadCommands(dir) {
 
 const commandsPath = path.join(__dirname, 'commands');
 loadCommands(commandsPath);
-loadCommands(path.join(__dirname, 'commands_guild/economy'));
+
+// Charge aussi les guild commands (banque, casino, économie...)
+const commandsGuildPath = path.join(__dirname, 'commands_guild');
+loadCommands(commandsGuildPath);
+
 console.log(`✅ ${client.commands.size} commande(s) slash chargée(s)`);
 
 // ── Chargement événements ───────────────────────
