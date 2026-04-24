@@ -1,10 +1,10 @@
 {
   "name": "nexusbot",
   "version": "2.0.0",
-  "description": "NexusBot v2 — Le bot Discord le plus complet : Musique, IA, Économie avancée, Modération, Niveaux, Premium et bien plus.",
+  "description": "NexusBot v2 \u2014 Le bot Discord le plus complet : Musique, IA, \u00c9conomie avanc\u00e9e, Mod\u00e9ration, Niveaux, Premium et bien plus.",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node deploy-commands.js && node src/index.js",
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
@@ -32,7 +32,16 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["discord", "bot", "economy", "leveling", "music", "moderation", "francophone", "premium"],
+  "keywords": [
+    "discord",
+    "bot",
+    "economy",
+    "leveling",
+    "music",
+    "moderation",
+    "francophone",
+    "premium"
+  ],
   "author": "NexusBot Team",
   "license": "MIT"
 }
