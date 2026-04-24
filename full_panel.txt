@@ -1,0 +1,116 @@
+=== PANEL COMPLET: L569 → L640 (72 lignes) ===
+
+L569:     if (sub === 'panel') {
+L570:       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+L571:         return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+L572: 
+L573:       const channel = interaction.options.getChannel('salon')
+L574:             || (cfg?.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null)
+L575:             || interaction.channel;
+L576: 
+L577:       if (!channel)
+L578:         return interaction.reply({ content: '❌ Aucun salon. Configure d\'abord avec `/ticket setup` ou précise un salon.', ephemeral: true });
+L579: 
+L580:       await interaction.deferReply({ ephemeral: true });
+L581: 
+L582:       // Purger les messages existants
+L583:       let purged = 0;
+L584:       try {
+L585:         let msgs;
+L586:         do {
+L587:           msgs = await channel.messages.fetch({ limit: 100 });
+L588:           if (!msgs.size) break;
+L589:           await channel.bulkDelete(msgs, true).catch(() => {});
+L590:           purged += msgs.size;
+L591:           if (msgs.size < 2) break;
+L592:         } while (purged < 1000);
+L593:       } catch {}
+L594: 
+L595:       // Reconstruire le panneau
+L596:       const panelEmbed = new EmbedBuilder()
+L597:         .setColor(cfg.color || '#7B2FBE')
+L598:         .setTitle('🎫 Support — Ouvre un ticket')
+L599:         .setDescription(
+L600:           '**Besoin d\'aide ou une question ?**\nClique sur le bouton ci-dessous et sélectionne une catégorie.\n\n' +
+L601:           CATEGORIES.map(c => `${c.emoji} **${c.label.replace(/^.*? /, '')}** — ${c.description}`).join('\n') +
+L602:           '\n\n> ⏱️ Nous répondons dans les plus brefs délais.'
+L603:         )
+L604:         .setThumbnail(interaction.guild.iconURL())
+L605:         .setFooter({ text: `${interaction.guild.name} • Support`, iconURL: interaction.guild.iconURL() });
+L606: 
+L607:       const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+L608:       const row = new ActionRowBuilder().addComponents(
+L609:         new ButtonBuilder()
+L610:           .setCustomId('ticket_open')
+L611:           .setLabel('Ouvrir un ticket')
+L612:           .setEmoji('🎫')
+L613:           .setStyle(ButtonStyle.Primary)
+L614:       );
+L615: 
+L616:       // Vérifier les permissions avant d'envoyer
+L617:       const botMemberPanel = interaction.guild.members.me;
+L618:       if (!channel.permissionsFor(botMemberPanel)?.has(['SendMessages', 'EmbedLinks'])) {
+L619:         return interaction.reply({
+L620:           embeds: [new EmbedBuilder()
+L621:             .setColor('#E74C3C')
+L622:             .setTitle('❌ Permission manquante dans ce salon')
+L623:             .setDescription(
+L624:               `Le bot ne peut pas envoyer de messages dans ${channel}.\n` +
+L625:               `Ajoute NexusBot dans les permissions du salon avec **Envoyer des messages** et **Intégrer des liens**.`
+L626:             )
+L627:           ]
+L628:         });
+L629:       }
+L630: 
+L631:       await channel.send({ embeds: [panelEmbed], components: [row] });
+L632:       db.setConfig(interaction.guildId, 'ticket_channel', channel.id);
+L633: 
+L634:       return interaction.reply({
+L635:         embeds: [new EmbedBuilder().setColor('#2ECC71')
+L636:           .setTitle('✅ Panneau republié !')
+L637:           .setDescription(`${channel} a été purgé (**${purged}** message(s) supprimé(s)) et le nouveau panneau est en place.`)
+L638:         ]
+L639:       });
+L640:     }
+
+=== DEBUT execute() à L239 ===
+L239:   async execute(interaction) {
+L240:     const sub = interaction.options.getSubcommand();
+L241:     const cfg = db.getConfig(interaction.guildId);
+L242:     const isStaff = () =>
+L243:       interaction.member.permissions.has(PermissionFlagsBits.ManageChannels) ||
+L244:       (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
+L245: 
+L246:     // ══════════════════════════════ SETUP ══════
+L247:     if (sub === 'setup') {
+L248:       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+L249:         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
+L250: 
+L251:       const channel   = interaction.options.getChannel('salon');
+L252:       const staffRole = interaction.options.getRole('staff');
+L253:       const category  = interaction.options.getChannel('categorie');
+L254:       const logCh     = interaction.options.getChannel('logs');
+L255:       const welcomeMsg = interaction.options.getString('message');
+L256: 
+L257:       db.setConfig(interaction.guildId, 'ticket_staff_role',    staffRole.id);
+L258:       db.setConfig(interaction.guildId, 'ticket_channel',       channel.id);
+L259:       if (category)   db.setConfig(interaction.guildId, 'ticket_category',     category.id);
+L260:       if (logCh)      db.setConfig(interaction.guildId, 'ticket_log_channel',  logCh.id);
+L261:       if (welcomeMsg) db.setConfig(interaction.guildId, 'ticket_welcome_msg',  welcomeMsg);
+L262: 
+L263:       // Auto-grant bot permissions dans le salon panel + la catégorie tickets
+L264:       const botMember = interaction.guild.members.me;
+L265:       const botPerms = [
+L266:         PermissionFlagsBits.ViewChannel,
+L267:         PermissionFlagsBits.SendMessages,
+L268:         PermissionFlagsBits.EmbedLinks,
+L269:         PermissionFlagsBits.ReadMessageHistory,
+L270:         PermissionFlagsBits.ManageChannels,
+L271:         PermissionFlagsBits.ManageMessages,
+L272:       ];
+L273:       try {
+L274:         await channel.permissionOverwrites.edit(botMember, {
+L275:           ViewChannel: true, SendMessages: true, EmbedLinks: true,
+L276:           ReadMessageHistory: true, ManageMessages: true,
+L277:         });
+L278:       } catch {}

@@ -1,0 +1,148 @@
+=== ticket.js: 1215 lignes, 454 ouvrantes / 454 fermantes ===
+
+Lignes contenant 'panel': 10
+  L165:       .setName('panel')
+  L263:       // Auto-grant bot permissions dans le salon panel + la catégorie tickets
+  L295:       const panelEmbed = new EmbedBuilder()
+  L328:       await channel.send({ embeds: [panelEmbed], components: [row] });
+  L568:     // ══════════════════════════════ PANEL (purge + repost) ══════
+  L569:     if (sub === 'panel') {
+  L595:       const panelEmbed = new EmbedBuilder()
+  L616:       const botMemberPanel = interaction.guild.members.me;
+  L617:       if (!channel.permissionsFor(botMemberPanel)?.has(['SendMessages', 'EmbedLinks'])) {
+  L630:       await channel.send({ embeds: [panelEmbed], components: [row] });
+
+
+
+=== Section panel à partir de L569 ===
+L567: 
+L568:     // ══════════════════════════════ PANEL (purge + repost) ══════
+L569:     if (sub === 'panel') {
+L570:       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+L571:         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
+L572: 
+L573:       const channel = interaction.options.getChannel('salon') ||
+L574:         (cfg.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null);
+L575: 
+L576:       if (!channel)
+L577:         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun salon. Configure d\'abord avec `/ticket setup` ou précise un salon.', ephemeral: true });
+L578: 
+L579:       await interaction.deferReply({ ephemeral: true });
+L580: 
+L581:       // Purger les messages existants
+L582:       let purged = 0;
+L583:       try {
+L584:         let msgs;
+L585:         do {
+L586:           msgs = await channel.messages.fetch({ limit: 100 });
+L587:           if (!msgs.size) break;
+L588:           await channel.bulkDelete(msgs, true).catch(() => {});
+L589:           purged += msgs.size;
+L590:           if (msgs.size < 2) break;
+L591:         } while (purged < 1000);
+L592:       } catch {}
+L593: 
+L594:       // Reconstruire le panneau
+L595:       const panelEmbed = new EmbedBuilder()
+L596:         .setColor(cfg.color || '#7B2FBE')
+L597:         .setTitle('🎫 Support — Ouvre un ticket')
+L598:         .setDescription(
+L599:           '**Besoin d\'aide ou une question ?**\nClique sur le bouton ci-dessous et sélectionne une catégorie.\n\n' +
+L600:           CATEGORIES.map(c => `${c.emoji} **${c.label.replace(/^.*? /, '')}** — ${c.description}`).join('\n') +
+L601:           '\n\n> ⏱️ Nous répondons dans les plus brefs délais.'
+L602:         )
+L603:         .setThumbnail(interaction.guild.iconURL())
+L604:         .setFooter({ text: `${interaction.guild.name} • Support`, iconURL: interaction.guild.iconURL() });
+L605: 
+L606:       const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+L607:       const row = new ActionRowBuilder().addComponents(
+L608:         new ButtonBuilder()
+L609:           .setCustomId('ticket_open')
+L610:           .setLabel('Ouvrir un ticket')
+L611:           .setEmoji('🎫')
+L612:           .setStyle(ButtonStyle.Primary)
+L613:       );
+L614: 
+L615:       // Vérifier les permissions avant d'envoyer
+L616:       const botMemberPanel = interaction.guild.members.me;
+L617:       if (!channel.permissionsFor(botMemberPanel)?.has(['SendMessages', 'EmbedLinks'])) {
+L618:         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+L619:           embeds: [new EmbedBuilder()
+L620:             .setColor('#E74C3C')
+L621:             .setTitle('❌ Permission manquante dans ce salon')
+L622:             .setDescription(
+L623:               `Le bot ne peut pas envoyer de messages dans ${channel}.\n` +
+L624:               `Ajoute NexusBot dans les permissions du salon avec **Envoyer des messages** et **Intégrer des liens**.`
+L625:             )
+L626:           ]
+L627:         });
+L628:       }
+L629: 
+L630:       await channel.send({ embeds: [panelEmbed], components: [row] });
+L631:       db.setConfig(interaction.guildId, 'ticket_channel', channel.id);
+L632: 
+L633:       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+L634:         embeds: [new EmbedBuilder().setColor('#2ECC71')
+L635:           .setTitle('✅ Panneau republié !')
+L636:           .setDescription(`${channel} a été purgé (**${purged}** message(s) supprimé(s)) et le nouveau panneau est en place.`)
+L637:         ]
+L638:       });
+L639:     }
+L640: 
+L641:     // ══════════════════════════════ ASSIGN ══════
+L642:     if (sub === 'assign') {
+L643:       if (!isStaff()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé au staff.', ephemeral: true });
+L644: 
+L645:       const ticket = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND channel_id=? AND status='open'")
+L646:         .get(interaction.guildId, interaction.channelId);
+L647:       if (!ticket) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce salon n\'est pas un ticket actif.', ephemeral: true });
+L648: 
+L649:       const targetUser = interaction.options.getUser('staff');
+L650:       const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+L651:       if (!targetMember) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
+L652: 
+L653:       // Mettre à jour en DB
+L654:       db.db.prepare('UPDATE tickets SET claimed_by=? WHERE id=?').run(targetUser.id, ticket.id);
+L655: 
+L656:       // Donner accès au salon si pas déjà dedans
+L657:       await interaction.channel.permissionOverwrites.edit(targetUser.id, {
+L658:         ViewChannel: true, SendMessages: true, ReadMessageHistory: true
+L659:       }).catch(() => {});
+L660: 
+L661:       // Mettre à jour le topic
+L662:       await interaction.channel.setTopic(
+L663:         `Ticket de <@${ticket.user_id}> | Assigné à ${targetMember.user.tag}`
+L664:       ).catch(() => {});
+L665: 
+L666:       // Envoyer un message dans le ticket
+L667:       await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+L668:         embeds: [new EmbedBuilder()
+
+=== Imports (L1-25) ===
+L1: const {
+L2:   SlashCommandBuilder, EmbedBuilder, ActionRowBuilder,
+L3:   ButtonBuilder, ButtonStyle, PermissionFlagsBits,
+L4:   ChannelType, StringSelectMenuBuilder, AttachmentBuilder
+L5: } = require('discord.js');
+L6: const db = require('../../database/db');
+L7: 
+L8: // ── Migrations inline ────────────────────────────────────
+L9: try {
+L10:   const tc = db.db.prepare('PRAGMA table_info(tickets)').all().map(c => c.name);
+L11:   if (!tc.includes('category'))          db.db.prepare("ALTER TABLE tickets ADD COLUMN category TEXT DEFAULT 'support'").run();
+L12:   if (!tc.includes('claimed_by'))        db.db.prepare("ALTER TABLE tickets ADD COLUMN claimed_by TEXT").run();
+L13:   if (!tc.includes('close_reason'))      db.db.prepare("ALTER TABLE tickets ADD COLUMN close_reason TEXT").run();
+L14:   if (!tc.includes('rating'))            db.db.prepare("ALTER TABLE tickets ADD COLUMN rating INTEGER").run();
+L15:   if (!tc.includes('priority'))          db.db.prepare("ALTER TABLE tickets ADD COLUMN priority TEXT DEFAULT 'normale'").run();
+L16:   if (!tc.includes('warn_sent'))         db.db.prepare('ALTER TABLE tickets ADD COLUMN warn_sent INTEGER DEFAULT 0').run();
+L17:   if (!tc.includes('closed_at'))         db.db.prepare('ALTER TABLE tickets ADD COLUMN closed_at INTEGER').run();
+L18:   // v2 — colonnes supplémentaires
+L19:   if (!tc.includes('tags'))              db.db.prepare("ALTER TABLE tickets ADD COLUMN tags TEXT DEFAULT '[]'").run();
+L20:   if (!tc.includes('first_response_at')) db.db.prepare('ALTER TABLE tickets ADD COLUMN first_response_at INTEGER').run();
+L21: } catch {}
+L22: try {
+L23:   const gc = db.db.prepare('PRAGMA table_info(guild_config)').all().map(c => c.name);
+L24:   if (!gc.includes('ticket_log_channel'))  db.db.prepare("ALTER TABLE guild_config ADD COLUMN ticket_log_channel TEXT").run();
+L25:   if (!gc.includes('ticket_welcome_msg'))  db.db.prepare("ALTER TABLE guild_config ADD COLUMN ticket_welcome_msg TEXT").run();
+
+=== Config ===
