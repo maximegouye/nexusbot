@@ -342,6 +342,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.isChatInputCommand()) return; // guard: ignore boutons
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId) || {};
     const isStaff = () =>
