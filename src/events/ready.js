@@ -1,31 +1,36 @@
 // ============================================================
-// ready.js — Auto-enregistrement des slash commands au démarrage
+// ready.js — Enregistrement slash commands au démarrage
+//            Guild-specific (instantané) + global fallback
 // ============================================================
 const { REST, Routes } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
 
-function collectCommands(dir) {
+function collectAllCommands(baseDir) {
   const commands = [];
-  if (!fs.existsSync(dir)) return commands;
-  const items = fs.readdirSync(dir, { withFileTypes: true });
-  for (const item of items) {
-    if (item.isDirectory()) {
-      const subDir = path.join(dir, item.name);
-      const files  = fs.readdirSync(subDir).filter(f => f.endsWith('.js'));
-      for (const file of files) {
+  const seen     = new Set();
+
+  function walk(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, item.name);
+      if (item.isDirectory() && !item.name.includes('disabled')) {
+        walk(full);
+      } else if (item.name.endsWith('.js') && !item.name.includes('.bak')) {
         try {
-          const cmd = require(path.join(subDir, file));
-          if (cmd.data) commands.push(cmd.data.toJSON());
-        } catch (e) { /* ignore */ }
+          // Clear cache so fresh require picks up latest code
+          delete require.cache[require.resolve(full)];
+          const cmd = require(full);
+          if (cmd.data && cmd.data.toJSON && !seen.has(cmd.data.name)) {
+            seen.add(cmd.data.name);
+            commands.push(cmd.data.toJSON());
+          }
+        } catch (e) { /* ignore load errors */ }
       }
-    } else if (item.name.endsWith('.js')) {
-      try {
-        const cmd = require(path.join(dir, item.name));
-        if (cmd.data) commands.push(cmd.data.toJSON());
-      } catch (e) { /* ignore */ }
     }
   }
+
+  walk(baseDir);
   return commands;
 }
 
@@ -35,39 +40,32 @@ module.exports = {
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.tag}`);
 
-    const commandsPath     = path.join(__dirname, '../commands');
-    const economyGuildPath = path.join(__dirname, '../commands_guild/economy');
-    const uniqueGuildPath  = path.join(__dirname, '../commands_guild/unique');
+    const src      = path.join(__dirname, '..');
+    const commands = collectAllCommands(src);
 
-    // Dé-dupliquer par nom de commande
-    const seen = new Set();
-    const commands = [];
-    for (const dir of [commandsPath, economyGuildPath, uniqueGuildPath]) {
-      for (const cmd of collectCommands(dir)) {
-        if (!seen.has(cmd.name)) {
-          seen.add(cmd.name);
-          commands.push(cmd);
-        }
-      }
-    }
-
-    const token = process.env.TOKEN || process.env.DISCORD_TOKEN;
+    const token = process.env.TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN;
     if (!token) {
-      console.error('❌ TOKEN non défini');
+      console.error('❌ TOKEN non défini — skip enregistrement commandes');
       return;
     }
 
-    const rest = new REST({ version: '10' }).setToken(token);
+    const rest    = new REST({ version: '10' }).setToken(token);
+    const appId   = client.user.id;
+    const guildId = process.env.HOME_GUILD_ID;
+
     try {
-      await rest.put(
-        Routes.applicationCommands(client.user.id),
-        { body: commands }
-      );
-      console.log(`✅ ${commands.length} slash commands enregistrées !`);
+      if (guildId) {
+        // Guild registration: instantané
+        await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: commands });
+        console.log(`✅ ${commands.length} slash commands enregistrées (guild ${guildId}) !`);
+      } else {
+        // Global fallback (jusqu'à 1h pour propager)
+        await rest.put(Routes.applicationCommands(appId), { body: commands });
+        console.log(`✅ ${commands.length} slash commands enregistrées (global) !`);
+      }
       commands.forEach(c => console.log(`   /${c.name}`));
     } catch (error) {
       console.error('❌ Erreur registration:', error.message);
     }
   }
 };
-
