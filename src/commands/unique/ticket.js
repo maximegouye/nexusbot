@@ -125,6 +125,109 @@ async function generateTranscript(channel, ticket) {
   return Buffer.from(txt, 'utf-8');
 }
 
+
+/**
+ * Gère les interactions bouton/select du module ticket.
+ * Appelé par interactionCreate.js avant handler.execute().
+ * @returns {boolean} true si l'interaction a été traitée
+ */
+async function handleComponent(interaction, customId) {
+    if (customId !== 'ticket_open') return false;
+
+    await interaction.deferReply({ ephemeral: true });
+
+    const { guild, member } = interaction;
+    const cfg = (db.getConfig ? db.getConfig(guild.id) : null) || {};
+
+    // Vérifier si l'utilisateur a déjà un ticket ouvert
+    const existing = guild.channels.cache.find(
+        c => c.name === `ticket-${member.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}` ||
+             c.topic === `ticket:${member.id}`
+    );
+    if (existing) {
+        return interaction.editReply({
+            content: `❌ Tu as déjà un ticket ouvert : ${existing}`,
+        }).then(() => true);
+    }
+
+    // Construire les permissions du canal
+    const permOverwrites = [
+        {
+            id: guild.roles.everyone.id,
+            deny: [PermissionFlagsBits.ViewChannel],
+        },
+        {
+            id: member.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+        },
+    ];
+
+        // Permissions staff
+        const staffRole = cfg.staff_role
+            ? interaction.guild.roles.cache.get(cfg.staff_role)
+            : null;
+        if (staffRole) {
+            permOverwrites.push({
+                id: staffRole.id,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+            });
+        }
+    // Options du canal
+    const safeName = member.user.username.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'user';
+    const channelOptions = {
+        name: `ticket-${safeName}`,
+        topic: `ticket:${member.id}`,
+        permissionOverwrites: permOverwrites,
+    };
+
+        // Catégorie
+        const category = cfg.ticket_category
+            ? interaction.guild.channels.cache.get(cfg.ticket_category)
+            : null;
+    if (category) channelOptions.parent = category.id;
+
+    try {
+        // Créer le canal
+        const ticketChannel = await guild.channels.create(channelOptions);
+
+        // Embed de bienvenue
+        const welcomeEmbed = new EmbedBuilder()
+            .setColor(cfg.color || '#5865F2')
+            .setTitle('🎫 Ticket ouvert')
+            .setDescription(
+                `Bonjour ${member}!\n\n` +
+                (cfg.ticket_welcome || 'Un membre du staff va vous répondre dès que possible.\n\nPour fermer ce ticket, utilisez `/ticket close`.')
+            )
+            .setFooter({ text: guild.name })
+            .setTimestamp();
+
+        // Bouton fermer
+        const closeBtn = new ButtonBuilder()
+            .setCustomId('ticket_close')
+            .setLabel('🔒 Fermer le ticket')
+            .setStyle(ButtonStyle.Danger);
+        const closeRow = new ActionRowBuilder().addComponents(closeBtn);
+
+        await ticketChannel.send({
+            content: `${member} ${staffRole ? staffRole : ''}`,
+            embeds: [welcomeEmbed],
+            components: [closeRow],
+        });
+
+        await interaction.editReply({
+            content: `✅ Ton ticket a été créé : ${ticketChannel}`,
+        });
+    } catch (err) {
+        console.error('[ticket_open] Erreur création canal:', err);
+        await interaction.editReply({
+            content: `❌ Impossible de créer le ticket : ${err.message}`,
+        }).catch(() => {});
+    }
+
+    return true;
+}
+
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ticket')
@@ -189,7 +292,9 @@ module.exports = {
         .setDescription('Nouveau niveau de priorité')
         .setRequired(true)
         .addChoices(
-          { name: '🟢 Faible — Pas urgent', value: 'faible' },
+          { name: '🟢 Faible — Pas urgent', value: 'faible',
+    handleComponent,
+},
           { name: '🟡 Normale — Standard',  value: 'normale' },
           { name: '🟠 Élevée — Assez urgent', value: 'elevee' },
           { name: '🔴 Urgente — Immédiat !', value: 'urgente' },
