@@ -42,7 +42,7 @@ module.exports = {
         const errMsg = { content: 'Une erreur est survenue lors de l\'execution.', ephemeral: true };
         try {
           if (interaction.deferred || interaction.replied) {
-            await interaction.editReply(errMsg);
+            await interaction.followUp(errMsg);
           } else {
             await interaction.reply(errMsg);
           }
