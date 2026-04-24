@@ -132,12 +132,16 @@ async function handleAdmin(cmd, args, message) {
       // Support typed @username (not a real Discord mention)
       const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
       if (uname) {
-        const found = message.guild.members.cache.find(m =>
-          m.user.username.toLowerCase() === uname ||
-          m.displayName.toLowerCase() === uname ||
-          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
-        );
-        if (found) mention = found.user;
+        try {
+          const fetched = await message.guild.members.fetch();
+          const found = fetched.find(m =>
+            m.user.username.toLowerCase() === uname ||
+            m.displayName.toLowerCase() === uname ||
+            (m.nickname && m.nickname.toLowerCase() === uname) ||
+            (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+          );
+          if (found) mention = found.user;
+        } catch(_) {}
       }
     }
     const amount  = parseInt(args.find(a => !/<@/.test(a) && !a.startsWith('@')) ?? '');
@@ -160,12 +164,16 @@ async function handleAdmin(cmd, args, message) {
       // Support typed @username (not a real Discord mention)
       const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
       if (uname) {
-        const found = message.guild.members.cache.find(m =>
-          m.user.username.toLowerCase() === uname ||
-          m.displayName.toLowerCase() === uname ||
-          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
-        );
-        if (found) mention = found.user;
+        try {
+          const fetched = await message.guild.members.fetch();
+          const found = fetched.find(m =>
+            m.user.username.toLowerCase() === uname ||
+            m.displayName.toLowerCase() === uname ||
+            (m.nickname && m.nickname.toLowerCase() === uname) ||
+            (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+          );
+          if (found) mention = found.user;
+        } catch(_) {}
       }
     }
     const amount  = parseInt(args.find(a => !/<@/.test(a) && !a.startsWith('@')) ?? '');
@@ -188,12 +196,16 @@ async function handleAdmin(cmd, args, message) {
       // Support typed @username (not a real Discord mention)
       const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
       if (uname) {
-        const found = message.guild.members.cache.find(m =>
-          m.user.username.toLowerCase() === uname ||
-          m.displayName.toLowerCase() === uname ||
-          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
-        );
-        if (found) mention = found.user;
+        try {
+          const fetched = await message.guild.members.fetch();
+          const found = fetched.find(m =>
+            m.user.username.toLowerCase() === uname ||
+            m.displayName.toLowerCase() === uname ||
+            (m.nickname && m.nickname.toLowerCase() === uname) ||
+            (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+          );
+          if (found) mention = found.user;
+        } catch(_) {}
       }
     }
     if (!mention) { await message.reply('Usage : `&reset @membre`'); return true; }
@@ -211,15 +223,19 @@ async function handleAdmin(cmd, args, message) {
       // Support typed @username (not a real Discord mention)
       const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
       if (uname) {
-        const found = message.guild.members.cache.find(m =>
-          m.user.username.toLowerCase() === uname ||
-          m.displayName.toLowerCase() === uname ||
-          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
-        );
-        if (found) mention = found.user;
+        try {
+          const fetched = await message.guild.members.fetch();
+          const found = fetched.find(m =>
+            m.user.username.toLowerCase() === uname ||
+            m.displayName.toLowerCase() === uname ||
+            (m.nickname && m.nickname.toLowerCase() === uname) ||
+            (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+          );
+          if (found) mention = found.user;
+        } catch(_) {}
       }
     }
-    if (!mention) { await message.reply('Usage : `&solde @membre`'); return true; }
+    if (!mention) mention = message.author; // Default to author if no mention specified
     try {
       const row = db.db.prepare('SELECT balance, bank FROM users WHERE user_id = ? AND guild_id = ?').get(mention.id, guildId);
       const bal  = row && row.balance ? row.balance : 0;
@@ -236,12 +252,16 @@ async function handleAdmin(cmd, args, message) {
       // Support typed @username (not a real Discord mention)
       const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
       if (uname) {
-        const found = message.guild.members.cache.find(m =>
-          m.user.username.toLowerCase() === uname ||
-          m.displayName.toLowerCase() === uname ||
-          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
-        );
-        if (found) mention = found.user;
+        try {
+          const fetched = await message.guild.members.fetch();
+          const found = fetched.find(m =>
+            m.user.username.toLowerCase() === uname ||
+            m.displayName.toLowerCase() === uname ||
+            (m.nickname && m.nickname.toLowerCase() === uname) ||
+            (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+          );
+          if (found) mention = found.user;
+        } catch(_) {}
       }
     }
     if (!mention) { await message.reply('Usage : `&cooldown @membre`'); return true; }
