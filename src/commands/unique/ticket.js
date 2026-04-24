@@ -567,59 +567,65 @@ module.exports = {
 
     // ══════════════════════════════ PANEL (purge + repost) ══════
     if (sub === 'panel') {
-        // Vérif permissions
+        // Vérif permission
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-            return interaction.reply({ content: '❌ Permission insuffisante. Réservé aux admins.', ephemeral: true });
-    
-        // Déterminer le salon cible
+            return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+        
+        // Salon cible
         const channel = interaction.options.getChannel('salon')
             || (cfg.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null)
             || interaction.channel;
-    
+        
         if (!channel)
-            return interaction.reply({ content: '❌ Aucun salon trouvé. Utilise `/ticket setup` d\'abord.', ephemeral: true });
-    
-        await interaction.deferReply({ ephemeral: true });
-    
-        // Purger anciens panels (messages du bot avec composants)
-        let purged = 0;
+            return interaction.reply({ content: '❌ Aucun salon trouvé.', ephemeral: true });
+        
+        // TOUT dans try/catch pour voir l'erreur exacte
         try {
-            const msgs = await channel.messages.fetch({ limit: 50 });
-            const botMsgs = msgs.filter(m => m.author.id === interaction.client.user.id && m.components?.length > 0);
-            for (const [, msg] of botMsgs) {
-                await msg.delete().catch(() => {});
-                purged++;
+            await interaction.deferReply({ ephemeral: true });
+        
+            // Purge anciens panels
+            let purged = 0;
+            try {
+                const msgs = await channel.messages.fetch({ limit: 50 });
+                for (const [, msg] of msgs.filter(m => m.author.id === interaction.client.user.id && m.components?.length > 0)) {
+                    await msg.delete().catch(() => {});
+                    purged++;
+                }
+            } catch (_purgeErr) { /* ignore purge errors */ }
+        
+            // Embed
+            const panelEmbed = new EmbedBuilder()
+                .setColor(cfg.color || '#5865F2')
+                .setTitle(cfg.ticket_title || '🎫 Support')
+                .setDescription(cfg.ticket_description || 'Clique sur le bouton pour ouvrir un ticket.');
+        
+            // Footer optionnel
+            if (interaction.guild.name) {
+                panelEmbed.setFooter({ text: interaction.guild.name });
             }
-        } catch (_) { /* ignore erreurs de purge */ }
-    
-        // Construire l'embed du panel
-        const panelEmbed = new EmbedBuilder()
-            .setColor(cfg.color || '#5865F2')
-            .setTitle(cfg.ticket_title || '🎫 Support — Zone Entraide')
-            .setDescription(cfg.ticket_description || 'Clique sur le bouton ci-dessous pour ouvrir un ticket.\nNotre équipe te répondra dès que possible.')
-            .setFooter({
-                text: interaction.guild.name,
-                iconURL: interaction.guild.iconURL({ dynamic: true }) ?? undefined,
-            })
-            .setTimestamp();
-    
-        // Construire le bouton d'ouverture
-        const openBtn = new ButtonBuilder()
-            .setCustomId('ticket_open')
-            .setLabel(cfg.ticket_button_label || '🎫 Ouvrir un ticket')
-            .setStyle(ButtonStyle.Primary);
-    
-        const panelRow = new ActionRowBuilder().addComponents(openBtn);
-    
-        // Envoyer le panel et confirmer
-        try {
+        
+            // Bouton
+            const openBtn = new ButtonBuilder()
+                .setCustomId('ticket_open')
+                .setLabel(cfg.ticket_button_label || '🎫 Ouvrir un ticket')
+                .setStyle(ButtonStyle.Primary);
+        
+            const panelRow = new ActionRowBuilder().addComponents(openBtn);
+        
+            // Envoyer
             await channel.send({ embeds: [panelEmbed], components: [panelRow] });
             await interaction.editReply({
-                content: `✅ Panneau republié dans ${channel} (${purged} ancien(s) supprimé(s)).`,
+                content: `✅ Panneau créé dans ${channel} (${purged} ancien(s) supprimé(s)).`,
             });
-        } catch (err) {
-            console.error('[ticket panel] Erreur envoi:', err);
-            await interaction.editReply({ content: `❌ Erreur: ${err.message}` }).catch(() => {});
+        
+        } catch (panelErr) {
+            console.error('[ticket panel] CRASH:', panelErr);
+            const errDetail = `❌ ERREUR: ${panelErr.message || String(panelErr)}`;
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply({ content: errDetail }).catch(() => {});
+            } else {
+                await interaction.reply({ content: errDetail, ephemeral: true }).catch(() => {});
+            }
         }
     }
 
