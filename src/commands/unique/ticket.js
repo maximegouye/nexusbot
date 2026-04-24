@@ -238,7 +238,7 @@ module.exports = {
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    const cfg = db.getConfig(interaction.guildId);
+    const cfg = db.getConfig(interaction.guildId) || {};
     const isStaff = () =>
       interaction.member.permissions.has(PermissionFlagsBits.ManageChannels) ||
       (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
@@ -567,76 +567,60 @@ module.exports = {
 
     // ══════════════════════════════ PANEL (purge + repost) ══════
     if (sub === 'panel') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
-
-      const channel = interaction.options.getChannel('salon')
-            || (cfg?.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null)
+        // Vérif permissions
+        if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+            return interaction.reply({ content: '❌ Permission insuffisante. Réservé aux admins.', ephemeral: true });
+    
+        // Déterminer le salon cible
+        const channel = interaction.options.getChannel('salon')
+            || (cfg.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null)
             || interaction.channel;
-
-      if (!channel)
-        return interaction.reply({ content: '❌ Aucun salon. Configure d\'abord avec `/ticket setup` ou précise un salon.', ephemeral: true });
-
-      await interaction.deferReply({ ephemeral: true });
-
-      // Purger les messages existants
-      let purged = 0;
-      try {
-        let msgs;
-        do {
-          msgs = await channel.messages.fetch({ limit: 100 });
-          if (!msgs.size) break;
-          await channel.bulkDelete(msgs, true).catch(() => {});
-          purged += msgs.size;
-          if (msgs.size < 2) break;
-        } while (purged < 1000);
-      } catch {}
-
-      // Reconstruire le panneau
-      const panelEmbed = new EmbedBuilder()
-        .setColor(cfg.color || '#7B2FBE')
-        .setTitle('🎫 Support — Ouvre un ticket')
-        .setDescription(
-          '**Besoin d\'aide ou une question ?**\nClique sur le bouton ci-dessous et sélectionne une catégorie.\n\n' +
-          CATEGORIES.map(c => `${c.emoji} **${c.label.replace(/^.*? /, '')}** — ${c.description}`).join('\n') +
-          '\n\n> ⏱️ Nous répondons dans les plus brefs délais.'
-        )
-        .setThumbnail(interaction.guild.iconURL())
-        .setFooter({ text: `${interaction.guild.name} • Support`, iconURL: interaction.guild.iconURL() });
-
-      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('ticket_open')
-          .setLabel('Ouvrir un ticket')
-          .setEmoji('🎫')
-          .setStyle(ButtonStyle.Primary)
-      );
-
-      // Vérifier les permissions avant d'envoyer
-      const botMemberPanel = interaction.guild.members.me;
-      if (!channel.permissionsFor(botMemberPanel)?.has(['SendMessages', 'EmbedLinks'])) {
-        return interaction.reply({
-          embeds: [new EmbedBuilder()
-            .setColor('#E74C3C')
-            .setTitle('❌ Permission manquante dans ce salon')
-            .setDescription(
-              `Le bot ne peut pas envoyer de messages dans ${channel}.\n` +
-              `Ajoute NexusBot dans les permissions du salon avec **Envoyer des messages** et **Intégrer des liens**.`
-            )
-          ]
-        });
-      }
-
-      await channel.send({ embeds: [panelEmbed], components: [row] });
-      db.setConfig(interaction.guildId, 'ticket_channel', channel.id);
-
-      return interaction.reply({
-        embeds: [new EmbedBuilder().setColor('#2ECC71')
-          .setTitle('✅ Panneau republié !')
-          .setDescription(`${channel} a été purgé (**${purged}** message(s) supprimé(s)) et le nouveau panneau est en place.`)
-        ]
-      });
+    
+        if (!channel)
+            return interaction.reply({ content: '❌ Aucun salon trouvé. Utilise `/ticket setup` d\'abord.', ephemeral: true });
+    
+        await interaction.deferReply({ ephemeral: true });
+    
+        // Purger anciens panels (messages du bot avec composants)
+        let purged = 0;
+        try {
+            const msgs = await channel.messages.fetch({ limit: 50 });
+            const botMsgs = msgs.filter(m => m.author.id === interaction.client.user.id && m.components?.length > 0);
+            for (const [, msg] of botMsgs) {
+                await msg.delete().catch(() => {});
+                purged++;
+            }
+        } catch (_) { /* ignore erreurs de purge */ }
+    
+        // Construire l'embed du panel
+        const panelEmbed = new EmbedBuilder()
+            .setColor(cfg.color || '#5865F2')
+            .setTitle(cfg.ticket_title || '🎫 Support — Zone Entraide')
+            .setDescription(cfg.ticket_description || 'Clique sur le bouton ci-dessous pour ouvrir un ticket.\nNotre équipe te répondra dès que possible.')
+            .setFooter({
+                text: interaction.guild.name,
+                iconURL: interaction.guild.iconURL({ dynamic: true }) ?? undefined,
+            })
+            .setTimestamp();
+    
+        // Construire le bouton d'ouverture
+        const openBtn = new ButtonBuilder()
+            .setCustomId('ticket_open')
+            .setLabel(cfg.ticket_button_label || '🎫 Ouvrir un ticket')
+            .setStyle(ButtonStyle.Primary);
+    
+        const panelRow = new ActionRowBuilder().addComponents(openBtn);
+    
+        // Envoyer le panel et confirmer
+        try {
+            await channel.send({ embeds: [panelEmbed], components: [panelRow] });
+            await interaction.editReply({
+                content: `✅ Panneau republié dans ${channel} (${purged} ancien(s) supprimé(s)).`,
+            });
+        } catch (err) {
+            console.error('[ticket panel] Erreur envoi:', err);
+            await interaction.editReply({ content: `❌ Erreur: ${err.message}` }).catch(() => {});
+        }
     }
 
     // ══════════════════════════════ ASSIGN ══════
