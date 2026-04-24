@@ -60,7 +60,7 @@ module.exports = {
       return;
     }
 
-    // -- Boutons / Menus / Modals
+    // — Boutons / Menus / Modals
     if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
       const cid = interaction.customId || '';
 
@@ -92,19 +92,18 @@ module.exports = {
         try {
           // Essayer handleComponent en premier (boutons/selects)
           if (typeof handler.handleComponent === 'function') {
-              try {
-                  const handled = await handler.handleComponent(interaction, cid);
-                  if (handled) return;
-              } catch (hcErr) {
-                  console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
-                  if (!interaction.replied && !interaction.deferred) {
-                      await interaction.reply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
-                  } else if (interaction.deferred) {
-                      await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}` }).catch(() => {});
-                  }
-                  return;
+            try {
+              const handled = await handler.handleComponent(interaction, cid);
+              if (handled) return;
+            } catch (hcErr) {
+              console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
+              if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
+              } else if (interaction.deferred) {
+                await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}` }).catch(() => {});
               }
-              }
+              return;
+            }
           }
           await handler.execute(interaction);
         } catch (e) {
@@ -113,8 +112,8 @@ module.exports = {
             await interaction.reply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
           }
         }
+        return;
       }
-      return;
     }
   },
 };
