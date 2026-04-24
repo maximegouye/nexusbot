@@ -1,172 +1,223 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+// ============================================================
+// boutique.js — Boutique du serveur avec rôles, titres & items
+// Emplacement : src/commands_guild/economy/boutique.js
+// ============================================================
+
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../../database/db');
 
+// ─── Tables ───────────────────────────────────────────────
 try {
-  db.db.prepare(`CREATE TABLE IF NOT EXISTS shop_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id TEXT, name TEXT, description TEXT,
-    price INTEGER, type TEXT DEFAULT 'cosmetic',
-    role_id TEXT, emoji TEXT DEFAULT '🛍️',
-    stock INTEGER DEFAULT -1,
-    UNIQUE(guild_id, name)
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS boutique_items (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id  TEXT,
+    nom       TEXT,
+    emoji     TEXT DEFAULT '🎁',
+    type      TEXT DEFAULT 'role',
+    valeur    TEXT,
+    prix      INTEGER DEFAULT 100,
+    stock     INTEGER DEFAULT -1,
+    actif     INTEGER DEFAULT 1
   )`).run();
-  db.db.prepare(`CREATE TABLE IF NOT EXISTS user_inventory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id TEXT, user_id TEXT, item_id INTEGER,
-    quantity INTEGER DEFAULT 1, used INTEGER DEFAULT 0,
-    bought_at INTEGER DEFAULT (strftime('%s','now')),
-    UNIQUE(guild_id, user_id, item_id)
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS boutique_achats (
+    user_id   TEXT,
+    guild_id  TEXT,
+    item_id   INTEGER,
+    achetedAt INTEGER DEFAULT (strftime('%s','now')),
+    PRIMARY KEY(user_id, guild_id, item_id)
   )`).run();
 } catch {}
+
+function isAdmin(member) {
+  return member.permissions.has(PermissionFlagsBits.Administrator) || member.permissions.has(PermissionFlagsBits.ManageGuild);
+}
+
+function fmt(n) { return n.toLocaleString('fr-FR'); }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('boutique')
-    .setDescription('🛍️ Boutique du serveur — Dépensez vos coins !')
-    .addSubcommand(s => s.setName('voir').setDescription('👀 Voir les articles disponibles'))
-    .addSubcommand(s => s.setName('acheter').setDescription('💰 Acheter un article')
-      .addStringOption(o => o.setName('article').setDescription('Nom de l\'article').setRequired(true)))
-    .addSubcommand(s => s.setName('inventaire').setDescription('🎒 Voir votre inventaire')
-      .addUserOption(o => o.setName('membre').setDescription('Voir l\'inventaire d\'un membre')))
-    .addSubcommand(s => s.setName('utiliser').setDescription('✅ Utiliser un article de votre inventaire')
-      .addStringOption(o => o.setName('article').setDescription('Nom de l\'article à utiliser').setRequired(true)))
-    .addSubcommand(s => s.setName('ajouter').setDescription('➕ Ajouter un article à la boutique (Admin)')
-      .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
-      .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(200))
-      .addStringOption(o => o.setName('emoji').setDescription('Emoji de l\'article'))
-      .addRoleOption(o => o.setName('role').setDescription('Rôle à donner lors de l\'achat'))
-    .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer un article (Admin)')
-      .addStringOption(o => o.setName('article').setDescription('Nom de l\'article').setRequired(true))),
+    .setDescription('🏪 Boutique du serveur — Dépense tes coins pour des récompenses !')
+    .addSubcommand(s => s
+      .setName('voir')
+      .setDescription('🛍️ Voir tous les articles disponibles'))
+    .addSubcommand(s => s
+      .setName('acheter')
+      .setDescription('💳 Acheter un article')
+      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
+    .addSubcommand(s => s
+      .setName('inventaire')
+      .setDescription('🎒 Voir vos achats'))
+    .addSubcommand(s => s
+      .setName('admin-ajouter')
+      .setDescription('⚙️ [Admin] Ajouter un article à la boutique')
+      .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true))
+      .addIntegerOption(o => o.setName('prix').setDescription('Prix en coins').setRequired(true))
+      .addStringOption(o => o.setName('type').setDescription('Type: role / titre / item').setRequired(true)
+        .addChoices(
+          { name: '🎭 Rôle Discord', value: 'role' },
+          { name: '🏷️ Titre personnalisé', value: 'titre' },
+          { name: '🎁 Item spécial', value: 'item' },
+        ))
+      .addStringOption(o => o.setName('valeur').setDescription('ID du rôle ou texte du titre').setRequired(true))
+      .addStringOption(o => o.setName('emoji').setDescription('Emoji de l\'article').setRequired(false))
+      .addIntegerOption(o => o.setName('stock').setDescription('Stock limité (-1 = illimité)').setRequired(false)))
+    .addSubcommand(s => s
+      .setName('admin-retirer')
+      .setDescription('⚙️ [Admin] Retirer un article')
+      .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    const sub = interaction.options.getSubcommand();
+    const sub     = interaction.options.getSubcommand();
+    const userId  = interaction.user.id;
     const guildId = interaction.guildId;
-    const userId = interaction.user.id;
-    const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '€';
+    const member  = interaction.member;
+    const cfg     = db.getConfig ? db.getConfig(guildId) : null;
+    const coin    = cfg?.currency_emoji || '🪙';
 
+    // ── VOIR ────────────────────────────────────────────────
     if (sub === 'voir') {
-      const items = db.db.prepare('SELECT * FROM shop_items WHERE guild_id=? ORDER BY price ASC').all(guildId);
-      if (!items.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ La boutique est vide. Un admin peut ajouter des articles avec `/boutique ajouter`.', ephemeral: true });
+      const items = db.db.prepare('SELECT * FROM boutique_items WHERE guild_id=? AND actif=1 ORDER BY prix ASC').all(guildId);
 
-      const lines = items.map(i => {
-        const stock = i.stock === -1 ? '∞' : i.stock > 0 ? i.stock : '**Épuisé**';
-        return `${i.emoji} **${i.name}** — ${i.price} ${coin}\n> ${i.description} | Stock: ${stock}${i.role_id ? ` | Rôle: <@&${i.role_id}>` : ''}`;
-      }).join('\n\n');
+      if (!items.length) {
+        return interaction.reply({
+          content: '🏪 La boutique est vide pour le moment. Un admin peut ajouter des articles avec `/boutique admin-ajouter`.',
+          ephemeral: true,
+        });
+      }
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#F1C40F').setTitle('🛍️ Boutique du serveur')
-          .setDescription(lines)
-          .setFooter({ text: `${items.length} article(s) • /boutique acheter <article>` })
-      ]});
+      const u      = db.getUser(userId, guildId);
+      const coins  = u?.balance || 0;
+
+      const embed = new EmbedBuilder()
+        .setColor(0xFEE75C)
+        .setTitle('🏪 Boutique du Serveur')
+        .setDescription(`Votre solde : **${fmt(coins)} ${coin}**\nUtilisez \`/boutique acheter <id>\` pour acheter un article.`)
+        .setTimestamp();
+
+      const TYPE_LABELS = { role: '🎭 Rôle', titre: '🏷️ Titre', item: '🎁 Item' };
+
+      items.forEach(item => {
+        const canAfford = coins >= item.prix;
+        const stockTxt  = item.stock === -1 ? '∞' : `${item.stock} restant(s)`;
+        embed.addFields({
+          name:   `${item.emoji || '🎁'} [#${item.id}] ${item.nom} ${canAfford ? '✅' : '❌'}`,
+          value:  `Type : ${TYPE_LABELS[item.type] || item.type} | Stock : ${stockTxt}\nPrix : **${fmt(item.prix)} ${coin}**`,
+          inline: true,
+        });
+      });
+
+      return interaction.reply({ embeds: [embed] });
     }
 
+    // ── ACHETER ─────────────────────────────────────────────
     if (sub === 'acheter') {
-      const nom = interaction.options.getString('article');
-      const item = db.db.prepare('SELECT * FROM shop_items WHERE guild_id=? AND LOWER(name)=LOWER(?)').get(guildId, nom);
-      if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article **${nom}** introuvable. Voir la boutique : \`/boutique voir\`.`, ephemeral: true });
-      if (item.stock === 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${item.name}** est épuisé !`, ephemeral: true });
+      const itemId = interaction.options.getInteger('id');
+      const item   = db.db.prepare('SELECT * FROM boutique_items WHERE id=? AND guild_id=? AND actif=1').get(itemId, guildId);
 
-      const u = db.getUser(userId, guildId);
-      if (u.balance < item.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant. **${item.price} ${coin}** requis, vous avez **${u.balance} ${coin}**.`, ephemeral: true });
+      if (!item) return interaction.reply({ content: `❌ Article #${itemId} introuvable.`, ephemeral: true });
 
-      // Vérifier si déjà possédé (pour les rôles)
-      const existing = db.db.prepare('SELECT * FROM user_inventory WHERE guild_id=? AND user_id=? AND item_id=?').get(guildId, userId, item.id);
-      if (existing && item.role_id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous possédez déjà **${item.name}** !`, ephemeral: true });
+      const dejAch = db.db.prepare('SELECT 1 FROM boutique_achats WHERE user_id=? AND guild_id=? AND item_id=?').get(userId, guildId, itemId);
+      if (dejAch) return interaction.reply({ content: `❌ Tu possèdes déjà **${item.nom}**.`, ephemeral: true });
 
-      db.addCoins(userId, guildId, -item.price);
-      if (existing) {
-        db.db.prepare('UPDATE user_inventory SET quantity=quantity+1 WHERE guild_id=? AND user_id=? AND item_id=?').run(guildId, userId, item.id);
+      if (item.stock === 0) return interaction.reply({ content: '❌ Stock épuisé !', ephemeral: true });
+
+      const u     = db.getUser(userId, guildId);
+      const coins = u?.balance || 0;
+      if (coins < item.prix) {
+        return interaction.reply({
+          content: `❌ Pas assez de coins. Tu as **${fmt(coins)} ${coin}** mais l'article coûte **${fmt(item.prix)} ${coin}**.`,
+          ephemeral: true,
+        });
+      }
+
+      db.addCoins(userId, guildId, -item.prix);
+      db.db.prepare('INSERT OR IGNORE INTO boutique_achats (user_id, guild_id, item_id) VALUES (?,?,?)').run(userId, guildId, itemId);
+
+      if (item.stock > 0) db.db.prepare('UPDATE boutique_items SET stock=stock-1 WHERE id=?').run(itemId);
+
+      let effectMsg = '';
+      if (item.type === 'role') {
+        const role = interaction.guild.roles.cache.get(item.valeur);
+        if (role) {
+          await member.roles.add(role).catch(() => null);
+          effectMsg = `✅ Le rôle **${role.name}** t'a été attribué !`;
+        } else {
+          effectMsg = '⚠️ Rôle introuvable — contacte un admin.';
+        }
+      } else if (item.type === 'titre') {
+        effectMsg = `🏷️ Titre débloqué : **${item.valeur}**`;
       } else {
-        db.db.prepare('INSERT INTO user_inventory (guild_id, user_id, item_id) VALUES (?,?,?)').run(guildId, userId, item.id);
-      }
-      if (item.stock > 0) db.db.prepare('UPDATE shop_items SET stock=stock-1 WHERE id=?').run(item.id);
-
-      // Donner le rôle si applicable
-      if (item.role_id) {
-        try {
-          await interaction.member.roles.add(item.role_id);
-        } catch {}
+        effectMsg = `🎁 Item obtenu : **${item.nom}**`;
       }
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Achat réussi !')
-          .setDescription(`Vous avez acheté **${item.emoji} ${item.name}** pour **${item.price} ${coin}** !`)
-          .addFields(
-            { name: '👛 Nouveau solde', value: `${u.balance - item.price} ${coin}`, inline: true },
-            { name: '🎒 Article', value: item.description, inline: true },
-          )
-      ]});
+      const embed = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle(`✅ Achat réussi — ${item.emoji || '🎁'} ${item.nom}`)
+        .setDescription(`${effectMsg}\n\n**Coût :** -${fmt(item.prix)} ${coin}\n**Solde restant :** ${fmt(coins - item.prix)} ${coin}`)
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
+    // ── INVENTAIRE ──────────────────────────────────────────
     if (sub === 'inventaire') {
-      const target = interaction.options.getUser('membre') || interaction.user;
-      const inv = db.db.prepare(`
-        SELECT ui.*, si.name, si.description, si.emoji, si.price
-        FROM user_inventory ui JOIN shop_items si ON ui.item_id=si.id
-        WHERE ui.guild_id=? AND ui.user_id=?
-      `).all(guildId, target.id);
+      const achats = db.db.prepare(`
+        SELECT b.*, bi.nom, bi.emoji, bi.type, bi.valeur, bi.prix
+        FROM boutique_achats b
+        JOIN boutique_items bi ON b.item_id = bi.id
+        WHERE b.user_id=? AND b.guild_id=?
+      `).all(userId, guildId);
 
-      if (!inv.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${target.id === userId ? 'Votre inventaire est vide.' : `<@${target.id}> n'a rien dans son inventaire.`}`, ephemeral: true });
-
-      const lines = inv.map(i => `${i.emoji} **${i.name}** x${i.quantity}${i.used ? ' *(utilisé)*' : ''}\n> ${i.description}`).join('\n\n');
-
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#7B2FBE').setTitle(`🎒 Inventaire de ${target.username}`)
-          .setDescription(lines).setThumbnail(target.displayAvatarURL())
-      ], ephemeral: target.id !== userId });
-    }
-
-    if (sub === 'utiliser') {
-      const nom = interaction.options.getString('article');
-      const invItem = db.db.prepare(`
-        SELECT ui.*, si.name, si.emoji, si.role_id, si.type
-        FROM user_inventory ui JOIN shop_items si ON ui.item_id=si.id
-        WHERE ui.guild_id=? AND ui.user_id=? AND LOWER(si.name)=LOWER(?) AND ui.quantity>0
-      `).get(guildId, userId, nom);
-
-      if (!invItem) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous ne possédez pas **${nom}** ou votre stock est épuisé.`, ephemeral: true });
-
-      db.db.prepare('UPDATE user_inventory SET quantity=quantity-1, used=1 WHERE guild_id=? AND user_id=? AND item_id=?').run(guildId, userId, invItem.item_id);
-
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Vous avez utilisé **${invItem.emoji} ${invItem.name}** !`)
-      ], ephemeral: true });
-    }
-
-    if (sub === 'ajouter') {
-      if (!interaction.member.permissions.has(8n)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
-      const nom = interaction.options.getString('nom');
-      const desc = interaction.options.getString('description');
-      const prix = parseInt(interaction.options.getString('prix'));
-      const emoji = interaction.options.getString('emoji') || '🛍️';
-      const role = interaction.options.getRole('role');
-      const stock = parseInt(interaction.options.getString('stock')) ?? -1;
-
-      try {
-        db.db.prepare('INSERT INTO shop_items (guild_id, name, description, price, emoji, role_id, stock) VALUES (?,?,?,?,?,?,?)')
-          .run(guildId, nom, desc, prix, emoji, role?.id || null, stock);
-      } catch {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Un article avec ce nom existe déjà.`, ephemeral: true });
+      if (!achats.length) {
+        return interaction.reply({ content: '🎒 Votre inventaire est vide. Visitez `/boutique voir` !', ephemeral: true });
       }
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Article ajouté !')
-          .addFields(
-            { name: '🏷️ Nom', value: `${emoji} ${nom}`, inline: true },
-            { name: '💰 Prix', value: `${prix} ${coin}`, inline: true },
-            { name: '📦 Stock', value: stock === -1 ? 'Illimité' : `${stock}`, inline: true },
-          )
-      ], ephemeral: true });
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle(`🎒 Vos achats — ${interaction.user.username}`)
+        .setTimestamp();
+
+      const TYPE_LABELS = { role: '🎭 Rôle', titre: '🏷️ Titre', item: '🎁 Item' };
+      achats.forEach(a => {
+        embed.addFields({
+          name:   `${a.emoji || '🎁'} ${a.nom}`,
+          value:  `Type : ${TYPE_LABELS[a.type] || a.type} | Payé : **${fmt(a.prix)} ${coin}**`,
+          inline: true,
+        });
+      });
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    if (sub === 'supprimer') {
-      if (!interaction.member.permissions.has(8n)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
-      const nom = interaction.options.getString('article');
-      const r = db.db.prepare('DELETE FROM shop_items WHERE guild_id=? AND LOWER(name)=LOWER(?)').run(guildId, nom);
-      if (!r.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article **${nom}** introuvable.`, ephemeral: true });
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Article **${nom}** supprimé.`, ephemeral: true });
+    // ── ADMIN-AJOUTER ───────────────────────────────────────
+    if (sub === 'admin-ajouter') {
+      if (!isAdmin(member)) return interaction.reply({ content: '❌ Réservé aux admins.', ephemeral: true });
+
+      const nom   = interaction.options.getString('nom');
+      const prix  = interaction.options.getInteger('prix');
+      const type  = interaction.options.getString('type');
+      const val   = interaction.options.getString('valeur');
+      const emoji = interaction.options.getString('emoji') || '🎁';
+      const stock = interaction.options.getInteger('stock') ?? -1;
+
+      const result = db.db.prepare(
+        'INSERT INTO boutique_items (guild_id, nom, emoji, type, valeur, prix, stock) VALUES (?,?,?,?,?,?,?)'
+      ).run(guildId, nom, emoji, type, val, prix, stock);
+
+      return interaction.reply({
+        content: `✅ Article **${emoji} ${nom}** ajouté (ID: #${result.lastInsertRowid}) au prix de **${fmt(prix)} ${coin}**.`,
+        ephemeral: true,
+      });
     }
-  }
+
+    // ── ADMIN-RETIRER ───────────────────────────────────────
+    if (sub === 'admin-retirer') {
+      if (!isAdmin(member)) return interaction.reply({ content: '❌ Réservé aux admins.', ephemeral: true });
+      const itemId = interaction.options.getInteger('id');
+      db.db.prepare('UPDATE boutique_items SET actif=0 WHERE id=? AND guild_id=?').run(itemId, guildId);
+      return interaction.reply({ content: `✅ Article #${itemId} retiré de la boutique.`, ephemeral: true });
+    }
+  },
 };
+
