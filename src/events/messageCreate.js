@@ -134,10 +134,10 @@ async function handleAdmin(cmd, args, message) {
       return true;
     }
     try {
-      await db.run('INSERT OR IGNORE INTO economy (userId, guildId, coins) VALUES (?,?,0)', [mention.id, guildId]);
-      await db.run('UPDATE economy SET coins = coins + ? WHERE userId = ? AND guildId = ?', [amount, mention.id, guildId]);
-      await message.reply(`**${mention.username}** a recu **${amount.toLocaleString('fr-FR')}** coins.`);
-    } catch(e) { await message.reply(`Erreur DB: ${e.message}`); }
+      db.db.prepare('INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?,?)').run(mention.id, guildId);
+      db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(amount, mention.id, guildId);
+      await message.reply('**' + mention.username + '** a recu **' + amount.toLocaleString('fr-FR') + '** coins.');
+    } catch(e) { await message.reply('Erreur DB: ' + e.message); }
     return true;
   }
 
@@ -150,9 +150,10 @@ async function handleAdmin(cmd, args, message) {
       return true;
     }
     try {
-      await db.run('UPDATE economy SET coins = MAX(0, coins - ?) WHERE userId = ? AND guildId = ?', [amount, mention.id, guildId]);
-      await message.reply(`**${amount.toLocaleString('fr-FR')}** coins retires a **${mention.username}**.`);
-    } catch(e) { await message.reply(`Erreur DB: ${e.message}`); }
+      db.db.prepare('INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?,?)').run(mention.id, guildId);
+      db.db.prepare('UPDATE users SET balance = MAX(0, balance - ?) WHERE user_id = ? AND guild_id = ?').run(amount, mention.id, guildId);
+      await message.reply('**' + amount.toLocaleString('fr-FR') + '** coins retires a **' + mention.username + '**.');
+    } catch(e) { await message.reply('Erreur DB: ' + e.message); }
     return true;
   }
 
@@ -161,9 +162,9 @@ async function handleAdmin(cmd, args, message) {
     const mention = message.mentions.users.first();
     if (!mention) { await message.reply('Usage : `&reset @membre`'); return true; }
     try {
-      await db.run('UPDATE economy SET coins = 0, bank = 0 WHERE userId = ? AND guildId = ?', [mention.id, guildId]);
-      await message.reply(`Compte de **${mention.username}** remis a zero.`);
-    } catch(e) { await message.reply(`Erreur DB: ${e.message}`); }
+      db.db.prepare('UPDATE users SET balance = 0, bank = 0 WHERE user_id = ? AND guild_id = ?').run(mention.id, guildId);
+      await message.reply('Compte de **' + mention.username + '** remis a zero.');
+    } catch(e) { await message.reply('Erreur DB: ' + e.message); }
     return true;
   }
 
@@ -172,11 +173,11 @@ async function handleAdmin(cmd, args, message) {
     const mention = message.mentions.users.first();
     if (!mention) { await message.reply('Usage : `&solde @membre`'); return true; }
     try {
-      const row = await db.get('SELECT coins, bank FROM economy WHERE userId = ? AND guildId = ?', [mention.id, guildId]);
-      const coins = row?.coins ?? 0;
-      const bank  = row?.bank  ?? 0;
-      await message.reply(`**${mention.username}** - Portefeuille : **${coins.toLocaleString('fr-FR')}** | Banque : **${bank.toLocaleString('fr-FR')}** coins`);
-    } catch(e) { await message.reply(`Erreur DB: ${e.message}`); }
+      const row = db.db.prepare('SELECT balance, bank FROM users WHERE user_id = ? AND guild_id = ?').get(mention.id, guildId);
+      const bal  = row && row.balance ? row.balance : 0;
+      const bank = row && row.bank    ? row.bank    : 0;
+      await message.reply('**' + mention.username + '** - Portefeuille : **' + bal.toLocaleString('fr-FR') + '** | Banque : **' + bank.toLocaleString('fr-FR') + '** coins');
+    } catch(e) { await message.reply('Erreur DB: ' + e.message); }
     return true;
   }
 
@@ -185,12 +186,9 @@ async function handleAdmin(cmd, args, message) {
     const mention = message.mentions.users.first();
     if (!mention) { await message.reply('Usage : `&cooldown @membre`'); return true; }
     try {
-      await db.run(
-        'UPDATE stats SET lastTravail=0, lastDaily=0, lastMissions=0 WHERE userId=? AND guildId=?',
-        [mention.id, guildId]
-      );
-      await message.reply(`Cooldowns de **${mention.username}** reinitialises.`);
-    } catch(e) { await message.reply(`Erreur DB: ${e.message}`); }
+      db.db.prepare('UPDATE users SET last_work=0, last_daily=0, last_crime=0, last_rob=0 WHERE user_id=? AND guild_id=?').run(mention.id, guildId);
+      await message.reply('Cooldowns de **' + mention.username + '** reinitialises.');
+    } catch(e) { await message.reply('Erreur DB: ' + e.message); }
     return true;
   }
 
@@ -206,7 +204,6 @@ async function handleAdmin(cmd, args, message) {
         '`&cooldown @membre` - Reinitialiser les cooldowns',
         '',
         'Toutes les commandes slash fonctionnent aussi avec `&`',
-        'Exemple : `&balance`, `&work`, `&daily`, `&rob @membre`',
       ].join('\n'));
     await message.reply({ embeds: [embed] });
     return true;
