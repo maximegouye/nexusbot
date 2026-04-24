@@ -1,0 +1,15 @@
+=== DEPLOY FINAL — jeu. 23 avr. 2026 12:56:51 CEST ===
+✅ Fichier corrigé trouvé
+✅ Backup créé: bak_1776941811
+✅ interactionCreate.js remplacé
+
+=== GIT ===
+src/events/interactionCreate.js
+[main 78b488f] 🔧 Fix: correction complète interactionCreate.js (reply/defer/syntax) [12:56]
+ 1 file changed, 39 insertions(+), 42 deletions(-)
+To https://github.com/maximegouye/nexusbot.git
+   eb1e0a1..78b488f  main -> main
+
+🚀 PUSH OK → Railway redéploie dans 2-3 min
+
+=== TERMINÉ ===

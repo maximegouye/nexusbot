@@ -1,0 +1,418 @@
+============================================================
+=== DATABASE MODULE ===
+============================================================
+TROUVE: /Users/maxime/Downloads/NexusBot/src/database/db.js
+const Database = require('better-sqlite3');
+const path = require('path');
+const fs = require('fs');
+
+// Sur Railway : DB_PATH=/app/data/nexusbot.db (volume persistant)
+// En local : utilise le chemin relatif par défaut
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/nexusbot.db');
+const dataDir = path.dirname(dbPath);
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const db = new Database(dbPath);
+
+// Optimisations
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('foreign_keys = ON');
+
+// ================================
+// SCHEMA
+// ================================
+db.exec(`
+  -- Config par serveur
+  CREATE TABLE IF NOT EXISTS guild_config (
+    guild_id            TEXT PRIMARY KEY,
+    prefix              TEXT DEFAULT '&',
+    lang                TEXT DEFAULT 'fr',
+    color               TEXT DEFAULT '#7B2FBE',
+    xp_enabled          INTEGER DEFAULT 1,
+    xp_multiplier       INTEGER DEFAULT 1,
+    eco_enabled         INTEGER DEFAULT 1,
+    welcome_channel     TEXT,
+    welcome_msg         TEXT,
+    leave_channel       TEXT,
+    leave_msg           TEXT,
+    log_channel         TEXT,
+    mod_log_channel     TEXT,
+    level_channel       TEXT,
+    level_msg           TEXT,
+    starboard_channel   TEXT,
+    starboard_threshold INTEGER DEFAULT 3,
+    automod_enabled     INTEGER DEFAULT 0,
+    automod_badwords    TEXT DEFAULT '[]',
+    automod_antispam    INTEGER DEFAULT 1,
+    automod_antilink    INTEGER DEFAULT 0,
+    mute_role           TEXT,
+    autorole            TEXT,
+    ticket_category     TEXT,
+    ticket_log          TEXT,
+    ticket_staff_role   TEXT,
+    ticket_channel      TEXT,
+    currency_name       TEXT DEFAULT 'Euros',
+    currency_emoji      TEXT DEFAULT '€',
+    daily_amount        INTEGER DEFAULT 25,
+    xp_rate             INTEGER DEFAULT 15,
+    coins_per_msg       INTEGER DEFAULT 1,
+    quest_channel       TEXT,
+    birthday_channel    TEXT,
+    birthday_role       TEXT,
+    health_channel      TEXT,
+    tempvoice_creator   TEXT,
+    created_at          INTEGER DEFAULT (strftime('%s','now'))
+  );
+
+  -- Utilisateurs
+  CREATE TABLE IF NOT EXISTS users (
+    user_id         TEXT NOT NULL,
+    guild_id        TEXT NOT NULL,
+    balance         INTEGER DEFAULT 0,
+    bank            INTEGER DEFAULT 0,
+    total_earned    INTEGER DEFAULT 0,
+    xp              INTEGER DEFAULT 0,
+    level           INTEGER DEFAULT 1,
+    voice_xp        INTEGER DEFAULT 0,
+    voice_minutes   INTEGER DEFAULT 0,
+    message_count   INTEGER DEFAULT 0,
+    reputation      INTEGER DEFAULT 0,
+    last_daily      INTEGER DEFAULT 0,
+    last_work       INTEGER DEFAULT 0,
+    last_crime      INTEGER DEFAULT 0,
+    last_rob        INTEGER DEFAULT 0,
+    last_message    INTEGER DEFAULT 0,
+    streak          INTEGER DEFAULT 0,
+    birthday        TEXT,
+    birth_year      INTEGER,
+    joined_at       INTEGER DEFAULT (strftime('%s','now')),
+    timezone        TEXT DEFAULT 'Europ
+
+============================================================
+=== BALANCE COMMAND ===
+============================================================
+FICHIER: /Users/maxime/Downloads/NexusBot/src/commands/economy/balance.js
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const db = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('balance')
+    .setDescription('💶 Affiche ton solde ou celui d\'un autre membre')
+    .addUserOption(o => o.setName('membre').setDescription('Membre à consulter').setRequired(false)),
+  cooldown: 5,
+
+  async execute(interaction) {
+    const target  = interaction.options.getUser('membre') || interaction.user;
+    const cfg     = db.getConfig(interaction.guildId);
+    const user    = db.getUser(target.id, interaction.guildId);
+    const symbol  = cfg.currency_emoji || '€';
+    const name    = cfg.currency_name  || 'Euros';
+
+    // Classement par richesse totale (portefeuille + banque)
+    const rank = db.db.prepare(
+      'SELECT COUNT(*) as r FROM users WHERE guild_id = ? AND (balance + bank) > ?'
+    ).get(interaction.guildId, user.balance + user.bank).r + 1;
+
+    // Total des membres avec de l'argent
+    const totalMembers = db.db.prepare(
+      "SELECT COUNT(*) as c FROM users WHERE guild_id = ? AND (balance + bank) > 0"
+    ).get(interaction.guildId).c;
+
+    // Portefeuille crypto
+    let cryptoValue = 0;
+    let cryptoLines = '';
+    try {
+      const wallet = db.getWallet(target.id, interaction.guildId);
+      if (wallet && wallet.length) {
+        const market = new Map((db.getCryptoMarket() || []).map(c => [c.symbol, c]));
+        for (const w of wallet) {
+          const m = market.get(w.crypto);
+          if (!m) continue;
+          const val = Math.floor(w.amount * m.price);
+          cryptoValue += val;
+          cryptoLines += `${m.emoji} **${w.crypto}** · ${w.amount.toFixed(6)} → ${val.toLocaleString('fr-FR')}${symbol}\n`;
+        }
+      }
+    } catch {}
+
+    const netWorth = user.balance + user.bank + cryptoValue;
+    const percentile = totalMembers > 1 ? Math.round((1 - (rank - 1) / totalMembers) * 100) : 100;
+
+    const embed = new EmbedBuilder()
+      .setColor(cfg.color || '#7B2FBE')
+      .setTitle(`💶 Portefeuille — ${target.username}`)
+      .setThumbnail(target.displayAvatarURL({ size: 256 }))
+      .addFields(
+        { name: '👛 Liquide',           value: `**${user.balance.toLocaleString('fr-FR')}${symbol}**`,  inline: true },
+        { name: '🏦 Banque',            value: `**${user.bank.toLocaleString('fr-FR')}${symbol}**`,     inline: true },
+        { name: '💹 Crypto',            value: `**${cryptoValue.toLocaleString('fr-FR')}${symbol}**`,   inline: true },
+        { name: '💎 Fortune totale',    value: `**${netWorth.toLocaleString('fr-FR')}${symbol}**`,      inline: false },
+        { name: '📈 Total gagné',       value: `**${user.total_earned.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+        { name: '🏆 Classement',        value: `**#${rank}** sur ${totalMembers} membres`,           inline: true },
+        { name: '📊 Percentile',        value: `**Top ${100 - percentile + 1}%**`,                   inline: true },
+      );
+
+    if (crypto
+
+============================================================
+=== WORK COMMAND ===
+============================================================
+FICHIER: /Users/maxime/Downloads/NexusBot/src/commands/economy/work.js
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const db = require('../../database/db');
+
+function trackMission(userId, guildId, type, amount = 1) {
+  try { require('../../commands_guild/unique/missions').progressMission(userId, guildId, type, amount); } catch {}
+}
+
+const JOBS = [
+  { name: 'Développeur',    emoji: '💻', min: 18, max: 45 },
+  { name: 'Médecin',        emoji: '🩺', min: 22, max: 55 },
+  { name: 'Chef cuisto',    emoji: '👨‍🍳', min: 12, max: 30 },
+  { name: 'Pilote',         emoji: '✈️', min: 20, max: 50 },
+  { name: 'Pompier',        emoji: '🔥', min: 15, max: 38 },
+  { name: 'Détective',      emoji: '🕵️', min: 18, max: 42 },
+  { name: 'Astronaute',     emoji: '🚀', min: 25, max: 65 },
+  { name: 'Musicien',       emoji: '🎵', min: 8,  max: 35 },
+  { name: 'Streamer',       emoji: '🎮', min: 5,  max: 80 }, // variance élevée comme IRL
+  { name: 'YouTubeur',      emoji: '📹', min: 3,  max: 90 },
+  { name: 'Trader',         emoji: '📈', min: 2,  max: 120 }, // risque élevé
+  { name: 'Agriculteur',    emoji: '🌾', min: 10, max: 28 },
+  { name: 'Chirurgien',     emoji: '🔪', min: 25, max: 60 },
+  { name: 'Boxeur',         emoji: '🥊', min: 15, max: 45 },
+  { name: 'Inventeur',      emoji: '💡', min: 12, max: 70 },
+  { name: 'Architecte',     emoji: '🏗️', min: 20, max: 52 },
+  { name: 'Journaliste',    emoji: '📰', min: 14, max: 36 },
+  { name: 'Chauffeur',      emoji: '🚗', min: 10, max: 25 },
+  { name: 'Pharmacien',     emoji: '💊', min: 20, max: 48 },
+  { name: 'Graphiste',      emoji: '🎨', min: 15, max: 40 },
+];
+
+const PHRASES = [
+  'Tu as passé la journée à travailler comme **{job}** et tu as gagné',
+  'Après une longue journée en tant que **{job}**, tu rapportes',
+  'Tu as brillé comme **{job}** et tu empoches',
+  'Mission accomplie ! En tant que **{job}**, tu reçois',
+  'Ton patron est ravi de toi ! Tu gagnes',
+  'Tu as travaillé dur toute la journée. Résultat :',
+  'Une journée bien remplie en tant que **{job}** — tu encaisses',
+];
+
+module.exp
+
+============================================================
+=== interactionCreate.js ACTUEL ===
+============================================================
+'use strict';
+
+// Routes des composants (boutons, menus, modals) vers la commande handler
+const COMPONENT_ROUTES = {
+  'part_':       'partenariat',
+  'travail_job_':'travail',
+  'casino_':     'casino',
+  'blackjack_':  'blackjack',
+  'crash_':      'crash',
+  'mines_':      'mines',
+  'poker_':      'poker',
+  'slot_':       'slots',
+  'roulette_':   'roulette',
+  'rob_':        'rob',
+  'fish_':       'fish',
+  'quest_':      'quest',
+  'ticket_':     'ticket',
+  'giveaway_':   'giveaway',
+  'suggest_':    'suggestion',
+  'voice_':      'tempvoice',
+  'conf_':       'confession',
+  'rep_':        'rep',
+  'bump_':       'bump',
+};
+
+module.exports = {
+  name: 'interactionCreate',
+
+  async execute(interaction, client) {
+
+    // -- Slash Commands
+    if (interaction.isChatInputCommand()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command) {
+        return interaction.reply({ content: 'Commande inconnue.', ephemeral: true }).catch(() => {});
+      }
+
+      try {
+        await interaction.deferReply({ ephemeral: false }).catch(() => {});
+        await command.execute(interaction);
+      } catch (error) {
+        console.error(`[SLASH /${interaction.commandName}] Erreur:`, error?.message || error);
+        const errMsg = { content: 'Une erreur est survenue lors de l\'execution.', ephemeral: true };
+        try {
+          if (interaction.deferred || interaction.replied) {
+            await interaction.editReply(errMsg);
+          } else {
+            await interaction.reply(errMsg);
+          }
+        } catch (_) {}
+      }
+      return;
+    }
+
+    // -- Autocomplete
+    if (interaction.isAutocomplete()) {
+      const command = client.commands.get(interaction.commandName);
+      if (command?.autocomplete) {
+        try { await command.autocomplete(interaction); } catch (_) {}
+      }
+      return;
+    }
+
+    // -- Boutons / Menus / Modals
+    if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
+      const cid = interaction.customId || '';
+
+      let handler = null;
+      for (const [prefix, cmdName] of Object.entries(COMPONENT_ROUTES)) {
+        if (cid.startsWith(prefix)) {
+          handler = client.commands.get(cmdName);
+          break;
+        }
+      }
+
+      if (!handler) {
+        const firstPart = cid.split('_')[0].split('-')[0].toLowerCase();
+        handler = client.commands.get(firstPart);
+      }
+
+      if (!handler) {
+        for (const [, cmd] of client.commands) {
+          if (typeof cmd.handleComponent === 'function') {
+            try {
+              const handled = await cmd.handleComponent(interaction, cid);
+              if (handled) return;
+            } catch (_) {}
+          }
+        }
+      }
+
+      if (handler) {
+        try {
+          await handler.execute(interaction);
+        } catch (e) {
+          console.error(`[COMPONENT ${cid}] Erreur:`, e?.message || e);
+          if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
+          }
+        }
+      }
+      return;
+    }
+  },
+};
+
+
+============================================================
+=== messageCreate.js ACTUEL ===
+============================================================
+'use strict';
+
+const path = require('path');
+const fs   = require('fs');
+const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const db = require('../database/db');
+
+const PREFIX = '&';
+
+// -- Chargement recursif de toutes les commandes slash
+function loadAllCommands(dir, map = new Map()) {
+  if (!fs.existsSync(dir)) return map;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name.includes('disabled')) continue;
+      loadAllCommands(full, map);
+    } else if (entry.name.endsWith('.js')) {
+      try {
+        const cmd = require(full);
+        const name = cmd.data?.name ?? null;
+        if (name && typeof cmd.execute === 'function') {
+          map.set(name.toLowerCase(), cmd);
+        }
+      } catch (e) {
+        // fichier invalide, on skip
+      }
+    }
+  }
+  return map;
+}
+
+// Cache des commandes (charge au premier appel)
+let _cmds = null;
+function getCmds() {
+  if (!_cmds) {
+    const dir = path.join(__dirname, '..', 'commands');
+    _cmds = loadAllCommands(dir);
+    console.log(`[PREFIX] ${_cmds.size} commandes chargees pour le prefixe &`);
+  }
+  return _cmds;
+}
+
+// -- Cree un objet "interaction" factice a partir d'un message
+function mockInteraction(message, args) {
+  const mentionedUser   = message.mentions.users.first()   ?? null;
+  const mentionedMember = message.mentions.members?.first() ?? null;
+  const cleanArgs = args.filter(a => !/<@!?\d+>/.test(a));
+
+  const obj = {
+    user:            message.author,
+    member:          message.member,
+    guild:           message.guild,
+    guildId:         message.guild?.id ?? null,
+    channel:         message.channel,
+    channelId:       message.channel?.id ?? null,
+    client:          message.client,
+    locale:          'fr',
+    deferred:        true,
+    replied:         false,
+
+    isChatInputCommand:  () => true,
+    isButton:            () => false,
+    isModalSubmit:       () => false,
+    isStringSelectMenu:  () => false,
+    isAutocomplete:      () => false,
+
+    options: {
+      _args:   cleanArgs,
+      _raw:    args,
+      _msg:    message,
+
+      getString(name, required = false) {
+        return cleanArgs[0] ?? null;
+      },
+      getInteger(name, required = false) {
+        const v = parseInt(cleanArgs[0]);
+        return isNaN(v) ? null : v;
+      },
+      getNumber(name, required = false) {
+        const v = parseFloat(cleanArgs[0]);
+        return isNaN(v) ? null : v;
+      },
+      getUser(name, required = false) {
+        return mentionedUser;
+      },
+      getMember(name, required = false) {
+        return mentionedMember;
+      },
+      getBoolean(name, required = false) {
+        const v = (cleanArgs[0] ?? '').toLowerCase();
+        return v === 'true' || v === 'oui' || v === 'yes' || v === '1';
+      },
+      getChannel(name, required = false) {
+        return message.mentions.channels?.first() ?? null;
+      },
+      getRole(name, re
+
+============================================================
+=== COMMANDES UTILISANT reply() (potentiellement problematiques avec deferReply) ===
+============================================================

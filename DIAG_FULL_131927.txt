@@ -1,0 +1,4 @@
+=== DIAGNOSTIC COMPLET NEXUSBOT - jeu. 23 avr. 2026 13:19:27 CEST ===
+Dossier: /Users/maxime/Downloads/NexusBot
+
+❌ node introuvable! Installe nvm et node.
