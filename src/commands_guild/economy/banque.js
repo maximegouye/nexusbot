@@ -80,9 +80,9 @@ module.exports = {
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId  = interaction.user.id;
-    const cfg     = db.getConfig(guildId);
+    const cfg     = db.getConfig(guildId) || {};
     const coin    = cfg.currency_emoji || '€';
-    const u       = db.getUser(userId, guildId);
+    const u       = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
     const bank    = u.bank || 0;
     const tier    = getTier(bank);
 
