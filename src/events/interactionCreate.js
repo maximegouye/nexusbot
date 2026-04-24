@@ -90,6 +90,15 @@ module.exports = {
 
       if (handler) {
         try {
+          // Essayer handleComponent en premier (boutons/selects)
+          if (typeof handler.handleComponent === 'function') {
+              try {
+                  const handled = await handler.handleComponent(interaction, cid);
+                  if (handled) return;
+              } catch (hcErr) {
+                  console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
+              }
+          }
           await handler.execute(interaction);
         } catch (e) {
           console.error(`[COMPONENT ${cid}] Erreur:`, e?.message || e);
