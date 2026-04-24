@@ -127,8 +127,20 @@ async function handleAdmin(cmd, args, message) {
 
   if (cmd === 'donner' || cmd === 'give') {
     if (!isAdmin) { await message.reply('Reserves aux administrateurs.'); return true; }
-    const mention = message.mentions.users.first();
-    const amount  = parseInt(args.find(a => !/<@/.test(a)) ?? '');
+    let mention = message.mentions.users.first();
+    if (!mention) {
+      // Support typed @username (not a real Discord mention)
+      const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
+      if (uname) {
+        const found = message.guild.members.cache.find(m =>
+          m.user.username.toLowerCase() === uname ||
+          m.displayName.toLowerCase() === uname ||
+          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+        );
+        if (found) mention = found.user;
+      }
+    }
+    const amount  = parseInt(args.find(a => !/<@/.test(a) && !a.startsWith('@')) ?? '');
     if (!mention || isNaN(amount) || amount <= 0) {
       await message.reply('Usage : `&donner @membre montant`');
       return true;
@@ -143,8 +155,20 @@ async function handleAdmin(cmd, args, message) {
 
   if (cmd === 'retirer' || cmd === 'remove' || cmd === 'enlever') {
     if (!isAdmin) { await message.reply('Reserves aux administrateurs.'); return true; }
-    const mention = message.mentions.users.first();
-    const amount  = parseInt(args.find(a => !/<@/.test(a)) ?? '');
+    let mention = message.mentions.users.first();
+    if (!mention) {
+      // Support typed @username (not a real Discord mention)
+      const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
+      if (uname) {
+        const found = message.guild.members.cache.find(m =>
+          m.user.username.toLowerCase() === uname ||
+          m.displayName.toLowerCase() === uname ||
+          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+        );
+        if (found) mention = found.user;
+      }
+    }
+    const amount  = parseInt(args.find(a => !/<@/.test(a) && !a.startsWith('@')) ?? '');
     if (!mention || isNaN(amount) || amount <= 0) {
       await message.reply('Usage : `&retirer @membre montant`');
       return true;
@@ -159,7 +183,19 @@ async function handleAdmin(cmd, args, message) {
 
   if (cmd === 'reset') {
     if (!isAdmin) { await message.reply('Reserves aux administrateurs.'); return true; }
-    const mention = message.mentions.users.first();
+    let mention = message.mentions.users.first();
+    if (!mention) {
+      // Support typed @username (not a real Discord mention)
+      const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
+      if (uname) {
+        const found = message.guild.members.cache.find(m =>
+          m.user.username.toLowerCase() === uname ||
+          m.displayName.toLowerCase() === uname ||
+          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+        );
+        if (found) mention = found.user;
+      }
+    }
     if (!mention) { await message.reply('Usage : `&reset @membre`'); return true; }
     try {
       db.db.prepare('UPDATE users SET balance = 0, bank = 0 WHERE user_id = ? AND guild_id = ?').run(mention.id, guildId);
@@ -170,7 +206,19 @@ async function handleAdmin(cmd, args, message) {
 
   if (cmd === 'solde' || cmd === 'bal') {
     if (!isAdmin) { await message.reply('Reserves aux administrateurs.'); return true; }
-    const mention = message.mentions.users.first();
+    let mention = message.mentions.users.first();
+    if (!mention) {
+      // Support typed @username (not a real Discord mention)
+      const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
+      if (uname) {
+        const found = message.guild.members.cache.find(m =>
+          m.user.username.toLowerCase() === uname ||
+          m.displayName.toLowerCase() === uname ||
+          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+        );
+        if (found) mention = found.user;
+      }
+    }
     if (!mention) { await message.reply('Usage : `&solde @membre`'); return true; }
     try {
       const row = db.db.prepare('SELECT balance, bank FROM users WHERE user_id = ? AND guild_id = ?').get(mention.id, guildId);
@@ -183,7 +231,19 @@ async function handleAdmin(cmd, args, message) {
 
   if (cmd === 'cooldown' || cmd === 'cd') {
     if (!isAdmin) { await message.reply('Reserves aux administrateurs.'); return true; }
-    const mention = message.mentions.users.first();
+    let mention = message.mentions.users.first();
+    if (!mention) {
+      // Support typed @username (not a real Discord mention)
+      const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
+      if (uname) {
+        const found = message.guild.members.cache.find(m =>
+          m.user.username.toLowerCase() === uname ||
+          m.displayName.toLowerCase() === uname ||
+          (m.user.globalName && m.user.globalName.toLowerCase() === uname)
+        );
+        if (found) mention = found.user;
+      }
+    }
     if (!mention) { await message.reply('Usage : `&cooldown @membre`'); return true; }
     try {
       db.db.prepare('UPDATE users SET last_work=0, last_daily=0, last_crime=0, last_rob=0 WHERE user_id=? AND guild_id=?').run(mention.id, guildId);
