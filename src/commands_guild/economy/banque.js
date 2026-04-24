@@ -77,23 +77,7 @@ module.exports = {
       .setDescription('🏆 Voir tous les tiers VIP et leurs avantages')),
 
   async execute(interaction) {
-    // --- DEBUG TRY-CATCH TEMPORAIRE ---
-    try {
-      return await this._executeInner(interaction);
-    } catch (debugErr) {
-      console.error('[BANQUE DEBUG]', debugErr);
-      const msg = '🐛 DEBUG: `' + (debugErr?.message || String(debugErr)).slice(0, 200) + '`';
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({ content: msg, ephemeral: true });
-        }
-      } catch (_) {}
-      throw debugErr;
-    }
-  },
-
-  async _executeInner(interaction) {
-    const sub     = interaction.options.getSubcommand();
+    const sub     = interaction.options.getSubcommand(false) || 'solde';
     const guildId = interaction.guildId;
     const userId  = interaction.user.id;
     const cfg     = db.getConfig(guildId) || {};
