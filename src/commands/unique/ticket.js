@@ -483,10 +483,16 @@ module.exports = {
         { id: interaction.guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
         { id: targetId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
       ];
-      if (cfg.ticket_staff_role) {
+      if (interaction.guild.ownerId && interaction.guild.ownerId !== targetId) {
         permissionOverwrites.push({
-          id: cfg.ticket_staff_role,
-          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages],
+          id: interaction.guild.ownerId,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.ManageMessages,
+            PermissionFlagsBits.ManageChannels,
+          ],
         });
       }
 
@@ -508,7 +514,7 @@ module.exports = {
       );
 
       await ticketChannel.send({
-        content: `<@${targetId}>${cfg.ticket_staff_role ? ` <@&${cfg.ticket_staff_role}>` : ''}`,
+        content: `<@${targetId}>`  <@&${cfg.ticket_staff_role}>` : ''}`,
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle(`🔓 Ticket #${ticket.id} Rouvert — ${cat.label.replace(/^.*? /, '')}`)
