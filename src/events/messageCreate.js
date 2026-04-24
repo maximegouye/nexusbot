@@ -318,7 +318,7 @@ module.exports = {
       await cmd.execute(mock);
     } catch (e) {
       console.error(`[PREFIX &${cmdName}] Erreur:`, e?.message || e);
-      message.reply('Erreur lors de l\'execution. Essaie la commande slash `/'.concat(cmdName, '` a la place.')).catch(() => {});
+      // Commande échouée (voir console)
     }
   },
 };
