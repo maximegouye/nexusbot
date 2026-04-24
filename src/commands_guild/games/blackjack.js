@@ -210,22 +210,36 @@ async function startGame(source, userId, guildId, mise) {
     doubled: false,
   };
 
-  // Animation distribution cartes
-  const tempState = { ...state, player: [player[0]], dealer: [dealer[0]], revealed: false };
-  const tempEmbed = buildEmbed(tempState, '');
+  // Animation distribution cartes — plus dramatique
+  function quickEmbed(pCards, dCards, msg_txt) {
+    return new EmbedBuilder()
+      .setColor('#2C3E50').setTitle('🃏 ・ BlackJack ・')
+      .addFields(
+        { name: '🎩 Croupier', value: dCards || '🂠', inline: false },
+        { name: `🎮 Vous`, value: pCards || '🂠', inline: false },
+      )
+      .setDescription(msg_txt || '');
+  }
+
+  const dealSteps = [
+    { pCards: '🂠',                        dCards: '―',               txt: '*Distribution...*', delay: 380 },
+    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '―',  txt: '*+1 carte joueur*', delay: 350 },
+    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '🂠', txt: '*+1 carte croupier*', delay: 380 },
+    { pCards: handStr(player),             dCards: '🂠',               txt: '*+2ème carte joueur*', delay: 380 },
+  ];
 
   let msg;
   if (isInteraction) {
-    msg = await source.editReply({ embeds: [tempEmbed], components: [] });
+    msg = await source.editReply({ embeds: [quickEmbed(dealSteps[0].pCards, dealSteps[0].dCards, dealSteps[0].txt)], components: [] });
   } else {
-    msg = await source.reply({ embeds: [tempEmbed] });
+    msg = await source.reply({ embeds: [quickEmbed(dealSteps[0].pCards, dealSteps[0].dCards, dealSteps[0].txt)] });
   }
-  await sleep(500);
 
-  // Carte joueur 2
-  tempState.player = player;
-  await msg.edit({ embeds: [buildEmbed(tempState, '')] });
-  await sleep(500);
+  for (let di = 1; di < dealSteps.length; di++) {
+    await sleep(dealSteps[di].delay);
+    await msg.edit({ embeds: [quickEmbed(dealSteps[di].pCards, dealSteps[di].dCards, dealSteps[di].txt)], components: [] });
+  }
+  await sleep(350);
 
   // Carte croupier 2 (cachée)
   state.player = player;

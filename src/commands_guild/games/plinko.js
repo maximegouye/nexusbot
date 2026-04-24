@@ -30,26 +30,33 @@ function dropBall(rows = 8) {
   return { finalSlot: pos, path };
 }
 
-// ─── Rendu de la grille ───────────────────────────────────
+// ─── Rendu de la grille amélioré ──────────────────────────
 function renderBoard(currentPath, step, mults, finalSlot = null) {
   const rows = 8;
   const cols = 9;
+  const PEG  = '·';
+  const BALL = '🔵';
   let board  = '';
 
   for (let r = 0; r <= rows; r++) {
     let row = '';
-    for (let c = 0; c < cols; c++) {
-      if (r < rows) {
-        // Rangée de chevilles
-        const isActive = r < step && currentPath[r] === c;
-        row += isActive ? '⚫' : '⬜';
-      } else {
-        // Ligne de slots
+    if (r < rows) {
+      // Rangée de chevilles — balle visible sur son chemin
+      const ballCol = (r < step && r < currentPath.length) ? currentPath[r] : -1;
+      for (let c = 0; c < cols; c++) {
+        if (c === ballCol) row += BALL;
+        else row += PEG;
+        if (c < cols-1) row += ' ';
+      }
+    } else {
+      // Ligne de slots en bas
+      for (let c = 0; c < cols; c++) {
         const isFinal = finalSlot !== null && c === finalSlot;
         const m = mults[c];
-        row += isFinal ? `**[×${m}]**` : `×${m}`;
+        if (isFinal) row += `**[×${m}]**`;
+        else row += `×${m}`;
+        if (c < cols-1) row += ' ';
       }
-      if (c < cols - 1) row += ' ';
     }
     board += row + '\n';
   }

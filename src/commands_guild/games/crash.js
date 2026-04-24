@@ -51,10 +51,30 @@ function multColor(m) {
 }
 
 function graphBar(current, crashPoint) {
-  const pct = Math.min(current / crashPoint, 1);
-  const len  = 20;
+  const pct  = Math.min(current / crashPoint, 1);
+  const len  = 18;
   const fill = Math.floor(pct * len);
-  return `[${'█'.repeat(fill)}${'░'.repeat(len - fill)}] ${(pct * 100).toFixed(0)}%`;
+  const bar  = '█'.repeat(fill) + '░'.repeat(len - fill);
+  const pctStr = (pct * 100).toFixed(0).padStart(3);
+  return `[${bar}] ${pctStr}%`;
+}
+
+function rocketEmoji(mult) {
+  if (mult >= 50)  return '🌌';
+  if (mult >= 20)  return '⭐';
+  if (mult >= 10)  return '🌙';
+  if (mult >= 5)   return '🛸';
+  if (mult >= 2.5) return '🚀';
+  return '🛫';
+}
+
+function altitudeBar(current, crashPoint) {
+  const steps = 10;
+  const pct   = Math.min(current / crashPoint, 1);
+  const pos   = Math.floor(pct * steps);
+  const bars  = Array(steps).fill('─');
+  bars[pos]   = rocketEmoji(current);
+  return bars.join('');
 }
 
 // ─── Parties actives ──────────────────────────────────────
@@ -97,18 +117,21 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
                 : cashedOut   ? '✅ ・ Cash-Out Réussi ! ・'
                 : '🚀 ・ Crash — En Vol ・';
 
-    const bar = graphBar(current, crashPoint);
+    const bar    = graphBar(current, crashPoint);
+    const rocket = rocketEmoji(current);
+    const alt    = altitudeBar(current, crashPoint);
 
     const e = new EmbedBuilder()
       .setColor(color)
       .setTitle(title)
       .addFields(
         {
-          name: crashed ? '💥 Crash à' : cashedOut ? '✅ Cash-out à' : '📈 Multiplicateur',
-          value: `# ×${current.toFixed(2)}`,
+          name: crashed ? `💥 Crash à` : cashedOut ? `✅ Cash-out à` : `${rocket} Multiplicateur`,
+          value: `## ×${current.toFixed(2)}`,
           inline: false,
         },
-        { name: '📊 Progression', value: `\`${bar}\``, inline: false },
+        { name: '✈️ Altitude', value: `\\`${alt}\\``, inline: false },
+        { name: '📊 Danger', value: `\\`${bar}\\``, inline: false },
         { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
       );
 

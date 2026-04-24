@@ -15,15 +15,8 @@ function numColor(n) {
   return RED_NUMS.includes(n) ? '🔴' : '⚫';
 }
 
-const SPIN_FRAMES = [
-  '🎡 ══ ▶️ ══════════════════ ◀️ ══',
-  '🎡 ══════ ▶️ ══════════════ ◀️ ══',
-  '🎡 ═════════ ▶️ ═══════════ ◀️ ══',
-  '🎡 ════════════ ▶️ ════════ ◀️ ══',
-  '🎡 ═══════════════ ▶️ ═════ ◀️ ══',
-  '🎡 ══════════════════ ▶️ ══ ◀️ ══',
-  '🎡 ══════════════════════ ▶️◀️ ══',
-];
+// Ordre authentique roue européenne
+const WHEEL_ORDER = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -124,26 +117,35 @@ async function playRoulette(source, userId, guildId, mise, betType) {
     msg = await source.reply({ embeds: [spinEmbed()] });
   }
 
-  // Animation spinning
-  for (let i = 0; i < SPIN_FRAMES.length; i++) {
-    await sleep(300);
-    const e = new EmbedBuilder()
-      .setColor('#C0392B')
-      .setTitle('🎡 ・ Roulette ・')
-      .setDescription('**La bille tourne...**\n\n' + SPIN_FRAMES[i])
-      .addFields({ name: '🎲 Paris', value: `${bet.label} — mise **${mise} ${coin}**`, inline: false });
-    await msg.edit({ embeds: [e] });
-  }
+  // Animation améliorée : bille qui tourne sur la vraie roue
+  const startIdx = Math.floor(Math.random() * WHEEL_ORDER.length);
+  const spinPhases = [
+    { frames:4, delay:140, color:'#C0392B', speed:'⚡ La bille s'élance !' },
+    { frames:4, delay:200, color:'#E74C3C', speed:'🌀 Elle tourne à grande vitesse...' },
+    { frames:3, delay:290, color:'#D35400', speed:'💨 Ralentissement...' },
+    { frames:2, delay:420, color:'#E67E22', speed:'⏳ Elle ralentit encore...' },
+    { frames:1, delay:600, color:'#F39C12', speed:'🎯 Presque arrêtée !' },
+  ];
 
-  // Ralentissement
-  for (let i = 0; i < 3; i++) {
-    await sleep(500 + i * 200);
-    const e = new EmbedBuilder()
-      .setColor('#E74C3C')
-      .setTitle('🎡 ・ Roulette ・')
-      .setDescription('**Ralentissement... 🎯**\n\n🎡 ═══════════════════ 🔮 ══')
-      .addFields({ name: '🎲 Paris', value: `${bet.label} — mise **${mise} ${coin}**`, inline: false });
-    await msg.edit({ embeds: [e] });
+  let frameIdx = startIdx;
+  for (const { frames, delay, color, speed } of spinPhases) {
+    for (let f = 0; f < frames; f++) {
+      frameIdx = (frameIdx + 1) % WHEEL_ORDER.length;
+      const wi = frameIdx;
+      const nums = [-2,-1,0,1,2].map(offset => {
+        const idx = (wi + offset + WHEEL_ORDER.length) % WHEEL_ORDER.length;
+        const n = WHEEL_ORDER[idx];
+        return offset === 0 ? `**【${numColor(n)}${n}】**` : `${numColor(n)}${n}`;
+      });
+      const wheelLine = nums.join('  ');
+      const e = new EmbedBuilder()
+        .setColor(color)
+        .setTitle('🎡 ・ Roulette ・')
+        .setDescription(`**${speed}**\n\n${wheelLine}\n\n▲`)
+        .addFields({name:'🎲 Paris',value:`${bet.label} — mise **${mise} ${coin}**`,inline:false});
+      await msg.edit({ embeds: [e] });
+      await sleep(delay);
+    }
   }
 
   // Résultat

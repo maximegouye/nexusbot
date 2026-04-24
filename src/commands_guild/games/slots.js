@@ -155,37 +155,52 @@ function evalGrid(grid) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ─── Animation ────────────────────────────────────────────
+// ─── Animation améliorée ──────────────────────────────────
 async function animateSpin(msg, grid, coin, mise, jackpot) {
-  // Phase 1 : tout tourne
-  for (let f = 0; f < 3; f++) {
-    const e = new EmbedBuilder()
-      .setColor('#F39C12')
-      .setTitle('🎰 ・ Machine à Sous ・')
-      .setDescription(`\`\`\`\n🌀 🌀 🌀 🌀 🌀\n🌀 🌀 🌀 🌀 🌀\n🌀 🌀 🌀 🌀 🌀\n\`\`\`\n*Les rouleaux tournent...*`)
-      .addFields(
-        { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
-        { name: '🏆 Jackpot', value: `${jackpot} ${coin}`, inline: true },
-      );
-    await msg.edit({ embeds: [e] });
-    await sleep(400);
+  const SYM = ['🍒','🍋','🍊','🍇','🍉','🔔','⭐','7️⃣','💎','🃏'];
+  const rndRow = () => Array.from({length:5}, () => SYM[Math.floor(Math.random()*SYM.length)]);
+
+  // Phase 1 : démarrage rapide (3 frames à 180ms) — symboles aléatoires
+  const startData = [
+    { color:'#F39C12', text:'⚡ Les rouleaux s'emballent...' },
+    { color:'#E67E22', text:'🌀 En pleine rotation !' },
+    { color:'#D35400', text:'💨 Ça tourne à toute vitesse !' },
+  ];
+  for (const { color, text } of startData) {
+    const r1=rndRow(), r2=rndRow(), r3=rndRow();
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(color).setTitle('🎰 ・ Machine à Sous ・')
+      .setDescription(`\`\`\`\n${r1.join(' ')}\n${r2.join(' ')}\n${r3.join(' ')}\n\`\`\`\n*${text}*`)
+      .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true},{name:'🏆 Jackpot',value:`${jackpot} ${coin}`,inline:true})
+    ]});
+    await sleep(180);
   }
 
-  // Phase 2 : rouleaux s'arrêtent un par un
-  const partial = Array.from({ length: 5 }, () => Array.from({ length: 3 }, () => ({ emoji: '🌀' }) ));
+  // Phase 2 : ralentissement progressif (2 frames à 280ms)
+  for (let f = 0; f < 2; f++) {
+    const r1=rndRow(), r2=rndRow(), r3=rndRow();
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor('#8E44AD').setTitle('🎰 ・ Machine à Sous ・')
+      .setDescription(`\`\`\`\n${r1.join(' ')}\n${r2.join(' ')}\n${r3.join(' ')}\n\`\`\`\n*🔄 Ralentissement...*`)
+      .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
+    ]});
+    await sleep(280);
+  }
+
+  // Phase 3 : rouleaux s'arrêtent un par un avec délai croissant
+  const partial = Array.from({length:5}, () => Array.from({length:3}, () => ({emoji:'🌀'})));
+  const stopColors = ['#6C3483','#1A5276','#1E8449','#117A65','#27AE60'];
   for (let col = 0; col < 5; col++) {
     partial[col] = grid[col];
-    await sleep(350);
-    const rows = ['', '', ''];
-    for (let row = 0; row < 3; row++) {
-      rows[row] = partial.map(c => c[row]?.emoji || '🌀').join(' ');
-    }
-    const e = new EmbedBuilder()
-      .setColor('#E67E22')
-      .setTitle('🎰 ・ Machine à Sous ・')
-      .setDescription(`\`\`\`\n${rows[0]}\n${rows[1]}\n${rows[2]}\n\`\`\``)
-      .addFields({ name: '💰 Mise', value: `${mise} ${coin}`, inline: true });
-    await msg.edit({ embeds: [e] });
+    const rows = [0,1,2].map(row => partial.map(c => c[row]?.emoji || '🌀').join(' '));
+    const rem = 4 - col;
+    const stopTxt = rem > 0 ? `🌀 ${rem} rouleau${rem>1?'x':''} encore en rotation...` : '✨ Tous les rouleaux sont arrêtés !';
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(stopColors[col]).setTitle('🎰 ・ Machine à Sous ・')
+      .setDescription(`\`\`\`\n${rows[0]}\n${rows[1]}\n${rows[2]}\n\`\`\`\n*${stopTxt}*`)
+      .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
+    ]});
+    await sleep(320 + col * 80); // Chaque rouleau s'arrête plus lentement
   }
 }
 

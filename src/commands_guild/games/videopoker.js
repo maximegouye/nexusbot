@@ -116,12 +116,37 @@ async function playVideoPoker(source, userId, guildId, mise) {
     );
   }
 
+  // Animation de distribution des cartes
+  const dealIntro = new EmbedBuilder()
+    .setColor('#6C3483')
+    .setTitle('🃏 ・ Video Poker — Jacks or Better ・')
+    .setDescription('🂠 🂠 🂠 🂠 🂠\n\n*Distribution des cartes...*')
+    .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
+
   let msg;
   if (isInteraction) {
-    msg = await source.editReply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+    msg = await source.editReply({ embeds: [dealIntro] });
   } else {
-    msg = await source.reply({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+    msg = await source.reply({ embeds: [dealIntro] });
   }
+
+  // Révéler les cartes une par une
+  const revealOrder = [0, 2, 4, 1, 3]; // ordre plus dramatique
+  const revealedFlags = [false, false, false, false, false];
+  for (const idx of revealOrder) {
+    revealedFlags[idx] = true;
+    const handPreview = hand.map((c, i) => revealedFlags[i] ? cardStr(c) : '🂠').join(' ');
+    await sleep(300);
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor('#8E44AD').setTitle('🃏 ・ Video Poker — Jacks or Better ・')
+      .setDescription(`${handPreview}\n\n*Carte ${revealOrder.indexOf(idx)+1}/5...*`)
+      .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
+    ]});
+  }
+  await sleep(350);
+
+  // Affiche la vraie main avec boutons
+  await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
 
   const filter = i => i.user.id === userId && i.customId.startsWith(`vp_`);
   const collector = msg.createMessageComponentCollector({ filter, time: 120_000 });

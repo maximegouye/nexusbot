@@ -83,14 +83,24 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     msg = await source.reply({ embeds: [animEmbed] });
   }
 
-  for (let f = 0; f < 4; f++) {
-    await sleep(300);
-    const fakeRolls = Array.from({ length: numDice }, () => DICE_EMOJIS[Math.floor(Math.random() * 6)]).join(' ');
-    const e = new EmbedBuilder().setColor('#E67E22').setTitle('🎲 ・ Dés ・').setDescription(`${fakeRolls}\n*Lancer...*`);
+  // Animation améliorée : dés qui s'agitent de plus en plus lentement
+  const rollPhases = [
+    { delay:160, color:'#F39C12', text:'🎲 Lancement !', mult:1 },
+    { delay:200, color:'#E67E22', text:'💨 Les dés roulent...', mult:1 },
+    { delay:260, color:'#D35400', text:'🎯 Presque...', mult:1 },
+    { delay:320, color:'#C0392B', text:'⏳ Dernière rotation...', mult:1 },
+    { delay:400, color:'#922B21', text:'🤞 Résultat dans 1 sec...', mult:1 },
+  ];
+  for (const { delay, color, text } of rollPhases) {
+    const fakeRolls = Array.from({length:numDice}, () => DICE_EMOJIS[Math.floor(Math.random()*6)]).join('  ');
+    const e = new EmbedBuilder()
+      .setColor(color).setTitle('🎲 ・ Dés ・')
+      .setDescription(`# ${fakeRolls}\n\n*${text}*`)
+      .addFields({name:'🎯 Pari',value:betLabel,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
     await msg.edit({ embeds: [e] });
+    await sleep(delay);
   }
-
-  await sleep(400);
+  await sleep(300);
 
   // Résultat
   const rolls = Array.from({ length: numDice }, () => rollDie());

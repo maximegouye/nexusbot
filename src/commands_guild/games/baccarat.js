@@ -100,40 +100,50 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
   db.addCoins(userId, guildId, -mise);
 
   const betLabels = { player: '👤 Joueur', banker: '🏦 Banquier', tie: '🤝 Égalité' };
-  const animEmbed = new EmbedBuilder()
-    .setColor('#1ABC9C')
-    .setTitle('🎴 ・ Baccarat ・')
-    .setDescription('*Distribution des cartes...*\n🃏 🃏 🃏 🃏')
-    .addFields({ name: '🎯 Pari', value: betLabels[betKey], inline: true }, { name: '💰 Mise', value: `${mise} ${coin}`, inline: true });
-
+  // Embed de départ — cartes dos visible
+  const bacAnimFrames = [
+    { desc:'🎴 Mélange du sabot...\n\n🃏 🃏 🃏 🃏', color:'#16A085', delay:500 },
+    { desc:'🎴 Distribution en cours...\n\n🃏 🃏 🃏 🃏', color:'#1ABC9C', delay:400 },
+  ];
   let msg;
-  if (isInteraction) {
-    msg = await source.editReply({ embeds: [animEmbed] });
-  } else {
-    msg = await source.reply({ embeds: [animEmbed] });
+  for (let fi = 0; fi < bacAnimFrames.length; fi++) {
+    const { desc, color, delay } = bacAnimFrames[fi];
+    const e = new EmbedBuilder().setColor(color).setTitle('🎴 ・ Baccarat ・')
+      .setDescription(desc)
+      .addFields({name:'🎯 Pari',value:betLabels[betKey],inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
+    if (fi === 0) {
+      if (isInteraction) { msg = await source.editReply({ embeds: [e] }); }
+      else { msg = await source.reply({ embeds: [e] }); }
+    } else {
+      await msg.edit({ embeds: [e] });
+    }
+    await sleep(delay);
   }
-
-  await sleep(800);
 
   const { player, banker, pTotal, bTotal } = playBaccarat();
 
-  // Distribution animée
+  // Distribution animée — cartes dos puis révèle
   const steps = [
-    { p: [player[0]], b: [] },
-    { p: [player[0]], b: [banker[0]] },
-    { p: player.slice(0, 2), b: [banker[0]] },
-    { p: player.slice(0, 2), b: banker.slice(0, 2) },
+    { p: ['🃏'], b: [],     desc:'1ère carte joueur...' },
+    { p: ['🃏'], b: ['🃏'], desc:'1ère carte banquier...' },
+    { p: [player[0]], b: ['🃏'],           desc:'Révèle la carte du joueur !' },
+    { p: [player[0]], b: [banker[0]],      desc:'Révèle la carte du banquier !' },
+    { p: player.slice(0,2).map(cardStr), b: [banker[0]], pRaw:true, bRaw:false, desc:'2ème carte joueur !' },
+    { p: player.slice(0,2).map(cardStr), b: banker.slice(0,2).map(cardStr), pRaw:true, bRaw:true, desc:'Main initiale complète !' },
   ];
   for (const s of steps) {
+    const pVal = s.pRaw ? s.p.join(' ') : (Array.isArray(s.p) && s.p[0]?.value ? s.p.map(cardStr).join(' ') : s.p.join(' '));
+    const bVal = s.bRaw ? s.b.join(' ') : (Array.isArray(s.b) && s.b[0]?.value ? s.b.map(cardStr).join(' ') : s.b.join(' '));
+    const pScore = s.pRaw ? '' : (s.p[0]?.value ? `(${handTotal(s.p.filter(c=>c?.value))})` : '');
+    const bScore = s.bRaw ? '' : (s.b[0]?.value ? `(${handTotal(s.b.filter(c=>c?.value))})` : '');
     const e = new EmbedBuilder()
-      .setColor('#1ABC9C')
-      .setTitle('🎴 ・ Baccarat ・')
+      .setColor('#1ABC9C').setTitle('🎴 ・ Baccarat ・').setDescription(`*${s.desc}*`)
       .addFields(
-        { name: `👤 Joueur (${handTotal(s.p)})`, value: s.p.map(cardStr).join(' ') || '—', inline: true },
-        { name: `🏦 Banquier (${handTotal(s.b)})`, value: s.b.map(cardStr).join(' ') || '—', inline: true },
+        {name:`👤 Joueur ${pScore}`,value:pVal||'—',inline:true},
+        {name:`🏦 Banquier ${bScore}`,value:bVal||'—',inline:true},
       );
     await msg.edit({ embeds: [e] });
-    await sleep(500);
+    await sleep(420);
   }
 
   // Troisième carte si applicable

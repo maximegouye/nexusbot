@@ -168,12 +168,34 @@ async function playMines(source, userId, guildId, mise, minesCount) {
   };
   sessions.set(userId, state);
 
+  // Animation intro : grille qui se "charge"
+  const introEmbed = new EmbedBuilder()
+    .setColor('#2C3E50')
+    .setTitle('💣 ・ Mines ・')
+    .setDescription('⚙️ *Placement des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜')
+    .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
+
   let msg;
   if (isInteraction) {
-    msg = await source.editReply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
+    msg = await source.editReply({ embeds: [introEmbed] });
   } else {
-    msg = await source.reply({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
+    msg = await source.reply({ embeds: [introEmbed] });
   }
+
+  // 2 frames d'intro (grille qui s'initialise)
+  const introFrames = [
+    { desc:'💣 *Mélange des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ❓ ⬜ ❓ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#1A252F' },
+    { desc:'💣 *Prêt ! Bonne chance...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#2C3E50' },
+  ];
+  for (const { desc, color } of introFrames) {
+    await sleep(380);
+    await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle('💣 ・ Mines ・').setDescription(desc)
+      .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true})] });
+  }
+  await sleep(300);
+
+  // Affiche la vraie grille interactive
+  await msg.edit({ embeds: [buildEmbed(state)], components: buildGridComponents(state) });
 
   // Collecteur
   const filter = i => i.user.id === userId && (

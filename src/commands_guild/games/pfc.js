@@ -8,7 +8,15 @@ const db = require('../../database/db');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-const SPIN_FRAMES = ['🌀', '💫', '🌀', '💫', '🌀'];
+const COIN_FRAMES = [
+  { emoji:'🟡', label:'PILE',  color:'#F1C40F' },
+  { emoji:'💠', label:'...',   color:'#3498DB' },
+  { emoji:'⚪', label:'FACE',  color:'#95A5A6' },
+  { emoji:'💠', label:'...',   color:'#2980B9' },
+  { emoji:'🟡', label:'PILE',  color:'#F39C12' },
+  { emoji:'💠', label:'...',   color:'#1ABC9C' },
+  { emoji:'⚪', label:'FACE',  color:'#7F8C8D' },
+];
 
 async function playCoinFlip(source, userId, guildId, mise, choix) {
   const isInteraction = !!source.editReply;
@@ -45,12 +53,21 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
     msg = await source.reply({ embeds: [animEmbed] });
   }
 
-  for (const frame of SPIN_FRAMES) {
-    await sleep(350);
-    const e = new EmbedBuilder().setColor('#E67E22').setTitle('🪙 ・ Pile ou Face ・').setDescription(`**La pièce tourne...**\n\n${frame}`);
+  // Animation améliorée : pièce qui tourne avec faces alternantes
+  const flipSpeeds = [180, 200, 240, 300, 380, 480];
+  for (let i = 0; i < COIN_FRAMES.length; i++) {
+    const { emoji, label, color } = COIN_FRAMES[i];
+    const delay = flipSpeeds[Math.min(i, flipSpeeds.length-1)];
+    const progress = '▓'.repeat(i+1) + '░'.repeat(COIN_FRAMES.length-i-1);
+    const e = new EmbedBuilder()
+      .setColor(color)
+      .setTitle('🪙 ・ Pile ou Face ・')
+      .setDescription(`# ${emoji}  ${label}\n\n\\`[${progress}]\\``)
+      .addFields({name:'🎯 Ton choix',value:chosen ? (chosen==='pile'?'🟡 Pile':'⚪ Face'):'🎲 Aléatoire',inline:true});
     await msg.edit({ embeds: [e] });
+    await sleep(delay);
   }
-  await sleep(400);
+  await sleep(300);
 
   const result = Math.random() < 0.5 ? 'pile' : 'face';
   const won    = !chosen || chosen === result;
