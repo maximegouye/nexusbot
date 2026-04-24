@@ -41,9 +41,7 @@ console.log(`\n📤 Envoi de ${commands.length} commande(s) à Discord...`);
 
 const rest = new REST().setToken(token);
 
-const guildId = process.argv.includes('--guild')
-  ? process.argv[process.argv.indexOf('--guild') + 1]
-  : (process.env.GUILD_ID || null);
+const guildId = process.env.GUILD_ID || '1492886135159128227'; // Zone Entraide - fallback hardcode
 
 (async () => {
   try {
