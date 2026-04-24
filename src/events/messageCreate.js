@@ -1,6 +1,6 @@
 const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../database/db');
-const PREFIX = '!';
+const PREFIX = '&';
 module.exports = {
   name: 'messageCreate',
   async execute(message) {
