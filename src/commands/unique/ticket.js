@@ -568,13 +568,14 @@ module.exports = {
     // ══════════════════════════════ PANEL (purge + repost) ══════
     if (sub === 'panel') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
+        return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
-      const channel = interaction.options.getChannel('salon') ||
-        (cfg.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null);
+      const channel = interaction.options.getChannel('salon')
+            || (cfg?.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null)
+            || interaction.channel;
 
       if (!channel)
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun salon. Configure d\'abord avec `/ticket setup` ou précise un salon.', ephemeral: true });
+        return interaction.reply({ content: '❌ Aucun salon. Configure d\'abord avec `/ticket setup` ou précise un salon.', ephemeral: true });
 
       await interaction.deferReply({ ephemeral: true });
 
@@ -615,7 +616,7 @@ module.exports = {
       // Vérifier les permissions avant d'envoyer
       const botMemberPanel = interaction.guild.members.me;
       if (!channel.permissionsFor(botMemberPanel)?.has(['SendMessages', 'EmbedLinks'])) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        return interaction.reply({
           embeds: [new EmbedBuilder()
             .setColor('#E74C3C')
             .setTitle('❌ Permission manquante dans ce salon')
@@ -630,7 +631,7 @@ module.exports = {
       await channel.send({ embeds: [panelEmbed], components: [row] });
       db.setConfig(interaction.guildId, 'ticket_channel', channel.id);
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+      return interaction.reply({
         embeds: [new EmbedBuilder().setColor('#2ECC71')
           .setTitle('✅ Panneau republié !')
           .setDescription(`${channel} a été purgé (**${purged}** message(s) supprimé(s)) et le nouveau panneau est en place.`)
