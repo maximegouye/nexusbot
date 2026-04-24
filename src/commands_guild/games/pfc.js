@@ -141,7 +141,7 @@ module.exports = {
   },
 
   name: 'pile-ou-face',
-  aliases: ['pf', 'coinflip', 'cf', 'flip'],
+  aliases: ['pfc', 'pf', 'coinflip', 'cf', 'flip'],
   async run(message, args) {
     const mise  = parseInt(args[0]);
     const choix = args[1] || null;
