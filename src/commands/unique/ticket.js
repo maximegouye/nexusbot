@@ -483,18 +483,26 @@ module.exports = {
         { id: interaction.guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
         { id: targetId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
       ];
-      if (interaction.guild.ownerId && interaction.guild.ownerId !== targetId) {
+      if (cfg.ticket_staff_role) {
         permissionOverwrites.push({
-          id: interaction.guild.ownerId,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.ManageMessages,
-            PermissionFlagsBits.ManageChannels,
-          ],
+          id: cfg.ticket_staff_role,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages],
         });
       }
+
+    // Proprio du serveur — toujours accès au ticket (même si pas staff)
+    if (interaction.guild.ownerId && interaction.guild.ownerId !== targetId) {
+        permissionOverwrites.push({
+            id: interaction.guild.ownerId,
+            allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.ManageMessages,
+                PermissionFlagsBits.ManageChannels,
+            ],
+        });
+    }
 
       const parent = cfg.ticket_category ? interaction.guild.channels.cache.get(cfg.ticket_category) : null;
       const ticketChannel = await interaction.guild.channels.create({
@@ -514,7 +522,7 @@ module.exports = {
       );
 
       await ticketChannel.send({
-        content: `<@${targetId}>`  <@&${cfg.ticket_staff_role}>` : ''}`,
+        content: `<@${targetId}>${cfg.ticket_staff_role ? ` <@&${cfg.ticket_staff_role}>` : ''}`,
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle(`🔓 Ticket #${ticket.id} Rouvert — ${cat.label.replace(/^.*? /, '')}`)
