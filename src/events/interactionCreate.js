@@ -97,6 +97,13 @@ module.exports = {
                   if (handled) return;
               } catch (hcErr) {
                   console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
+                  if (!interaction.replied && !interaction.deferred) {
+                      await interaction.reply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
+                  } else if (interaction.deferred) {
+                      await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}` }).catch(() => {});
+                  }
+                  return;
+              }
               }
           }
           await handler.execute(interaction);
