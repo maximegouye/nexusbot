@@ -1335,18 +1335,39 @@ module.exports = {
             const ratingStr = avgRating ? `${'⭐'.repeat(Math.round(parseFloat(avgRating)))} ${avgRating}/5` : '—';
 
             const panelEmbed = new EmbedBuilder()
-              .setColor('#5865F2')
-              .setTitle('╔══  🎫  CENTRE DE SUPPORT  🎫  ══╗')
+              .setColor('#2B2D31')
+              .setAuthor({
+                name: `${interaction.guild.name} — Assistance officielle`,
+                iconURL: interaction.guild.iconURL({ size: 128 }) || undefined,
+              })
+              .setTitle("🌟  CENTRE D'ASSISTANCE OFFICIEL  🌟")
               .setDescription(
-                `> *Notre équipe est là pour vous aider — 7j/7.*\n\n` +
-                `**Sélectionnez la catégorie** de votre demande :\n\n` +
-                CATEGORIES.map(c => `${c.emoji} **${c.label.replace(/^.*? /,'')}** — ${c.description}`).join('\n') +
-                `\n\n${'─'.repeat(40)}\n` +
-                `🎫 **${openTickets}** ouverts · 📁 **${totalTickets}** total · ⭐ **${ratingStr}**\n` +
-                `⬇️ **Cliquez sur le bouton ci-dessous pour commencer**`
+                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `Vous méritez une aide **rapide**, **personnelle** et **de qualité**.\n` +
+                `Chaque demande est traitée avec le plus grand soin, dans un cadre **entièrement confidentiel**.\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `**📋 Sélectionnez la nature de votre demande :**\n\n` +
+                CATEGORIES.map(c =>
+                  `${c.emoji}  **${c.label.replace(/^[^ ]+ /, '')}**\n` +
+                  `┗ *${c.description}*`
+                ).join('\n\n') +
+                `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `⏱️  Réponse garantie en **moins de 2h**\n` +
+                `🔒  Espace privé — **Confidentialité totale**\n` +
+                `⭐  Satisfaction : **${ratingStr}**\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `Appuyez sur le bouton ci-dessous pour ouvrir votre ticket.`
+              )
+              .addFields(
+                { name: '📬 Tickets ouverts', value: `\`${openTickets}\``, inline: true },
+                { name: '📊 Tickets traités',  value: `\`${totalTickets}\``, inline: true },
+                { name: '🕐 Disponibilité',    value: '\`7j/7 — 24h/24\`', inline: true },
               )
               .setThumbnail(interaction.guild.iconURL({ size: 256 }) || null)
-              .setFooter({ text: `${interaction.guild.name} • Support Premium`, iconURL: interaction.guild.iconURL() || undefined })
+              .setFooter({
+                text: `${interaction.guild.name} • Support Premium & Confidentiel`,
+                iconURL: interaction.guild.iconURL() || undefined,
+              })
               .setTimestamp();
 
             const openBtn = new ButtonBuilder()
