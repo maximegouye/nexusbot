@@ -36,6 +36,7 @@ const COMPONENT_ROUTES = {
   // ── Autres composants ────────────────────────────────────
   'app_':         'applications',
   'apply_':       'applications',
+  'rec_':         'recrutement',
   'pay_'          : 'payer',
   'heist_'        : 'braquage',
   'sondage_'      : 'sondage_avance',
@@ -46,7 +47,6 @@ const COMPONENT_ROUTES = {
   // ── Nouveaux jeux de casino ──────────────────────────────
   'grattage_':    'grattage',
   'tour_':        'tour',
-  'hilo_':        'hilo',
 };
 
 module.exports = {
