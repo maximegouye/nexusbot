@@ -2,47 +2,32 @@
 
 // Routes des composants (boutons, menus, modals) vers la commande handler
 const COMPONENT_ROUTES = {
-  // ── Commandes avec handleComponent ───────────────────────
-  'part_':        'partenariat',
-  'ticket_':      'ticket',
-  'giveaway_':    'giveaway',
-  // ── Nouvelles routes avec handleComponent ────────────────
-  'banque_':      'banque',
-  'hist_':        'historique',
-  'help_':        'aide',
-  'profil_':      'profil',
-  // ── Jeux/eco avec handleComponent ou re-dispatch ─────────
-  'casino_':      'casino',
-  'blackjack_':   'blackjack',
-  'crash_':       'crash',
-  'mines_':       'mines',
-  'poker_':       'poker',
-  'slot_':        'slots',
-  'roulette_':    'roulette',
-  'rob_':         'rob',
-  'fish_':        'fish',
-  'quest_':       'quest',
-  'suggest_':     'suggestion',
-  'voice_':       'tempvoice',
-  'conf_':        'confession',
-  'rep_':         'rep',
-  'bump_':        'bump',
-  // ── Routes sans collector (handleComponent requis) ────────
-  'prestige_':    'prestige',
-  'roue_':        'roue',
-  'pet_':         'pets',
-  'rr_':          'reactionroles',
-  'rolemenu_':    'rolemenu',
-  // ── Autres composants ────────────────────────────────────
-  'app_':         'applications',
-  'apply_':       'applications',
-  'pay_'          : 'payer',
-  'heist_'        : 'braquage',
-  'sondage_'      : 'sondage_avance',
-  'pendu_'        : 'pendu',
-  'morpion_'      : 'morpion',
-  'poll_'         : 'poll',
-  'appmodal_':    'applications',
+  // ── handleComponent implémenté ───────────────────────────
+  'part_':      'partenariat',
+  'ticket_':    'ticket',
+  'giveaway_':  'giveaway',
+  'hist_':      'historique',
+  'help_':      'aide',
+  'profil_':    'profil',
+  'prestige_':  'prestige',
+  'roue_':      'roue',
+  'pet_':       'pets',
+  'rr_':        'reactionroles',
+  'rolemenu_':  'rolemenu',
+  'app_':       'applications',
+  'apply_':     'applications',
+  'appmodal_':  'applications',
+  'sondage_':   'sondage_avance',
+  'pendu_':     'pendu',
+  'morpion_':   'morpion',
+  'poll_':      'poll',
+  // ── Collector-based (inline collector gère, pas execute) ─
+  'crash_':     'crash',
+  'mines_':     'mines',
+  'slot_':      'slots',
+  'poker_':     'poker',
+  'heist_':     'braquage',
+  'pay_':       'payer',
 };
 
 module.exports = {
@@ -127,7 +112,7 @@ module.exports = {
               return;
             }
           }
-          await handler.execute(interaction);
+          // Components are handled only via handleComponent; no execute() fallback for buttons/selects/modals
         } catch (e) {
           console.error(`[COMPONENT ${cid}] Erreur:`, e?.message || e);
           if (!interaction.replied && !interaction.deferred) {
