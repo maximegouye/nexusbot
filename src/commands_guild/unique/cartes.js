@@ -86,13 +86,13 @@ module.exports = {
     .addSubcommand(s => s.setName('collection').setDescription('📚 Voir votre collection')
       .addUserOption(o => o.setName('membre').setDescription('Voir la collection d\'un autre')))
     .addSubcommand(s => s.setName('vendre').setDescription('💰 Mettre une carte en vente sur le marché')
-      .addStringOption(o => o.setName('carte_id').setDescription('ID de la carte (ex: dragon_fire)').setRequired(true))
+      .addStringOption(o => o.setName('carte_id').setDescription('ID de la carte (ex: dragon_fire)').setRequired(true)))
     .addSubcommand(s => s.setName('marche').setDescription('🏪 Voir les cartes en vente'))
     .addSubcommand(s => s.setName('acheter').setDescription('🛒 Acheter une carte sur le marché')
       .addStringOption(o => o.setName('id_annonce').setDescription('ID de l\'annonce').setRequired(true)))
     .addSubcommand(s => s.setName('duel').setDescription('⚔️ Défier quelqu\'un avec votre meilleure carte')
       .addUserOption(o => o.setName('adversaire').setDescription('Adversaire').setRequired(true))
-      .addStringOption(o => o.setName('votre_carte').setDescription('ID de votre carte').setRequired(true)))),
+      .addStringOption(o => o.setName('votre_carte').setDescription('ID de votre carte').setRequired(true))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

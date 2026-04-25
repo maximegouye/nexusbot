@@ -37,10 +37,10 @@ module.exports = {
     .setDescription('🎨 Explorateur de couleurs — Convertissez et affichez des couleurs')
     .addSubcommand(s => s.setName('hex').setDescription('🎨 Analyser une couleur HEX')
       .addStringOption(o => o.setName('valeur').setDescription('Code HEX (ex: #7B2FBE ou 7B2FBE)').setRequired(true)))
-    .addSubcommand(s => s.setName('rgb').setDescription('🎨 Analyser une couleur RGB')
+    .addSubcommand(s => s.setName('rgb').setDescription('🎨 Analyser une couleur RGB'))
     .addSubcommand(s => s.setName('aleatoire').setDescription('🎲 Générer une couleur aléatoire'))
     .addSubcommand(s => s.setName('palette').setDescription('🎨 Générer une palette harmonieuse')
-      .addStringOption(o => o.setName('hex').setDescription('Couleur de base (HEX)').setRequired(true)))),
+      .addStringOption(o => o.setName('hex').setDescription('Couleur de base (HEX)').setRequired(true))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

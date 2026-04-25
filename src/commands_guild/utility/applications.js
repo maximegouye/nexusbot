@@ -38,13 +38,13 @@ module.exports = {
       .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true))
       .addStringOption(o => o.setName('texte').setDescription('Question à ajouter (vide = voir les questions)')))
     .addSubcommand(s => s.setName('supprimer_question').setDescription('🗑️ Supprimer une question (Admin)')
-      .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true))
+      .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true)))
     .addSubcommand(s => s.setName('postuler').setDescription('📝 Postuler pour un rôle')
       .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les formulaires disponibles'))
     .addSubcommand(s => s.setName('voir').setDescription('🔍 Voir vos candidatures'))
     .addSubcommand(s => s.setName('fermer').setDescription('🔒 Ouvrir/fermer un formulaire (Admin)')
-      .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true)))),
+      .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

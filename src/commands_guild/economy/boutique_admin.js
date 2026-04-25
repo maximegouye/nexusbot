@@ -18,7 +18,7 @@ module.exports = {
       .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200))
       .addStringOption(o => o.setName('emoji').setDescription('Emoji de l\'article (ex: 🎩)').setMaxLength(10))
       .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat'))
-
+)
     .addSubcommand(s => s.setName('modifier').setDescription('✏️ Modifier un article existant')
       .addStringOption(o => o.setName('nom').setDescription('Nouveau nom'))
       .addStringOption(o => o.setName('description').setDescription('Nouvelle description').setMaxLength(200))
@@ -32,7 +32,7 @@ module.exports = {
 
     .addSubcommand(s => s.setName('stock_ajouter').setDescription('📦 Ajouter du stock à un article')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
-
+)
     .addSubcommand(s => s.setName('ventes').setDescription('📊 Statistiques de ventes des articles'))
 
     .addSubcommand(s => s.setName('vider').setDescription('☢️ Vider entièrement la boutique')
@@ -42,7 +42,7 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID de l\'article à copier').setRequired(true)))
 
     .addSubcommand(s => s.setName('promo').setDescription('🏷️ Mettre un article en promotion')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

@@ -42,14 +42,14 @@ module.exports = {
     .addSubcommand(s => s.setName('info').setDescription('📋 Voir les infos d\'une guilde')
       .addStringOption(o => o.setName('nom').setDescription('Nom de la guilde (laissez vide pour la vôtre)')))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Liste des guildes du serveur'))
-    .addSubcommand(s => s.setName('don').setDescription('💰 Donner des coins au trésor de votre guilde')
+    .addSubcommand(s => s.setName('don').setDescription('💰 Donner des coins au trésor de votre guilde'))
     .addSubcommand(s => s.setName('expulser').setDescription('👢 Expulser un membre (leader/officier)')
       .addUserOption(o => o.setName('membre').setDescription('Membre à expulser').setRequired(true)))
     .addSubcommand(s => s.setName('promouvoir').setDescription('⭐ Promouvoir un membre officier (leader)')
       .addUserOption(o => o.setName('membre').setDescription('Membre à promouvoir').setRequired(true)))
     .addSubcommand(s => s.setName('guerre').setDescription('⚔️ Déclarer la guerre à une autre guilde (fun)')
       .addStringOption(o => o.setName('ennemi').setDescription('Nom de la guilde ennemie').setRequired(true)))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des guildes'))),
+    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des guildes')),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

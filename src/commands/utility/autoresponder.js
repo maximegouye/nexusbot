@@ -17,12 +17,12 @@ module.exports = {
     .addSubcommand(s => s.setName('ajouter').setDescription('Ajouter une réponse automatique')
       .addStringOption(o => o.setName('declencheur').setDescription('Texte qui déclenche la réponse').setRequired(true))
       .addStringOption(o => o.setName('reponse').setDescription('Réponse à envoyer').setRequired(true))
-      .addBooleanOption(o => o.setName('exact').setDescription('Correspondance exacte du message entier (sinon: contient)'))
+      .addBooleanOption(o => o.setName('exact').setDescription('Correspondance exacte du message entier (sinon: contient)')))
     .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer une réponse automatique')
       .addStringOption(o => o.setName('id').setDescription('ID de la réponse').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('Voir toutes les réponses automatiques'))
     .addSubcommand(s => s.setName('test').setDescription('Tester un déclencheur')
-      .addStringOption(o => o.setName('message').setDescription('Message à tester').setRequired(true)))),
+      .addStringOption(o => o.setName('message').setDescription('Message à tester').setRequired(true))),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
 

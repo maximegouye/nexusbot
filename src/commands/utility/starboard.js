@@ -26,10 +26,10 @@ module.exports = {
       .addStringOption(o => o.setName('emoji').setDescription('Emoji de vote (défaut: ⭐)'))
       .addBooleanOption(o => o.setName('selfstar').setDescription('Autoriser de voter son propre message')))
     .addSubcommand(s => s.setName('statut').setDescription('Voir la configuration et les statistiques'))
-    .addSubcommand(s => s.setName('top').setDescription('🏆 Top 10 des messages les plus étoilés')
+    .addSubcommand(s => s.setName('top').setDescription('🏆 Top 10 des messages les plus étoilés'))
     .addSubcommand(s => s.setName('aleatoire').setDescription('🎲 Afficher un message étoilé au hasard'))
     .addSubcommand(s => s.setName('desactiver').setDescription('Désactiver le starboard'))
-    .addSubcommand(s => s.setName('reset').setDescription('🗑️ Réinitialiser tous les messages étoilés'))),
+    .addSubcommand(s => s.setName('reset').setDescription('🗑️ Réinitialiser tous les messages étoilés')),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

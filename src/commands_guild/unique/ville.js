@@ -52,11 +52,11 @@ module.exports = {
       .addStringOption(o => o.setName('batiment').setDescription('Bâtiment à construire').setRequired(true)
         .addChoices(...Object.entries(BUILDINGS).map(([k, v]) => ({ name: `${v.emoji} ${v.name} — ${v.desc}`, value: k })))))
     .addSubcommand(s => s.setName('collecter').setDescription('💰 Collecter les taxes de votre ville'))
-    .addSubcommand(s => s.setName('taxer').setDescription('📊 Changer le taux de taxe (0-25%)')
+    .addSubcommand(s => s.setName('taxer').setDescription('📊 Changer le taux de taxe (0-25%)'))
     .addSubcommand(s => s.setName('slogan').setDescription('✏️ Changer le slogan de votre ville')
       .addStringOption(o => o.setName('texte').setDescription('Nouveau slogan').setRequired(true).setMaxLength(80)))
     .addSubcommand(s => s.setName('batiments').setDescription('🏗️ Liste des bâtiments disponibles'))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des villes les plus riches'))),
+    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des villes les plus riches')),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

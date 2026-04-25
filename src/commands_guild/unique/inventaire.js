@@ -101,10 +101,10 @@ module.exports = {
     .addSubcommand(s => s.setName('catalogue').setDescription('📚 Catalogue de tous les items'))
     .addSubcommand(s => s.setName('donner').setDescription('🎁 Donner un item à quelqu\'un')
       .addUserOption(o => o.setName('joueur').setDescription('Destinataire').setRequired(true))
-      .addStringOption(o => o.setName('item').setDescription('ID de l\'item à donner').setRequired(true))
+      .addStringOption(o => o.setName('item').setDescription('ID de l\'item à donner').setRequired(true)))
     .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre un item contre des coins')
-      .addStringOption(o => o.setName('item').setDescription('ID de l\'item à vendre').setRequired(true))
-    .addSubcommand(s => s.setName('lootbox').setDescription('📦 Ouvrir une lootbox (50 coins)')))),
+      .addStringOption(o => o.setName('item').setDescription('ID de l\'item à vendre').setRequired(true)))
+    .addSubcommand(s => s.setName('lootbox').setDescription('📦 Ouvrir une lootbox (50 coins)')),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;

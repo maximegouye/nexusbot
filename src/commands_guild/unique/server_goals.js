@@ -54,14 +54,14 @@ module.exports = {
       .addStringOption(o => o.setName('message').setDescription('Message d\'annonce quand l\'objectif est atteint')))
     .addSubcommand(s => s.setName('maj')
       .setDescription('🔄 Mettre à jour la progression d\'un objectif manuel [Admin]')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
     .addSubcommand(s => s.setName('terminer')
       .setDescription('✅ Marquer un objectif comme terminé [Admin]')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
     .addSubcommand(s => s.setName('supprimer')
       .setDescription('🗑️ Supprimer un objectif [Admin]')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
-    .addSubcommand(s => s.setName('historique').setDescription('📜 Voir les objectifs accomplis'))),
+    .addSubcommand(s => s.setName('historique').setDescription('📜 Voir les objectifs accomplis')),
 
   cooldown: 5,
 

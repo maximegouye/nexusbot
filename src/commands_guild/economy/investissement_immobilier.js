@@ -34,11 +34,11 @@ module.exports = {
     .setDescription('🏠 Marché Immobilier Virtuel')
     .addSubcommand(s => s.setName('marche').setDescription('🏪 Voir les propriétés disponibles'))
     .addSubcommand(s => s.setName('acheter')
-      .setDescription('💰 Acheter une propriété')
+      .setDescription('💰 Acheter une propriété'))
     .addSubcommand(s => s.setName('portfolio').setDescription('📋 Voir ton portfolio immobilier'))
     .addSubcommand(s => s.setName('loyer').setDescription('💸 Collecter les loyers de tes propriétés'))
     .addSubcommand(s => s.setName('vendre')
-      .setDescription('📉 Vendre une propriété'))),
+      .setDescription('📉 Vendre une propriété')),
 
   cooldown: 5,
 

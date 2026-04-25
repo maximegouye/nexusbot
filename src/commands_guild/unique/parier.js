@@ -45,7 +45,7 @@ module.exports = {
       .addStringOption(o => o.setName('choix').setDescription('Votre choix').setRequired(true).addChoices(
         { name: '🅰️ Option A', value: 'a' },
         { name: '🅱️ Option B', value: 'b' },
-      ))
+      )))
     .addSubcommand(s => s.setName('voir')
       .setDescription('👁️ Voir un pari')
       .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true)))
@@ -60,7 +60,7 @@ module.exports = {
       )))
     .addSubcommand(s => s.setName('annuler')
       .setDescription('❌ Annuler un pari (admin/créateur)')
-      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true)))),
+      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))),
 
   cooldown: 5,
 

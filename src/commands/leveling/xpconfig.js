@@ -16,7 +16,7 @@ module.exports = {
     .addSubcommand(s => s.setName('statut').setDescription('Voir la configuration XP actuelle'))
     .addSubcommand(s => s.setName('activer').setDescription('Activer/désactiver le système XP')
       .addBooleanOption(o => o.setName('actif').setDescription('Actif ?').setRequired(true)))
-    .addSubcommand(s => s.setName('taux').setDescription('Modifier le taux de XP par message')
+    .addSubcommand(s => s.setName('taux').setDescription('Modifier le taux de XP par message'))
     .addSubcommand(s => s.setName('noxp_canal').setDescription('Ajouter/retirer un canal sans XP')
       .addChannelOption(o => o.setName('canal').setDescription('Canal').setRequired(true))
       .addBooleanOption(o => o.setName('ajouter').setDescription('Ajouter (true) ou retirer (false)').setRequired(true)))
@@ -24,11 +24,11 @@ module.exports = {
       .addRoleOption(o => o.setName('role').setDescription('Rôle').setRequired(true))
       .addBooleanOption(o => o.setName('ajouter').setDescription('Ajouter (true) ou retirer (false)').setRequired(true)))
     .addSubcommand(s => s.setName('multiplicateur').setDescription('XP x2, x3... pour un rôle (ex: Booster)')
-      .addRoleOption(o => o.setName('role').setDescription('Rôle').setRequired(true))
+      .addRoleOption(o => o.setName('role').setDescription('Rôle').setRequired(true)))
     .addSubcommand(s => s.setName('message_levelup').setDescription('Personnaliser le message de montée de niveau')
       .addStringOption(o => o.setName('message').setDescription('Message ({user}, {level}, {guild} dispo)').setRequired(true)))
     .addSubcommand(s => s.setName('canal_levelup').setDescription('Canal où afficher les montées de niveau')
-      .addChannelOption(o => o.setName('canal').setDescription('Canal (vide = canal actuel)').setRequired(false))))),
+      .addChannelOption(o => o.setName('canal').setDescription('Canal (vide = canal actuel)').setRequired(false))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

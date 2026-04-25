@@ -32,9 +32,9 @@ module.exports = {
     .setDescription('🏷️ Système d\'enchères — vendez et achetez aux enchères !')
     .addSubcommand(s => s.setName('creer').setDescription('🏷️ Créer une enchère')
       .addStringOption(o => o.setName('article').setDescription('Nom de l\'article').setRequired(true).setMaxLength(80))
-      .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200))
+      .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200)))
     .addSubcommand(s => s.setName('encherir').setDescription('💰 Faire une enchère')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir une enchère')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Liste des enchères actives'))
@@ -42,7 +42,7 @@ module.exports = {
     .addSubcommand(s => s.setName('annuler').setDescription('❌ Annuler votre enchère (avant première mise)')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('cloturer').setDescription('🔒 Clôturer une enchère terminée')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

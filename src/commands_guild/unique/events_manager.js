@@ -55,7 +55,7 @@ module.exports = {
       .addStringOption(o => o.setName('debut').setDescription('Date/heure de début (JJ/MM/AAAA HH:MM)').setRequired(true))
       .addStringOption(o => o.setName('description').setDescription('Description').setMaxLength(500))
       .addStringOption(o => o.setName('lieu').setDescription('Lieu ou lien vocal').setMaxLength(200))
-      .addStringOption(o => o.setName('fin').setDescription('Date/heure de fin (JJ/MM/AAAA HH:MM)'))
+      .addStringOption(o => o.setName('fin').setDescription('Date/heure de fin (JJ/MM/AAAA HH:MM)')))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les prochains événements'))
     .addSubcommand(s => s.setName('info')
       .setDescription('🔍 Voir les détails d\'un événement')
@@ -72,7 +72,7 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
     .addSubcommand(s => s.setName('annuler')
       .setDescription('🗑️ Annuler un événement [Admin]')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true))),
 
   cooldown: 5,
 

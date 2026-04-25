@@ -33,7 +33,7 @@ module.exports = {
     .setName('mine')
     .setDescription('⛏️ Creusez des mines pour trouver des minerais précieux !')
     .addSubcommand(s => s.setName('creuser').setDescription('⛏️ Creuser pour trouver des minerais'))
-    .addSubcommand(s => s.setName('profondeur').setDescription('⬇️ Descendre plus profond dans la mine')
+    .addSubcommand(s => s.setName('profondeur').setDescription('⬇️ Descendre plus profond dans la mine'))
     .addSubcommand(s => s.setName('pioche').setDescription('⛏️ Améliorer votre pioche')
       .addStringOption(o => o.setName('action').setDescription('Action').setRequired(true)
         .addChoices(
@@ -41,7 +41,7 @@ module.exports = {
           { name: '⬆️ Améliorer', value: 'ameliorer' },
         )))
     .addSubcommand(s => s.setName('stats').setDescription('📊 Vos statistiques minières'))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Top des mineurs'))),
+    .addSubcommand(s => s.setName('classement').setDescription('🏆 Top des mineurs')),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

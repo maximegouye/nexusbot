@@ -38,15 +38,15 @@ module.exports = {
     .addSubcommand(s => s.setName('vendre')
       .setDescription('📦 Mettre un objet aux enchères')
       .addStringOption(o => o.setName('objet').setDescription('Nom de l\'objet').setRequired(true).setMaxLength(100))
-      .addStringOption(o => o.setName('description').setDescription('Description de l\'objet').setMaxLength(300))
+      .addStringOption(o => o.setName('description').setDescription('Description de l\'objet').setMaxLength(300)))
     .addSubcommand(s => s.setName('miser')
       .setDescription('💰 Faire une enchère')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('voir')
       .setDescription('👁️ Voir une enchère')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les enchères actives'))
-    .addSubcommand(s => s.setName('mes_encheres').setDescription('👤 Voir mes enchères (ventes et enchères)')))),
+    .addSubcommand(s => s.setName('mes_encheres').setDescription('👤 Voir mes enchères (ventes et enchères)')),
 
   cooldown: 5,
 

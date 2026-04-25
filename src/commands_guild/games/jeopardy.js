@@ -51,7 +51,7 @@ module.exports = {
     .setName('jeopardy')
     .setDescription('🎮 Quiz Jeopardy — Catégories, niveaux, compétition !')
     .addSubcommand(s => s.setName('start')
-      .setDescription('▶️ Lancer une partie de Jeopardy')
+      .setDescription('▶️ Lancer une partie de Jeopardy'))
     .addSubcommand(s => s.setName('question')
       .setDescription('❓ Choisir une catégorie et une valeur')
       .addStringOption(o => o.setName('categorie').setDescription('Catégorie').setRequired(true)
@@ -71,7 +71,7 @@ module.exports = {
           { name: '💰 1000', value: 1000 },
         )))
     .addSubcommand(s => s.setName('scores').setDescription('🏆 Voir les scores de la partie'))
-    .addSubcommand(s => s.setName('stop').setDescription('⏹️ Terminer la partie'))),
+    .addSubcommand(s => s.setName('stop').setDescription('⏹️ Terminer la partie')),
 
   cooldown: 5,
 

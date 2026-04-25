@@ -17,13 +17,13 @@ module.exports = {
     .setDescription('⛓️ Système de prison virtuelle')
     .addSubcommand(s => s.setName('emprisonner').setDescription('⛓️ Emprisonner un membre')
       .addUserOption(o => o.setName('membre').setDescription('Membre à emprisonner').setRequired(true))
-      .addStringOption(o => o.setName('motif').setDescription('Motif').setRequired(true))
+      .addStringOption(o => o.setName('motif').setDescription('Motif').setRequired(true)))
     .addSubcommand(s => s.setName('liberer').setDescription('🔓 Libérer un prisonnier (admin)')
       .addUserOption(o => o.setName('membre').setDescription('Membre à libérer').setRequired(true)))
     .addSubcommand(s => s.setName('evasion').setDescription('🏃 Tenter une évasion (50% de chance)'))
     .addSubcommand(s => s.setName('caution').setDescription('💰 Payer sa caution pour se libérer'))
     .addSubcommand(s => s.setName('statut').setDescription('📋 Voir les prisonniers actuels'))
-    .addSubcommand(s => s.setName('cellule').setDescription('🔍 Voir ton statut en prison'))),
+    .addSubcommand(s => s.setName('cellule').setDescription('🔍 Voir ton statut en prison')),
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
