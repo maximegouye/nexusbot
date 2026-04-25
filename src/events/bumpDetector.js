@@ -80,10 +80,10 @@ async function sendBumpReminder(client, guildId) {
     );
 
     await channel.send({
-      content: `@here 🔔 **Rappel de bump !**`,
+      content: userId ? `<@${userId}> 🔔 **Rappel de bump !**` : '🔔 **Rappel de bump !**',
       embeds: [embed],
       components: [row],
-      allowedMentions: { parse: ['everyone'] },
+      allowedMentions: { users: userId ? [userId] : [] },
     });
   } catch (e) {
     console.error('[BumpReminder] Erreur envoi rappel:', e.message);
