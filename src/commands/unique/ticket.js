@@ -63,6 +63,7 @@ const CATEGORIES = [
   { value: 'partenariat', label: '🤝 Partenariat',         description: 'Demande de partenariat',              emoji: '🤝', color: '#2ECC71' },
   { value: 'signalement', label: '🚨 Signalement',         description: 'Signaler un membre/comportement',     emoji: '🚨', color: '#E67E22' },
   { value: 'achat',       label: '💰 Achat / Premium',     description: 'Question sur un achat ou abonnement', emoji: '💰', color: '#F1C40F' },
+  { value: 'recrutement', label: '🎯 Recrutement',          description: 'Suivi de candidature ou question staff', emoji: '🎯', color: '#9B59B6' },
   { value: 'autre',       label: '📋 Autre',               description: 'Toute autre demande',                 emoji: '📋', color: '#95A5A6' },
 ];
 
@@ -99,6 +100,11 @@ const FORMS = {
     { id: 'product',     label: '🛒 Produit / Offre concerné',          style: TextInputStyle.Short,     placeholder: 'Ex: VIP Gold, Pass Premium',    required: true,  max: 100 },
     { id: 'order_id',    label: '🔢 Numéro de commande (si applicable)', style: TextInputStyle.Short,     placeholder: 'Ex: ORDER-12345',               required: false, max: 50  },
     { id: 'description', label: '📝 Description du problème',           style: TextInputStyle.Paragraph, placeholder: "Qu'est-ce qui ne fonctionne pas ?", required: true, max: 500 },
+  ],
+  recrutement: [
+    { id: 'poste',       label: '🎯 Poste visé',                    style: TextInputStyle.Short,     placeholder: 'Ex: Modérateur, Graphiste, Helper...', required: true,  max: 100 },
+    { id: 'subject',     label: '📌 Objet de ta demande',           style: TextInputStyle.Short,     placeholder: 'Ex: Suivi candidature, question staff', required: true,  max: 100 },
+    { id: 'description', label: '📝 Détails de ta demande',         style: TextInputStyle.Paragraph, placeholder: 'Explique ta question ou demande...',    required: true,  max: 500 },
   ],
   autre: [
     { id: 'subject',     label: '📌 Sujet de ta demande',      style: TextInputStyle.Short,     placeholder: 'Résume ta demande en quelques mots', required: true,  max: 100  },
