@@ -32,17 +32,20 @@ async function checkBumpReminders(client) {
       const channel = guild.channels.cache.get(reminder.channel_id);
       if (!channel) continue;
 
-      // Récupérer le rôle bump configuré (optionnel)
+      // Récupérer le rôle bump configuré (staff/admin)
       const cfg      = db.prepare('SELECT bump_role FROM guild_config WHERE guild_id=?').get(reminder.guild_id);
       const bumpRole = cfg?.bump_role ? guild.roles.cache.get(cfg.bump_role) : null;
       const userId   = reminder.user_id !== '0' ? reminder.user_id : null;
 
-      // Construire le ping : rôle > @dernier bumpeur > message simple
-      const pingContent = bumpRole
-        ? `${bumpRole} 🔔 **C'est l'heure du bump !**`
-        : userId
-          ? `<@${userId}> 🔔 **Rappel de bump !**`
-          : '🔔 **Rappel de bump !**';
+      // Ping uniquement : rôle staff configuré + propriétaire du serveur
+      // (pas @everyone, pas le dernier bumpeur aléatoire)
+      const ownerId = guild.ownerId;
+      let pingParts = [];
+      if (bumpRole) pingParts.push(`${bumpRole}`);
+      if (ownerId)  pingParts.push(`<@${ownerId}>`);
+      const pingContent = pingParts.length > 0
+        ? `${pingParts.join(' ')} 🔔 **C'est l'heure du bump !**`
+        : '🔔 **C\'est l\'heure du bump !**';
 
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -69,22 +72,25 @@ async function checkBumpReminders(client) {
           .setEmoji('🔗'),
       );
 
+      // allowedMentions : rôle staff + propriétaire uniquement (jamais @everyone)
+      const allowedUsers = ownerId ? [ownerId] : [];
       await channel.send({
         content: pingContent,
         embeds: [embed],
         components: [row],
         allowedMentions: {
           roles: bumpRole ? [bumpRole.id] : [],
-          users: !bumpRole && userId ? [userId] : [],
+          users: allowedUsers,
+          parse: [], // pas de @everyone/@here automatique
         },
       }).catch(() => {});
 
-      // DM au dernier bumpeur si pas de rôle configuré
-      if (!bumpRole && userId) {
+      // DM au propriétaire du serveur pour s'assurer que le rappel est vu
+      if (ownerId) {
         try {
-          const member = await guild.members.fetch(userId).catch(() => null);
-          if (member) {
-            await member.send({
+          const owner = await guild.members.fetch(ownerId).catch(() => null);
+          if (owner) {
+            await owner.send({
               embeds: [
                 new EmbedBuilder()
                   .setColor('#5865F2')
