@@ -80,5 +80,75 @@ module.exports = {
     });
 
     db.db.prepare('UPDATE polls SET message_id = ? WHERE id = ?').run(msg.id, pollId);
+
+  },
+
+  async handleComponent(interaction, customId) {
+    if (!customId.startsWith('poll_')) return false;
+
+    const parts = customId.split('_');
+    if (parts.length < 4) return false;
+
+    const pollId = parseInt(parts[2]);
+    const choiceIdx = parseInt(parts[3]);
+
+    if (isNaN(pollId) || isNaN(choiceIdx)) return false;
+
+    await interaction.deferUpdate().catch(() => {});
+
+    try {
+      const poll = db.db.prepare('SELECT * FROM polls WHERE id = ?').get(pollId);
+      if (!poll) {
+        await interaction.reply({ content: '❌ Sondage non trouvé.', ephemeral: true }).catch(() => {});
+        return true;
+      }
+
+      const choices = JSON.parse(poll.choices);
+      const votes = JSON.parse(poll.votes);
+      const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+      // Initialiser le tableau de votes
+      if (!Array.isArray(votes[choiceIdx])) votes[choiceIdx] = [];
+
+      // Ajouter le vote (sans doublon)
+      if (!votes[choiceIdx].includes(interaction.user.id)) {
+        votes[choiceIdx].push(interaction.user.id);
+        db.db.prepare('UPDATE polls SET votes = ? WHERE id = ?').run(JSON.stringify(votes), pollId);
+      }
+
+      // Reconstruire l'embed
+      const cfg = db.getConfig(interaction.guildId);
+      const total = Object.values(votes).flat().length;
+      const emojis = ['🇦', '🇧', '🇨', '🇩'];
+      const embed = new EmbedBuilder()
+        .setColor(cfg?.color || '#7B2FBE')
+        .setTitle(`📊 ${poll.question}`)
+        .setDescription(`*Créé par <@${poll.creator_id}>*\n⏰ Fin : <t:${poll.ends_at}:R>`)
+        .setFooter({ text: `${total} vote${total !== 1 ? 's' : ''} • ID: ${pollId}` });
+
+      for (let i = 0; i < choices.length; i++) {
+        const count = (votes[i] || []).length;
+        const pct = total > 0 ? Math.round(count / total * 100) : 0;
+        const barLen = 20;
+        const filled = Math.round(pct / 100 * barLen);
+        const bar = '█'.repeat(filled) + '░'.repeat(barLen - filled);
+        embed.addFields({ name: `${emojis[i]} ${choices[i]}`, value: `${bar} **${pct}%** (${count})`, inline: false });
+      }
+
+      const row = new ActionRowBuilder().addComponents(
+        ...choices.map((c, i) => new ButtonBuilder()
+          .setCustomId(`poll_vote_${pollId}_${i}`)
+          .setLabel(c.length > 20 ? c.slice(0, 17) + '…' : c)
+          .setEmoji(emojis[i])
+          .setStyle(ButtonStyle.Primary)
+        )
+      );
+
+      await interaction.editReply({ embeds: [embed], components: [row] }).catch(() => {});
+      return true;
+    } catch (err) {
+      console.error('[POLL handleComponent]', err?.message || err);
+      return true;
+    }
   }
 };

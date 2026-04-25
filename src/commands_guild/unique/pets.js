@@ -302,3 +302,29 @@ module.exports = {
     }
   }
 };
+
+  async handleComponent(interaction, customId) {
+    if (!customId.startsWith('pet_')) return false;
+
+    if (customId.includes('abandon_confirm')) {
+      const userId = customId.split('_')[2];
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+        return true;
+      }
+
+      db.db.prepare('DELETE FROM pets WHERE guild_id=? AND user_id=?').run(interaction.guildId, interaction.user.id);
+      await interaction.update({ content: '💔 Votre animal a été abandonné.', components: [] }).catch(() => {});
+    } else if (customId.includes('abandon_cancel')) {
+      const userId = customId.split('_')[2];
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+        return true;
+      }
+
+      await interaction.update({ content: '✅ Abandon annulé.', components: [] }).catch(() => {});
+    }
+
+    return true;
+  }
+};

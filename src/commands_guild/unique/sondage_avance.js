@@ -128,5 +128,61 @@ module.exports = {
           .setFooter({ text: sondage.ended ? 'Sondage terminé' : 'Sondage en cours' })
       ], ephemeral: false });
     }
+  },
+
+  async handleComponent(interaction, customId) {
+    if (!customId.startsWith('sondagev_')) return false;
+
+    const parts = customId.split('_');
+    if (parts.length < 3) return false;
+
+    const msgId = parts[1];
+    const optIdx = parseInt(parts[2]);
+    if (isNaN(optIdx)) return false;
+
+    await interaction.deferUpdate().catch(() => {});
+
+    try {
+      const sondage = db.db.prepare('SELECT * FROM sondages WHERE guild_id=? AND message_id=?')
+        .get(interaction.guildId, msgId);
+      if (!sondage || sondage.ended) {
+        return true;
+      }
+
+      const options = JSON.parse(sondage.options);
+      const votes = JSON.parse(sondage.votes || '{}');
+      const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+
+      // Initialiser
+      if (!Array.isArray(votes[optIdx])) votes[optIdx] = [];
+
+      // Enregistrer le vote si pas encore voté
+      if (!votes[optIdx].includes(interaction.user.id)) {
+        votes[optIdx].push(interaction.user.id);
+        db.db.prepare('UPDATE sondages SET votes=? WHERE id=?').run(JSON.stringify(votes), sondage.id);
+      }
+
+      // Recalculer les résultats
+      const totalVotes = Object.values(votes).flat().length;
+      const results = options.map((o, i) => {
+        const optVotes = votes[i] ? votes[i].length : 0;
+        const pct = totalVotes > 0 ? Math.round(optVotes / totalVotes * 100) : 0;
+        const bar = '█'.repeat(Math.floor(pct / 10)) + '░'.repeat(10 - Math.floor(pct / 10));
+        return `${emojis[i]} **${o}**\n${bar} ${optVotes} vote(s) — **${pct}%**`;
+      }).join('\n\n');
+
+      const { EmbedBuilder } = require('discord.js');
+      await interaction.editReply({ embeds: [
+        new EmbedBuilder().setColor('#5865F2').setTitle(`📊 ${sondage.question}`)
+          .setDescription(results)
+          .addFields({ name: '🗳️ Total', value: `**${totalVotes}** vote(s)`, inline: true })
+          .setFooter({ text: 'Sondage en cours' })
+      ] }).catch(() => {});
+
+      return true;
+    } catch (err) {
+      console.error('[SONDAGE handleComponent]', err?.message || err);
+      return true;
+    }
   }
 };

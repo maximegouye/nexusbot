@@ -27,9 +27,21 @@ const COMPONENT_ROUTES = {
   'conf_':        'confession',
   'rep_':         'rep',
   'bump_':        'bump',
+  // ── Routes sans collector (handleComponent requis) ────────
+  'prestige_':    'prestige',
+  'roue_':        'roue',
+  'pet_':         'pets',
+  'rr_':          'reactionroles',
+  'rolemenu_':    'rolemenu',
   // ── Autres composants ────────────────────────────────────
   'app_':         'applications',
   'apply_':       'applications',
+  'pay_'          : 'payer',
+  'heist_'        : 'braquage',
+  'sondage_'      : 'sondage_avance',
+  'pendu_'        : 'pendu',
+  'morpion_'      : 'morpion',
+  'poll_'         : 'poll',
   'appmodal_':    'applications',
 };
 

@@ -91,7 +91,7 @@ module.exports = {
   },
 
   // Gestionnaire de bouton (appelé depuis interactionCreate)
-  async handleButton(interaction) {
+  async handleComponent(interaction) {
     const db = require('../../database/db');
     const letter = interaction.customId.replace('pendu_', '');
     const guildId = interaction.guildId;

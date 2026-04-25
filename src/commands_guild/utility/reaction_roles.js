@@ -151,3 +151,30 @@ module.exports = {
     }
   }
 };
+
+  async handleComponent(interaction, customId) {
+    if (!customId.startsWith('rr_')) return false;
+
+    const roleId = customId.replace('rr_', '');
+    const role = interaction.guild.roles.cache.get(roleId);
+
+    if (!role) {
+      await interaction.reply({ content: '❌ Rôle introuvable.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+
+    try {
+      if (interaction.member.roles.cache.has(roleId)) {
+        await interaction.member.roles.remove(roleId);
+        await interaction.reply({ content: `✅ Rôle **${role.name}** retiré.`, ephemeral: true }).catch(() => {});
+      } else {
+        await interaction.member.roles.add(roleId);
+        await interaction.reply({ content: `✅ Rôle **${role.name}** ajouté.`, ephemeral: true }).catch(() => {});
+      }
+    } catch (e) {
+      await interaction.reply({ content: `❌ Erreur: ${e.message}`, ephemeral: true }).catch(() => {});
+    }
+
+    return true;
+  }
+};

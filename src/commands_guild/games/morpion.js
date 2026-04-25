@@ -94,7 +94,7 @@ module.exports = {
     }
   },
 
-  async handleButton(interaction) {
+  async handleComponent(interaction) {
     const db = require('../../database/db');
     const cfg = db.getConfig(interaction.guildId);
     const coin = cfg.currency_emoji || '🪙';

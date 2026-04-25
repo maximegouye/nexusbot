@@ -112,3 +112,48 @@ module.exports = {
     }
   }
 };
+
+
+  async handleComponent(interaction, customId) {
+    if (!customId.startsWith('prestige_')) return false;
+    
+    const userId = customId.split('_')[1];
+    if (interaction.user.id !== userId) {
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+
+    const guildId = interaction.guildId;
+    const cfg = db.getConfig(guildId);
+    const coin = cfg.currency_emoji || '€';
+
+    if (customId.includes('confirm')) {
+      const u = db.getUser(interaction.user.id, guildId);
+      const currentPrestige = u.prestige || 0;
+      const nextPData = PRESTIGE_LEVELS[currentPrestige];
+
+      if (!nextPData) {
+        await interaction.update({ content: '🌟 Prestige maximum atteint !', components: [], ephemeral: true }).catch(() => {});
+        return true;
+      }
+
+      const coinReward = 5000 * (currentPrestige + 1);
+      
+      db.db.prepare('UPDATE users SET prestige = ?, level = 1, xp = 0, prestige_coins_total = prestige_coins_total + ? WHERE user_id=? AND guild_id=?')
+        .run(currentPrestige + 1, coinReward, interaction.user.id, guildId);
+      db.addCoins(interaction.user.id, guildId, coinReward);
+
+      const embed = new EmbedBuilder()
+        .setColor(nextPData.color)
+        .setTitle(`${nextPData.emoji} Prestige effectué !`)
+        .setDescription(`Vous êtes passé à **Prestige ${currentPrestige + 1}** !\n\n${nextPData.bonus}`)
+        .addFields({ name: '💰 Récompense', value: `+${coinReward.toLocaleString()} ${coin}` });
+
+      await interaction.update({ embeds: [embed], components: [] }).catch(() => {});
+    } else if (customId.includes('cancel')) {
+      await interaction.update({ content: '❌ Prestige annulé.', components: [] }).catch(() => {});
+    }
+
+    return true;
+  }
+};

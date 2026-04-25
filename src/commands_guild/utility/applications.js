@@ -248,3 +248,102 @@ async function handleApplication(interaction, guildId, userId, nom) {
     await modalSubmit.reply({ content: `✅ Votre candidature pour **${nom}** a été soumise ! L'équipe la traitera bientôt.`, ephemeral: true });
   } catch {}
 }
+
+async function handleComponent(interaction) {
+  const db = require('../../database/db');
+  const customId = interaction.customId;
+
+  try {
+    // Gérer les boutons de candidature (apply_*)
+    if (customId.startsWith('apply_')) {
+      const nom = customId.slice(6); // Récupère le nom après 'apply_'
+      return await handleApplication(interaction, interaction.guildId, interaction.user.id, nom);
+    }
+
+    // Gérer les boutons accept/reject (app_*)
+    if (customId.startsWith('app_')) {
+      const isAdmin = interaction.member.permissions.has(0x20n);
+      if (!isAdmin) {
+        return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+      }
+
+      // app_accept_<submissionId>_<roleId>
+      if (customId.startsWith('app_accept_')) {
+        const parts = customId.slice(11).split('_');
+        const submissionId = parseInt(parts[0]);
+        const roleId = parts.slice(1).join('_') || null;
+
+        const submission = db.db.prepare('SELECT * FROM app_submissions WHERE id=?').get(submissionId);
+        if (!submission) {
+          return interaction.reply({ content: '❌ Candidature introuvable.', ephemeral: true });
+        }
+
+        // Mettre à jour le statut
+        db.db.prepare('UPDATE app_submissions SET status=?, reviewer_id=? WHERE id=?')
+          .run('accepted', interaction.user.id, submissionId);
+
+        // Donner le rôle si applicable
+        if (roleId) {
+          const member = await interaction.guild.members.fetch(submission.user_id).catch(() => null);
+          if (member) {
+            await member.roles.add(roleId).catch(() => {});
+          }
+        }
+
+        // Mettre à jour l'embed et retirer les boutons
+        const embed = interaction.message.embeds[0];
+        if (embed) {
+          embed.setColor('#2ECC71')
+            .setTitle(embed.title.replace('Nouvelle', 'Candidature acceptée'));
+          embed.fields[0] = {
+            name: 'Status',
+            value: `✅ Acceptée par <@${interaction.user.id}>`,
+            inline: false
+          };
+        }
+
+        await interaction.message.edit({ embeds: [embed], components: [] }).catch(() => {});
+        return interaction.reply({ content: `✅ Candidature acceptée !${roleId ? ' Rôle attribué.' : ''}`, ephemeral: true });
+      }
+
+      // app_reject_<submissionId>
+      if (customId.startsWith('app_reject_')) {
+        const submissionId = parseInt(customId.slice(11));
+
+        const submission = db.db.prepare('SELECT * FROM app_submissions WHERE id=?').get(submissionId);
+        if (!submission) {
+          return interaction.reply({ content: '❌ Candidature introuvable.', ephemeral: true });
+        }
+
+        // Mettre à jour le statut
+        db.db.prepare('UPDATE app_submissions SET status=?, reviewer_id=? WHERE id=?')
+          .run('rejected', interaction.user.id, submissionId);
+
+        // Mettre à jour l'embed et retirer les boutons
+        const embed = interaction.message.embeds[0];
+        if (embed) {
+          embed.setColor('#E74C3C')
+            .setTitle(embed.title.replace('Nouvelle', 'Candidature refusée'));
+          embed.fields[0] = {
+            name: 'Status',
+            value: `❌ Refusée par <@${interaction.user.id}>`,
+            inline: false
+          };
+        }
+
+        await interaction.message.edit({ embeds: [embed], components: [] }).catch(() => {});
+        return interaction.reply({ content: '✅ Candidature refusée.', ephemeral: true });
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Erreur dans handleComponent (applications):', error);
+    try {
+      return interaction.reply({ content: '❌ Une erreur s\'est produite.', ephemeral: true });
+    } catch {}
+    return false;
+  }
+}
+
+module.exports.handleComponent = handleComponent;
