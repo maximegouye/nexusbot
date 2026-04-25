@@ -34,24 +34,48 @@ module.exports = {
     const appId   = client.user.id;
     const guildId = process.env.HOME_GUILD_ID || '1492886135159128227';
 
+    // ── Validation locale avant envoi ──────────────────────────
+    function validateCommands(cmds) {
+      const issues = [];
+      function checkNode(node, path) {
+        if (node.description && node.description.length > 100)
+          issues.push(`${path}.description trop longue (${node.description.length} chars): "${node.description.slice(0,60)}..."`);
+        if (node.name && node.name.length > 32)
+          issues.push(`${path}.name trop long (${node.name.length} chars): "${node.name}"`);
+        if (node.choices) node.choices.forEach((ch, i) => {
+          if (typeof ch.name === 'string' && ch.name.length > 100)
+            issues.push(`${path}.choices[${i}].name trop long (${ch.name.length}): "${ch.name}"`);
+          if (typeof ch.value === 'string' && ch.value.length > 100)
+            issues.push(`${path}.choices[${i}].value trop long (${ch.value.length}): "${ch.value}"`);
+        });
+        if (node.options) node.options.forEach((opt, i) => checkNode(opt, `${path}.options[${i}]`));
+      }
+      cmds.forEach((cmd, i) => checkNode(cmd, `commands[${i}](${cmd.name})`));
+      return issues;
+    }
+
+    const validationIssues = validateCommands(commands);
+    if (validationIssues.length > 0) {
+      console.error('❌ Validation avant envoi — problèmes détectés:');
+      validationIssues.forEach(issue => console.error('  •', issue));
+    }
+
     try {
       await rest.put(
         Routes.applicationGuildCommands(appId, guildId),
         { body: commands }
       );
       console.log(`✅ ${commands.length} slash commands enregistrées sur le serveur ${guildId} !`);
-      commands.forEach(c => {
-        const subs = (c.options || []).filter(o => o.type === 1).map(o => o.name);
-        console.log(`   /${c.name}${subs.length ? ' [' + subs.join(', ') + ']' : ''}`);
-      });
     } catch (error) {
       console.error('❌ Erreur guild registration:', error.message);
+      if (error.rawError) console.error('   Détail:', JSON.stringify(error.rawError?.errors || error.rawError).slice(0, 500));
       // Fallback global
       try {
         await rest.put(Routes.applicationCommands(appId), { body: commands });
         console.log(`✅ ${commands.length} slash commands enregistrées globalement (fallback).`);
       } catch (e2) {
         console.error('❌ Erreur global registration:', e2.message);
+        if (e2.rawError) console.error('   Détail:', JSON.stringify(e2.rawError?.errors || e2.rawError).slice(0, 500));
       }
     }
   }
