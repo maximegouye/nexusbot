@@ -4,12 +4,18 @@
 //   • src/commands_guild/ → guild  (HOME_GUILD_ID, ≤ 130)
 // ============================================================
 const { REST, Routes } = require('discord.js');
+const { checkBumpReminders } = require('../utils/bumpReminderCheck');
 
 module.exports = {
   name: 'clientReady',
   once: true,
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.tag} (${client.user.id})`);
+
+    // ── Bump Reminder — vérification toutes les 60 secondes ─
+    checkBumpReminders(client).catch(() => {});
+    setInterval(() => checkBumpReminders(client).catch(() => {}), 60_000);
+    console.log('✅ Bump Reminder : checker démarré (60s interval, persistant DB)');
 
     const token = process.env.TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN;
     if (!token) {
@@ -44,12 +50,10 @@ module.exports = {
     // ── Construction des tableaux JSON ─────────────────────
     const globalCmds = (client.globalCommandsList || [])
       .filter(d => d && typeof d.toJSON === 'function')
-      .slice(0, 100)
       .map(d => d.toJSON());
 
     const guildCmds = (client.guildCommandsList || [])
       .filter(d => d && typeof d.toJSON === 'function')
-      .slice(0, 100)
       .map(d => d.toJSON());
 
     console.log(`📦 Global: ${globalCmds.length} commandes | Guild: ${guildCmds.length} commandes`);
