@@ -154,7 +154,7 @@ connectWithRetry();
 // ── Dashboard web (démarre après connexion Discord) ──────
 try {
   const dashboard = require('../dashboard/server');
-  client.once('ready', () => dashboard.start(client));
+  client.once('clientReady', () => dashboard.start(client));
 } catch (e) {
   console.warn('[Dashboard] Non disponible:', e.message);
 }
