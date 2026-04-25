@@ -68,19 +68,19 @@ module.exports = {
       .setDescription('💰 Gestion économique complète')
 
       .addSubcommand(s => s.setName('donner').setDescription('Donner des coins à un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
 
       .addSubcommand(s => s.setName('retirer').setDescription('Retirer des coins à un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
 
       .addSubcommand(s => s.setName('definir-solde').setDescription('Définir précisément le solde d\'un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
 
       .addSubcommand(s => s.setName('donner-xp').setDescription('Donner de l\'XP à un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
 
       .addSubcommand(s => s.setName('definir-niveau').setDescription('Définir le niveau d\'un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
 
       .addSubcommand(s => s.setName('reset-user').setDescription('Réinitialiser le profil économique d\'un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre à réinitialiser').setRequired(true)))
@@ -102,11 +102,11 @@ module.exports = {
         .addStringOption(o => o.setName('nom').setDescription('Nom de la monnaie').setRequired(false))
         .addStringOption(o => o.setName('emoji').setDescription('Emoji de la monnaie').setRequired(false)))
 
-      .addSubcommand(s => s.setName('daily').setDescription('Configurer la récompense journalière')
+      .addSubcommand(s => s.setName('daily').setDescription('Configurer la récompense journalière'))
 
-      .addSubcommand(s => s.setName('xp-multiplicateur').setDescription('Configurer le multiplicateur d\'XP')
+      .addSubcommand(s => s.setName('xp-multiplicateur').setDescription('Configurer le multiplicateur d\'XP'))
 
-      .addSubcommand(s => s.setName('coins-par-message').setDescription('Définir les coins gagnés par message')
+      .addSubcommand(s => s.setName('coins-par-message').setDescription('Définir les coins gagnés par message'))
 
       .addSubcommand(s => s.setName('bienvenue').setDescription('Configurer le canal et message de bienvenue')
         .addChannelOption(o => o.setName('canal').setDescription('Canal de bienvenue').setRequired(true))
@@ -135,7 +135,7 @@ module.exports = {
         .addChannelOption(o => o.setName('canal').setDescription('Canal').setRequired(true)))
 
       .addSubcommand(s => s.setName('starboard').setDescription('Configurer le canal starboard')
-        .addChannelOption(o => o.setName('canal').setDescription('Canal starboard').setRequired(true))
+        .addChannelOption(o => o.setName('canal').setDescription('Canal starboard').setRequired(true)))
 
       .addSubcommand(s => s.setName('voir').setDescription('Afficher la configuration complète actuelle du serveur'))
     )
@@ -149,16 +149,16 @@ module.exports = {
         .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
         .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(200))
         .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false))
-        .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat').setRequired(false))
+        .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat').setRequired(false)))
 
       .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer un article de la boutique')
         .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
 
       .addSubcommand(s => s.setName('modifier-prix').setDescription('Modifier le prix d\'un article')
-        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
 
       .addSubcommand(s => s.setName('modifier-stock').setDescription('Modifier le stock d\'un article')
-        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
 
       .addSubcommand(s => s.setName('activer').setDescription('Activer ou désactiver un article')
         .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
@@ -182,7 +182,7 @@ module.exports = {
           { name: '📅 Double Daily', value: 'double_daily' },
           { name: '💬 Bonus Messages', value: 'msg_bonus' },
           { name: '🎰 Jackpot (gains x5)', value: 'jackpot' }
-        ))
+        )))
 
       .addSubcommand(s => s.setName('terminer').setDescription('Terminer un événement en cours')
         .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
@@ -260,12 +260,12 @@ module.exports = {
 
       .addSubcommand(s => s.setName('liste-blacklist').setDescription('Afficher tous les membres blacklistés'))
 
-      .addSubcommand(s => s.setName('audit-log').setDescription('Consulter le journal des actions propriétaire')
+      .addSubcommand(s => s.setName('audit-log').setDescription('Consulter le journal des actions propriétaire'))
 
       .addSubcommand(s => s.setName('lockdown').setDescription('Activer ou désactiver le mode verrouillage du serveur')
         .addBooleanOption(o => o.setName('actif').setDescription('Activer le verrouillage').setRequired(true))
         .addStringOption(o => o.setName('raison').setDescription('Raison du verrouillage').setRequired(false)))
-    ))))))))))))))),
+    ),
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXÉCUTION

@@ -64,11 +64,11 @@ module.exports = {
         ))
       .addStringOption(o => o.setName('valeur').setDescription('Valeur de la question').setRequired(true)
         .addChoices(
-          { name: '💰 200', value: 200 },
-          { name: '💰 400', value: 400 },
-          { name: '💰 600', value: 600 },
-          { name: '💰 800', value: 800 },
-          { name: '💰 1000', value: 1000 },
+          { name: '💰 200', value: '200' },
+          { name: '💰 400', value: '400' },
+          { name: '💰 600', value: '600' },
+          { name: '💰 800', value: '800' },
+          { name: '💰 1000', value: '1000' },
         )))
     .addSubcommand(s => s.setName('scores').setDescription('🏆 Voir les scores de la partie'))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Terminer la partie')),

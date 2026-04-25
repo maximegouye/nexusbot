@@ -188,11 +188,11 @@ module.exports = {
       .addSubcommand(s => s
         .setName('donner')
         .setDescription('🎁 Donner un item à un joueur')
-        .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
+        .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true)))
       .addSubcommand(s => s
         .setName('retirer')
         .setDescription('❌ Retirer un item d\'un joueur')
-        .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true))
+        .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true)))
       .addSubcommand(s => s
         .setName('vider')
         .setDescription('🗑️ Vider tout l\'inventaire d\'un joueur')
@@ -202,7 +202,7 @@ module.exports = {
         .setName('voir')
         .setDescription('📋 Voir l\'inventaire complet d\'un joueur')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true)))
-    ))),
+    ),
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXECUTE
