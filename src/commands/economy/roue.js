@@ -111,77 +111,58 @@ module.exports = {
   },
 };
 
-// Handler pour les boutons roue
-async handleComponent(interaction, customId) {
+async function handleComponent(interaction, customId) {
   if (!customId.startsWith('roue_')) return false;
 
-  const cfg = db.getConfig(interaction.guildId);
+  const cfg    = db.getConfig(interaction.guildId);
   const symbol = cfg.currency_emoji || '€';
+  const color  = cfg.color || '#9B59B6';
 
-  if (customId.startsWith('roue_replay:')) {
-    const miseStr = decodeURIComponent(customId.split(':')[1]);
-    const mise = parseInt(miseStr);
-    
-    const user = db.getUser(interaction.user.id, interaction.guildId);
-    if (user.balance < mise) {
-      await interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString()}${symbol}**).`, ephemeral: true }).catch(() => {});
-      return true;
-    }
-
-    db.removeCoins(interaction.user.id, interaction.guildId, mise);
-
-    const CASES = [
-      { emoji: '💀', mult: 0,    label: '💀 Banqueroute',       color: '#000000' },
-      { emoji: '🪙', mult: 0.5,  label: '🪙 Moitié remboursée', color: '#95A5A6' },
-      { emoji: '⚖️', mult: 1,    label: '⚖️ Mise récupérée',    color: '#3498DB' },
-      { emoji: '💰', mult: 1.5,  label: '💰 Petit gain ×1.5',   color: '#F39C12' },
-      { emoji: '💎', mult: 2,    label: '💎 Gain ×2',            color: '#2ECC71' },
-
-  async handleComponent(interaction, customId) {
-    if (!customId.startsWith('roue_')) return false;
-
-    const cfg = db.getConfig(interaction.guildId);
-    const symbol = cfg.currency_emoji || '€';
-    const CASES = [
-      { emoji: '💀', mult: 0, weight: 30 },
-      { emoji: '🪙', mult: 0.5, weight: 22 },
-      { emoji: '⚖️', mult: 1, weight: 18 },
-      { emoji: '💰', mult: 1.5, weight: 12 },
-      { emoji: '💎', mult: 2, weight: 8 },
-      { emoji: '🏆', mult: 3, weight: 5 },
-      { emoji: '⭐', mult: 5, weight: 3 },
-      { emoji: '💫', mult: 10, weight: 2 },
-    ];
-    const POOL = CASES.flatMap(c => Array(c.weight).fill(c));
-
-    if (customId.startsWith('roue_replay:') || customId.startsWith('roue_double:')) {
-      const miseStr = decodeURIComponent(customId.split(':')[1]);
-      const mise = parseInt(miseStr);
-      
-      const user = db.getUser(interaction.user.id, interaction.guildId);
-      if (user.balance < mise) {
-        await interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString()}${symbol}**).`, ephemeral: true }).catch(() => {});
-        return true;
-      }
-
-      db.removeCoins(interaction.user.id, interaction.guildId, mise);
-      const pick = POOL[Math.floor(Math.random() * POOL.length)];
-      const gain = Math.floor(mise * pick.mult);
-      if (gain > 0) db.addCoins(interaction.user.id, interaction.guildId, gain);
-
-      const embed = new EmbedBuilder()
-        .setColor(pick.mult === 0 ? '#E74C3C' : pick.mult < 1 ? '#F39C12' : pick.mult >= 5 ? '#9B59B6' : '#2ECC71')
-        .setTitle(`🎡 ${pick.emoji}`)
-        .addFields({ name: '💰', value: `${gain.toLocaleString()}${symbol}` });
-
-      const newRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`roue_replay:${encodeURIComponent(String(mise))}`).setLabel('🎡 Rejouer').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`roue_double:${encodeURIComponent(String(mise * 2))}`).setLabel('✖️ ×2').setStyle(ButtonStyle.Success),
-      );
-
-      await interaction.update({ embeds: [embed], components: [newRow] }).catch(() => {});
-    }
-
+  const parts   = customId.split(':');
+  const action  = parts[0]; // roue_replay or roue_double
+  const miseRaw = decodeURIComponent(parts[1] || '0');
+  let mise = parseInt(miseRaw, 10);
+  if (!mise || mise < 1) {
+    await interaction.reply({ content: '❌ Mise invalide.', ephemeral: true }).catch(() => {});
     return true;
   }
-};
+  if (action === 'roue_double') mise = mise * 2;
+
+  const user = db.getUser(interaction.user.id, interaction.guildId);
+  if (user.balance < mise) {
+    await interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true }).catch(() => {});
+    return true;
+  }
+
+  db.removeCoins(interaction.user.id, interaction.guildId, mise);
+  const pick = POOL[Math.floor(Math.random() * POOL.length)];
+  const gain = Math.floor(mise * pick.mult);
+  if (gain > 0) db.addCoins(interaction.user.id, interaction.guildId, gain);
+  const net = gain - mise;
+  const balanceAfter = Math.max(0, user.balance - mise + gain);
+  const resColor = pick.mult === 0 ? '#E74C3C' : pick.mult < 1 ? '#F39C12' : pick.mult >= 5 ? '#9B59B6' : '#2ECC71';
+
+  const embed = new EmbedBuilder()
+    .setColor(resColor)
+    .setTitle(`🎡 La roue s'arrête sur… ${pick.emoji}`)
+    .setDescription(`${pick.label}`)
+    .addFields(
+      { name: '💰 Mise',           value: `${mise.toLocaleString('fr-FR')}${symbol}`,              inline: true },
+      { name: '✖️ Multiplicateur', value: `×${pick.mult}`,                                         inline: true },
+      { name: '🏆 Gain',           value: `${gain.toLocaleString('fr-FR')}${symbol}`,              inline: true },
+      { name: net >= 0 ? '📈 Bénéfice' : '📉 Perte', value: `**${net > 0 ? '+' : ''}${net.toLocaleString('fr-FR')}${symbol}**`, inline: true },
+      { name: `${symbol} Solde`,   value: `**${balanceAfter.toLocaleString('fr-FR')}${symbol}**`,  inline: true },
+    )
+    .setFooter({ text: '🎡 Roue de la fortune · NexusBot' })
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`roue_replay:${encodeURIComponent(String(mise))}`).setLabel('🎡 Rejouer').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`roue_double:${encodeURIComponent(String(mise))}`).setLabel('✖️ Rejouer ×2').setStyle(ButtonStyle.Success),
+  );
+
+  await interaction.update({ embeds: [embed], components: [row] }).catch(() => {});
+  return true;
+}
+
+module.exports.handleComponent = handleComponent;

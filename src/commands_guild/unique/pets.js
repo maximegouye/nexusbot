@@ -303,28 +303,29 @@ module.exports = {
   }
 };
 
-  async handleComponent(interaction, customId) {
-    if (!customId.startsWith('pet_')) return false;
+async function handleComponent(interaction, customId) {
+  if (!customId.startsWith('pet_')) return false;
 
-    if (customId.includes('abandon_confirm')) {
-      const userId = customId.split('_')[2];
-      if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
-        return true;
-      }
+  const parts  = customId.split('_'); // pet_abandon_confirm_userId or pet_abandon_cancel_userId
+  const action = parts[2]; // confirm or cancel
+  const userId = parts[3];
 
-      db.db.prepare('DELETE FROM pets WHERE guild_id=? AND user_id=?').run(interaction.guildId, interaction.user.id);
-      await interaction.update({ content: '💔 Votre animal a été abandonné.', components: [] }).catch(() => {});
-    } else if (customId.includes('abandon_cancel')) {
-      const userId = customId.split('_')[2];
-      if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
-        return true;
-      }
-
-      await interaction.update({ content: '✅ Abandon annulé.', components: [] }).catch(() => {});
-    }
-
+  if (interaction.user.id !== userId) {
+    await interaction.reply({ content: '❌ Ce bouton ne vous est pas destiné.', ephemeral: true }).catch(() => {});
     return true;
   }
-};
+
+  if (action === 'cancel') {
+    await interaction.update({ content: '✅ Abandon annulé.', embeds: [], components: [] }).catch(() => {});
+    return true;
+  }
+
+  if (action === 'confirm') {
+    db.db.prepare('DELETE FROM pets WHERE guild_id=? AND user_id=?').run(interaction.guildId, interaction.user.id);
+    await interaction.update({ content: '💔 Votre animal de compagnie a été abandonné.', embeds: [], components: [] }).catch(() => {});
+  }
+
+  return true;
+}
+
+module.exports.handleComponent = handleComponent;
