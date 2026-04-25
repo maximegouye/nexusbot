@@ -12,6 +12,15 @@ module.exports = {
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.tag} (${client.user.id})`);
 
+    // ── Notification de démarrage dans #gestion-tickets ────────────
+    const LOG_CHANNEL_ID = '1494390992290054154'; // #gestion-tickets
+    setTimeout(async () => {
+      try {
+        const logCh = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
+        if (logCh) await logCh.send(`🟢 **NexusBot redémarré** — v\`bf80220\` — commandes recrutement v2 enregistrées`).catch(() => {});
+      } catch (_) {}
+    }, 5000);
+
     // ── Bump Reminder — vérification toutes les 60 secondes ─
     checkBumpReminders(client).catch(() => {});
     setInterval(() => checkBumpReminders(client).catch(() => {}), 60_000);
