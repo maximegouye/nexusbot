@@ -109,9 +109,33 @@ if (!token) {
   process.exit(1);
 }
 
-client.login(token)
-  .then(() => console.log(`✅ NexusBot connecté en tant que ${client.user?.tag}`))
-  .catch(err => {
-    console.error('❌ Erreur connexion Discord:', err.message);
-    process.exit(1);
-  });
+async function connectWithRetry(maxRetries = 10) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await client.login(token);
+      console.log(`✅ NexusBot connecté en tant que ${client.user?.tag}`);
+      return;
+    } catch (err) {
+      console.error(`❌ Erreur connexion Discord (tentative ${attempt}/${maxRetries}): ${err.message}`);
+
+      // Session Discord épuisée → attendre jusqu'au reset
+      const resetMatch = err.message && err.message.match(/resets at (.+)/);
+      if (resetMatch) {
+        const resetTime = new Date(resetMatch[1]).getTime();
+        const waitMs = Math.max(resetTime - Date.now() + 10000, 60000);
+        console.log(`⏳ Sessions Discord épuisées. Attente ${Math.ceil(waitMs / 1000)}s jusqu'au reset (${resetMatch[1]})...`);
+        await new Promise(r => setTimeout(r, waitMs));
+      } else if (attempt < maxRetries) {
+        // Autre erreur : backoff exponentiel (30s, 60s, 120s…)
+        const delay = Math.min(30000 * Math.pow(2, attempt - 1), 600000);
+        console.log(`⏳ Nouvelle tentative dans ${Math.ceil(delay / 1000)}s...`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        console.error('❌ Nombre maximum de tentatives atteint. Arrêt.');
+        process.exit(1);
+      }
+    }
+  }
+}
+
+connectWithRetry();
