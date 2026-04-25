@@ -44,10 +44,12 @@ module.exports = {
     // ── Construction des tableaux JSON ─────────────────────
     const globalCmds = (client.globalCommandsList || [])
       .filter(d => d && typeof d.toJSON === 'function')
+      .slice(0, 100)
       .map(d => d.toJSON());
 
     const guildCmds = (client.guildCommandsList || [])
       .filter(d => d && typeof d.toJSON === 'function')
+      .slice(0, 100)
       .map(d => d.toJSON());
 
     console.log(`📦 Global: ${globalCmds.length} commandes | Guild: ${guildCmds.length} commandes`);
