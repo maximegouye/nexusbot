@@ -172,7 +172,7 @@ async function handleComponent(interaction, customId) {
       await interaction.reply({ content: `✅ Rôle **${role.name}** ajouté.`, ephemeral: true }).catch(() => {});
     }
   } catch (e) {
-    await interaction.reply({ content: `❌ Impossible de modifier le rôle : ${e.message}`, ephemeral: true }).catch(() => {});
+    await interaction.reply({ content: `❌ Erreur: ${e.message}`, ephemeral: true }).catch(() => {});
   }
 
   return true;

@@ -96,20 +96,20 @@ async function handleComponent(interaction, customId) {
   if (!customId.startsWith('rolemenu_')) return false;
 
   const roleId = customId.replace('rolemenu_toggle_', '');
-  const role   = interaction.guild.roles.cache.get(roleId);
+  const role = interaction.guild.roles.cache.get(roleId);
 
   if (!role) {
     await interaction.reply({ content: '❌ Rôle introuvable.', ephemeral: true }).catch(() => {});
     return true;
   }
 
-  // Check max_choices constraint
-  const menu = db.db.prepare('SELECT * FROM role_menus WHERE guild_id=? AND message_id=?').get(interaction.guildId, interaction.message?.id);
+  // Vérif max_choices
+  const menu = db.db.prepare('SELECT * FROM role_menus WHERE message_id=? AND guild_id=?').get(interaction.message?.id, interaction.guildId);
   if (menu && menu.max_choices > 0) {
     const menuRoles = JSON.parse(menu.roles || '[]');
-    const currentCount = menuRoles.filter(rId => interaction.member.roles.cache.has(rId)).length;
-    if (!interaction.member.roles.cache.has(roleId) && currentCount >= menu.max_choices) {
-      await interaction.reply({ content: `❌ Vous ne pouvez sélectionner que **${menu.max_choices}** rôle(s) maximum.`, ephemeral: true }).catch(() => {});
+    const userRoles = menuRoles.filter(id => interaction.member.roles.cache.has(id));
+    if (!interaction.member.roles.cache.has(roleId) && userRoles.length >= menu.max_choices) {
+      await interaction.reply({ content: `❌ Maximum ${menu.max_choices} rôle(s) autorisé(s) pour ce menu.`, ephemeral: true }).catch(() => {});
       return true;
     }
   }

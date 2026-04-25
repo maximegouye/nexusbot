@@ -113,53 +113,48 @@ module.exports = {
   }
 };
 
+
 async function handleComponent(interaction, customId) {
   if (!customId.startsWith('prestige_')) return false;
 
-  const parts  = customId.split('_'); // prestige_confirm_userId or prestige_cancel_userId
-  const action = parts[1];
+  // prestige_confirm_<userId> or prestige_cancel_<userId>
+  const parts  = customId.split('_');
+  const action = parts[1]; // 'confirm' or 'cancel'
   const userId = parts[2];
 
   if (interaction.user.id !== userId) {
-    await interaction.reply({ content: '❌ Ce bouton ne vous est pas destiné.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
     return true;
   }
 
-  if (action === 'cancel') {
-    await interaction.update({ content: '❌ Prestige annulé.', embeds: [], components: [] }).catch(() => {});
-    return true;
-  }
+  const guildId = interaction.guildId;
+  const cfg     = db.getConfig(guildId);
+  const coin    = cfg.currency_emoji || '€';
 
   if (action === 'confirm') {
-    const guildId = interaction.guildId;
-    const cfg     = db.getConfig(guildId);
-    const coin    = cfg.currency_emoji || '€';
-    const u       = db.getUser(interaction.user.id, guildId);
+    const u             = db.getUser(interaction.user.id, guildId);
     const currentPrestige = u.prestige || 0;
-    const nextPData = PRESTIGE_LEVELS[currentPrestige];
+    const nextPData     = PRESTIGE_LEVELS[currentPrestige];
 
     if (!nextPData) {
-      await interaction.update({ content: '🌟 Vous avez déjà atteint le prestige maximum !', embeds: [], components: [] }).catch(() => {});
+      await interaction.update({ content: '🌟 Prestige maximum atteint !', components: [] }).catch(() => {});
       return true;
     }
 
     const coinReward = 5000 * (currentPrestige + 1);
-    db.db.prepare('UPDATE users SET prestige=?, level=1, xp=0, prestige_coins_total=prestige_coins_total+? WHERE user_id=? AND guild_id=?')
+    db.db.prepare('UPDATE users SET prestige = ?, level = 1, xp = 0, prestige_coins_total = prestige_coins_total + ? WHERE user_id=? AND guild_id=?')
       .run(currentPrestige + 1, coinReward, interaction.user.id, guildId);
     db.addCoins(interaction.user.id, guildId, coinReward);
 
     const embed = new EmbedBuilder()
       .setColor(nextPData.color)
-      .setTitle(`${nextPData.emoji} Prestige ${currentPrestige + 1} atteint !`)
-      .setDescription(`Félicitations ! Vous avez obtenu :\n**${nextPData.bonus}**`)
-      .addFields(
-        { name: '💰 Récompense coins', value: `+${coinReward.toLocaleString('fr-FR')} ${coin}`, inline: true },
-        { name: '🔄 Niveau réinitialisé', value: 'Niveau 1 · XP 0', inline: true },
-      )
-      .setFooter({ text: 'NexusBot • Prestige' })
-      .setTimestamp();
+      .setTitle(`${nextPData.emoji} Prestige effectué !`)
+      .setDescription(`Vous êtes passé à **Prestige ${currentPrestige + 1}** !\n\n${nextPData.bonus}`)
+      .addFields({ name: '💰 Récompense', value: `+${coinReward.toLocaleString()} ${coin}` });
 
     await interaction.update({ embeds: [embed], components: [] }).catch(() => {});
+  } else {
+    await interaction.update({ content: '❌ Prestige annulé.', components: [] }).catch(() => {});
   }
 
   return true;
