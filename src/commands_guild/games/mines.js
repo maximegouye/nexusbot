@@ -23,9 +23,11 @@ function calcMult(totalCases, minesCount, revealed) {
 // ─── Parties actives ──────────────────────────────────────
 const sessions = new Map(); // userId → state
 
-// ─── Grille 5×5 ───────────────────────────────────────────
-const GRID_SIZE  = 5;
-const TOTAL_CELLS = GRID_SIZE * GRID_SIZE; // 25
+// ─── Grille 4×5 (4 rangées × 5 colonnes = 20 cases + 1 rangée cash-out = 5 ActionRows max) ───
+const GRID_ROWS   = 4;
+const GRID_COLS   = 5;
+const GRID_SIZE   = GRID_COLS; // compat avec les boucles existantes
+const TOTAL_CELLS = GRID_ROWS * GRID_COLS; // 20
 
 function buildGrid(minesCount) {
   const cells = Array(TOTAL_CELLS).fill('safe');
@@ -42,10 +44,10 @@ function buildGrid(minesCount) {
 // ─── Rendu des boutons ────────────────────────────────────
 function buildGridComponents(state) {
   const rows = [];
-  for (let r = 0; r < GRID_SIZE; r++) {
+  for (let r = 0; r < GRID_ROWS; r++) {
     const rowBuilder = new ActionRowBuilder();
-    for (let c = 0; c < GRID_SIZE; c++) {
-      const idx     = r * GRID_SIZE + c;
+    for (let c = 0; c < GRID_COLS; c++) {
+      const idx     = r * GRID_COLS + c;
       const cell    = state.grid[idx];
       const revealed = state.revealed[idx];
       let label, style, disabled;

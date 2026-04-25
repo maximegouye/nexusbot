@@ -2,32 +2,47 @@
 
 // Routes des composants (boutons, menus, modals) vers la commande handler
 const COMPONENT_ROUTES = {
-  // ── handleComponent implémenté ───────────────────────────
-  'part_':      'partenariat',
-  'ticket_':    'ticket',
-  'giveaway_':  'giveaway',
-  'hist_':      'historique',
-  'help_':      'aide',
-  'profil_':    'profil',
-  'prestige_':  'prestige',
-  'roue_':      'roue',
-  'pet_':       'pets',
-  'rr_':        'reactionroles',
-  'rolemenu_':  'rolemenu',
-  'app_':       'applications',
-  'apply_':     'applications',
-  'appmodal_':  'applications',
-  'sondage_':   'sondage_avance',
-  'pendu_':     'pendu',
-  'morpion_':   'morpion',
-  'poll_':      'poll',
-  // ── Collector-based (inline collector gère, pas execute) ─
-  'crash_':     'crash',
-  'mines_':     'mines',
-  'slot_':      'slots',
-  'poker_':     'poker',
-  'heist_':     'braquage',
-  'pay_':       'payer',
+  // ── Commandes avec handleComponent ───────────────────────
+  'part_':        'partenariat',
+  'ticket_':      'ticket',
+  'giveaway_':    'giveaway',
+  // ── Nouvelles routes avec handleComponent ────────────────
+  'banque_':      'banque',
+  'hist_':        'historique',
+  'help_':        'aide',
+  'profil_':      'profil',
+  // ── Jeux/eco avec handleComponent ou re-dispatch ─────────
+  'casino_':      'casino',
+  'blackjack_':   'blackjack',
+  'crash_':       'crash',
+  'mines_':       'mines',
+  'poker_':       'poker',
+  'slot_':        'slots',
+  'roulette_':    'roulette',
+  'rob_':         'rob',
+  'fish_':        'fish',
+  'quest_':       'quest',
+  'suggest_':     'suggestion',
+  'voice_':       'tempvoice',
+  'conf_':        'confession',
+  'rep_':         'rep',
+  'bump_':        'bump',
+  // ── Routes sans collector (handleComponent requis) ────────
+  'prestige_':    'prestige',
+  'roue_':        'roue',
+  'pet_':         'pets',
+  'rr_':          'reactionroles',
+  'rolemenu_':    'rolemenu',
+  // ── Autres composants ────────────────────────────────────
+  'app_':         'applications',
+  'apply_':       'applications',
+  'pay_'          : 'payer',
+  'heist_'        : 'braquage',
+  'sondage_'      : 'sondage_avance',
+  'pendu_'        : 'pendu',
+  'morpion_'      : 'morpion',
+  'poll_'         : 'poll',
+  'appmodal_':    'applications',
 };
 
 module.exports = {
@@ -63,21 +78,6 @@ module.exports = {
       const command = client.commands.get(interaction.commandName);
       if (command?.autocomplete) {
         try { await command.autocomplete(interaction); } catch (_) {}
-      }
-      return;
-    }
-
-    // — Context Menus (clic-droit user/message) ─────────────
-    if (interaction.isUserContextMenuCommand() || interaction.isMessageContextMenuCommand()) {
-      const cmd = client.commands.get(interaction.commandName);
-      if (!cmd) return;
-      try {
-        await cmd.execute(interaction);
-      } catch (e) {
-        console.error(`[ContextMenu ${interaction.commandName}]`, e?.message || e);
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({ content: `❌ Erreur lors de l'exécution.`, ephemeral: true }).catch(() => {});
-        }
       }
       return;
     }
@@ -126,8 +126,13 @@ module.exports = {
               }
               return;
             }
+          } else if (interaction.isButton() || interaction.isStringSelectMenu()) {
+            // Pas de handleComponent → collector expiré ou bouton orphelin
+            await interaction.reply({ content: '⏱️ Cette interaction a expiré. Relancez la commande.', ephemeral: true }).catch(() => {});
+            return;
           }
-          // Components are handled only via handleComponent; no execute() fallback for buttons/selects/modals
+          // Modal sans handleComponent → laisser passer vers execute()
+          await handler.execute(interaction);
         } catch (e) {
           console.error(`[COMPONENT ${cid}] Erreur:`, e?.message || e);
           if (!interaction.replied && !interaction.deferred) {
