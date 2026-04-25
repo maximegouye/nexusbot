@@ -6,6 +6,81 @@ const {
 } = require('discord.js');
 const db = require('../../database/db');
 
+
+// ─── Timers d'inactivité des tickets ──────────────────────────────
+const ticketTimers = new Map(); // channelId → { warn, close }
+
+function clearTicketTimers(channelId) {
+  const t = ticketTimers.get(channelId);
+  if (t) { clearTimeout(t.warn); clearTimeout(t.close); ticketTimers.delete(channelId); }
+}
+
+function startInactivityWatch(channel, ticketId, userId) {
+  clearTicketTimers(channel.id);
+  const WARN  = 23 * 60 * 60 * 1000; // 23h → avertissement
+  const CLOSE = 47 * 60 * 60 * 1000; // 47h → fermeture auto
+
+  const warnTimer = setTimeout(async () => {
+    try {
+      await channel.send({
+        content: `<@${userId}>`,
+        embeds: [new EmbedBuilder()
+          .setColor('#F39C12')
+          .setTitle('⏰ Rappel — Ticket inactif depuis 23h')
+          .setDescription(
+            `Votre ticket **#${ticketId}** est resté sans activité depuis près de 24 heures.\n\n` +
+            `Si votre problème est résolu, vous pouvez **fermer le ticket** ci-dessus.\n` +
+            `Dans le cas contraire, **envoyez un message** pour maintenir ce ticket ouvert.\n\n` +
+            `> ⚠️ Sans réponse dans l'heure, ce ticket sera **fermé automatiquement**.`
+          )
+          .setFooter({ text: 'Fermeture automatique dans 1 heure si aucune activité' })
+          .setTimestamp()
+        ],
+      });
+    } catch {}
+  }, WARN);
+
+  const closeTimer = setTimeout(async () => {
+    try {
+      const tData = db.db.prepare('SELECT * FROM tickets WHERE channel_id=? AND status=?').get(channel.id, 'open');
+      if (!tData) return;
+      db.db.prepare("UPDATE tickets SET status='closed', closed_at=?, close_reason=? WHERE id=?")
+        .run(Math.floor(Date.now() / 1000), 'Fermeture automatique (inactivité 48h)', tData.id);
+      await channel.send({
+        embeds: [new EmbedBuilder()
+          .setColor('#ED4245')
+          .setTitle('🔒 Ticket fermé automatiquement')
+          .setDescription(
+            `Ce ticket a été **fermé automatiquement** après 48h d'inactivité.\n\n` +
+            `Si vous avez encore besoin d'aide, n'hésitez pas à ouvrir un nouveau ticket.\n` +
+            `> Ce salon sera supprimé dans 30 secondes.`
+          )
+          .setTimestamp()
+        ],
+      });
+      // DM user
+      try {
+        const u = await channel.client.users.fetch(tData.user_id);
+        await u.send({ embeds: [new EmbedBuilder()
+          .setColor('#ED4245')
+          .setTitle('📁 Ticket fermé automatiquement')
+          .setDescription(
+            `Votre ticket **#${tData.id}** sur **${channel.guild.name}** a été clôturé après 48h d'inactivité.\n\n` +
+            `Si vous avez encore besoin d'aide, ouvrez un nouveau ticket depuis le salon support.\n` +
+            `Nous restons disponibles pour vous. 🤝`
+          )
+          .setFooter({ text: channel.guild.name })
+          .setTimestamp()
+        ] });
+      } catch {}
+      setTimeout(() => channel.delete().catch(() => {}), 30000);
+    } catch {}
+    ticketTimers.delete(channel.id);
+  }, CLOSE);
+
+  ticketTimers.set(channel.id, { warn: warnTimer, close: closeTimer });
+}
+
 // ── Migrations inline ────────────────────────────────────
 try {
   const tc = db.db.prepare('PRAGMA table_info(tickets)').all().map(c => c.name);
@@ -208,25 +283,33 @@ async function handleComponent(interaction, customId) {
       // Double vérif ticket existant
       const existing = guild.channels.cache.find(c => c.topic?.startsWith(`ticket:${member.id}`));
       if (existing) {
-        return interaction.editReply({ embeds: [new EmbedBuilder()
-          .setColor('#E67E22').setDescription(`⚠️ Ticket déjà ouvert : ${existing}`)
-        ], components: [] });
+        return interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor('#E67E22')
+          .setTitle('⚠️ Ticket déjà en cours')
+          .setDescription(
+            `Vous avez déjà un ticket ouvert : ${existing}\n\n` +
+            `Merci de terminer votre demande actuelle avant d'en ouvrir une nouvelle.\n` +
+            `Si vous ne voyez plus votre ticket, contactez un administrateur.`
+          )
+          .setFooter({ text: 'Un seul ticket actif par membre à la fois' })
+        ],
+        components: [],
+      });
       }
 
-      // Permissions
+      // ── Permissions : PROPRIÉTAIRE uniquement (le staff n'a pas accès) ──
       const permOverwrites = [
         { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-        { id: member.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+        { id: member.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.UseExternalEmojis] },
       ];
-      const staffRole = cfg.ticket_staff_role ? guild.roles.cache.get(String(cfg.ticket_staff_role)) : null;
-      if (staffRole) permOverwrites.push({
-        id: staffRole.id,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages],
-      });
-      if (guild.ownerId && guild.ownerId !== member.id) permOverwrites.push({
-        id: guild.ownerId,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ManageChannels],
-      });
+      // Propriétaire du serveur — accès complet et exclusif
+      if (guild.ownerId && guild.ownerId !== member.id) {
+        permOverwrites.push({
+          id: guild.ownerId,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.AttachFiles],
+        });
+      }
 
       const safeName = (member.user.username || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 14) || 'user';
       const ticketChannel = await guild.channels.create({
@@ -406,14 +489,46 @@ async function handleComponent(interaction, customId) {
 
       if (logCh) await logCh.send({ embeds: [logEmbed], files: [attachment] }).catch(() => {});
 
-      // Message de fermeture + notation
+      // Arrêter le timer d'inactivité
+      clearTicketTimers(interaction.channel.id);
+
+      // ── DM de clôture au membre ───────────────────────────────────────────
+      try {
+        const ticketUser = await guild.client.users.fetch(ticket.user_id);
+        const durationSec = Math.floor(Date.now() / 1000) - ticket.created_at;
+        const durationStr = durationSec < 3600
+          ? `${Math.floor(durationSec / 60)} minute${Math.floor(durationSec / 60) > 1 ? 's' : ''}`
+          : durationSec < 86400
+            ? `${Math.floor(durationSec / 3600)}h${Math.floor((durationSec % 3600) / 60)}min`
+            : `${Math.floor(durationSec / 86400)} jour${Math.floor(durationSec / 86400) > 1 ? 's' : ''}`;
+
+        await ticketUser.send({
+          embeds: [new EmbedBuilder()
+            .setColor('#2ECC71')
+            .setTitle(`📁 Votre ticket a été traité — #${ticket.id}`)
+            .setDescription(
+              `Votre demande sur **${guild.name}** a été clôturée avec succès.\n` +
+              `Nous espérons sincèrement avoir pu vous aider.\n\n` +
+              `**Catégorie :** ${cat.emoji} ${cat.label.replace(/^[^ ]+ /, '')}\n` +
+              `**Durée de traitement :** ${durationStr}\n` +
+              `**Clôturé le :** <t:${Math.floor(Date.now() / 1000)}:F>\n\n` +
+              `Merci pour votre confiance. N'hésitez pas à revenir si nécessaire. 🤝\n` +
+              `> *${guild.name} — Support confidentiel et professionnel*`
+            )
+            .setFooter({ text: guild.name, iconURL: guild.iconURL() || undefined })
+            .setTimestamp()
+          ],
+        });
+      } catch {}
+
+      // ── Message de notation ───────────────────────────────────────────────
       const ratingRow = new ActionRowBuilder().addComponents(
-        ['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐'].map((s, i) =>
+        [1,2,3,4,5].map(i =>
           new ButtonBuilder()
-            .setCustomId(`ticket_rate_${ticket.id}_${i+1}`)
-            .setLabel(`${i+1}`)
-            .setEmoji(['😞','😐','🙂','😊','🤩'][i])
-            .setStyle(i >= 3 ? ButtonStyle.Success : i === 2 ? ButtonStyle.Primary : ButtonStyle.Secondary)
+            .setCustomId(`ticket_rate_${ticket.id}_${i}`)
+            .setLabel(`${i} étoile${i > 1 ? 's' : ''}`)
+            .setEmoji(['😞','😐','🙂','😊','🤩'][i - 1])
+            .setStyle(i >= 4 ? ButtonStyle.Success : i === 3 ? ButtonStyle.Primary : ButtonStyle.Secondary)
         )
       );
 
@@ -421,19 +536,21 @@ async function handleComponent(interaction, customId) {
         content: `<@${ticket.user_id}>`,
         embeds: [new EmbedBuilder()
           .setColor('#5865F2')
-          .setTitle('🌟 Merci — Donne une note !')
+          .setTitle('🌟 Évaluez votre expérience')
           .setDescription(
-            `Ton ticket a été **fermé et archivé** avec succès.\n\n` +
-            `**Comment s'est passée ton expérience ?**\n` +
-            `😞 Mauvais · 😐 Passable · 🙂 Bien · 😊 Super · 🤩 Excellent\n\n` +
-            `> Ce salon sera supprimé dans **10 secondes**.`
+            `Votre ticket **#${ticket.id}** a été **fermé et archivé**. Merci de vous être adressé à nous.\n\n` +
+            `Votre avis est précieux pour nous permettre de continuer à vous offrir un service de qualité.\n` +
+            `**Comment évaluez-vous votre expérience ?**\n\n` +
+            `😞 Mauvaise · 😐 Passable · 🙂 Bonne · 😊 Très bonne · 🤩 Excellente\n\n` +
+            `> Ce salon sera supprimé dans **15 secondes**.`
           )
-          .setFooter({ text: 'Ton avis nous aide à nous améliorer ✨' })
+          .setFooter({ text: 'Votre avis nous aide à nous améliorer en permanence ✨' })
+          .setTimestamp()
         ],
         components: [ratingRow],
       }).catch(() => {});
 
-      setTimeout(() => interaction.channel?.delete().catch(() => {}), 10000);
+      setTimeout(() => interaction.channel?.delete().catch(() => {}), 15000);
 
     } catch (err) {
       console.error('[ticket_confirm_close] CRASH:', err?.stack || err?.message || err);
@@ -559,6 +676,118 @@ async function handleComponent(interaction, customId) {
     return true;
   }
 
+
+  // ── ticket_urgent_ID → Marquer le ticket urgent ──────────────────────────
+  if (customId.startsWith('ticket_urgent_')) {
+    try {
+      const ticketId = customId.replace('ticket_urgent_', '');
+      const channel  = interaction.channel;
+      const currentName = channel.name || '';
+
+      // Ajouter ⚠️ si pas déjà là, sinon retirer
+      const isUrgent = currentName.startsWith('⚠️');
+      const newName  = isUrgent
+        ? currentName.replace(/^⚠️[-·]?/, '')
+        : ('⚠️-' + currentName).slice(0, 100);
+
+      await channel.setName(newName).catch(() => {});
+
+      await interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor(isUrgent ? '#95A5A6' : '#E74C3C')
+          .setTitle(isUrgent ? '✅ Urgence retirée' : '🚨 Ticket marqué URGENT')
+          .setDescription(isUrgent
+            ? "Le statut d'urgence a été retiré de ce ticket."
+            : 'Ce ticket est désormais marqué comme **urgent**. Le propriétaire a été notifié.'
+          )
+          .setTimestamp()
+        ],
+        ephemeral: true,
+      });
+
+      // DM au propriétaire si escalade urgente
+      if (!isUrgent) {
+        try {
+          const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
+          if (ticket) {
+            const owner = await interaction.guild.client.users.fetch(interaction.guild.ownerId);
+            await owner.send({
+              embeds: [new EmbedBuilder()
+                .setColor('#E74C3C')
+                .setTitle('🚨 URGENCE — Ticket escaladé')
+                .setDescription(
+                  `Le membre **${interaction.user.tag}** a marqué son ticket comme **urgent** sur **${interaction.guild.name}**.\n\n` +
+                  `**Ticket :** #${ticketId} • Salon : ${channel.name}\n` +
+                  `> Veuillez intervenir dès que possible.`
+                )
+                .setTimestamp()
+              ],
+            });
+          }
+        } catch {}
+      }
+    } catch (err) { console.error('[ticket_urgent] error:', err.message); }
+    return true;
+  }
+
+  // ── ticket_note_ID → Note privée (modal) ─────────────────────────────────
+  if (customId.startsWith('ticket_note_')) {
+    try {
+      const ticketId = customId.replace('ticket_note_', '');
+      // Seul le propriétaire peut ajouter une note privée
+      if (interaction.user.id !== interaction.guild.ownerId) {
+        await interaction.reply({ content: '❌ Seul le propriétaire du serveur peut ajouter des notes privées.', ephemeral: true });
+        return true;
+      }
+      const modal = new ModalBuilder()
+        .setCustomId(`ticket_notesend_${ticketId}`)
+        .setTitle('🗒️ Note privée — Ticket #' + ticketId)
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('note_content')
+              .setLabel('Contenu de votre note (visible uniquement par vous)')
+              .setStyle(TextInputStyle.Paragraph)
+              .setPlaceholder('Ex : Membre connu, déjà signalé pour...')
+              .setMaxLength(1000)
+              .setRequired(true)
+          )
+        );
+      await interaction.showModal(modal);
+    } catch (err) { console.error('[ticket_note] error:', err.message); }
+    return true;
+  }
+
+  // ── ticket_notesend_ID → Enregistrement note privée ──────────────────────
+  if (customId.startsWith('ticket_notesend_')) {
+    try {
+      const ticketId = customId.replace('ticket_notesend_', '');
+      const content  = interaction.fields.getTextInputValue('note_content');
+      const now      = `<t:${Math.floor(Date.now() / 1000)}:f>`;
+      // Sauvegarder en DB
+      try {
+        const existing = db.db.prepare('SELECT tags FROM tickets WHERE id=?').get(ticketId);
+        const notes    = JSON.parse(existing?.tags || '[]');
+        notes.push({ text: content, by: interaction.user.tag, at: Date.now() });
+        db.db.prepare('UPDATE tickets SET tags=? WHERE id=?').run(JSON.stringify(notes), ticketId);
+      } catch {}
+      await interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle('🗒️ Note privée enregistrée')
+          .setDescription(
+            `**${now}** — par ${interaction.user}\n\n` +
+            `\`\`\`\n${content}\n\`\`\`\n\n` +
+            `> Cette note est visible uniquement par vous.`
+          )
+          .setFooter({ text: 'Note privée • Ticket #' + ticketId })
+          .setTimestamp()
+        ],
+        ephemeral: true,
+      });
+    } catch (err) { console.error('[ticket_notesend] error:', err.message); }
+    return true;
+  }
   // ── ticket_qr_select_ID → Envoyer la réponse rapide ─────────────────────
   if (customId.startsWith('ticket_qr_select_')) {
     try {
@@ -763,19 +992,49 @@ module.exports = {
         } catch {}
       }
 
+      // Stats live
+      let statsOpen = 0, statsTotal = 0, statsRating = '—';
+      try {
+        statsOpen  = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='open'").get(interaction.guild.id)?.c || 0;
+        statsTotal = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=?").get(interaction.guild.id)?.c || 0;
+        const avgR = db.db.prepare("SELECT AVG(rating) as r FROM tickets WHERE guild_id=? AND rating IS NOT NULL").get(interaction.guild.id)?.r;
+        if (avgR) statsRating = avgR.toFixed(1) + '/5 ⭐';
+      } catch {}
+
       const panelEmbed = new EmbedBuilder()
-        .setColor('#5865F2')
-        .setTitle('╔══  🎫  CENTRE DE SUPPORT  🎫  ══╗')
+        .setColor('#2B2D31')
+        .setAuthor({
+          name: `${interaction.guild.name} — Assistance officielle`,
+          iconURL: interaction.guild.iconURL({ size: 128 }) || undefined,
+        })
+        .setTitle("🌟  CENTRE D'ASSISTANCE OFFICIEL  🌟")
         .setDescription(
-          `> *Notre équipe est là pour vous aider — 7j/7.*\n\n` +
-          `**Sélectionnez la catégorie** qui correspond à votre demande :\n\n` +
-          CATEGORIES.map(c => `${c.emoji} **${c.label.replace(/^.*? /,'')}** — ${c.description}`).join('\n') +
-          `\n\n${'─'.repeat(40)}\n` +
-          `⬇️ **Cliquez sur le bouton ci-dessous pour commencer**\n` +
-          `⏱️ Temps de réponse moyen : **< 2 heures**`
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `Vous méritez une aide **rapide**, **personnelle** et **de qualité**.\n` +
+          `Chaque demande est traitée avec le plus grand soin, dans un cadre **entièrement confidentiel**.\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `**📋 Sélectionnez la nature de votre demande :**\n\n` +
+          CATEGORIES.map(c =>
+            `${c.emoji}  **${c.label.replace(/^[^ ]+ /, '')}**\n` +
+            `┗ *${c.description}*`
+          ).join('\n\n') +
+          `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `⏱️  Réponse garantie en **moins de 2h**\n` +
+          `🔒  Espace privé — **Confidentialité totale**\n` +
+          `⭐  Satisfaction client : **${statsRating}**\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `Appuyez sur le bouton ci-dessous pour ouvrir votre ticket.`
+        )
+        .addFields(
+          { name: '📬 Tickets ouverts', value: `\`${statsOpen}\``, inline: true },
+          { name: '📊 Tickets traités', value: `\`${statsTotal}\``, inline: true },
+          { name: '🕐 Disponibilité',   value: '\`7j/7 — 24h/24\`', inline: true },
         )
         .setThumbnail(interaction.guild.iconURL({ size: 256 }) || null)
-        .setFooter({ text: `${interaction.guild.name} • Support Professionnel`, iconURL: interaction.guild.iconURL() || undefined })
+        .setFooter({
+          text: `${interaction.guild.name} • Support Premium & Confidentiel`,
+          iconURL: interaction.guild.iconURL() || undefined,
+        })
         .setTimestamp();
 
       const row = new ActionRowBuilder().addComponents(
