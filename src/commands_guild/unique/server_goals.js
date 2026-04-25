@@ -48,6 +48,7 @@ module.exports = {
           { name: '🚀 Boosts', value: 'boosts' },
           { name: '⭐ Manuel', value: 'manual' },
         ))
+      .addIntegerOption(o => o.setName('objectif').setDescription('Valeur cible à atteindre').setRequired(true).setMinValue(1))
       .addStringOption(o => o.setName('description').setDescription('Description').setMaxLength(300))
       .addStringOption(o => o.setName('recompense_coins').setDescription('Coins donnés à tous quand l\'objectif est atteint'))
       .addRoleOption(o => o.setName('recompense_role').setDescription('Rôle donné à tous quand atteint'))
@@ -124,7 +125,7 @@ module.exports = {
     if (sub === 'creer') {
       const titre  = interaction.options.getString('titre');
       const type   = interaction.options.getString('type');
-      const target = parseInt(interaction.options.getString('objectif'));
+      const target = interaction.options.getInteger('objectif');
       const desc   = interaction.options.getString('description');
       const coins  = parseInt(interaction.options.getString('recompense_coins')) || 0;
       const role   = interaction.options.getRole('recompense_role');

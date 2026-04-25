@@ -55,7 +55,9 @@ module.exports = {
       .addStringOption(o => o.setName('debut').setDescription('Date/heure de début (JJ/MM/AAAA HH:MM)').setRequired(true))
       .addStringOption(o => o.setName('description').setDescription('Description').setMaxLength(500))
       .addStringOption(o => o.setName('lieu').setDescription('Lieu ou lien vocal').setMaxLength(200))
-      .addStringOption(o => o.setName('fin').setDescription('Date/heure de fin (JJ/MM/AAAA HH:MM)')))
+      .addStringOption(o => o.setName('fin').setDescription('Date/heure de fin (JJ/MM/AAAA HH:MM)'))
+      .addIntegerOption(o => o.setName('max_joueurs').setDescription('Nombre max de joueurs (0 = illimité)').setMinValue(0))
+      .addIntegerOption(o => o.setName('recompense').setDescription('Récompense en coins').setMinValue(0)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les prochains événements'))
     .addSubcommand(s => s.setName('info')
       .setDescription('🔍 Voir les détails d\'un événement')
@@ -91,8 +93,8 @@ module.exports = {
       const fin    = interaction.options.getString('fin') ? parseDate(interaction.options.getString('fin')) : null;
       const desc   = interaction.options.getString('description');
       const lieu   = interaction.options.getString('lieu');
-      const max    = parseInt(interaction.options.getString('max_joueurs')) || 0;
-      const reward = parseInt(interaction.options.getString('recompense')) || 0;
+      const max    = interaction.options.getInteger('max_joueurs') || 0;
+      const reward = interaction.options.getInteger('recompense') || 0;
 
       const result = db.db.prepare(`INSERT INTO server_events (guild_id, creator_id, title, description, starts_at, ends_at, location, max_players, reward_coins)
         VALUES (?,?,?,?,?,?,?,?,?)`).run(guildId, userId, titre, desc, debut, fin, lieu, max, reward);

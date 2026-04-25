@@ -37,7 +37,10 @@ module.exports = {
     .setDescription('🎨 Explorateur de couleurs — Convertissez et affichez des couleurs')
     .addSubcommand(s => s.setName('hex').setDescription('🎨 Analyser une couleur HEX')
       .addStringOption(o => o.setName('valeur').setDescription('Code HEX (ex: #7B2FBE ou 7B2FBE)').setRequired(true)))
-    .addSubcommand(s => s.setName('rgb').setDescription('🎨 Analyser une couleur RGB'))
+    .addSubcommand(s => s.setName('rgb').setDescription('🎨 Analyser une couleur RGB')
+      .addIntegerOption(o => o.setName('rouge').setDescription('Composant rouge (0-255)').setRequired(true).setMinValue(0).setMaxValue(255))
+      .addIntegerOption(o => o.setName('vert').setDescription('Composant vert (0-255)').setRequired(true).setMinValue(0).setMaxValue(255))
+      .addIntegerOption(o => o.setName('bleu').setDescription('Composant bleu (0-255)').setRequired(true).setMinValue(0).setMaxValue(255)))
     .addSubcommand(s => s.setName('aleatoire').setDescription('🎲 Générer une couleur aléatoire'))
     .addSubcommand(s => s.setName('palette').setDescription('🎨 Générer une palette harmonieuse')
       .addStringOption(o => o.setName('hex').setDescription('Couleur de base (HEX)').setRequired(true))),
@@ -71,9 +74,9 @@ module.exports = {
     }
 
     if (sub === 'rgb') {
-      const r = parseInt(interaction.options.getString('rouge'));
-      const g = parseInt(interaction.options.getString('vert'));
-      const b = parseInt(interaction.options.getString('bleu'));
+      const r = interaction.options.getInteger('rouge');
+      const g = interaction.options.getInteger('vert');
+      const b = interaction.options.getInteger('bleu');
       return sendColor(rgbToHex(r,g,b));
     }
 

@@ -44,7 +44,7 @@ module.exports = {
       .addStringOption(o => o.setName('jeu').setDescription('Jeu/activité').setRequired(true))
       .addStringOption(o => o.setName('prix').setDescription('Prix/récompense').setRequired(true))
       .addIntegerOption(o => o.setName('max').setDescription('Max joueurs (4, 8, 16)').addChoices(
-        { name: '4 joueurs', value: 4 }, { name: '8 joueurs', value: 8 }, { name: '16 joueurs', value: 16 }
+        { name: '4 joueurs', value: '4' }, { name: '8 joueurs', value: '8' }, { name: '16 joueurs', value: '16' }
       )))
     .addSubcommand(s => s.setName('inscrire').setDescription('✋ S\'inscrire à un tournoi')
       .addIntegerOption(o => o.setName('id').setDescription('ID du tournoi').setRequired(true)))
@@ -69,7 +69,7 @@ module.exports = {
       const nom = interaction.options.getString('nom');
       const jeu = interaction.options.getString('jeu');
       const prix = interaction.options.getString('prix');
-      const max = parseInt(interaction.options.getString('max')) || 8;
+      const max = interaction.options.getInteger('max') || 8;
 
       const result = db.db.prepare('INSERT INTO tournois (guild_id, name, game, prize, max_players, created_by) VALUES (?,?,?,?,?,?)').run(guildId, nom, jeu, prix, max, userId);
       const id = result.lastInsertRowid;
@@ -94,7 +94,7 @@ module.exports = {
     }
 
     if (sub === 'inscrire') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
       if (!tournoi) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
       if (tournoi.status !== 'inscription') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Les inscriptions sont fermées.', ephemeral: true });
@@ -113,7 +113,7 @@ module.exports = {
 
     if (sub === 'lancer') {
       if (!isStaff) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Staff uniquement.', ephemeral: true });
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
       if (!tournoi) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
       if (tournoi.status !== 'inscription') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce tournoi a déjà commencé ou est terminé.', ephemeral: true });
@@ -136,7 +136,7 @@ module.exports = {
 
     if (sub === 'resultat') {
       if (!isStaff) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Staff uniquement.', ephemeral: true });
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const winner = interaction.options.getUser('gagnant');
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
       if (!tournoi || tournoi.status !== 'en_cours') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tournoi introuvable ou non actif.', ephemeral: true });
@@ -199,7 +199,7 @@ module.exports = {
     }
 
     if (sub === 'bracket') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const tournoi = db.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
       if (!tournoi) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
 

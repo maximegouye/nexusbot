@@ -37,6 +37,8 @@ module.exports = {
           { name: '🪙 Double Coins', value: 'coins' },
           { name: '⚡ Double XP + Coins', value: 'both' },
         ))
+      .addIntegerOption(o => o.setName('duree').setDescription('Durée en minutes').setRequired(true).setMinValue(1).setMaxValue(10080))
+      .addNumberOption(o => o.setName('multiplicateur').setDescription('Multiplicateur XP (ex: 2.0)').setMinValue(1).setMaxValue(10))
       .addStringOption(o => o.setName('raison').setDescription('Raison de l\'événement').setMaxLength(200)))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir les boosts actifs'))
     .addSubcommand(s => s.setName('arreter')
@@ -55,8 +57,8 @@ module.exports = {
 
     if (sub === 'activer') {
       const type   = interaction.options.getString('type');
-      const duree  = parseInt(interaction.options.getString('duree'));
-      const multi  = parseFloat(interaction.options.getString('multiplicateur')) || 2.0;
+      const duree  = interaction.options.getInteger('duree');
+      const multi  = interaction.options.getNumber('multiplicateur') || 2.0;
       const raison = interaction.options.getString('raison') || 'Événement spécial !';
       const endsAt = now + duree * 60;
 
