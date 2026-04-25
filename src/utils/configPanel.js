@@ -572,7 +572,7 @@ function buildVocalPanel(cfg, guild, userId) {
   const embed = new EmbedBuilder()
     .setColor(cfg.color || '#7B2FBE')
     .setTitle('🔊 Salons vocaux')
-    .setDescription('Configure le système de salons vocaux temporaires.\nQuand un membre rejoint le **Salon Créateur**, un salon privé lui est automatiquement créé.')
+    .setDescription('Configure les salons vocaux temporaires et le créateur de salon privé.')
     .addFields(
       { name: '🎙️ Salon Créateur', value: chanMention(cfg.tempvoice_creator), inline: true },
     )
@@ -716,7 +716,7 @@ function buildAnnivPanel(cfg, guild, userId) {
   const embed = new EmbedBuilder()
     .setColor(cfg.color || '#7B2FBE')
     .setTitle('🎂 Anniversaires')
-    .setDescription('Les membres peuvent enregistrer leur anniversaire avec `/birthday set`.\nLe bot les annonce automatiquement dans le salon configuré.')
+    .setDescription('Anniversaires des membres enregistrés et annoncés automatiquement.')
     .addFields(
       { name: '📣 Salon anniversaires',  value: chanMention(cfg.birthday_channel), inline: true },
       { name: '🎂 Rôle anniversaire',    value: roleMention(cfg.birthday_role),    inline: true },

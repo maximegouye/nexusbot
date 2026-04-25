@@ -44,7 +44,7 @@ module.exports = {
       .addStringOption(o => o.setName('jeu').setDescription('Jeu/activité').setRequired(true))
       .addStringOption(o => o.setName('prix').setDescription('Prix/récompense').setRequired(true))
       .addIntegerOption(o => o.setName('max').setDescription('Max joueurs (4, 8, 16)').addChoices(
-        { name: '4 joueurs', value: '4' }, { name: '8 joueurs', value: '8' }, { name: '16 joueurs', value: '16' }
+        { name: '4 joueurs', value: 4 }, { name: '8 joueurs', value: 8 }, { name: '16 joueurs', value: 16 }
       )))
     .addSubcommand(s => s.setName('inscrire').setDescription('✋ S\'inscrire à un tournoi')
       .addIntegerOption(o => o.setName('id').setDescription('ID du tournoi').setRequired(true)))

@@ -62,7 +62,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('🟩 Wordle — Nouvelle partie !')
-        .setDescription('Devine le mot en **6 essais**.\n🟩 = Bonne lettre, bonne place\n🟨 = Bonne lettre, mauvaise place\n⬛ = Lettre absente\n\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛\n⬛⬛⬛⬛⬛')
+        .setDescription('Devine le mot en 6 essais. 🟩=bonne place 🟨=mauvaise place ⬛=absent')
         .setFooter({ text: 'Utilise /wordle deviner <mot>' })
       ], ephemeral: true });
     }
