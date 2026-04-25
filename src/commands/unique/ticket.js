@@ -712,15 +712,15 @@ module.exports = {
     if (sub === 'panel') {
         // Vérif permission
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-            return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+            return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
         
         // Salon cible
         const channel = interaction.options.getChannel('salon')
             || (cfg.ticket_channel ? interaction.guild.channels.cache.get(cfg.ticket_channel) : null)
             || interaction.channel;
-        
+
         if (!channel)
-            return interaction.reply({ content: '❌ Aucun salon trouvé.', ephemeral: true });
+            return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun salon trouvé.', ephemeral: true });
         
         // TOUT dans try/catch pour voir l'erreur exacte
         try {
@@ -764,11 +764,13 @@ module.exports = {
         } catch (panelErr) {
             console.error('[ticket panel] CRASH:', panelErr);
             const errDetail = `❌ ERREUR: ${panelErr.message || String(panelErr)}`;
-            if (interaction.deferred || interaction.replied) {
-                await interaction.editReply({ content: errDetail }).catch(() => {});
-            } else {
-                await interaction.reply({ content: errDetail, ephemeral: true }).catch(() => {});
-            }
+            try {
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.editReply({ content: errDetail }).catch(() => {});
+                } else {
+                    await interaction.reply({ content: errDetail, ephemeral: true }).catch(() => {});
+                }
+            } catch (_) {}
         }
     }
 
