@@ -1298,6 +1298,15 @@ module.exports = {
     }
 
     // ══ Annuler fermeture (via /ticket fermer) ══════════════════════════════════
-    // (handled by button with id ticket_cancel_close_ID)
+    if (cid.startsWith('ticket_cancel_close_')) {
+      if (!interaction.isButton()) return false;
+      await interaction.update({
+        embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription('↩️ Fermeture annulée. Le ticket reste ouvert.')],
+        components: [],
+      }).catch(() => {});
+      return true;
+    }
+
+    return false;
   },
 };
