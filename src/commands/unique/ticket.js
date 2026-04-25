@@ -217,8 +217,16 @@ async function createTicket(interaction, catValue, formData) {
       .setDescription(`Tu ne peux pas ouvrir de ticket.\n\n**Raison :** ${bl.reason || 'Non précisée'}`)], ephemeral: true });
   }
 
-  // Limite tickets ouverts
+  // Limite tickets ouverts — auto-close orphans (salon supprimé manuellement)
   const maxOpen = cfg.ticket_max_open || 1;
+  const openTickets = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='open'").all(guildId, member.id);
+  for (const t of openTickets) {
+    const ch = guild.channels.cache.get(t.channel_id);
+    if (!ch) {
+      // Salon supprimé sans passer par le bot → fermeture automatique en DB
+      db.db.prepare("UPDATE tickets SET status='closed', closed_at=? WHERE id=?").run(ts(), t.id);
+    }
+  }
   const openCount = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND user_id=? AND status='open'").get(guildId, member.id)?.c || 0;
   if (openCount >= maxOpen) {
     const existing = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='open'").get(guildId, member.id);
