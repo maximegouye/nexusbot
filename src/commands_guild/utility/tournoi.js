@@ -37,7 +37,7 @@ function generateBracket(players) {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('tournoi')
+    .setName('tournoi-admin')
     .setDescription('🏆 Système de tournois avec bracket automatique')
     .addSubcommand(s => s.setName('creer').setDescription('🏆 Créer un tournoi (Admin/Staff)')
       .addStringOption(o => o.setName('nom').setDescription('Nom du tournoi').setRequired(true).setMaxLength(50))
