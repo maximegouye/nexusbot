@@ -2,25 +2,35 @@
 
 // Routes des composants (boutons, menus, modals) vers la commande handler
 const COMPONENT_ROUTES = {
-  'part_':       'partenariat',
-  'travail_job_':'travail',
-  'casino_':     'casino',
-  'blackjack_':  'blackjack',
-  'crash_':      'crash',
-  'mines_':      'mines',
-  'poker_':      'poker',
-  'slot_':       'slots',
-  'roulette_':   'roulette',
-  'rob_':        'rob',
-  'fish_':       'fish',
-  'quest_':      'quest',
-  'ticket_':     'ticket',
-  'giveaway_':   'giveaway',
-  'suggest_':    'suggestion',
-  'voice_':      'tempvoice',
-  'conf_':       'confession',
-  'rep_':        'rep',
-  'bump_':       'bump',
+  // ── Commandes avec handleComponent ───────────────────────
+  'part_':        'partenariat',
+  'ticket_':      'ticket',
+  'giveaway_':    'giveaway',
+  // ── Nouvelles routes avec handleComponent ────────────────
+  'banque_':      'banque',
+  'hist_':        'historique',
+  'help_':        'aide',
+  'profil_':      'profil',
+  // ── Jeux/eco avec handleComponent ou re-dispatch ─────────
+  'casino_':      'casino',
+  'blackjack_':   'blackjack',
+  'crash_':       'crash',
+  'mines_':       'mines',
+  'poker_':       'poker',
+  'slot_':        'slots',
+  'roulette_':    'roulette',
+  'rob_':         'rob',
+  'fish_':        'fish',
+  'quest_':       'quest',
+  'suggest_':     'suggestion',
+  'voice_':       'tempvoice',
+  'conf_':        'confession',
+  'rep_':         'rep',
+  'bump_':        'bump',
+  // ── Autres composants ────────────────────────────────────
+  'app_':         'applications',
+  'apply_':       'applications',
+  'appmodal_':    'applications',
 };
 
 module.exports = {

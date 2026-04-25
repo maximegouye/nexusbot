@@ -108,5 +108,34 @@ module.exports = {
     });
   },
 
+
+  async handleComponent(interaction, cid) {
+    if (!cid.startsWith('hist_')) return false;
+    const parts   = cid.split(':');
+    const action  = parts[0];
+    const userId  = parts[1];
+    const pageArg = parseInt(parts[2]) || 1;
+    if (interaction.user.id !== userId)
+      return interaction.reply({ content: '❌ Cet historique ne t\'appartient pas.', ephemeral: true });
+    const cfg    = db.getConfig(interaction.guildId);
+    const symbol = cfg.currency_emoji || '€';
+    const color  = cfg.color || '#7C3AED';
+    const target = await interaction.client.users.fetch(userId).catch(() => null);
+    if (!target) return false;
+    const total = db.countTransactions(userId, interaction.guildId);
+    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    let page;
+    if      (action === 'hist_first') page = 1;
+    else if (action === 'hist_last')  page = pages;
+    else if (action === 'hist_prev')  page = Math.max(1, pageArg - 1);
+    else if (action === 'hist_next')  page = Math.min(pages, pageArg + 1);
+    else                              page = pageArg;
+    const rows = db.getTransactions(userId, interaction.guildId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
+    await interaction.update({
+      embeds:     [buildEmbed({ user: target, guild: interaction.guild, page, total, rows, symbol, color })],
+      components: [buildButtons(userId, page, pages)],
+    });
+    return true;
+  },
   _build: { buildEmbed, buildButtons, PAGE_SIZE, TYPE_EMOJI, TYPE_LABEL },
 };

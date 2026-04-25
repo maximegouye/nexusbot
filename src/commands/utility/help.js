@@ -83,6 +83,35 @@ module.exports = {
     });
   },
 
+
+  async handleComponent(interaction, cid) {
+    if (!cid.startsWith('help_')) return false;
+    const userId = cid.split(':')[1];
+    const cfg   = db.getConfig(interaction.guildId);
+    const color = cfg.color || '#7B2FBE';
+
+    if (cid.startsWith('help_home:')) {
+      await interaction.update({
+        embeds:     [buildHomeEmbed(interaction, color)],
+        components: buildComponents(userId, 'accueil'),
+      });
+      return true;
+    }
+    if (cid.startsWith('help_config:')) {
+      await interaction.reply({ content: '⚙️ Tape **`&config`** dans le chat pour ouvrir le panneau de configuration !', ephemeral: true });
+      return true;
+    }
+    if (cid.startsWith('help_cat:') && interaction.isStringSelectMenu()) {
+      const cat   = interaction.values[0];
+      const embed = buildCategoryEmbed(cat, color);
+      await interaction.update({
+        embeds:     [embed || buildHomeEmbed(interaction, color)],
+        components: buildComponents(userId, cat),
+      });
+      return true;
+    }
+    return false;
+  },
   // Exports utilitaires pour le handler global
   _build: { buildHomeEmbed, buildCategoryEmbed, buildComponents, CATALOGUE },
 };

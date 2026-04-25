@@ -95,4 +95,35 @@ module.exports = {
   },
 
   _build: { buildMainEmbed, buildButtons },
+
+  async handleComponent(interaction, cid) {
+    if (!cid.startsWith('profil_')) return false;
+    const parts    = cid.split(':');
+    const action   = parts[0];
+    const userId   = parts[1]; // clicker
+    const targetId = parts[2]; // profil owner
+
+    if (interaction.user.id !== userId)
+      return interaction.reply({ content: '❌ Ces boutons ne sont pas pour toi.', ephemeral: true });
+
+    if (action === 'profil_refresh') {
+      // Re-execute le profil
+      const fake = Object.create(interaction);
+      fake.options = { getUser: () => null };
+      await interaction.deferUpdate();
+      // Fetch target and rebuild
+      const target = await interaction.client.users.fetch(targetId).catch(() => null);
+      if (!target) return true;
+      const member = await interaction.guild.members.fetch(targetId).catch(() => null);
+      // Just update with a note
+      await interaction.editReply({ content: '🔄 Utilise `/profil` pour actualiser.', embeds: [], components: [] });
+      return true;
+    }
+    if (action === 'profil_stats')   { await interaction.reply({ content: '📊 Utilise `/rank` pour tes stats XP et `/leaderboard` pour le classement.', ephemeral: true }); return true; }
+    if (action === 'profil_crypto')  { await interaction.reply({ content: '💹 Utilise `/crypto` pour voir ton portefeuille.', ephemeral: true }); return true; }
+    if (action === 'profil_history') { await interaction.reply({ content: '📜 Utilise `/historique` pour voir tes transactions.', ephemeral: true }); return true; }
+    if (action === 'profil_badges')  { await interaction.reply({ content: '🏅 Utilise `/badges` pour voir tes badges.', ephemeral: true }); return true; }
+
+    return false;
+  },
 };
