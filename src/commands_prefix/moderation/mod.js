@@ -33,7 +33,7 @@ const commands = [
     usage: '@membre [raison]',
     cooldown: 3,
     async execute(message, args, client, db) {
-      if (!message.member.permissions.has(0x2n)) return message.reply('❌ Permission d'expulser requise.');
+      if (!message.member.permissions.has(0x2n)) return message.reply('❌ Permission d\'expulser requise.');
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
       const reason = args.slice(1).join(' ') || 'Aucune raison';

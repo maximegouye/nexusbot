@@ -265,7 +265,7 @@ module.exports = {
       .addSubcommand(s => s.setName('lockdown').setDescription('Activer ou désactiver le mode verrouillage du serveur')
         .addBooleanOption(o => o.setName('actif').setDescription('Activer le verrouillage').setRequired(true))
         .addStringOption(o => o.setName('raison').setDescription('Raison du verrouillage').setRequired(false)))
-    ),
+    ))))))))))))))),
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXÉCUTION

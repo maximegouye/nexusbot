@@ -14,7 +14,7 @@ module.exports = {
       .setDescription('📥 Acheter une annonce du marché')
     .addSubcommand(s => s
       .setName('retirer')
-      .setDescription('❌ Retirer ta propre annonce')
+      .setDescription('❌ Retirer ta propre annonce')))),
   cooldown: 5,
 
   async execute(interaction) {

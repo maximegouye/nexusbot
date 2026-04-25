@@ -34,7 +34,7 @@ module.exports = {
     .addSubcommand(s => s.setName('sansemojis').setDescription('🚫 Activer/désactiver le mode sans emojis'))
     .addSubcommand(s => s.setName('aide').setDescription('❓ Guide d\'accessibilité — Comment utiliser NexusBot'))
     .addSubcommand(s => s.setName('commandes').setDescription('📋 Liste de toutes les commandes en texte accessible'))
-    .addSubcommand(s => s.setName('lire').setDescription('🔊 Résumer les derniers messages du salon en texte pur')
+    .addSubcommand(s => s.setName('lire').setDescription('🔊 Résumer les derniers messages du salon en texte pur')),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

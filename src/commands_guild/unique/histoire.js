@@ -48,7 +48,7 @@ module.exports = {
     .addSubcommand(s => s.setName('terminer').setDescription('🔒 Terminer une histoire (créateur seulement)')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true)))
     .addSubcommand(s => s.setName('info').setDescription('ℹ️ Infos sur une histoire')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'histoire').setRequired(true))))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

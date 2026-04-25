@@ -41,7 +41,7 @@ module.exports = {
           { name: '⬆️ Améliorer', value: 'ameliorer' },
         )))
     .addSubcommand(s => s.setName('stats').setDescription('📊 Vos statistiques minières'))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Top des mineurs')),
+    .addSubcommand(s => s.setName('classement').setDescription('🏆 Top des mineurs'))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

@@ -42,7 +42,7 @@ module.exports = {
     .addSubcommand(s => s.setName('annuler').setDescription('❌ Annuler votre enchère (avant première mise)')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('cloturer').setDescription('🔒 Clôturer une enchère terminée')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

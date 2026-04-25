@@ -10,7 +10,7 @@ module.exports = {
     .addSubcommand(s => s.setName('creer').setDescription('➕ Créer une quête (Admin)')
       .addStringOption(o => o.setName('titre').setDescription('Titre').setRequired(true).setMaxLength(100))
       .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(500))
-      .addStringOption(o => o.setName('recompense').setDescription('Récompense à distribuer').setRequired(true))
+      .addStringOption(o => o.setName('recompense').setDescription('Récompense à distribuer').setRequired(true)))),
   cooldown: 5,
 
   async execute(interaction) {

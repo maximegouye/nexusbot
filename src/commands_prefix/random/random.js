@@ -71,7 +71,7 @@ const commands = [
     }
   },
   {
-    // Renommé pour éviter conflit avec commands_prefix/games/des_prefix.js (jeu casino)
+    // Renommé pour éviter conflit avec commands_prefix/games/des_prefix.js (jeu casino),
     name: 'lancer',
     aliases: ['roll', 'lancer_de', 'jetdes'],
     description: 'Lancer des dés aléatoires (ex: 2d6, 1d20)',

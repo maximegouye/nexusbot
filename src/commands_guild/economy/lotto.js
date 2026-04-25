@@ -4,7 +4,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('lotto')
-    .setDescription('🎟️ Participe à la loterie hebdomadaire du serveur !')
+    .setDescription('🎟️ Participe à la loterie hebdomadaire du serveur !'),
   cooldown: 5,
 
   async execute(interaction) {

@@ -71,7 +71,7 @@ module.exports = {
           { name: '💰 1000', value: 1000 },
         )))
     .addSubcommand(s => s.setName('scores').setDescription('🏆 Voir les scores de la partie'))
-    .addSubcommand(s => s.setName('stop').setDescription('⏹️ Terminer la partie')),
+    .addSubcommand(s => s.setName('stop').setDescription('⏹️ Terminer la partie'))),
 
   cooldown: 5,
 

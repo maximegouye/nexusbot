@@ -5,7 +5,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('transfer')
     .setDescription('💸 Envoie des coins à un autre membre')
-    .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true))
+    .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true)),
   cooldown: 10,
 
   async execute(interaction) {

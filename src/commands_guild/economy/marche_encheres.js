@@ -46,7 +46,7 @@ module.exports = {
       .setDescription('👁️ Voir une enchère')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les enchères actives'))
-    .addSubcommand(s => s.setName('mes_encheres').setDescription('👤 Voir mes enchères (ventes et enchères)')),
+    .addSubcommand(s => s.setName('mes_encheres').setDescription('👤 Voir mes enchères (ventes et enchères)')))),
 
   cooldown: 5,
 

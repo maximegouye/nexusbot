@@ -62,7 +62,7 @@ module.exports = {
           { name: '🔇 Mute temporaire', value: 'mute' },
           { name: '👢 Kick', value: 'kick' },
           { name: '🔨 Ban', value: 'ban' },
-        ))
+        ))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

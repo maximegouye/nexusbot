@@ -38,7 +38,7 @@ module.exports = {
       { name: '⬆️ Haut 8–12 (×2)',            value: 'haut' },
       { name: '🎯 Sept (×5)',                  value: 'sept' },
       { name: '🎰 Numéro précis (×5 à ×35)',   value: 'numero' },
-    ))
+    )),
   cooldown: 2,
 
   async execute(interaction) {

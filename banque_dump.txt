@@ -1,0 +1,271 @@
+Total: 269 lignes
+
+L  1: // ============================================================
+L  2: // banque.js — Amélioré : tiers VIP + intérêts composés
+L  3: // Emplacement : src/commands_guild/economy/banque.js
+L  4: //   (remplace l'ancien fichier banque.js)
+L  5: // ============================================================
+L  6: 
+L  7: const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+L  8: const db = require('../../database/db');
+L  9: const { checkCooldown, cooldownMessage } = require('../../utils/cooldownManager');
+L 10: 
+L 11: // ─── Migration sécurisée ──────────────────────────────────
+L 12: try {
+L 13:   const cols = db.db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
+L 14:   if (!cols.includes('bank'))           db.db.prepare('ALTER TABLE users ADD COLUMN bank INTEGER DEFAULT 0').run();
+L 15:   if (!cols.includes('bank_tier'))      db.db.prepare('ALTER TABLE users ADD COLUMN bank_tier TEXT DEFAULT "bronze"').run();
+L 16:   if (!cols.includes('last_interest'))  db.db.prepare('ALTER TABLE users ADD COLUMN last_interest TEXT DEFAULT ""').run();
+L 17: } catch {}
+L 18: 
+L 19: try {
+L 20:   db.db.prepare(`CREATE TABLE IF NOT EXISTS bank_transactions (
+L 21:     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+L 22:     guild_id   TEXT,
+L 23:     user_id    TEXT,
+L 24:     type       TEXT,
+L 25:     amount     INTEGER,
+L 26:     created_at INTEGER DEFAULT (strftime('%s','now'))
+L 27:   )`).run();
+L 28: } catch {}
+L 29: 
+L 30: // ─── Tiers VIP ────────────────────────────────────────────
+L 31: const TIERS = {
+L 32:   bronze:   { name: 'Bronze',   emoji: '🟤', color: '#CD7F32', minBank: 0,       interest: 0.02, maxMultiplier: 10  },
+L 33:   silver:   { name: 'Argent',   emoji: '⚪', color: '#C0C0C0', minBank: 5000,    interest: 0.03, maxMultiplier: 15  },
+L 34:   gold:     { name: 'Or',       emoji: '🟡', color: '#FFD700', minBank: 25000,   interest: 0.04, maxMultiplier: 20  },
+L 35:   platinum: { name: 'Platine',  emoji: '💠', color: '#00CED1', minBank: 100000,  interest: 0.05, maxMultiplier: 30  },
+L 36:   diamond:  { name: 'Diamant',  emoji: '💎', color: '#B9F2FF', minBank: 500000,  interest: 0.07, maxMultiplier: 50  },
+L 37: };
+L 38: 
+L 39: function getTier(bankBalance) {
+L 40:   const tierList = Object.values(TIERS).sort((a, b) => b.minBank - a.minBank);
+L 41:   return tierList.find(t => bankBalance >= t.minBank) || TIERS.bronze;
+L 42: }
+L 43: 
+L 44: function formatNum(n) {
+L 45:   return n.toLocaleString('fr-FR');
+L 46: }
+L 47: 
+L 48: // ─── Module ───────────────────────────────────────────────
+L 49: module.exports = {
+L 50:   data: new SlashCommandBuilder()
+L 51:     .setName('banque')
+L 52:     .setDescription('🏦 Gérez votre compte bancaire avec tiers VIP et intérêts composés')
+L 53:     .addSubcommand(s => s
+L 54:       .setName('solde')
+L 55:       .setDescription('💰 Voir votre solde bancaire et votre tier VIP'))
+L 56:     .addSubcommand(s => s
+L 57:       .setName('deposer')
+L 58:       .setDescription('📥 Déposer des coins à la banque')
+L 59:       .addIntegerOption(o => o.setName('montant').setDescription('Montant à déposer (0 = tout)').setRequired(true).setMinValue(1)))
+L 60:     .addSubcommand(s => s
+L 61:       .setName('retirer')
+L 62:       .setDescription('📤 Retirer des coins de la banque')
+L 63:       .addIntegerOption(o => o.setName('montant').setDescription('Montant à retirer (0 = tout)').setRequired(true).setMinValue(1)))
+L 64:     .addSubcommand(s => s
+L 65:       .setName('interets')
+L 66:       .setDescription('📈 Réclamer vos intérêts quotidiens (composés selon votre tier)'))
+L 67:     .addSubcommand(s => s
+L 68:       .setName('historique')
+L 69:       .setDescription('📋 Voir les 10 dernières transactions'))
+L 70:     .addSubcommand(s => s
+L 71:       .setName('virer')
+L 72:       .setDescription('💸 Virer des coins à un autre membre')
+L 73:       .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true))
+L 74:       .addIntegerOption(o => o.setName('montant').setDescription('Montant à virer').setRequired(true).setMinValue(1)))
+L 75:     .addSubcommand(s => s
+L 76:       .setName('tiers')
+L 77:       .setDescription('🏆 Voir tous les tiers VIP et leurs avantages')),
+L 78: 
+L 79:   async execute(interaction) {
+L 80:     const sub     = interaction.options.getSubcommand();
+L 81:     const guildId = interaction.guildId;
+L 82:     const userId  = interaction.user.id;
+L 83:     const cfg     = db.getConfig(guildId) || {};
+L 84:     const coin    = cfg.currency_emoji || '€';
+L 85:     const u       = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
+L 86:     const bank    = u.bank || 0;
+L 87:     const tier    = getTier(bank);
+L 88: 
+L 89:     // ── SOLDE ─────────────────────────────────────────────
+L 90:     if (sub === 'solde') {
+L 91:       const maxBankCap = u.balance * tier.maxMultiplier;
+L 92:       const nextTierList = Object.values(TIERS).sort((a, b) => a.minBank - b.minBank);
+L 93:       const nextTier = nextTierList.find(t => t.minBank > bank);
+L 94: 
+L 95:       const embed = new EmbedBuilder()
+L 96:         .setColor(tier.color)
+L 97:         .setTitle(`${tier.emoji} Compte Bancaire — Tier ${tier.name}`)
+L 98:         .setThumbnail(interaction.user.displayAvatarURL())
+L 99:         .addFields(
+L100:           { name: '💼 Portefeuille',    value: `**${formatNum(u.balance)} ${coin}**`,  inline: true },
+L101:           { name: '🏦 Banque',           value: `**${formatNum(bank)} ${coin}**`,       inline: true },
+L102:           { name: '💎 Total',            value: `**${formatNum(u.balance + bank)} ${coin}**`, inline: true },
+L103:           { name: '📈 Taux d\'intérêt', value: `**${tier.interest * 100}%**/jour`,     inline: true },
+L104:           { name: '📊 Plafond banque',   value: `**${formatNum(maxBankCap)} ${coin}**`, inline: true },
+L105:           { name: `${tier.emoji} Tier`,  value: `**${tier.name}**`,                    inline: true },
+L106:         );
+L107: 
+L108:       if (nextTier) {
+L109:         const needed = nextTier.minBank - bank;
+L110:         embed.addFields({
+L111:           name: `⬆️ Prochain tier : ${nextTier.emoji} ${nextTier.name}`,
+L112:           value: `Encore **${formatNum(needed)} ${coin}** à la banque (taux → **${nextTier.interest * 100}%**)`
+L113:         });
+L114:       }
+L115: 
+L116:       embed.setFooter({ text: '/banque interets — intérêts composés disponibles 1x/jour' });
+L117:       return interaction.reply({ embeds: [embed], ephemeral: true });
+L118:     }
+L119: 
+L120:     // ── DÉPOSER ───────────────────────────────────────────
+L121:     if (sub === 'deposer') {
+L122:       let montant = interaction.options.getInteger('montant');
+L123:       if (montant === 0) montant = u.balance;
+L124:       if (montant > u.balance) return interaction.reply({ content: `❌ Solde insuffisant (**${formatNum(u.balance)} ${coin}**).`, ephemeral: true });
+L125: 
+L126:       const maxCap = u.balance * tier.maxMultiplier;
+L127:       if (bank >= maxCap) {
+L128:         return interaction.reply({ content: `❌ Banque pleine ! Plafond tier ${tier.name} : **${formatNum(maxCap)} ${coin}**.`, ephemeral: true });
+L129:       }
+L130: 
+L131:       const allowed = Math.min(montant, maxCap - bank);
+L132:       db.addCoins(userId, guildId, -allowed);
+L133:       db.db.prepare('UPDATE users SET bank=COALESCE(bank,0)+? WHERE user_id=? AND guild_id=?').run(allowed, userId, guildId);
+L134:       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, userId, 'depot', allowed);
+L135: 
+L136:       const embed = new EmbedBuilder()
+L137:         .setColor('#2ECC71')
+L138:         .setTitle('📥 Dépôt effectué')
+L139:         .addFields(
+L140:           { name: '💰 Déposé',  value: `**+${formatNum(allowed)} ${coin}**`, inline: true },
+L141:           { name: '🏦 Banque',  value: `**${formatNum(bank + allowed)} ${coin}**`, inline: true }
+L142:         );
+L143: 
+L144:       if (allowed < montant) embed.addFields({ name: '⚠️ Plafond atteint', value: `Seuls **${formatNum(allowed)} ${coin}** ont été déposés (plafond tier ${tier.name}).` });
+L145: 
+L146:       return interaction.reply({ embeds: [embed] });
+L147:     }
+L148: 
+L149:     // ── RETIRER ───────────────────────────────────────────
+L150:     if (sub === 'retirer') {
+L151:       let montant = interaction.options.getInteger('montant');
+L152:       if (montant === 0) montant = bank;
+L153:       if (montant > bank) return interaction.reply({ content: `❌ Vous n'avez que **${formatNum(bank)} ${coin}** en banque.`, ephemeral: true });
+L154: 
+L155:       db.addCoins(userId, guildId, montant);
+L156:       db.db.prepare('UPDATE users SET bank=bank-? WHERE user_id=? AND guild_id=?').run(montant, userId, guildId);
+L157:       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, userId, 'retrait', montant);
+L158: 
+L159:       return interaction.reply({
+L160:         embeds: [new EmbedBuilder()
+L161:           .setColor('#E74C3C')
+L162:           .setTitle('📤 Retrait effectué')
+L163:           .addFields(
+L164:             { name: '💰 Retiré',     value: `**-${formatNum(montant)} ${coin}**`, inline: true },
+L165:             { name: '🏦 Banque',     value: `**${formatNum(bank - montant)} ${coin}**`, inline: true },
+L166:             { name: '💼 Portefeuille', value: `**${formatNum(u.balance + montant)} ${coin}**`, inline: true }
+L167:           )]
+L168:       });
+L169:     }
+L170: 
+L171:     // ── INTÉRÊTS ──────────────────────────────────────────
+L172:     if (sub === 'interets') {
+L173:       const cd = checkCooldown(userId, 'banque_interets', 22 * 3600);
+L174:       if (cd.onCooldown) {
+L175:         return interaction.reply({ content: cooldownMessage(cd.remaining), ephemeral: true });
+L176:       }
+L177: 
+L178:       if (bank === 0) {
+L179:         return interaction.reply({ content: '❌ Vous n\'avez pas d\'argent à la banque.', ephemeral: true });
+L180:       }
+L181: 
+L182:       // Intérêts composés selon le tier
+L183:       const interet = Math.floor(bank * tier.interest);
+L184:       db.db.prepare('UPDATE users SET bank=bank+? WHERE user_id=? AND guild_id=?').run(interet, userId, guildId);
+L185:       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, userId, 'interets', interet);
+L186: 
+L187:       const embed = new EmbedBuilder()
+L188:         .setColor(tier.color)
+L189:         .setTitle(`${tier.emoji} Intérêts composés réclamés !`)
+L190:         .setDescription(`Votre tier **${tier.name}** vous rapporte **${tier.interest * 100}%/jour** sur votre solde bancaire.`)
+L191:         .addFields(
+L192:           { name: '💰 Intérêts gagnés', value: `**+${formatNum(interet)} ${coin}**`, inline: true },
+L193:           { name: '🏦 Nouveau solde',   value: `**${formatNum(bank + interet)} ${coin}**`, inline: true },
+L194:           { name: `${tier.emoji} Tier`, value: `**${tier.name}**`, inline: true }
+L195:         )
+L196:         .setFooter({ text: 'Prochain intérêt disponible dans ~22h' });
+L197: 
+L198:       return interaction.reply({ embeds: [embed] });
+L199:     }
+L200: 
+L201:     // ── HISTORIQUE ────────────────────────────────────────
+L202:     if (sub === 'historique') {
+L203:       const txs = db.db.prepare(
+L204:         'SELECT * FROM bank_transactions WHERE user_id=? AND guild_id=? ORDER BY created_at DESC LIMIT 10'
+L205:       ).all(userId, guildId);
+L206: 
+L207:       if (!txs.length) {
+L208:         return interaction.reply({ content: '📋 Aucune transaction trouvée.', ephemeral: true });
+L209:       }
+L210: 
+L211:       const typeEmoji = { depot: '📥', retrait: '📤', interets: '📈', virement_in: '💸', virement_out: '💸' };
+L212:       const lines = txs.map(tx => {
+L213:         const date = new Date(tx.created_at * 1000).toLocaleDateString('fr-FR');
+L214:         const sign = ['retrait', 'virement_out'].includes(tx.type) ? '-' : '+';
+L215:         return `${typeEmoji[tx.type] || '💰'} \`${date}\` **${sign}${formatNum(tx.amount)} ${coin}** — ${tx.type}`;
+L216:       }).join('\n');
+L217: 
+L218:       const embed = new EmbedBuilder()
+L219:         .setColor('#3498DB')
+L220:         .setTitle('📋 10 dernières transactions')
+L221:         .setDescription(lines);
+L222: 
+L223:       return interaction.reply({ embeds: [embed], ephemeral: true });
+L224:     }
+L225: 
+L226:     // ── VIRER ─────────────────────────────────────────────
+L227:     if (sub === 'virer') {
+L228:       const target  = interaction.options.getUser('membre');
+L229:       const montant = interaction.options.getInteger('montant');
+L230: 
+L231:       if (target.id === userId) return interaction.reply({ content: '❌ Vous ne pouvez pas vous virer de l\'argent.', ephemeral: true });
+L232:       if (montant > bank) return interaction.reply({ content: `❌ Solde bancaire insuffisant.`, ephemeral: true });
+L233: 
+L234:       db.db.prepare('UPDATE users SET bank=bank-? WHERE user_id=? AND guild_id=?').run(montant, userId, guildId);
+L235:       db.db.prepare('UPDATE users SET bank=COALESCE(bank,0)+? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
+L236:       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, userId, 'virement_out', montant);
+L237:       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, target.id, 'virement_in', montant);
+L238: 
+L239:       return interaction.reply({
+L240:         embeds: [new EmbedBuilder()
+L241:           .setColor('#2ECC71')
+L242:           .setTitle('💸 Virement effectué')
+L243:           .setDescription(`Vous avez viré **${formatNum(montant)} ${coin}** à ${target}.`)
+L244:           .addFields(
+L245:             { name: '🏦 Votre banque', value: `**${formatNum(bank - montant)} ${coin}**`, inline: true }
+L246:           )]
+L247:       });
+L248:     }
+L249: 
+L250:     // ── TIERS ─────────────────────────────────────────────
+L251:     if (sub === 'tiers') {
+L252:       const tierFields = Object.values(TIERS).sort((a, b) => a.minBank - b.minBank).map(t => ({
+L253:         name: `${t.emoji} ${t.name}`,
+L254:         value: `Dépôt min : **${formatNum(t.minBank)} ${coin}**\nIntérêts : **${t.interest * 100}%/jour**\nPlafond : **x${t.maxMultiplier}** votre portefeuille`,
+L255:         inline: true
+L256:       }));
+L257: 
+L258:       const embed = new EmbedBuilder()
+L259:         .setColor('#FFD700')
+L260:         .setTitle('🏆 Tiers VIP Bancaires')
+L261:         .setDescription(`Votre tier actuel : ${tier.emoji} **${tier.name}** — Déposez plus pour progresser !`)
+L262:         .addFields(tierFields)
+L263:         .setFooter({ text: 'Plus votre dépôt est élevé, plus vos intérêts composés sont puissants !' });
+L264: 
+L265:       return interaction.reply({ embeds: [embed], ephemeral: true });
+L266:     }
+L267:   }
+L268: };
+L269: 

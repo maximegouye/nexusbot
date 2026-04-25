@@ -72,7 +72,7 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))
     .addSubcommand(s => s.setName('annuler')
       .setDescription('🗑️ Annuler un événement [Admin]')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))),
 
   cooldown: 5,
 

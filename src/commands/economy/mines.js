@@ -23,7 +23,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('mines')
     .setDescription('💣 Démineur casino — découvre les diamants sans toucher les mines')
-    .addStringOption(o => o.setName('mise').setDescription('Ex: 500, 1000, all, 25%').setRequired(true).setMaxLength(20))
+    .addStringOption(o => o.setName('mise').setDescription('Ex: 500, 1000, all, 25%').setRequired(true).setMaxLength(20)),
   cooldown: 3,
 
   async execute(interaction) {

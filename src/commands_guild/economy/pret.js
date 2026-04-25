@@ -26,7 +26,7 @@ module.exports = {
     .addSubcommand(s => s.setName('emprunter').setDescription('💸 Emprunter des coins')
     .addSubcommand(s => s.setName('rembourser').setDescription('💰 Rembourser votre prêt actif'))
     .addSubcommand(s => s.setName('statut').setDescription('📋 Voir votre situation de prêt'))
-    .addSubcommand(s => s.setName('taux').setDescription('📊 Voir les taux selon votre niveau')),
+    .addSubcommand(s => s.setName('taux').setDescription('📊 Voir les taux selon votre niveau'))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

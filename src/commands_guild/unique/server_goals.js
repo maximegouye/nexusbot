@@ -61,7 +61,7 @@ module.exports = {
     .addSubcommand(s => s.setName('supprimer')
       .setDescription('🗑️ Supprimer un objectif [Admin]')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'objectif').setRequired(true)))
-    .addSubcommand(s => s.setName('historique').setDescription('📜 Voir les objectifs accomplis')),
+    .addSubcommand(s => s.setName('historique').setDescription('📜 Voir les objectifs accomplis'))),
 
   cooldown: 5,
 

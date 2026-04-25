@@ -520,7 +520,7 @@ const commands = [
   },
 
   {
-    // DEPRECATED : remplacé par commands_prefix/games/des_prefix.js (version premium)
+    // DEPRECATED : remplacé par commands_prefix/games/des_prefix.js (version premium),
     name: 'dice_old',
     aliases: [],
     description: '[OBSOLÈTE] Ancien lancer de dés (remplacé par &des)',
@@ -556,7 +556,7 @@ const commands = [
   },
 
   {
-    // DEPRECATED : remplacé par commands_prefix/games/blackjack_prefix.js (version premium avec état persisté)
+    // DEPRECATED : remplacé par commands_prefix/games/blackjack_prefix.js (version premium avec état persisté),
     name: 'blackjack_old',
     aliases: [],
     description: '[OBSOLÈTE] Ancien blackjack (remplacé par &blackjack / &bj)',

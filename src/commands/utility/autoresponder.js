@@ -22,8 +22,7 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID de la réponse').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('Voir toutes les réponses automatiques'))
     .addSubcommand(s => s.setName('test').setDescription('Tester un déclencheur')
-      .addStringOption(o => o.setName('message').setDescription('Message à tester').setRequired(true))),
-
+      .addStringOption(o => o.setName('message').setDescription('Message à tester').setRequired(true)))),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
 

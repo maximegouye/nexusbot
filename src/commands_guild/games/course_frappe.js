@@ -62,7 +62,7 @@ module.exports = {
           { name: '🔥 Moyen', value: 'moyen' },
           { name: '💀 Difficile', value: 'difficile' },
         )))
-    .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la course en cours')),
+    .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la course en cours'))),
 
   cooldown: 5,
 

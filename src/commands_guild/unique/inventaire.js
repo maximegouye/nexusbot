@@ -1,5 +1,5 @@
 /**
- * NexusBot — Système d'inventaire et de collection d'objets
+ * NexusBot — Système d'inventaire et de collection d\'objets
  * UNIQUE : Collecter, équiper, échanger, créer des ensembles
  */
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
@@ -104,8 +104,7 @@ module.exports = {
       .addStringOption(o => o.setName('item').setDescription('ID de l\'item à donner').setRequired(true))
     .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre un item contre des coins')
       .addStringOption(o => o.setName('item').setDescription('ID de l\'item à vendre').setRequired(true))
-    .addSubcommand(s => s.setName('lootbox').setDescription('📦 Ouvrir une lootbox (50 coins)')
-
+    .addSubcommand(s => s.setName('lootbox').setDescription('📦 Ouvrir une lootbox (50 coins)')))),
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;

@@ -49,7 +49,7 @@ module.exports = {
       .addBooleanOption(o => o.setName('symboles').setDescription('Inclure des symboles (défaut: non)'))
       .addBooleanOption(o => o.setName('nosimilaires').setDescription('Exclure les caractères similaires (i,l,1,o,0)'))
     .addSubcommand(s => s.setName('analyser').setDescription('🔍 Analyser la force d\'un mot de passe')
-      .addStringOption(o => o.setName('mot_de_passe').setDescription('Mot de passe à analyser').setRequired(true))),
+      .addStringOption(o => o.setName('mot_de_passe').setDescription('Mot de passe à analyser').setRequired(true)))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

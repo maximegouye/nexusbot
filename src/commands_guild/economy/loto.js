@@ -22,7 +22,7 @@ module.exports = {
     .addSubcommand(s => s.setName('jackpot').setDescription('💰 Voir le jackpot actuel et ton nombre de tickets'))
     .addSubcommand(s => s.setName('classement').setDescription('📋 Qui a le plus de chances de gagner ?'))
     .addSubcommand(s => s.setName('tirage').setDescription('🎲 Effectuer le tirage au sort (Admin)')
-      .addBooleanOption(o => o.setName('forcer').setDescription('Forcer le tirage maintenant').setRequired(true))),
+      .addBooleanOption(o => o.setName('forcer').setDescription('Forcer le tirage maintenant').setRequired(true)))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

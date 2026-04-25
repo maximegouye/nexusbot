@@ -28,7 +28,7 @@ module.exports = {
     .addSubcommand(s => s.setName('message_levelup').setDescription('Personnaliser le message de montée de niveau')
       .addStringOption(o => o.setName('message').setDescription('Message ({user}, {level}, {guild} dispo)').setRequired(true)))
     .addSubcommand(s => s.setName('canal_levelup').setDescription('Canal où afficher les montées de niveau')
-      .addChannelOption(o => o.setName('canal').setDescription('Canal (vide = canal actuel)').setRequired(false))),
+      .addChannelOption(o => o.setName('canal').setDescription('Canal (vide = canal actuel)').setRequired(false))))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

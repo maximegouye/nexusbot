@@ -35,7 +35,7 @@ module.exports = {
     .addSubcommand(s => s.setName('cloturer').setDescription('🔒 Clôturer et annoncer les résultats (admins)')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'élection').setRequired(true)))
     .addSubcommand(s => s.setName('referendum').setDescription('📊 Référendum rapide oui/non')
-      .addStringOption(o => o.setName('question').setDescription('Question du référendum').setRequired(true).setMaxLength(200))
+      .addStringOption(o => o.setName('question').setDescription('Question du référendum').setRequired(true).setMaxLength(200))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

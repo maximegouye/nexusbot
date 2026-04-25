@@ -56,7 +56,7 @@ module.exports = {
     .addSubcommand(s => s.setName('slogan').setDescription('✏️ Changer le slogan de votre ville')
       .addStringOption(o => o.setName('texte').setDescription('Nouveau slogan').setRequired(true).setMaxLength(80)))
     .addSubcommand(s => s.setName('batiments').setDescription('🏗️ Liste des bâtiments disponibles'))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des villes les plus riches')),
+    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des villes les plus riches'))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

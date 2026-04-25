@@ -23,8 +23,7 @@ module.exports = {
     .addSubcommand(s => s.setName('evasion').setDescription('🏃 Tenter une évasion (50% de chance)'))
     .addSubcommand(s => s.setName('caution').setDescription('💰 Payer sa caution pour se libérer'))
     .addSubcommand(s => s.setName('statut').setDescription('📋 Voir les prisonniers actuels'))
-    .addSubcommand(s => s.setName('cellule').setDescription('🔍 Voir ton statut en prison')),
-
+    .addSubcommand(s => s.setName('cellule').setDescription('🔍 Voir ton statut en prison'))),
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();

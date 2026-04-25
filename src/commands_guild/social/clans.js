@@ -40,7 +40,7 @@ module.exports = {
       .addUserOption(o => o.setName('membre').setDescription('Membre à promouvoir').setRequired(true))
       .addStringOption(o => o.setName('rang').setDescription('Nouveau rang').setRequired(true)
         .addChoices({ name: '⭐ Officier', value: 'officier' }, { name: '👑 Chef', value: 'chef' })))
-    .addSubcommand(s => s.setName('don').setDescription('💰 Faire un don à la trésorerie du clan')
+    .addSubcommand(s => s.setName('don').setDescription('💰 Faire un don à la trésorerie du clan')),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

@@ -71,7 +71,7 @@ module.exports = {
           { name: '🎲 Mixte',    value: 'mixte'   },
         ))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la partie en cours'))
-    .addSubcommand(s => s.setName('scores').setDescription('🏆 Voir les scores de la partie')),
+    .addSubcommand(s => s.setName('scores').setDescription('🏆 Voir les scores de la partie'))),
 
   cooldown: 5,
 

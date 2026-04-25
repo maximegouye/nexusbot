@@ -9,7 +9,7 @@ module.exports = {
     .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
     .addStringOption(o => o.setName('description').setDescription('Description').setRequired(false).setMaxLength(200))
     .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false).setMaxLength(10))
-    .addRoleOption(o => o.setName('role').setDescription('Rôle Discord à donner').setRequired(false))
+    .addRoleOption(o => o.setName('role').setDescription('Rôle Discord à donner').setRequired(false)),
   cooldown: 5,
 
   async execute(interaction) {

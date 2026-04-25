@@ -4,7 +4,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('braquage')
-    .setDescription('🏦 Organise un braquage de banque avec d\'autres membres !')
+    .setDescription('🏦 Organise un braquage de banque avec d\'autres membres !'),
   cooldown: 5,
 
   async execute(interaction) {

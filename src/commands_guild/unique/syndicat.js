@@ -49,7 +49,7 @@ module.exports = {
       .addUserOption(o => o.setName('membre').setDescription('Membre à promouvoir').setRequired(true)))
     .addSubcommand(s => s.setName('guerre').setDescription('⚔️ Déclarer la guerre à une autre guilde (fun)')
       .addStringOption(o => o.setName('ennemi').setDescription('Nom de la guilde ennemie').setRequired(true)))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des guildes')),
+    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des guildes'))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

@@ -44,7 +44,7 @@ module.exports = {
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les formulaires disponibles'))
     .addSubcommand(s => s.setName('voir').setDescription('🔍 Voir vos candidatures'))
     .addSubcommand(s => s.setName('fermer').setDescription('🔒 Ouvrir/fermer un formulaire (Admin)')
-      .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true))),
+      .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true)))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

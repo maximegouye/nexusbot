@@ -7,7 +7,7 @@ module.exports = {
     .setDescription('🔨 Bannir un membre du serveur')
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addUserOption(o => o.setName('membre').setDescription('Membre à bannir').setRequired(true))
-    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
+    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false)),
   cooldown: 3,
 
   async execute(interaction) {

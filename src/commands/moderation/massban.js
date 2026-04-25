@@ -7,7 +7,7 @@ module.exports = {
     .setDescription('🔨 Bannir plusieurs membres en une seule commande (anti-raid)')
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addStringOption(o => o.setName('ids').setDescription('IDs séparés par des espaces ou virgules').setRequired(true))
-    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
+    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false)),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });

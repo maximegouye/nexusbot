@@ -35,7 +35,7 @@ module.exports = {
         ))
     .addSubcommand(s => s.setName('portefeuille').setDescription('💼 Voir vos investissements actifs'))
     .addSubcommand(s => s.setName('collecter').setDescription('💰 Collecter les investissements arrivés à maturité'))
-    .addSubcommand(s => s.setName('options').setDescription('📊 Voir tous les types d\'investissement')),
+    .addSubcommand(s => s.setName('options').setDescription('📊 Voir tous les types d\'investissement'))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

@@ -202,7 +202,7 @@ module.exports = {
         .setName('voir')
         .setDescription('📋 Voir l\'inventaire complet d\'un joueur')
         .addUserOption(o => o.setName('joueur').setDescription('Joueur cible').setRequired(true)))
-    ),
+    ))),
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXECUTE

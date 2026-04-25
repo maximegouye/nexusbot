@@ -42,7 +42,7 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID de l\'article à copier').setRequired(true)))
 
     .addSubcommand(s => s.setName('promo').setDescription('🏷️ Mettre un article en promotion')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

@@ -4,7 +4,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('buy')
-    .setDescription('🛍️ Achète un article dans la boutique')
+    .setDescription('🛍️ Achète un article dans la boutique'),
   cooldown: 5,
 
   async execute(interaction) {

@@ -40,7 +40,7 @@ module.exports = {
     .addSubcommand(s => s.setName('rgb').setDescription('🎨 Analyser une couleur RGB')
     .addSubcommand(s => s.setName('aleatoire').setDescription('🎲 Générer une couleur aléatoire'))
     .addSubcommand(s => s.setName('palette').setDescription('🎨 Générer une palette harmonieuse')
-      .addStringOption(o => o.setName('hex').setDescription('Couleur de base (HEX)').setRequired(true))),
+      .addStringOption(o => o.setName('hex').setDescription('Couleur de base (HEX)').setRequired(true)))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

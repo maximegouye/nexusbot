@@ -60,7 +60,7 @@ module.exports = {
       )))
     .addSubcommand(s => s.setName('annuler')
       .setDescription('❌ Annuler un pari (admin/créateur)')
-      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true))),
+      .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true)))),
 
   cooldown: 5,
 

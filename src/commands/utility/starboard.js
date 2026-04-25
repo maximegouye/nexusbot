@@ -29,7 +29,7 @@ module.exports = {
     .addSubcommand(s => s.setName('top').setDescription('🏆 Top 10 des messages les plus étoilés')
     .addSubcommand(s => s.setName('aleatoire').setDescription('🎲 Afficher un message étoilé au hasard'))
     .addSubcommand(s => s.setName('desactiver').setDescription('Désactiver le starboard'))
-    .addSubcommand(s => s.setName('reset').setDescription('🗑️ Réinitialiser tous les messages étoilés')),
+    .addSubcommand(s => s.setName('reset').setDescription('🗑️ Réinitialiser tous les messages étoilés'))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

@@ -92,7 +92,7 @@ module.exports = {
       .addStringOption(o => o.setName('id_annonce').setDescription('ID de l\'annonce').setRequired(true)))
     .addSubcommand(s => s.setName('duel').setDescription('⚔️ Défier quelqu\'un avec votre meilleure carte')
       .addUserOption(o => o.setName('adversaire').setDescription('Adversaire').setRequired(true))
-      .addStringOption(o => o.setName('votre_carte').setDescription('ID de votre carte').setRequired(true))),
+      .addStringOption(o => o.setName('votre_carte').setDescription('ID de votre carte').setRequired(true)))),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

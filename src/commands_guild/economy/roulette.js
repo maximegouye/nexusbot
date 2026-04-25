@@ -40,7 +40,7 @@ module.exports = {
     .setName('roulette')
     .setDescription('🎡 Roulette — mise ce que tu veux, choisis ton pari')
     .addStringOption(o => o.setName('mise').setDescription('Montant misé (ex: 500, 1000, all, 25%)').setRequired(true).setMaxLength(20))
-    .addStringOption(o => o.setName('pari').setDescription('Type de pari').setRequired(false).addChoices(...CHOIX))
+    .addStringOption(o => o.setName('pari').setDescription('Type de pari').setRequired(false).addChoices(...CHOIX)),
   cooldown: 3,
 
   async execute(interaction) {

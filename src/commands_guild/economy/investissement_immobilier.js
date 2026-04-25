@@ -38,7 +38,7 @@ module.exports = {
     .addSubcommand(s => s.setName('portfolio').setDescription('📋 Voir ton portfolio immobilier'))
     .addSubcommand(s => s.setName('loyer').setDescription('💸 Collecter les loyers de tes propriétés'))
     .addSubcommand(s => s.setName('vendre')
-      .setDescription('📉 Vendre une propriété')
+      .setDescription('📉 Vendre une propriété'))),
 
   cooldown: 5,
 
