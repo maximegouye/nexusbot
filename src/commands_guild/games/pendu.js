@@ -5,7 +5,7 @@ const WORDS = [
   // Animaux
   'elephant', 'girafe', 'kangourou', 'manchot', 'crocodile', 'hippopotame', 'cameleon',
   // Fruits
-  'ananas', 'pastèque', 'mangue', 'framboise', 'grenade', 'abricot', 'nectarine',
+  'ananas', 'citrouille', 'mangue', 'framboise', 'grenade', 'abricot', 'nectarine',
   // Pays
   'portugal', 'argentine', 'australie', 'ethiopie', 'cambodge', 'venezuela',
   // Objets
@@ -34,11 +34,13 @@ function buildDisplay(word, guessed) {
 }
 
 function buildKeyboard(guessed) {
-  const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  // Discord limite : 5 boutons max par ActionRow, 5 ActionRows max
+  // 26 lettres → 5 rangées de 5 = 25 lettres (a-y), z rarissime dans les mots
+  const letters = 'abcdefghijklmnopqrstuvwxy'.split(''); // 25 lettres
   const rows = [];
-  for (let i = 0; i < letters.length; i += 7) {
+  for (let i = 0; i < letters.length; i += 5) {
     rows.push(new ActionRowBuilder().addComponents(
-      letters.slice(i, i + 7).map(l =>
+      letters.slice(i, i + 5).map(l =>
         new ButtonBuilder()
           .setCustomId(`pendu_${l}`)
           .setLabel(l.toUpperCase())
@@ -47,7 +49,7 @@ function buildKeyboard(guessed) {
       )
     ));
   }
-  return rows.slice(0, 4); // Max 4 lignes de boutons
+  return rows.slice(0, 5); // Max 5 ActionRows
 }
 
 module.exports = {
@@ -90,68 +92,79 @@ module.exports = {
     }
   },
 
-  // Gestionnaire de bouton (appelé depuis interactionCreate)
-  async handleComponent(interaction) {
-    const db = require('../../database/db');
-    const letter = interaction.customId.replace('pendu_', '');
-    const guildId = interaction.guildId;
-    const userId = interaction.user.id;
-    const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
-    const key = `${guildId}_${userId}`;
-
-    const game = activeGames.get(key);
-    if (!game) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune partie en cours. Lancez `/pendu jouer`.', ephemeral: true });
-
-    if (game.guessed.includes(letter)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous avez déjà essayé **${letter.toUpperCase()}**.`, ephemeral: true });
-
-    game.guessed.push(letter);
-    if (!game.word.includes(letter)) game.errors++;
-
-    const display = buildDisplay(game.word, game.guessed);
-    const allFound = game.word.split('').every(l => game.guessed.includes(l));
-
-    if (allFound) {
-      activeGames.delete(key);
-      db.addCoins(userId, guildId, REWARD);
-      const time = ((Date.now() - game.time) / 1000).toFixed(1);
-      return interaction.update({
-        embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('🎉 Bravo ! Vous avez gagné !')
-          .setDescription(HANGMAN[game.errors])
-          .addFields(
-            { name: '✅ Mot', value: `**${game.word.toUpperCase()}**`, inline: true },
-            { name: '⏱️ Temps', value: `${time}s`, inline: true },
-            { name: '💰 Gain', value: `+${REWARD} ${coin}`, inline: true },
-          )
-        ], components: []
-      });
-    }
-
-    if (game.errors >= 6) {
-      activeGames.delete(key);
-      return interaction.update({
-        embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('💀 Perdu !')
-          .setDescription(HANGMAN[6])
-          .addFields(
-            { name: '❌ Mot', value: `Le mot était : **${game.word.toUpperCase()}**`, inline: false },
-          )
-        ], components: []
-      });
-    }
-
-    const embed = new EmbedBuilder()
-      .setColor(game.errors >= 4 ? '#E74C3C' : '#9B59B6')
-      .setTitle('🎯 Pendu')
-      .setDescription(HANGMAN[game.errors])
-      .addFields(
-        { name: '🔤 Mot', value: display, inline: false },
-        { name: '❌ Erreurs', value: `${game.errors}/6`, inline: true },
-        { name: '🔠 Essayés', value: game.guessed.map(l => l.toUpperCase()).join(' ') || '—', inline: true },
-      )
-      .setFooter({ text: `${game.word.length} lettres` });
-
-    return interaction.update({ embeds: [embed], components: buildKeyboard(game.guessed) });
-  }
 };
 
+async function handleComponent(interaction, customId) {
+  if (!customId.startsWith('pendu_')) return false;
+
+  const letter = customId.replace('pendu_', '');
+  const guildId = interaction.guildId;
+  const userId = interaction.user.id;
+  const cfg = db.getConfig(guildId);
+  const coin = cfg?.currency_emoji || '🪙';
+  const key = `${guildId}_${userId}`;
+
+  const game = activeGames.get(key);
+  if (!game) {
+    await interaction.reply({ content: '❌ Aucune partie en cours. Lancez `/pendu jouer`.', ephemeral: true }).catch(() => {});
+    return true;
+  }
+
+  if (game.guessed.includes(letter)) {
+    await interaction.reply({ content: `❌ Vous avez déjà essayé **${letter.toUpperCase()}**.`, ephemeral: true }).catch(() => {});
+    return true;
+  }
+
+  game.guessed.push(letter);
+  if (!game.word.includes(letter)) game.errors++;
+
+  const display = buildDisplay(game.word, game.guessed);
+  const allFound = game.word.split('').every(l => game.guessed.includes(l));
+
+  if (allFound) {
+    activeGames.delete(key);
+    db.addCoins(userId, guildId, REWARD);
+    const time = ((Date.now() - game.time) / 1000).toFixed(1);
+    await interaction.update({
+      embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('🎉 Bravo ! Vous avez gagné !')
+        .setDescription(HANGMAN[game.errors])
+        .addFields(
+          { name: '✅ Mot', value: `**${game.word.toUpperCase()}**`, inline: true },
+          { name: '⏱️ Temps', value: `${time}s`, inline: true },
+          { name: '💰 Gain', value: `+${REWARD} ${coin}`, inline: true },
+        )
+      ], components: []
+    }).catch(() => {});
+    return true;
+  }
+
+  if (game.errors >= 6) {
+    activeGames.delete(key);
+    await interaction.update({
+      embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('💀 Perdu !')
+        .setDescription(HANGMAN[6])
+        .addFields(
+          { name: '❌ Mot', value: `Le mot était : **${game.word.toUpperCase()}**`, inline: false },
+        )
+      ], components: []
+    }).catch(() => {});
+    return true;
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(game.errors >= 4 ? '#E74C3C' : '#9B59B6')
+    .setTitle('🎯 Pendu')
+    .setDescription(HANGMAN[game.errors])
+    .addFields(
+      { name: '🔤 Mot', value: display, inline: false },
+      { name: '❌ Erreurs', value: `${game.errors}/6`, inline: true },
+      { name: '🔠 Essayés', value: game.guessed.map(l => l.toUpperCase()).join(' ') || '—', inline: true },
+    )
+    .setFooter({ text: `${game.word.length} lettres` });
+
+  await interaction.update({ embeds: [embed], components: buildKeyboard(game.guessed) }).catch(() => {});
+  return true;
+}
+
+module.exports.handleComponent = handleComponent;
 module.exports.activeGames = activeGames;
