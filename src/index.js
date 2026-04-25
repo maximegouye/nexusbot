@@ -35,22 +35,34 @@ const client = new Client({
 });
 
 // ── Collections ─────────────────────────────────
-client.commands  = new Collection();
-client.cooldowns = new Collection();
+client.commands          = new Collection();
+client.cooldowns         = new Collection();
+client.globalCommandsList = []; // pour enregistrement global (src/commands/)
+client.guildCommandsList  = []; // pour enregistrement guild  (src/commands_guild/)
 
 // ── Chargement commandes slash ──────────────────
-function loadCommands(dir) {
+// tag = 'global' | 'guild' — détermine l'endpoint REST utilisé dans ready.js
+function loadCommands(dir, tag) {
   if (!fs.existsSync(dir)) return;
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      loadCommands(fullPath);
-    } else if (entry.name.endsWith('.js')) {
+      // Ignore les dossiers marqués .disabled (ex: music.disabled)
+      if (!entry.name.includes('.disabled')) {
+        loadCommands(fullPath, tag);
+      }
+    } else if (entry.name.endsWith('.js') && !entry.name.includes('.disabled')) {
       try {
         const cmd = require(fullPath);
         if (cmd.data && cmd.execute) {
-          client.commands.set(cmd.data.name, cmd);
+          cmd._sourceDir = tag;
+          client.commands.set(cmd.data.name, cmd); // guild écrase global si même nom
+          if (tag === 'global') {
+            client.globalCommandsList.push(cmd.data);
+          } else {
+            client.guildCommandsList.push(cmd.data);
+          }
         }
       } catch (e) {
         console.error(`[Commands] Erreur chargement ${entry.name}:`, e.message);
@@ -59,14 +71,13 @@ function loadCommands(dir) {
   }
 }
 
-const commandsPath = path.join(__dirname, 'commands');
-loadCommands(commandsPath);
-
-// Charge aussi les guild commands (banque, casino, économie...)
+const commandsPath      = path.join(__dirname, 'commands');
 const commandsGuildPath = path.join(__dirname, 'commands_guild');
-loadCommands(commandsGuildPath);
 
-console.log(`✅ ${client.commands.size} commande(s) slash chargée(s)`);
+loadCommands(commandsPath,      'global'); // 109 commandes → endpoint global
+loadCommands(commandsGuildPath, 'guild');  // 122 commandes → endpoint guild
+
+console.log(`✅ ${client.commands.size} commande(s) slash chargée(s) (global:${client.globalCommandsList.length} guild:${client.guildCommandsList.length})`);
 
 // ── Chargement événements ───────────────────────
 const eventsPath = path.join(__dirname, 'events');
