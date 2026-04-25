@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Copier package.json en premier pour utiliser le cache Docker
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --omit=optional
 
 # Copier le reste du code
 COPY . .
