@@ -6,7 +6,7 @@
 const { REST, Routes } = require('discord.js');
 
 module.exports = {
-  name: 'ready',
+  name: 'clientReady',
   once: true,
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.tag} (${client.user.id})`);
@@ -64,23 +64,13 @@ module.exports = {
       console.log('✅ Validation OK — aucun problème détecté');
     }
 
-    // ── Context menus (séparés des slash, limites : 5 user + 5 message) ──
-    const ctxMenus = (client.contextMenusList || [])
-      .filter(d => d && typeof d.toJSON === 'function')
-      .map(d => d.toJSON());
-    const ctxUser    = ctxMenus.filter(c => c.type === 2).slice(0, 5);
-    const ctxMessage = ctxMenus.filter(c => c.type === 3).slice(0, 5);
-    const allCtx     = [...ctxUser, ...ctxMessage];
-    console.log(`📦 Context menus: ${ctxUser.length} user + ${ctxMessage.length} message`);
-
-    // ── Enregistrement GUILD commands + context menus en un seul appel ──
+    // ── Enregistrement GUILD commands ──────────────────────
     try {
-      const guildPayload = [...guildCmds, ...allCtx];
       await rest.put(
         Routes.applicationGuildCommands(appId, guildId),
-        { body: guildPayload }
+        { body: guildCmds }
       );
-      console.log(`✅ ${guildCmds.length} guild slash + ${allCtx.length} context menus enregistrés sur ${guildId}`);
+      console.log(`✅ ${guildCmds.length} guild commands enregistrées sur ${guildId}`);
     } catch (error) {
       console.error('❌ Erreur guild registration:', error.message);
       if (error.rawError) {

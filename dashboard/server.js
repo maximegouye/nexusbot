@@ -30,6 +30,28 @@ const io         = new Server(httpServer, {
   transports: ['websocket', 'polling'],
 });
 
+// ── Store sessions en mémoire (sans warning production) ───
+class SilentMemoryStore extends session.Store {
+  constructor() {
+    super();
+    this._store = new Map();
+    // Nettoyage automatique toutes les 15 min (sessions expirées)
+    setInterval(() => {
+      const now = Date.now();
+      for (const [sid, sess] of this._store) {
+        if (sess.cookie && sess.cookie.expires && new Date(sess.cookie.expires) < now) {
+          this._store.delete(sid);
+        }
+      }
+    }, 15 * 60 * 1000).unref();
+  }
+  get(sid, cb)     { cb(null, this._store.get(sid) ?? null); }
+  set(sid, s, cb)  { this._store.set(sid, s); cb(); }
+  destroy(sid, cb) { this._store.delete(sid); cb(); }
+  length(cb)       { cb(null, this._store.size); }
+  clear(cb)        { this._store.clear(); cb(); }
+}
+
 // ── Middleware ────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -38,6 +60,7 @@ app.use(session({
   secret:            SESSION_SECRET,
   resave:            false,
   saveUninitialized: false,
+  store:             new SilentMemoryStore(),
   cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 }, // 7j
 }));
 
