@@ -397,7 +397,7 @@ module.exports = {
       const p = POSTES[poste];
       return interaction.reply({
         content: wasOpen
-          ? `🔴 Poste **${p?.label ?? poste}** **fermé**. Le bouton sur le panneau sera désactivé au prochain `/recrutement panel`.`
+          ? `🔴 Poste **${p?.label ?? poste}** **fermé**. Le bouton sera désactivé au prochain /recrutement panel.`
           : `🟢 Poste **${p?.label ?? poste}** **ouvert** aux candidatures.`,
         ephemeral: true,
       });
