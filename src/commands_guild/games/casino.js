@@ -115,3 +115,59 @@ async function handleCasino(source, userId, guildId, sub) {
   }
 }
 
+// ── handleComponent pour les boutons du panel casino ─────────────────────────
+const CASINO_GAME_MAP = {
+  'casino_bj':     { label: 'Blackjack',   slash: '/blackjack',   prefix: '&blackjack'   },
+  'casino_poker':  { label: 'Poker',        slash: '/poker',       prefix: '&poker'       },
+  'casino_roul':   { label: 'Roulette',     slash: '/roulette',    prefix: '&roulette'    },
+  'casino_roue':   { label: 'Roue',         slash: '/roue',        prefix: '&roue'        },
+  'casino_slots':  { label: 'Slots',        slash: '/slots',       prefix: '&slots'       },
+  'casino_mines':  { label: 'Mines',        slash: '/mines',       prefix: '&mines'       },
+  'casino_crash':  { label: 'Crash',        slash: '/crash',       prefix: '&crash'       },
+  'casino_des':    { label: 'Dés',          slash: '/des',         prefix: '&des'         },
+  'casino_crypto': { label: 'Crypto',       slash: '/crypto',      prefix: '&crypto'      },
+};
+
+async function handleComponent(interaction, customId) {
+  if (!customId.startsWith('casino_')) return false;
+
+  const base = customId.split(':')[0]; // retire éventuel :userId
+
+  // Bouton stats détaillées
+  if (base === 'casino_stats') {
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+    const client = interaction.client;
+    const statsCmd = client.commands.get('casino-stats') || client.commands.get('casinostats') || client.commands.get('casino');
+    if (statsCmd && typeof statsCmd.execute === 'function') {
+      // Appel direct impossible (pas de slash options) → message guide
+    }
+    return interaction.editReply({
+      content: '📊 Utilise `/casino-stats` pour voir tes statistiques détaillées.',
+    }).then(() => true).catch(() => true);
+  }
+
+  // Bouton top gagnants
+  if (base === 'casino_top') {
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+    try {
+      await handleCasino(interaction, interaction.user.id, interaction.guildId, 'top');
+    } catch (_) {
+      await interaction.editReply({ content: '🏆 Utilise `/casino top` pour voir le classement.' }).catch(() => {});
+    }
+    return true;
+  }
+
+  // Boutons de jeu → guide rapide
+  const game = CASINO_GAME_MAP[base];
+  if (game) {
+    await interaction.reply({
+      content: `🎮 **${game.label}** — Lance le jeu avec :\n• Slash : \`${game.slash} <mise>\`\n• Préfixe : \`${game.prefix} <mise>\``,
+      ephemeral: true,
+    }).catch(() => {});
+    return true;
+  }
+
+  return false;
+}
+
+module.exports.handleComponent = handleComponent;
