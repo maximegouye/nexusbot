@@ -355,7 +355,15 @@ module.exports = {
   name: 'roulette',
   aliases: ['rl', 'wheel', 'casino-roulette'],
   async run(message, args) {
-    const mise = parseInt(args[0]);
+    const rawMise = (args[0] || '').toLowerCase().trim();
+    if (!rawMise) return message.reply('❌ Usage : `&roulette <mise> <pari>`\nEx: `&roulette 100 rouge`');
+    const u = db.getUser(message.author.id, message.guildId);
+    const bal = u?.balance || 0;
+    let mise;
+    if (rawMise === 'all' || rawMise === 'tout' || rawMise === 'max') mise = bal;
+    else if (rawMise === 'moitie' || rawMise === 'half' || rawMise === '50%') mise = Math.floor(bal / 2);
+    else if (rawMise.endsWith('%')) mise = Math.floor(bal * Math.min(100, parseFloat(rawMise)) / 100);
+    else mise = parseInt(rawMise);
     if (!mise || mise < 5) return message.reply('❌ Usage : `&roulette <mise> <pari>`\nEx: `&roulette 100 rouge`');
     const betType = args.slice(1).join(' ');
     if (!betType) return message.reply(`❌ Précise ton pari.\n\n${BET_HELP}`);

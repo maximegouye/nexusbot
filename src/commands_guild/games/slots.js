@@ -378,8 +378,16 @@ module.exports = {
   name: 'slots',
   aliases: ['slot', 'machine', 'jackpot'],
   async run(message, args) {
-    const mise   = parseInt(args[0]);
-    const lignes = parseInt(args[1]) || 1;
+    const rawMise = (args[0] || '').toLowerCase().trim();
+    const lignes  = parseInt(args[1]) || 1;
+    if (!rawMise) return message.reply('❌ Usage : `&slots <mise> [lignes]`\nEx: `&slots 100 3`');
+    const u = db.getUser(message.author.id, message.guildId);
+    const bal = u?.balance || 0;
+    let mise;
+    if (rawMise === 'all' || rawMise === 'tout' || rawMise === 'max') mise = bal;
+    else if (rawMise === 'moitie' || rawMise === 'half' || rawMise === '50%') mise = Math.floor(bal / 2);
+    else if (rawMise.endsWith('%')) mise = Math.floor(bal * Math.min(100, parseFloat(rawMise)) / 100);
+    else mise = parseInt(rawMise);
     if (!mise || mise < 5) return message.reply('❌ Usage : `&slots <mise> [lignes]`\nEx: `&slots 100 3`');
     await playSlots(message, message.author.id, message.guildId, mise, Math.min(3, Math.max(1, lignes)));
   },

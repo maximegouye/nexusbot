@@ -6,6 +6,39 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
+// ── Adaptateur préfixe→interaction ────────────────────────────────────────────
+function mkFake(message, opts = {}) {
+  let replied = false, deferred = false;
+  const send = async (data) => {
+    if (replied || deferred) return message.channel.send(data).catch(() => {});
+    replied = true;
+    return message.reply(data).catch(() => message.channel.send(data).catch(() => {}));
+  };
+  return {
+    user: message.author, member: message.member,
+    guild: message.guild, guildId: message.guildId,
+    channel: message.channel, client: message.client,
+    get deferred() { return deferred; }, get replied() { return replied; },
+    options: {
+      getSubcommand: opts.getSubcommand || (() => null),
+      getUser:    opts.getUser    || ((k) => null),
+      getMember:  opts.getMember  || ((k) => null),
+      getRole:    opts.getRole    || ((k) => null),
+      getChannel: opts.getChannel || ((k) => null),
+      getString:  opts.getString  || ((k) => null),
+      getInteger: opts.getInteger || ((k) => null),
+      getNumber:  opts.getNumber  || ((k) => null),
+      getBoolean: opts.getBoolean || ((k) => null),
+    },
+    deferReply: async () => { deferred = true; },
+    editReply:  async (d) => send(d),
+    reply:      async (d) => send(d),
+    followUp:   async (d) => message.channel.send(d).catch(() => {}),
+    update:     async (d) => {},
+  };
+}
+
+
 const CASES = [
   { emoji: '💀', mult: 0,    weight: 30, label: '💀 Banqueroute',       color: '#000000' },
   { emoji: '🪙', mult: 0.5,  weight: 22, label: '🪙 Moitié remboursée', color: '#95A5A6' },
@@ -42,8 +75,7 @@ module.exports = {
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
-    const miseRaw = interaction.options.get('mise');
-    const raw     = miseRaw ? String(miseRaw.value) : null;
+    const raw = interaction.options.getString('mise') ?? interaction.options.get?.('mise')?.value ?? null;
 
     const bet = parseBet(raw, user.balance);
     if (bet == null) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide.', ephemeral: true });
@@ -109,7 +141,17 @@ module.exports = {
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row] }).catch(() => {});
   },
+
+  name: 'roue',
+  aliases: ['wheel', 'spinner'],
+  async run(message, args) {
+    const raw = args[0];
+    if (!raw) return message.reply('❌ Usage : `&roue <mise>`');
+    const fake = mkFake(message, { getString: () => raw });
+    await this.execute(fake);
+  },
 };
+;
 
 async function handleComponent(interaction, customId) {
   if (!customId.startsWith('roue_')) return false;

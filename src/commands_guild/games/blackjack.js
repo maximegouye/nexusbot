@@ -374,8 +374,16 @@ module.exports = {
   name: 'blackjack',
   aliases: ['bj', '21'],
   async run(message, args) {
-    const mise = parseInt(args[0]);
-    if (!mise || mise < 10) return message.reply('❌ Usage : `!blackjack <mise>` — mise minimum 10.');
+    const rawMise = (args[0] || '').toLowerCase().trim();
+    if (!rawMise) return message.reply('❌ Usage : `&blackjack <mise>` — mise minimum 10.');
+    const u = db.getUser(message.author.id, message.guildId);
+    const bal = u?.balance || 0;
+    let mise;
+    if (rawMise === 'all' || rawMise === 'tout' || rawMise === 'max') mise = bal;
+    else if (rawMise === 'moitie' || rawMise === 'half' || rawMise === '50%') mise = Math.floor(bal / 2);
+    else if (rawMise.endsWith('%')) mise = Math.floor(bal * Math.min(100, parseFloat(rawMise)) / 100);
+    else mise = parseInt(rawMise);
+    if (!mise || mise < 10) return message.reply('❌ Usage : `&blackjack <mise>` — mise minimum 10.');
     await startGame(message, message.author.id, message.guildId, mise);
   },
 };

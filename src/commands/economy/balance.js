@@ -103,7 +103,7 @@ module.exports = {
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   },
   name: 'balance',
-  aliases: ["solde", "wallet", "argent"],
+  aliases: ["bal", "solde", "wallet", "argent", "portefeuille"],
     async run(message, args) {
     const target = message.mentions.users.first() || message.author;
     const fake = mkFake(message, { getUser: function() { return target; } });
