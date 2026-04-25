@@ -1,6 +1,39 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../../database/db');
 
+// ── Adaptateur préfixe→interaction ────────────────────────────────────────────
+function mkFake(message, opts = {}) {
+  let replied = false, deferred = false;
+  const send = async (data) => {
+    if (replied || deferred) return message.channel.send(data).catch(() => {});
+    replied = true;
+    return message.reply(data).catch(() => message.channel.send(data).catch(() => {}));
+  };
+  return {
+    user: message.author, member: message.member,
+    guild: message.guild, guildId: message.guildId,
+    channel: message.channel, client: message.client,
+    get deferred() { return deferred; }, get replied() { return replied; },
+    options: {
+      getSubcommand: opts.getSubcommand || (() => null),
+      getUser:    opts.getUser    || ((k) => null),
+      getMember:  opts.getMember  || ((k) => null),
+      getRole:    opts.getRole    || ((k) => null),
+      getChannel: opts.getChannel || ((k) => null),
+      getString:  opts.getString  || ((k) => null),
+      getInteger: opts.getInteger || ((k) => null),
+      getNumber:  opts.getNumber  || ((k) => null),
+      getBoolean: opts.getBoolean || ((k) => null),
+    },
+    deferReply: async () => { deferred = true; },
+    editReply:  async (d) => send(d),
+    reply:      async (d) => send(d),
+    followUp:   async (d) => message.channel.send(d).catch(() => {}),
+    update:     async (d) => {},
+  };
+}
+
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('richlist')
@@ -54,5 +87,12 @@ module.exports = {
       .setTimestamp();
 
     return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  }
+  },
+  name: 'richlist',
+  aliases: ["toprichesse"],
+    async run(message, args) {
+    const type = args[0] || 'global';
+    const fake = mkFake(message, { getString: () => ['global','banque','total'].includes(type) ? type : 'global' });
+    await this.execute(fake);
+  },
 };

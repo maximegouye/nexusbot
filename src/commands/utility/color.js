@@ -1,5 +1,38 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 
+// ── Adaptateur préfixe→interaction ────────────────────────────────────────────
+function mkFake(message, opts = {}) {
+  let replied = false, deferred = false;
+  const send = async (data) => {
+    if (replied || deferred) return message.channel.send(data).catch(() => {});
+    replied = true;
+    return message.reply(data).catch(() => message.channel.send(data).catch(() => {}));
+  };
+  return {
+    user: message.author, member: message.member,
+    guild: message.guild, guildId: message.guildId,
+    channel: message.channel, client: message.client,
+    get deferred() { return deferred; }, get replied() { return replied; },
+    options: {
+      getSubcommand: opts.getSubcommand || (() => null),
+      getUser:    opts.getUser    || ((k) => null),
+      getMember:  opts.getMember  || ((k) => null),
+      getRole:    opts.getRole    || ((k) => null),
+      getChannel: opts.getChannel || ((k) => null),
+      getString:  opts.getString  || ((k) => null),
+      getInteger: opts.getInteger || ((k) => null),
+      getNumber:  opts.getNumber  || ((k) => null),
+      getBoolean: opts.getBoolean || ((k) => null),
+    },
+    deferReply: async () => { deferred = true; },
+    editReply:  async (d) => send(d),
+    reply:      async (d) => send(d),
+    followUp:   async (d) => message.channel.send(d).catch(() => {}),
+    update:     async (d) => {},
+  };
+}
+
+
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
   return { r, g, b };
@@ -80,5 +113,12 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], files: [attachment] });
     }
     return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  }
+  },
+  name: 'color',
+  aliases: ["couleur2", "hex2"],
+    async run(message, args) {
+    const hex = args[0] || '#7B2FBE';
+    const fake = mkFake(message, { getString: () => hex });
+    await this.execute(fake);
+  },
 };

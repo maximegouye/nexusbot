@@ -90,5 +90,13 @@ module.exports = {
       await target.send({ embeds: [embed] });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Règles envoyées dans <#${target.id}>`, ephemeral: true });
     }
-  }
+  },
+  name: 'embed2',
+  aliases: ["makeembed"],
+    async run(message, args) {
+    const titre = args[0] || 'Embed';
+    const description = args.slice(1).join(' ') || ' ';
+    const fake = mkFake(message, { getSubcommand: () => 'simple', getString: (k) => k === 'titre' ? titre : k === 'description' ? description : null, getChannel: () => message.channel });
+    await this.execute(fake);
+  },
 };

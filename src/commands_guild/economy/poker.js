@@ -8,6 +8,39 @@ const {
 } = require('discord.js');
 const db = require('../../database/db');
 
+// ── Adaptateur préfixe→interaction ────────────────────────────────────────────
+function mkFake(message, opts = {}) {
+  let replied = false, deferred = false;
+  const send = async (data) => {
+    if (replied || deferred) return message.channel.send(data).catch(() => {});
+    replied = true;
+    return message.reply(data).catch(() => message.channel.send(data).catch(() => {}));
+  };
+  return {
+    user: message.author, member: message.member,
+    guild: message.guild, guildId: message.guildId,
+    channel: message.channel, client: message.client,
+    get deferred() { return deferred; }, get replied() { return replied; },
+    options: {
+      getSubcommand: opts.getSubcommand || (() => null),
+      getUser:    opts.getUser    || ((k) => null),
+      getMember:  opts.getMember  || ((k) => null),
+      getRole:    opts.getRole    || ((k) => null),
+      getChannel: opts.getChannel || ((k) => null),
+      getString:  opts.getString  || ((k) => null),
+      getInteger: opts.getInteger || ((k) => null),
+      getNumber:  opts.getNumber  || ((k) => null),
+      getBoolean: opts.getBoolean || ((k) => null),
+    },
+    deferReply: async () => { deferred = true; },
+    editReply:  async (d) => send(d),
+    reply:      async (d) => send(d),
+    followUp:   async (d) => message.channel.send(d).catch(() => {}),
+    update:     async (d) => {},
+  };
+}
+
+
 // ─── Deck ────────────────────────────────────────────────
 const SUITS  = ['♠', '♥', '♦', '♣'];
 const VALUES = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
@@ -231,5 +264,12 @@ module.exports = {
         }).catch(() => {});
       }
     });
-  }
+  },
+  name: 'poker2',
+  aliases: ["poker-prefix"],
+    async run(message, args) {
+    const mise = args[0] || '100';
+    const fake = mkFake(message, { getString: () => mise });
+    await this.execute(fake);
+  },
 };

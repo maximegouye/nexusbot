@@ -1,6 +1,40 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
+
+// ── Adaptateur préfixe→interaction ────────────────────────────────────────────
+function mkFake(message, opts) {
+  opts = opts || {};
+  let replied = false, deferred = false;
+  const send = async (data) => {
+    if (replied || deferred) return message.channel.send(data).catch(() => {});
+    replied = true;
+    return message.reply(data).catch(() => message.channel.send(data).catch(() => {}));
+  };
+  return {
+    user: message.author, member: message.member,
+    guild: message.guild, guildId: message.guildId,
+    channel: message.channel, client: message.client,
+    get deferred() { return deferred; }, get replied() { return replied; },
+    options: {
+      getSubcommand: opts.getSubcommand || function() { return null; },
+      getUser:    opts.getUser    || function() { return null; },
+      getMember:  opts.getMember  || function() { return null; },
+      getRole:    opts.getRole    || function() { return null; },
+      getChannel: opts.getChannel || function() { return null; },
+      getString:  opts.getString  || function() { return null; },
+      getInteger: opts.getInteger || function() { return null; },
+      getNumber:  opts.getNumber  || function() { return null; },
+      getBoolean: opts.getBoolean || function() { return null; },
+    },
+    deferReply: async function() { deferred = true; },
+    editReply:  async function(d) { return send(d); },
+    reply:      async function(d) { return send(d); },
+    followUp:   async function(d) { return message.channel.send(d).catch(() => {}); },
+    update:     async function(d) {},
+  };
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('braquage')
@@ -91,5 +125,16 @@ module.exports = {
         else msg.edit({ embeds: [embed], components: [] }).catch(() => {});
       }
     }
-  }
+  },
+
+  name: 'braquage',
+  aliases: ['heist', 'vol'],
+  async run(message, args) {
+    const cible = args[0] || '1000';
+    const fake = mkFake(message, {
+      getString: (k) => k === 'cible' ? cible : null,
+    });
+    await this.execute(fake);
+  },
+
 };
