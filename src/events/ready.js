@@ -64,13 +64,23 @@ module.exports = {
       console.log('✅ Validation OK — aucun problème détecté');
     }
 
-    // ── Enregistrement GUILD commands ──────────────────────
+    // ── Context menus (séparés des slash, limites : 5 user + 5 message) ──
+    const ctxMenus = (client.contextMenusList || [])
+      .filter(d => d && typeof d.toJSON === 'function')
+      .map(d => d.toJSON());
+    const ctxUser    = ctxMenus.filter(c => c.type === 2).slice(0, 5);
+    const ctxMessage = ctxMenus.filter(c => c.type === 3).slice(0, 5);
+    const allCtx     = [...ctxUser, ...ctxMessage];
+    console.log(`📦 Context menus: ${ctxUser.length} user + ${ctxMessage.length} message`);
+
+    // ── Enregistrement GUILD commands + context menus en un seul appel ──
     try {
+      const guildPayload = [...guildCmds, ...allCtx];
       await rest.put(
         Routes.applicationGuildCommands(appId, guildId),
-        { body: guildCmds }
+        { body: guildPayload }
       );
-      console.log(`✅ ${guildCmds.length} guild commands enregistrées sur ${guildId}`);
+      console.log(`✅ ${guildCmds.length} guild slash + ${allCtx.length} context menus enregistrés sur ${guildId}`);
     } catch (error) {
       console.error('❌ Erreur guild registration:', error.message);
       if (error.rawError) {

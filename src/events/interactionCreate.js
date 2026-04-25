@@ -67,6 +67,21 @@ module.exports = {
       return;
     }
 
+    // — Context Menus (clic-droit user/message) ─────────────
+    if (interaction.isUserContextMenuCommand() || interaction.isMessageContextMenuCommand()) {
+      const cmd = client.commands.get(interaction.commandName);
+      if (!cmd) return;
+      try {
+        await cmd.execute(interaction);
+      } catch (e) {
+        console.error(`[ContextMenu ${interaction.commandName}]`, e?.message || e);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Erreur lors de l'exécution.`, ephemeral: true }).catch(() => {});
+        }
+      }
+      return;
+    }
+
     // — Boutons / Menus / Modals
     if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
       const cid = interaction.customId || '';
