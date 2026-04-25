@@ -329,9 +329,7 @@ module.exports = {
         .setDescription('Nouveau niveau de priorité')
         .setRequired(true)
         .addChoices(
-          { name: '🟢 Faible — Pas urgent', value: 'faible',
-    handleComponent,
-},
+          { name: '🟢 Faible — Pas urgent', value: 'faible' },
           { name: '🟡 Normale — Standard',  value: 'normale' },
           { name: '🟠 Élevée — Assez urgent', value: 'elevee' },
           { name: '🔴 Urgente — Immédiat !', value: 'urgente' },
@@ -1342,6 +1340,7 @@ module.exports = {
   },
 
   // ── Exposer pour interactionCreate.js et ticketAutoClose.js
+  handleComponent,
   generateTranscript,
   getCatInfo,
   CATEGORIES,
