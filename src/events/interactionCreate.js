@@ -43,6 +43,9 @@ const COMPONENT_ROUTES = {
   'morpion_'      : 'morpion',
   'poll_'         : 'poll',
   'appmodal_':    'applications',
+  // ── Nouveaux jeux de casino ──────────────────────────────
+  'grattage_':    'grattage',
+  'tour_':        'tour',
 };
 
 module.exports = {
