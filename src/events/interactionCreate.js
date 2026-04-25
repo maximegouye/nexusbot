@@ -46,6 +46,7 @@ const COMPONENT_ROUTES = {
   // ── Nouveaux jeux de casino ──────────────────────────────
   'grattage_':    'grattage',
   'tour_':        'tour',
+  'hilo_':        'hilo',
 };
 
 module.exports = {
