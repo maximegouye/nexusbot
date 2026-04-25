@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusBot Dashboard</title>
+  <meta name="description" content="Dashboard officiel de NexusBot — Gérez votre serveur Discord.">
+  <link rel="icon" href="/img/logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+<!-- Overlay mobile -->
+<div class="overlay" id="overlay"></div>
+
+<!-- ── Sidebar ──────────────────────────────────────────── -->
+<div class="layout">
+<aside class="sidebar">
+  <a class="sidebar-logo" href="#home" data-page="home">
+    <img src="/img/logo.png" alt="NexusBot" id="bot-avatar-sidebar"
+         onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+    <div class="logo-text">Nexus<span>Bot</span></div>
+  </a>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Général</div>
+    <a class="sidebar-link active" href="#home" data-page="home">
+      <span class="icon">🏠</span> Accueil
+    </a>
+    <a class="sidebar-link" href="#economy" data-page="economy">
+      <span class="icon">💰</span> Économie
+    </a>
+    <a class="sidebar-link" href="#commands" data-page="commands">
+      <span class="icon">📋</span> Commandes
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Gestion</div>
+    <a class="sidebar-link" href="#admin" data-page="admin">
+      <span class="icon">⚙️</span> Administration
+    </a>
+    <a class="sidebar-link" href="#logs" data-page="logs">
+      <span class="icon">📊</span> Logs en direct
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Plus</div>
+    <a class="sidebar-link" href="#premium" data-page="premium">
+      <span class="icon">✨</span> Premium
+      <span class="badge new">NEW</span>
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <% if (user) { %>
+    <div class="sidebar-user">
+      <img src="<%= user.avatar_url %>" alt="" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+      <div class="user-info">
+        <div class="user-name"><%= user.global_name || user.username %></div>
+        <div class="user-tag">Administrateur</div>
+      </div>
+      <a href="/auth/logout" title="Déconnexion" style="color:var(--text-muted);font-size:1.1rem">🚪</a>
+    </div>
+    <% } else { %>
+    <a class="btn btn-primary" href="/auth/login" style="width:100%;justify-content:center">
+      <svg width="16" height="16" viewBox="0 0 71 55" fill="none"><g clip-path="url(#a)"><path d="M60.1 4.9A58.6 58.6 0 0 0 45.4.6a40.9 40.9 0 0 0-1.8 3.7 54.1 54.1 0 0 0-16.1 0 38.6 38.6 0 0 0-1.8-3.7A58.4 58.4 0 0 0 10.9 4.9C1.6 18.9-1 32.6.3 46a59 59 0 0 0 17.9 9 44 44 0 0 0 3.8-6.3 38.4 38.4 0 0 1-6-2.9l1.5-1.1a41.9 41.9 0 0 0 35.8 0l1.5 1a38.5 38.5 0 0 1-6 2.9c1.1 2.2 2.4 4.3 3.8 6.3A58.7 58.7 0 0 0 70.7 46c1.5-15.6-2.6-29.1-10.6-41.1ZM23.7 37.7c-3.5 0-6.3-3.2-6.3-7.1s2.8-7.1 6.3-7.1c3.5 0 6.4 3.2 6.3 7.1 0 3.9-2.8 7.1-6.3 7.1Zm23.6 0c-3.4 0-6.3-3.2-6.3-7.1s2.8-7.1 6.3-7.1c3.5 0 6.3 3.2 6.3 7.1 0 3.9-2.7 7.1-6.3 7.1Z" fill="currentColor"/></g></svg>
+      Connexion Discord
+    </a>
+    <% } %>
+  </div>
+</aside>
+
+<!-- ── Contenu principal ───────────────────────────────── -->
+<div class="main-content">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:16px">
+      <button class="menu-toggle btn btn-outline btn-sm" id="menu-toggle">☰</button>
+      <span class="topbar-title" id="topbar-title">🏠 Accueil</span>
+    </div>
+    <div class="topbar-actions">
+      <span id="ping-display" style="font-size:.82rem;color:var(--text-muted)"></span>
+      <span class="status-dot online" id="status-dot"></span>
+    </div>
+  </header>
+
+  <!-- ═══════════ PAGE : ACCUEIL ═══════════ -->
+  <div data-view="home" class="page fade-in">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
+      <img id="bot-avatar" src="/img/logo.png" alt="Bot"
+           style="width:56px;height:56px;border-radius:50%;border:2px solid var(--accent)"
+           onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+      <div>
+        <h1 id="stat-tag" style="font-size:1.6rem">NexusBot</h1>
+        <p style="color:var(--text-secondary);font-size:.9rem">Tableau de bord · Données en temps réel</p>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card success">
+        <div class="stat-icon">🟢</div>
+        <div class="stat-info">
+          <div class="stat-label">Statut</div>
+          <div class="stat-value" id="stat-status">…</div>
+          <div class="stat-sub" id="stat-uptime">Chargement…</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🏠</div>
+        <div class="stat-info">
+          <div class="stat-label">Serveurs</div>
+          <div class="stat-value" id="stat-guilds">…</div>
+          <div class="stat-sub">Guildes actives</div>
+        </div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+          <div class="stat-label">Joueurs</div>
+          <div class="stat-value" id="stat-users">…</div>
+          <div class="stat-sub">Comptes économie</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-info">
+          <div class="stat-label">Latence</div>
+          <div class="stat-value" id="stat-ping">…</div>
+          <div class="stat-sub">Ping WebSocket</div>
+        </div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-icon">🪙</div>
+        <div class="stat-info">
+          <div class="stat-label">Coins en circulation</div>
+          <div class="stat-value" id="stat-coins">…</div>
+          <div class="stat-sub">Total économie</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-info">
+          <div class="stat-label">Commandes</div>
+          <div class="stat-value" id="stat-commands">…</div>
+          <div class="stat-sub">Slash + Préfixe</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📈 Activité par serveur</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="guild-chart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">ℹ️ Informations bot</div>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border)">
+              <span style="color:var(--text-secondary)">Version Discord.js</span>
+              <span class="badge badge-accent">v14</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border)">
+              <span style="color:var(--text-secondary)">Plateforme</span>
+              <span>Railway ☁️</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border)">
+              <span style="color:var(--text-secondary)">Node.js</span>
+              <span class="badge badge-success">v20 LTS</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border)">
+              <span style="color:var(--text-secondary)">Préfixe</span>
+              <code style="background:var(--bg-hover);padding:2px 8px;border-radius:4px">&amp;</code>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="color:var(--text-secondary)">Uptime</span>
+              <span id="stat-uptime-2">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE : ÉCONOMIE ═══════════ -->
+  <div data-view="economy" class="page fade-in" style="display:none">
+    <h2 style="margin-bottom:24px">💰 Économie</h2>
+
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🏆 Classement des joueurs</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="cmd-count" style="font-size:.8rem;color:var(--text-muted)"></span>
+            <div class="search-box">
+              <span>🔍</span>
+              <input type="text" id="lb-search" placeholder="Rechercher…">
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Joueur</th>
+                <th>Portefeuille</th>
+                <th>Banque</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="lb-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📊 Distribution des richesses</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="wealth-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE : COMMANDES ═══════════ -->
+  <div data-view="commands" class="page fade-in" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <h2>📋 Commandes</h2>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="cmd-count" style="color:var(--text-muted);font-size:.9rem"></span>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="cmd-search" placeholder="Rechercher une commande…">
+        </div>
+      </div>
+    </div>
+    <div id="cmd-list">
+      <div style="text-align:center;padding:48px;color:var(--text-muted)">Chargement des commandes…</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE : ADMIN ═══════════ -->
+  <div data-view="admin" class="page fade-in" style="display:none">
+    <h2 style="margin-bottom:8px">⚙️ Administration</h2>
+    <p style="color:var(--text-secondary);margin-bottom:28px">Configurez NexusBot pour votre serveur.</p>
+
+    <% if (!user) { %>
+    <div class="card" style="text-align:center;padding:48px">
+      <div style="font-size:3rem;margin-bottom:16px">🔒</div>
+      <h3 style="margin-bottom:12px">Connexion requise</h3>
+      <p style="color:var(--text-secondary);margin-bottom:24px">Tu dois te connecter avec Discord pour accéder au panneau d'administration.</p>
+      <a href="/auth/login" class="btn btn-primary btn-lg">Se connecter avec Discord</a>
+    </div>
+    <% } else { %>
+    <form id="admin-form">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🤖 Configuration générale</div></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Préfixe du bot</label>
+              <input class="form-control" type="text" value="&amp;" maxlength="5" placeholder="&amp;">
+              <small style="color:var(--text-muted);font-size:.78rem;margin-top:4px;display:block">Préfixe pour les commandes texte.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Salon des logs</label>
+              <input class="form-control" type="text" placeholder="#logs">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Langue</label>
+              <select class="form-control">
+                <option>🇫🇷 Français</option>
+                <option>🇬🇧 English</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">🎰 Économie</div></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Symbole de la monnaie</label>
+              <input class="form-control" type="text" value="🪙" maxlength="4">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gain journalier (/daily)</label>
+              <input class="form-control" type="number" value="500" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gain travail (/work)</label>
+              <input class="form-control" type="number" value="200" min="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">🛡️ Modération</div></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Salon de bienvenue</label>
+              <input class="form-control" type="text" placeholder="#bienvenue">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Message de bienvenue</label>
+              <textarea class="form-control" rows="3" placeholder="Bienvenue {user} sur {server} !"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Rôle auto-assign</label>
+              <input class="form-control" type="text" placeholder="@Membre">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">🔔 Bump automatique</div></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Salon de bump</label>
+              <input class="form-control" type="text" placeholder="#bump">
+            </div>
+            <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:14px;font-size:.85rem;color:var(--text-secondary)">
+              💡 <strong>Automatique :</strong> NexusBot détecte quand tu utilises <code>/bump</code> (DISBOARD) et t'envoie un rappel 2h plus tard avec un bouton.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px">
+        <button type="button" class="btn btn-outline">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
+      </div>
+    </form>
+    <% } %>
+  </div>
+
+  <!-- ═══════════ PAGE : LOGS ═══════════ -->
+  <div data-view="logs" class="page fade-in" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <h2>📊 Logs en direct</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('log-console').innerHTML=''">🗑️ Effacer</button>
+        <span class="badge badge-success">● LIVE</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <div class="card-title">🖥️ Console du bot</div>
+        <div style="font-size:.8rem;color:var(--text-muted)">Connecté via WebSocket</div>
+      </div>
+      <div class="card-body" style="padding:16px">
+        <div class="log-console" id="log-console">
+          <div class="log-line">
+            <span class="log-time">--:--:--</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">En attente de connexion au serveur de logs…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PAGE : PREMIUM ═══════════ -->
+  <div data-view="premium" class="page fade-in" style="display:none">
+    <div style="text-align:center;margin-bottom:48px">
+      <h1 style="margin-bottom:12px">✨ Passe à <span style="color:var(--accent)">NexusBot Premium</span></h1>
+      <p style="color:var(--text-secondary);max-width:560px;margin:0 auto;font-size:1.05rem">
+        Accède aux fonctionnalités exclusives et booste ton serveur Discord au niveau supérieur.
+      </p>
+    </div>
+
+    <div class="plans-grid">
+      <!-- Gratuit -->
+      <div class="plan-card">
+        <div class="plan-name">🆓 Gratuit</div>
+        <div class="plan-price">0€ <span>/ mois</span></div>
+        <div class="plan-desc">Toutes les fonctionnalités de base pour démarrer.</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Toutes les commandes de base</li>
+          <li><span class="check">✓</span> Économie complète</li>
+          <li><span class="check">✓</span> Jeux de casino</li>
+          <li><span class="check">✓</span> Modération basique</li>
+          <li><span class="check">✓</span> Bump automatique</li>
+          <li><span class="cross">✗</span> <span style="color:var(--text-muted)">Dashboard avancé</span></li>
+          <li><span class="cross">✗</span> <span style="color:var(--text-muted)">Support prioritaire</span></li>
+          <li><span class="cross">✗</span> <span style="color:var(--text-muted)">Rôles automatisés</span></li>
+        </ul>
+        <button class="btn btn-outline plan-cta" style="width:100%">Plan actuel</button>
+      </div>
+
+      <!-- Pro -->
+      <div class="plan-card featured">
+        <div class="plan-name">⚡ Pro</div>
+        <div class="plan-price">4,99€ <span>/ mois</span></div>
+        <div class="plan-desc">Pour les serveurs qui veulent se démarquer.</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Tout ce qui est Gratuit</li>
+          <li><span class="check">✓</span> Dashboard complet</li>
+          <li><span class="check">✓</span> Logs avancés</li>
+          <li><span class="check">✓</span> Statistiques détaillées</li>
+          <li><span class="check">✓</span> Rôles automatisés</li>
+          <li><span class="check">✓</span> Messages programmés</li>
+          <li><span class="check">✓</span> Support prioritaire</li>
+          <li><span class="cross">✗</span> <span style="color:var(--text-muted)">Serveur dédié</span></li>
+        </ul>
+        <button class="btn btn-primary plan-cta" style="width:100%">Commencer l'essai gratuit</button>
+      </div>
+
+      <!-- Élite -->
+      <div class="plan-card">
+        <div class="plan-name">💎 Élite</div>
+        <div class="plan-price">9,99€ <span>/ mois</span></div>
+        <div class="plan-desc">Pour les grandes communautés exigeantes.</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Tout ce qui est Pro</li>
+          <li><span class="check">✓</span> Bot personnalisé</li>
+          <li><span class="check">✓</span> Commandes custom</li>
+          <li><span class="check">✓</span> Intégration API externe</li>
+          <li><span class="check">✓</span> Base de données dédiée</li>
+          <li><span class="check">✓</span> Backups automatiques</li>
+          <li><span class="check">✓</span> Support 24/7</li>
+          <li><span class="check">✓</span> Serveur Railway dédié</li>
+        </ul>
+        <button class="btn btn-outline plan-cta" style="width:100%">Contacter l'équipe</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:32px;text-align:center;padding:40px">
+      <h3 style="margin-bottom:12px">🎯 Vous avez des questions ?</h3>
+      <p style="color:var(--text-secondary);margin-bottom:24px">Notre équipe est disponible sur Discord pour vous aider à choisir le bon plan.</p>
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+        <a href="https://discord.gg/nexusbot" class="btn btn-primary" target="_blank">💬 Rejoindre le Discord</a>
+        <a href="mailto:contact@nexusbot.fr" class="btn btn-outline">📧 Nous contacter</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-content -->
+</div><!-- /layout -->
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Mise à jour ping -->
+<script>
+  // Afficher le ping en live
+  setInterval(async () => {
+    try {
+      const r = await fetch('/api/stats');
+      const d = await r.json();
+      const el = document.getElementById('ping-display');
+      if (el && d.bot?.ping != null) el.textContent = d.bot.ping + 'ms';
+      // Uptime
+      const u = document.getElementById('stat-uptime-2');
+      if (u && d.bot?.uptime) {
+        const s = d.bot.uptime;
+        const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+        u.textContent = `${h}h ${m}m`;
+      }
+    } catch(_) {}
+  }, 15000);
+</script>
+
+<script src="/js/app.js"></script>
+</body>
+</html>

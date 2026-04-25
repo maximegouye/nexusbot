@@ -37,9 +37,8 @@ const client = new Client({
 // ── Collections ─────────────────────────────────
 client.commands          = new Collection();
 client.cooldowns         = new Collection();
-client.globalCommandsList  = []; // pour enregistrement global (src/commands/)
-client.guildCommandsList   = []; // pour enregistrement guild  (src/commands_guild/)
-client.contextMenusList    = []; // pour enregistrement context menus (src/context_menus/)
+client.globalCommandsList = []; // pour enregistrement global (src/commands/)
+client.guildCommandsList  = []; // pour enregistrement guild  (src/commands_guild/)
 
 // ── Chargement commandes slash ──────────────────
 // tag = 'global' | 'guild' — détermine l'endpoint REST utilisé dans ready.js
@@ -79,23 +78,6 @@ loadCommands(commandsPath,      'global'); // 109 commandes → endpoint global
 loadCommands(commandsGuildPath, 'guild');  // 122 commandes → endpoint guild
 
 console.log(`✅ ${client.commands.size} commande(s) slash chargée(s) (global:${client.globalCommandsList.length} guild:${client.guildCommandsList.length})`);
-
-// ── Chargement context menus (clic-droit) ───────────────────
-(function loadContextMenus() {
-  const ctxDir = path.join(__dirname, 'context_menus');
-  if (!fs.existsSync(ctxDir)) return;
-  for (const file of fs.readdirSync(ctxDir)) {
-    if (!file.endsWith('.js')) continue;
-    try {
-      const cmd = require(path.join(ctxDir, file));
-      if (cmd.data && cmd.execute) {
-        client.commands.set(cmd.data.name, cmd);
-        client.contextMenusList.push(cmd.data);
-      }
-    } catch (e) { console.error(`[ContextMenus] Erreur ${file}:`, e.message); }
-  }
-  console.log(`✅ ${client.contextMenusList.length} context menu(s) chargé(s)`);
-})();
 
 // ── Chargement événements ───────────────────────
 const eventsPath = path.join(__dirname, 'events');
@@ -168,3 +150,11 @@ async function connectWithRetry(maxRetries = 10) {
 }
 
 connectWithRetry();
+
+// ── Dashboard web (démarre après connexion Discord) ──────
+try {
+  const dashboard = require('../dashboard/server');
+  client.once('ready', () => dashboard.start(client));
+} catch (e) {
+  console.warn('[Dashboard] Non disponible:', e.message);
+}

@@ -1,7 +1,7 @@
 {
   "name": "nexusbot",
   "version": "2.0.0",
-  "description": "NexusBot v2 \u2014 Le bot Discord le plus complet : Musique, IA, \u00c9conomie avanc\u00e9e, Mod\u00e9ration, Niveaux, Premium et bien plus.",
+  "description": "NexusBot v2 — Le bot Discord le plus complet : Musique, IA, Économie avancée, Modération, Niveaux, Premium et bien plus.",
   "main": "src/index.js",
   "scripts": {
     "start": "node deploy-commands.js && node src/index.js",
@@ -21,7 +21,11 @@
     "play-dl": "^1.9.7",
     "ffmpeg-static": "^5.2.0",
     "sodium-native": "^4.0.4",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "express": "^4.18.3",
+    "socket.io": "^4.7.4",
+    "express-session": "^1.18.0",
+    "ejs": "^3.1.10"
   },
   "optionalDependencies": {
     "canvas": "^2.11.2"
