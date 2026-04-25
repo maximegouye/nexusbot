@@ -234,7 +234,7 @@ async function handleComponent(interaction, customId) {
         type: ChannelType.GuildText,
         topic: `ticket:${member.id}`,
         parent: cfg.ticket_category ? String(cfg.ticket_category) : undefined,
-        permissionOverwrites,
+        permissionOverwrites: permOverwrites,
       });
 
       // Enregistrement DB
