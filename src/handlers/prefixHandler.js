@@ -1,105 +1,86 @@
 // ============================================================
 // prefixHandler.js — Handler de commandes avec préfixe &
-// Charge src/commands_prefix/ (récursif) + alias + cooldowns
+// Emplacement : src/handlers/prefixHandler.js
 // ============================================================
-'use strict';
+// À ajouter dans index.js / bot.js :
+//   const { setupPrefixHandler } = require('./handlers/prefixHandler');
+//   setupPrefixHandler(client);
+// ============================================================
 
 const fs   = require('fs');
 const path = require('path');
 
 const PREFIX = '&';
 
-// ── Chargement récursif ─────────────────────────────────────
-function loadAllPrefixCommands(baseDir) {
+// Charge toutes les commandes avec la propriété `run`
+function loadPrefixCommands(dir) {
   const commands = new Map();
   const aliases  = new Map();
 
-  function walk(dir) {
-    if (!fs.existsSync(dir)) return;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.includes('disabled')) walk(full);
-      } else if (entry.name.endsWith('.js') && !entry.name.includes('disabled')) {
-        try {
-          const cmd = require(full);
-          // Accepte execute ou run
-          const fn = cmd.execute || cmd.run;
-          if (!fn || !cmd.name) continue;
-          // Normalise : toujours exposer execute
-          cmd.execute = fn;
-          commands.set(cmd.name.toLowerCase(), cmd);
-          if (Array.isArray(cmd.aliases)) {
-            for (const alias of cmd.aliases) {
-              aliases.set(alias.toLowerCase(), cmd.name.toLowerCase());
-            }
-          }
-        } catch (e) {
-          console.error(`[PrefixHandler] Erreur chargement ${entry.name}: ${e.message}`);
-        }
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'));
+  for (const file of files) {
+    try {
+      const cmd = require(path.join(dir, file));
+      if (!cmd.run || !cmd.name) continue;
+
+      commands.set(cmd.name, cmd);
+      if (cmd.aliases) {
+        for (const alias of cmd.aliases) aliases.set(alias, cmd.name);
       }
+    } catch (e) {
+      console.error(`[PrefixHandler] Erreur chargement ${file}:`, e.message);
     }
   }
-
-  walk(baseDir);
   return { commands, aliases };
 }
 
-// ── Setup ───────────────────────────────────────────────────
 function setupPrefixHandler(client) {
-  let db;
-  try { db = require('../database/db'); } catch (e) {
-    console.error('[PrefixHandler] DB non disponible:', e.message);
+  // Dossiers contenant des commandes avec `run`
+  const gameDirs = [
+    path.join(__dirname, '../commands_guild/games'),
+    path.join(__dirname, '../commands_guild/economy'),
+    path.join(__dirname, '../commands_guild/unique'),
+  ];
+
+  const allCommands = new Map();
+  const allAliases  = new Map();
+
+  for (const dir of gameDirs) {
+    if (!fs.existsSync(dir)) continue;
+    const { commands, aliases } = loadPrefixCommands(dir);
+    for (const [k, v] of commands) allCommands.set(k, v);
+    for (const [k, v] of aliases) allAliases.set(k, v);
   }
 
-  const prefixDir = path.join(__dirname, '../commands_prefix');
-  const { commands: allCommands, aliases: allAliases } = loadAllPrefixCommands(prefixDir);
-
-  console.log(`[PrefixHandler] ${allCommands.size} commandes & chargées depuis ${prefixDir}`);
-
-  // Cooldowns en mémoire (userId:cmdName → timestamp)
-  const cooldowns = new Map();
+  console.log(`[PrefixHandler] ${allCommands.size} commandes préfixe chargées (préfixe: ${PREFIX})`);
 
   client.on('messageCreate', async message => {
     if (message.author.bot || message.author.system) return;
-    if (!message.guild) return;
     if (!message.content.startsWith(PREFIX)) return;
+    if (!message.guild) return;
 
     const args    = message.content.slice(PREFIX.length).trim().split(/\s+/);
-    const cmdName = args.shift()?.toLowerCase();
-    if (!cmdName) return;
+    const cmdName = args.shift().toLowerCase();
 
+    // Résoudre alias
     const resolvedName = allAliases.get(cmdName) || cmdName;
     const cmd = allCommands.get(resolvedName);
-    if (!cmd) return; // Commande inconnue — ignorer
 
-    // ── Cooldown ─────────────────────────────────────────────
-    if (cmd.cooldown) {
-      const key = `${message.author.id}:${resolvedName}`;
-      const now = Date.now();
-      const expires = cooldowns.get(key) || 0;
-      if (now < expires) {
-        const left = ((expires - now) / 1000).toFixed(1);
-        return message.reply(`⏳ Cooldown : attends encore **${left}s** avant de relancer \`${PREFIX}${resolvedName}\`.`).catch(() => {});
-      }
-      cooldowns.set(key, now + cmd.cooldown * 1000);
-      setTimeout(() => cooldowns.delete(key), cmd.cooldown * 1000);
-    }
+    if (!cmd) return; // Commande inconnue → ignorer silencieusement
 
-    // ── Blacklist ─────────────────────────────────────────────
     try {
-      const { isBlacklisted } = require('../utils/securityManager');
-      if (isBlacklisted(message.author.id, message.guildId)) {
-        return message.reply('🚫 Tu es blacklisté sur ce serveur.').catch(() => {});
-      }
-    } catch {}
+      // Vérification blacklist si securityManager disponible
+      try {
+        const { isBlacklisted } = require('../utils/securityManager');
+        if (isBlacklisted(message.author.id, message.guildId)) {
+          return message.reply('🚫 Tu es blacklisté sur ce serveur.');
+        }
+      } catch {}
 
-    // ── Exécution ─────────────────────────────────────────────
-    try {
-      await cmd.execute(message, args, client, db);
+      await cmd.run(message, args);
     } catch (err) {
-      console.error(`[PrefixHandler] Erreur "${resolvedName}":`, err.message || err);
-      message.reply(`❌ Erreur lors de l'exécution de \`${PREFIX}${resolvedName}\`.`).catch(() => {});
+      console.error(`[PrefixHandler] Erreur commande "${resolvedName}":`, err);
+      message.reply(`❌ Une erreur s'est produite lors de l'exécution de \`${PREFIX}${resolvedName}\`.`).catch(() => {});
     }
   });
 }

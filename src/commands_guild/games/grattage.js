@@ -18,9 +18,9 @@ const SYMBOLES = [
   { emoji: '🃏', name: 'Joker',   weight: 8,  mult: 4  },
   { emoji: '🍀', name: 'Trèfle',  weight: 10, mult: 3  },
   { emoji: '🍒', name: 'Cerise',  weight: 14, mult: 2  },
-  { emoji: '🍋', name: 'Citron',  weight: 18, mult: 1.2 },
-  { emoji: '🍊', name: 'Orange',  weight: 30, mult: 0  }, // rien
-  { emoji: '🔔', name: 'Cloche',  weight: 18, mult: 0  }, // rien
+  { emoji: '🍋', name: 'Citron',  weight: 18, mult: 1.5 },
+  { emoji: '🍊', name: 'Orange',  weight: 22, mult: 0  }, // rien
+  { emoji: '🔔', name: 'Cloche',  weight: 11, mult: 0  }, // rien
 ];
 const TOTAL_W = SYMBOLES.reduce((s, x) => s + x.weight, 0);
 
