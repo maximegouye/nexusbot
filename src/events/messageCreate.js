@@ -47,6 +47,31 @@ function mockInteraction(message, args) {
   const mentionedMember = message.mentions.members?.first() ?? null;
   const cleanArgs = args.filter(a => !/<@!?\d+>/.test(a));
 
+  // Compteur de position : chaque appel getString/getInteger/getNumber consomme un arg
+  let _pos = 0;
+
+  // Résout 'all'/'tout'/'max' en solde liquide du joueur
+  function resolveBalance() {
+    try {
+      const dbMod = require('../database/db');
+      return dbMod.getUser(message.author.id, message.guild?.id)?.balance || 0;
+    } catch { return 0; }
+  }
+
+  // Parse une valeur brute en nombre (gère all/tout/%, moitié, etc.)
+  function parseAmount(raw) {
+    const s = (raw ?? '').toLowerCase().trim();
+    if (!s) return null;
+    if (['all', 'tout', 'max', 'allin'].includes(s)) return resolveBalance();
+    if (['moitie', 'moitié', 'half', '50%'].includes(s)) return Math.floor(resolveBalance() / 2);
+    if (s.endsWith('%')) {
+      const pct = parseFloat(s);
+      return isFinite(pct) ? Math.floor(resolveBalance() * Math.min(pct, 100) / 100) : null;
+    }
+    const v = parseFloat(s);
+    return isFinite(v) ? Math.floor(v) : null;
+  }
+
   const obj = {
     user:            message.author,
     member:          message.member,
@@ -71,24 +96,28 @@ function mockInteraction(message, args) {
       _msg:    message,
 
       getString(name, required = false) {
-        return cleanArgs[0] ?? null;
+        return cleanArgs[_pos++] ?? null;
       },
       getInteger(name, required = false) {
-        const v = parseInt(cleanArgs[0]);
-        return isNaN(v) ? null : v;
+        const raw = cleanArgs[_pos++];
+        if (raw == null) return null;
+        const parsed = parseAmount(raw);
+        return (parsed != null && Number.isFinite(parsed)) ? parsed : null;
       },
       getNumber(name, required = false) {
-        const v = parseFloat(cleanArgs[0]);
-        return isNaN(v) ? null : v;
+        const raw = cleanArgs[_pos++];
+        if (raw == null) return null;
+        const parsed = parseAmount(raw);
+        return (parsed != null && Number.isFinite(parsed)) ? parsed : null;
       },
       getUser(name, required = false) {
-        return mentionedUser;
+        return mentionedUser; // pas de consommation positionnelle
       },
       getMember(name, required = false) {
         return mentionedMember;
       },
       getBoolean(name, required = false) {
-        const v = (cleanArgs[0] ?? '').toLowerCase();
+        const v = (cleanArgs[_pos++] ?? '').toLowerCase();
         return v === 'true' || v === 'oui' || v === 'yes' || v === '1';
       },
       getChannel(name, required = false) {
@@ -217,31 +246,26 @@ async function handleAdmin(cmd, args, message) {
   }
 
   if (cmd === 'solde' || cmd === 'bal') {
-    if (!isAdmin) { await message.reply('Reserves aux administrateurs.'); return true; }
-    let mention = message.mentions.users.first();
-    if (!mention) {
-      // Support typed @username (not a real Discord mention)
-      const uname = (args.find(a => a.startsWith('@')) || '').slice(1).toLowerCase();
-      if (uname) {
-        try {
-          const fetched = await message.guild.members.fetch();
-          const found = fetched.find(m =>
-            m.user.username.toLowerCase() === uname ||
-            m.displayName.toLowerCase() === uname ||
-            (m.nickname && m.nickname.toLowerCase() === uname) ||
-            (m.user.globalName && m.user.globalName.toLowerCase() === uname)
-          );
-          if (found) mention = found.user;
-        } catch(_) {}
-      }
-    }
-    if (!mention) mention = message.author; // Default to author if no mention specified
+    // Accessible à tous — admins peuvent voir le solde d'un autre membre
+    let mention = message.mentions.users.first() || message.author;
+    if (mention !== message.author && !isAdmin) mention = message.author;
     try {
-      const row = db.db.prepare('SELECT balance, bank FROM users WHERE user_id = ? AND guild_id = ?').get(mention.id, guildId);
-      const bal  = row && row.balance ? row.balance : 0;
-      const bank = row && row.bank    ? row.bank    : 0;
-      await message.reply('**' + mention.username + '** - Portefeuille : **' + bal.toLocaleString('fr-FR') + '** | Banque : **' + bank.toLocaleString('fr-FR') + '** coins');
-    } catch(e) { await message.reply('Erreur DB: ' + e.message); }
+      const cmds = getCmds();
+      const balCmd = cmds.get('balance');
+      if (balCmd) {
+        // Utiliser la vraie commande balance pour un affichage riche
+        const mock = mockInteraction(message, args);
+        // Override getUser pour retourner la cible correcte
+        mock.options.getUser = () => mention;
+        await balCmd.execute(mock);
+      } else {
+        // Fallback simple
+        const row = db.db.prepare('SELECT balance, bank FROM users WHERE user_id = ? AND guild_id = ?').get(mention.id, guildId);
+        const bal  = (row?.balance) || 0;
+        const bank = (row?.bank)    || 0;
+        await message.reply(`💶 **${mention.username}** — Portefeuille : **${bal.toLocaleString('fr-FR')}** | Banque : **${bank.toLocaleString('fr-FR')}** coins`);
+      }
+    } catch(e) { await message.reply('❌ Erreur : ' + e.message).catch(() => {}); }
     return true;
   }
 
