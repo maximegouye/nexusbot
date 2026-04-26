@@ -198,10 +198,10 @@ module.exports = {
           .setTitle('⏭️ Piste suivante')
           .setDescription(
             `**Précédente :** ~~${oldTitle}~~\n\n` +
-            `**Maintenant :** 🎵 ${ns?.currentYTTitle || ns?.currentStation?.title || s?.currentTitle || '*Chargement...*'}`
+            `**Maintenant :** 🎵 ${ns?.currentStation?.title || ns?.currentTitle || '*Chargement...*'}`
           )
           .addFields(
-            { name: '🎭 Style', value: ns?.currentStation?.title || s?.currentTitle || '...', inline: true },
+            { name: '🎭 Style', value: ns?.currentStation?.title || ns?.currentTitle || '...', inline: true },
             { name: '🔊 Volume', value: `${Math.round((ns?.volume || 0.5) * 100)}%`, inline: true },
           )
           .setTimestamp()

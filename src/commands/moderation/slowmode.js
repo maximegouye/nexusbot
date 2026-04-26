@@ -4,11 +4,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('slowmode')
     .setDescription('🐌 Activer/désactiver le mode lent sur un salon')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+    .addIntegerOption(o => o.setName('secondes').setDescription('Délai en secondes (0 = désactiver)').setMinValue(0).setMaxValue(21600).setRequired(true)),
   cooldown: 3,
 
   async execute(interaction) {
-    const sec = parseInt(interaction.options.getString('secondes'));
+    const sec = interaction.options.getInteger('secondes') ?? 0;
     await interaction.channel.setRateLimitPerUser(sec, `Slowmode par ${interaction.user.tag}`);
 
     const embed = new EmbedBuilder()

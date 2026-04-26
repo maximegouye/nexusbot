@@ -1245,7 +1245,7 @@ async function handleConfigInteraction(interaction, db, client) {
          VALUES (?, ?, ?, ?, ?)`
       ).run(interaction.guildId, trigger, response, interaction.user.id, Math.floor(Date.now() / 1000));
       const newCfg = db.getConfig(interaction.guildId);
-      const panel  = buildCategoryPanel('reponses', newCfg, interaction.guild, userId, db);
+      const panel  = buildCategoryPanel('reponses', newCfg, interaction.guild, userId, db, client);
       return interaction.update(panel);
     }
 
@@ -1255,7 +1255,7 @@ async function handleConfigInteraction(interaction, db, client) {
       const result  = db.db.prepare('DELETE FROM custom_commands WHERE guild_id=? AND trigger=?')
         .run(interaction.guildId, trigger);
       const newCfg  = db.getConfig(interaction.guildId);
-      const panel   = buildCategoryPanel('reponses', newCfg, interaction.guild, userId, db);
+      const panel   = buildCategoryPanel('reponses', newCfg, interaction.guild, userId, db, client);
       try {
         await interaction.update(panel);
         if (result.changes === 0) {
@@ -1274,7 +1274,7 @@ async function handleConfigInteraction(interaction, db, client) {
       db.setConfig(interaction.guildId, key, JSON.stringify(words));
       const newCfg   = db.getConfig(interaction.guildId);
       const category = getCategoryForKey(key);
-      const panel    = buildCategoryPanel(category, newCfg, interaction.guild, userId, db);
+      const panel    = buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client);
       try { return await interaction.update(panel); }
       catch { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {}); }
     }

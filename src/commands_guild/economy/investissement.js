@@ -32,7 +32,8 @@ module.exports = {
           { name: '🚀 Startup — +35% / 3j (risque élevé)', value: 'startup' },
           { name: '₿ Crypto — +25% / 12h (très risqué)', value: 'crypto_inv' },
           { name: '🏠 Immobilier — +50% / 7j (risque faible)', value: 'immo' },
-        )))
+        ))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à investir').setMinValue(1).setRequired(true)))
     .addSubcommand(s => s.setName('portefeuille').setDescription('💼 Voir vos investissements actifs'))
     .addSubcommand(s => s.setName('collecter').setDescription('💰 Collecter les investissements arrivés à maturité'))
     .addSubcommand(s => s.setName('options').setDescription('📊 Voir tous les types d\'investissement')),
@@ -58,7 +59,7 @@ module.exports = {
 
     if (sub === 'placer') {
       const type = interaction.options.getString('type');
-      const montant = parseInt(interaction.options.getString('montant'));
+      const montant = interaction.options.getInteger('montant');
       const inv = INVESTMENTS[type];
       const u = db.getUser(userId, guildId);
 

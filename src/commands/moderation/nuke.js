@@ -4,14 +4,15 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('nuke')
     .setDescription('💥 Supprimer tous les messages d\'un salon (clone + suppression)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+    .addIntegerOption(o => o.setName('messages').setDescription('Supprimer N messages seulement (optionnel, sinon nuke complet)').setMinValue(1).setMaxValue(100).setRequired(false)),
   cooldown: 30,
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
-    const nbMessages = parseInt(interaction.options.getString('messages'));
+    const nbMessages = interaction.options.getInteger('messages') || null;
 
     if (nbMessages) {
       // Suppression de N messages (bulk delete)

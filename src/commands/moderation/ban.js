@@ -7,13 +7,14 @@ module.exports = {
     .setDescription('🔨 Bannir un membre du serveur')
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addUserOption(o => o.setName('membre').setDescription('Membre à bannir').setRequired(true))
-    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false)),
+    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
+    .addIntegerOption(o => o.setName('jours').setDescription('Supprimer les messages des X derniers jours (0–7)').setMinValue(0).setMaxValue(7).setRequired(false)),
   cooldown: 3,
 
   async execute(interaction) {
     const target  = interaction.options.getMember('membre');
     const raison  = interaction.options.getString('raison') || 'Aucune raison fournie';
-    const days    = parseInt(interaction.options.getString('jours')) || 0;
+    const days    = interaction.options.getInteger('jours') || 0;
 
     if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
     if (!target.bannable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });

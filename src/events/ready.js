@@ -24,7 +24,7 @@ const POSTES = {
 // ── Auto-setup du système de recrutement ──────────────────
 async function autoSetupRecrutement(client, guildId) {
   try {
-    const { db } = require('../database/db');
+    const db = require('../database/db');
 
     // Créer les tables si elles n'existent pas encore
     try {

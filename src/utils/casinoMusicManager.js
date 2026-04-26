@@ -272,7 +272,7 @@ async function autoInit(client, guildId) {
 
     const result = await startMusic(guild, channel.id);
     if (result.success && !result.alreadyPlaying) {
-      console.log(`[CasinoMusic] ✅ Auto-démarrage : ${result.channel?.name || channelId}`);
+      console.log(`[CasinoMusic] ✅ Auto-démarrage : ${result.channel?.name || channel.name}`);
     }
   } catch (err) {
     console.error('[CasinoMusic] autoInit error:', err?.message);
