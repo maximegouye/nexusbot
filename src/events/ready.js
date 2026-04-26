@@ -152,6 +152,13 @@ module.exports = {
     setInterval(() => checkBumpReminders(client).catch(() => {}), 60_000);
     console.log('✅ Bump Reminder : checker démarré (60s interval, persistant DB)');
 
+    // ── Migration : désactiver les messages de départ (leave_channel = NULL) ──
+    try {
+      const db = require('../database/db');
+      db.db.prepare('UPDATE guild_config SET leave_channel = NULL WHERE leave_channel IS NOT NULL').run();
+      console.log('✅ Migration : leave_channel réinitialisé à NULL pour tous les guilds');
+    } catch (_) {}
+
     const guildId = process.env.HOME_GUILD_ID || '1492886135159128227';
 
     // ── Auto-setup recrutement (15s après démarrage pour laisser le cache se remplir)

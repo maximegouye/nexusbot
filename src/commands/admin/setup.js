@@ -76,8 +76,9 @@ module.exports = {
 
     if (sub === 'leave') {
       const canal = interaction.options.getChannel('canal');
-      db.setConfig(interaction.guildId, 'leave_channel', canal.id);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de départ : ${canal}.`)], ephemeral: true });
+      db.setConfig(interaction.guildId, 'leave_channel', canal?.id || null);
+      const msg = canal ? `✅ Canal de départ : ${canal}.` : '✅ Messages de départ **désactivés**.';
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
     }
 
     if (sub === 'levels') {
