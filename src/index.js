@@ -32,14 +32,9 @@ const client = new Client({
     Partials.User,
     Partials.GuildMember,
   ],
-  // Stabilité WebSocket sur Railway (proxy TCP qui peut killer les connexions idle)
-  ws: {
-    large_threshold: 50,
-  },
-  rest: {
-    timeout: 30_000,
-    retries: 3,
-  },
+  // ── Stabilité WebSocket sur Railway (proxy/NAT) ─
+  ws: { large_threshold: 50 },
+  rest: { timeout: 30_000, retries: 3 },
 });
 
 // ── Collections ─────────────────────────────────

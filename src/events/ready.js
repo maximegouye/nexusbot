@@ -4,7 +4,11 @@
 // ============================================================
 const { REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
 const { checkBumpReminders } = require('../utils/bumpReminderCheck');
-const { autoInit: casinoMusicAutoInit, startBackgroundRetry, onShardResume } = require('../utils/casinoMusicManager');
+const {
+  autoInit:             casinoMusicAutoInit,
+  startBackgroundRetry: casinoMusicBackgroundRetry,
+  onShardResume:        casinoMusicOnShardResume,
+} = require('../utils/casinoMusicManager');
 
 // ── Postes recrutement (miroir de recrutement.js) ──────────
 const POSTES = {
@@ -157,17 +161,15 @@ module.exports = {
     // ── Musique casino — auto-démarrage (20s pour que le cache vocal soit prêt)
     casinoMusicAutoInit(client, guildId).catch(() => {});
 
-    // ── Boucle de retry permanente — reconnecte la musique si déconnectée ──
-    startBackgroundRetry(client, guildId).catch(() => {});
+    // ── Musique casino — background retry (relance si connexion tombe)
+    casinoMusicBackgroundRetry(client, guildId).catch(() => {});
 
-    // ── Shard resume — relancer la musique après reconnexion WebSocket ──
+    // ── Musique casino — listener shard RESUMED (reconnexion après drop WS)
     client.ws.on('RESUMED', () => {
-      console.log('[Shard] RESUMED — relance musique casino si nécessaire...');
-      onShardResume(client, guildId).catch(() => {});
+      casinoMusicOnShardResume(client, guildId).catch(() => {});
     });
     client.on('shardResume', () => {
-      console.log('[Shard] shardResume — relance musique casino si nécessaire...');
-      onShardResume(client, guildId).catch(() => {});
+      casinoMusicOnShardResume(client, guildId).catch(() => {});
     });
 
     const token = process.env.TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN;
