@@ -516,10 +516,10 @@ module.exports = {
         }
       }
 
-      // Construire le modal (5 questions)
+      // Construire le modal (5 questions) — titre max 45 chars (limite Discord)
       const modal = new ModalBuilder()
         .setCustomId(`rec_form_${poste}`)
-        .setTitle(`${p.label} — Formulaire de candidature`);
+        .setTitle(`${p.label} — Candidature`.slice(0, 45));
 
       for (let i = 0; i < p.questions.length; i++) {
         modal.addComponents(

@@ -67,6 +67,31 @@ async function checkBumpReminders(client) {
         },
       }).catch(() => {});
 
+      // DM privé au propriétaire du serveur uniquement
+      try {
+        const owner = await guild.fetchOwner().catch(() => null);
+        if (owner) {
+          await owner.send({
+            embeds: [
+              new EmbedBuilder()
+                .setColor('#5865F2')
+                .setTitle('⏰ Rappel de bump — ' + guild.name)
+                .setDescription(
+                  `**2 heures** se sont écoulées depuis le dernier bump sur **${guild.name}** !\n\n` +
+                  `🚀 N'oublie pas d'utiliser \`/bump\` sur DISBOARD pour faire remonter le serveur.`
+                )
+                .addFields(
+                  { name: '⏰ Dernier bump', value: `<t:${reminder.bumped_at}:R>`, inline: true },
+                  { name: '👤 Bumpé par',    value: userId ? `<@${userId}>` : 'Inconnu', inline: true },
+                )
+                .setFooter({ text: `NexusBot • Rappel privé — ${guild.name}` })
+                .setTimestamp(),
+            ],
+            components: [row],
+          }).catch(() => {});
+        }
+      } catch (_) {}
+
       console.log(`[BumpReminder] Rappel envoyé sur "${guild.name}" (guild ${reminder.guild_id})`);
 
     } catch (err) {
