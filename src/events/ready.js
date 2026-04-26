@@ -59,7 +59,17 @@ async function autoSetupRecrutement(client, guildId) {
         type: ChannelType.GuildText,
         topic: 'Postulez pour rejoindre l\'équipe staff ! Cliquez sur le bouton du poste souhaité.',
         reason: 'Auto-setup système de recrutement NexusBot',
-      }).catch(e => { console.error('[Recrutement] Erreur création canal:', e.message); return null; });
+      }).catch(e => {
+        console.error('[Recrutement] Erreur création canal:', e.message);
+        return null;
+      });
+
+      // Fallback : si on ne peut pas créer le canal, on utilise #gestion-tickets
+      if (!panelChannel) {
+        const FALLBACK_ID = '1494390992290054154'; // #gestion-tickets
+        panelChannel = guild.channels.cache.get(FALLBACK_ID) || null;
+        if (panelChannel) console.log('[Recrutement] ⚠️  Fallback → panneau posté dans #gestion-tickets');
+      }
     }
 
     if (!panelChannel) return;
