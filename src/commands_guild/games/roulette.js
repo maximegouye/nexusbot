@@ -290,41 +290,16 @@ async function playRoulette(source, userId, guildId, mise, betType) {
       .setStyle(ButtonStyle.Secondary),
   );
 
+  const resultTitle = won ? '🎡 🎉 VICTOIRE 🎉 Roulette Royale' : '🎡 💸 PERDU 💸 Roulette Royale';
+
   const finalEmbed = new EmbedBuilder()
     .setColor(color)
-    .setTitle('🎡 Roulette Royale — Résultat')
+    .setTitle(resultTitle)
     .setDescription(finalDesc)
     .setFooter({ text: 'Jouez de manière responsable · Mise min : 5 coins' })
     .setTimestamp();
 
   await msg.edit({ embeds: [finalEmbed], components: [row] });
-
-  // Collector boutons
-  const filter = i => i.user.id === userId && (i.customId.startsWith('rl_replay_') || i.customId.startsWith('rl_table_'));
-  const collector = msg.createMessageComponentCollector({ filter, time: 30_000 });
-
-  collector.on('collect', async i => {
-    await i.deferUpdate();
-    collector.stop();
-
-    if (i.customId.startsWith('rl_table_')) {
-      const tableEmbed = new EmbedBuilder()
-        .setColor('#1A5276')
-        .setTitle('📋 Table des mises — Roulette Royale')
-        .setDescription(casinoHeader() + '\n' + BET_HELP)
-        .setFooter({ text: 'Utilise &roulette <mise> <pari> pour jouer' });
-      await msg.edit({ embeds: [tableEmbed], components: [] });
-      return;
-    }
-
-    // Rejouer
-    const parts   = i.customId.split('_');
-    const newMise = parseInt(parts[3]);
-    const newBet  = parts.slice(4).join('_');
-    await playRoulette(source, userId, guildId, newMise, newBet);
-  });
-
-  collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));
 }
 
 // ─── Exports ──────────────────────────────────────────────────
@@ -371,5 +346,37 @@ module.exports = {
   },
 
   betHelp: BET_HELP,
+
+  async handleComponent(interaction, cid) {
+    if (cid.startsWith('rl_table_')) {
+      const userId = cid.split('_')[2];
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.deferUpdate();
+      const tableEmbed = new EmbedBuilder()
+        .setColor('#1A5276')
+        .setTitle('📋 Table des mises — Roulette Royale')
+        .setDescription(casinoHeader() + '\n' + BET_HELP)
+        .setFooter({ text: 'Utilise /roulette mise pari pour jouer' });
+      await interaction.editReply({ embeds: [tableEmbed], components: [] });
+      return true;
+    }
+    if (cid.startsWith('rl_replay_')) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const mise = parseInt(parts[3]);
+      const betType = parts.slice(4).join('_');
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.deferUpdate();
+      await playRoulette(interaction, userId, interaction.guildId, mise, betType);
+      return true;
+    }
+    return false;
+  },
 };
 

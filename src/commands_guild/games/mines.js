@@ -20,8 +20,19 @@ function calcMult(totalCases, minesCount, revealed) {
   return parseFloat((0.99 / mult).toFixed(2)); // house edge 1%
 }
 
-// ─── Parties actives ──────────────────────────────────────
-const sessions = new Map(); // userId → state
+// ─── Parties actives avec TTL (10 minutes) ────────────────
+const sessions = new Map(); // userId → { state, timeout }
+const SESSION_TTL = 10 * 60 * 1000; // 10 minutes
+
+function setSessionTimeout(userId, state) {
+  // Clear old timeout if exists
+  if (state.timeout) clearTimeout(state.timeout);
+
+  // Set new timeout
+  state.timeout = setTimeout(() => {
+    sessions.delete(userId);
+  }, SESSION_TTL);
+}
 
 // ─── Grille 4×5 (4 rangées × 5 colonnes = 20 cases + 1 rangée cash-out = 5 ActionRows max) ───
 const GRID_ROWS   = 4;
@@ -92,6 +103,15 @@ function buildGridComponents(state) {
         .setDisabled(state.safeRevealed === 0),
     );
     rows.push(cashRow);
+  } else {
+    // Replay button after game ends
+    const replayRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`mines_replay_${state.userId}_${state.mise}_${state.minesCount}`)
+        .setLabel('🎮 Rejouer')
+        .setStyle(ButtonStyle.Primary),
+    );
+    rows.push(replayRow);
   }
 
   return rows;
@@ -107,13 +127,13 @@ function buildEmbed(state, status = '') {
   const e = new EmbedBuilder()
     .setColor(color)
     .setTitle(
-      status === 'win'  ? '💎 ・ Mines — Cash-Out Réussi ・' :
-      status === 'lose' ? '💥 ・ Mines — BOOM ! ・' :
-      '💣 ・ Mines — Évite les bombes ・'
+      status === 'win'  ? '💎 Mines - Cash-Out Reussi' :
+      status === 'lose' ? '💥 Mines - BOOM !' :
+      '💣 Mines - Evite les bombes'
     )
     .addFields(
-      { name: '💣 Mines cachées', value: `${state.minesCount} / ${TOTAL_CELLS}`, inline: true },
-      { name: '💎 Cases sûres révélées', value: `${state.safeRevealed}`, inline: true },
+      { name: '💣 Mines cachees', value: `${state.minesCount} / ${TOTAL_CELLS}`, inline: true },
+      { name: '💎 Cases sures revelees', value: `${state.safeRevealed}`, inline: true },
       { name: '📈 Multiplicateur', value: `×${mult.toFixed(2)}`, inline: true },
       { name: '💰 Mise', value: `${state.mise} ${coin}`, inline: true },
     );
@@ -126,10 +146,34 @@ function buildEmbed(state, status = '') {
     e.addFields({ name: '❌ Perte', value: `-${state.mise} ${coin}`, inline: true });
     e.setDescription('💥 **BOOM !** Tu as touché une mine. Partie terminée.');
   } else {
-    e.setDescription(`Clique sur les cases pour les révéler.\nÉvite les **${state.minesCount} mines** et cash-out avant d'exploser !`);
+    e.setDescription(`Clique sur les cases pour les reveler.\nEvite les **${state.minesCount} mines** et cash-out avant d'exploser !`);
   }
 
   return e;
+}
+
+// ─── Explosion animation ──────────────────────────────────
+async function animateExplosion(msg, state) {
+  const explosionEmojis = ['💥', '⚡', '🔥', '💫'];
+  for (let i = 0; i < 3; i++) {
+    const emoji = explosionEmojis[i % explosionEmojis.length];
+    const embed = new EmbedBuilder()
+      .setColor('#E74C3C')
+      .setTitle(`${emoji} Mines - BOOM ! ${emoji}`)
+      .setDescription('*Explosion....*');
+    await msg.edit({ embeds: [embed] }).catch(() => {});
+    await sleep(100);
+  }
+}
+
+// ─── Safe reveal animation ────────────────────────────────
+async function animateSafeReveal(msg, state) {
+  const flashEmbed = new EmbedBuilder()
+    .setColor('#52BE80')
+    .setTitle('💎 Mines - Case Sure !')
+    .setDescription('*Flash vert...*');
+  await msg.edit({ embeds: [flashEmbed] }).catch(() => {});
+  await sleep(100);
 }
 
 // ─── Jeu principal ────────────────────────────────────────
@@ -144,7 +188,7 @@ async function playMines(source, userId, guildId, mise, minesCount) {
     return source.reply(err);
   }
   if (sessions.has(userId)) {
-    const err = '⚠️ Tu as déjà une partie de Mines en cours !';
+    const err = '⚠️ Tu as deja une partie de Mines en cours !';
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -167,13 +211,15 @@ async function playMines(source, userId, guildId, mise, minesCount) {
     revealed:      Array(TOTAL_CELLS).fill(null),
     safeRevealed:  0,
     ended:         false,
+    timeout:       null,
   };
   sessions.set(userId, state);
+  setSessionTimeout(userId, state);
 
   // Animation intro : grille qui se "charge"
   const introEmbed = new EmbedBuilder()
     .setColor('#2C3E50')
-    .setTitle('💣 ・ Mines ・')
+    .setTitle('💣 Mines')
     .setDescription('⚙️ *Placement des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜')
     .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
 
@@ -186,12 +232,12 @@ async function playMines(source, userId, guildId, mise, minesCount) {
 
   // 2 frames d'intro (grille qui s'initialise)
   const introFrames = [
-    { desc:'💣 *Mélange des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ❓ ⬜ ❓ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#1A252F' },
-    { desc:'💣 *Prêt ! Bonne chance...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#2C3E50' },
+    { desc:'💣 *Melange des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ❓ ⬜ ❓ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#1A252F' },
+    { desc:'💣 *Pret ! Bonne chance...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#2C3E50' },
   ];
   for (const { desc, color } of introFrames) {
     await sleep(380);
-    await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle('💣 ・ Mines ・').setDescription(desc)
+    await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle('💣 Mines').setDescription(desc)
       .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true})] });
   }
   await sleep(300);
@@ -202,14 +248,18 @@ async function playMines(source, userId, guildId, mise, minesCount) {
   // Collecteur
   const filter = i => i.user.id === userId && (
     i.customId.startsWith(`mines_${userId}_`) ||
-    i.customId === `mines_cashout_${userId}`
+    i.customId === `mines_cashout_${userId}` ||
+    i.customId.startsWith(`mines_replay_`)
   );
-  const collector = msg.createMessageComponentCollector({ filter, time: 300_000 }); // 5 min
+  const collector = msg.createMessageComponentCollector({ filter, time: 10 * 60 * 1000 }); // 10 min
 
   collector.on('collect', async i => {
     await i.deferUpdate().catch(() => {});
     const st = sessions.get(userId);
     if (!st || st.ended) return;
+
+    // Reset timeout on interaction
+    setSessionTimeout(userId, st);
 
     if (i.customId === `mines_cashout_${userId}`) {
       // Cash-out
@@ -224,8 +274,19 @@ async function playMines(source, userId, guildId, mise, minesCount) {
         embeds: [buildEmbed(st, 'win')],
         components: buildGridComponents(st),
       });
+    } else if (i.customId.startsWith('mines_replay_')) {
+      collector.stop('replay');
+      const parts = i.customId.split('_');
+      const customUserId = parts[2];
+      const replayMise = parseInt(parts[3]);
+      const replayMines = parseInt(parts[4]);
+
+      if (customUserId === userId) {
+        const source = { editReply: (d) => i.editReply(d), deferred: true };
+        await playMines(source, userId, guildId, replayMise, replayMines);
+      }
     } else {
-      // Révéler une case
+      // Reveler une case
       const idx = parseInt(i.customId.split('_').pop());
       if (st.revealed[idx] !== null) return;
 
@@ -233,12 +294,14 @@ async function playMines(source, userId, guildId, mise, minesCount) {
 
       if (cellType === 'mine') {
         // BOOM
+        await animateExplosion(msg, st);
+
         st.revealed[idx] = 'mine';
         st.ended = true;
         sessions.delete(userId);
         collector.stop('boom');
 
-        // Révèle toutes les mines
+        // Revele toutes les mines
         for (let c = 0; c < TOTAL_CELLS; c++) {
           if (st.grid[c] === 'mine') st.revealed[c] = 'mine';
         }
@@ -247,11 +310,13 @@ async function playMines(source, userId, guildId, mise, minesCount) {
           components: buildGridComponents(st),
         });
       } else {
-        // Case sûre
+        // Case sure
+        await animateSafeReveal(msg, st);
+
         st.revealed[idx] = 'safe';
         st.safeRevealed++;
 
-        // Toutes les cases sûres révélées = victoire automatique
+        // Toutes les cases sures revelees = victoire automatique
         const safeCells = TOTAL_CELLS - st.minesCount;
         if (st.safeRevealed >= safeCells) {
           const mult = calcMult(TOTAL_CELLS, st.minesCount, st.safeRevealed);
@@ -281,21 +346,42 @@ async function playMines(source, userId, guildId, mise, minesCount) {
         sessions.delete(userId);
         // Remboursement si timeout
         db.addCoins(userId, guildId, Math.floor(st.mise * 0.5));
-        msg.edit({ content: '⏰ Temps écoulé — 50% de la mise remboursée.', components: [] }).catch(() => {});
+        msg.edit({ content: '⏰ Temps ecoulé - 50% de la mise remboursee.', components: [] }).catch(() => {});
       }
     }
   });
+}
+
+// ─── Handle Component ──────────────────────────────────────
+async function handleComponent(interaction) {
+  const userId = interaction.user.id;
+  const guildId = interaction.guildId;
+
+  if (interaction.customId.startsWith('mines_replay_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const mise = parseInt(parts[3]);
+    const mines = parseInt(parts[4]);
+
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+
+    await interaction.deferUpdate();
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playMines(source, userId, guildId, mise, mines);
+  }
 }
 
 // ─── Exports ──────────────────────────────────────────────
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('mines')
-    .setDescription('💣 Mines — révèle les cases sans toucher les bombes !')
+    .setDescription('💣 Mines - revele les cases sans toucher les bombes !')
     .addIntegerOption(o => o
-      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true).setMinValue(10))
+      .setName('mise').setDescription('Montant a miser (min 10)').setRequired(true).setMinValue(10))
     .addIntegerOption(o => o
-      .setName('mines').setDescription('Nombre de mines 1-24 (défaut 3)').setMinValue(1).setMaxValue(24)),
+      .setName('mines').setDescription('Nombre de mines 1-24 (defaut 3)').setMinValue(1).setMaxValue(24)),
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
@@ -318,5 +404,6 @@ module.exports = {
     if (!mise || mise < 10) return message.reply('❌ Usage : `&mines <mise> [mines]`\nEx: `&mines 500 5`');
     await playMines(message, message.author.id, message.guildId, mise, mines);
   },
-};
 
+  handleComponent,
+};

@@ -169,7 +169,7 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
   for (const { color, text } of startData) {
     const r1=rndRow(), r2=rndRow(), r3=rndRow();
     await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor(color).setTitle('🎰 ・ Machine à Sous ・')
+      .setColor(color).setTitle('🎰 SLOT MACHINE ROYALE 🎰')
       .setDescription(`\`\`\`\n${r1.join(' ')}\n${r2.join(' ')}\n${r3.join(' ')}\n\`\`\`\n*${text}*`)
       .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true},{name:'🏆 Jackpot',value:`${jackpot} ${coin}`,inline:true})
     ]});
@@ -180,7 +180,7 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
   for (let f = 0; f < 2; f++) {
     const r1=rndRow(), r2=rndRow(), r3=rndRow();
     await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor('#8E44AD').setTitle('🎰 ・ Machine à Sous ・')
+      .setColor('#8E44AD').setTitle('🎰 SLOT MACHINE ROYALE 🎰')
       .setDescription(`\`\`\`\n${r1.join(' ')}\n${r2.join(' ')}\n${r3.join(' ')}\n\`\`\`\n*🔄 Ralentissement...*`)
       .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
     ]});
@@ -196,11 +196,29 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
     const rem = 4 - col;
     const stopTxt = rem > 0 ? `🌀 ${rem} rouleau${rem>1?'x':''} encore en rotation...` : '✨ Tous les rouleaux sont arrêtés !';
     await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor(stopColors[col]).setTitle('🎰 ・ Machine à Sous ・')
+      .setColor(stopColors[col]).setTitle('🎰 SLOT MACHINE ROYALE 🎰')
       .setDescription(`\`\`\`\n${rows[0]}\n${rows[1]}\n${rows[2]}\n\`\`\`\n*${stopTxt}*`)
       .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
     ]});
     await sleep(320 + col * 80); // Chaque rouleau s'arrête plus lentement
+  }
+}
+
+// ─── Animation pluie de pièces (coin rain) ───────────────
+async function animateCoinRain(msg, color, title, lines = 4) {
+  const rainFrames = ['💰', '💸', '💵', '💴', '💶', '💷', '💳'];
+  const coins = Array.from({length: 3}, () => rainFrames[Math.floor(Math.random() * rainFrames.length)]);
+  const text = coins.join(' ');
+
+  for (let i = 0; i < lines; i++) {
+    const frameCoins = Array.from({length: Math.min(3, i + 1)}, () => rainFrames[Math.floor(Math.random() * rainFrames.length)]);
+    const frameText = frameCoins.join(' ');
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(color)
+      .setTitle(title)
+      .setDescription(`${frameText}\n\n*Pluie de pièces...*`)
+    ]}).catch(() => {});
+    await sleep(150);
   }
 }
 
@@ -228,7 +246,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
 
   const startEmbed = new EmbedBuilder()
     .setColor('#F39C12')
-    .setTitle('🎰 ・ Machine à Sous ・')
+    .setTitle('🎰 SLOT MACHINE ROYALE 🎰')
     .setDescription('`🌀 🌀 🌀 🌀 🌀\n🌀 🌀 🌀 🌀 🌀\n🌀 🌀 🌀 🌀 🌀`\n*Lancement des rouleaux...*')
     .addFields(
       { name: '💰 Mise', value: `${totalMise} ${coin} (${lines} ligne${lines > 1 ? 's' : ''})`, inline: true },
@@ -251,7 +269,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
 
   let totalGain = 0;
   let color = '#E74C3C';
-  let title = '🎰 ・ Machine à Sous ・';
+  let title = '🎰 SLOT MACHINE ROYALE 🎰';
   let desc  = '';
   let isJackpotWon = false;
 
@@ -270,27 +288,36 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
     totalGain = jp;
     resetJackpot(guildId);
     color  = '#FFD700';
-    title  = '🏆 ・ JACKPOT PROGRESSIF ・ 🏆';
+    title  = '🏆 JACKPOT PROGRESSIF 🏆';
     desc   = `🎊 **FÉLICITATIONS !** Tu as décroché le **JACKPOT** !\n\n**+${jp} ${coin}** remportés !`;
     db.addCoins(userId, guildId, jp);
+
+    // Coin rain animation for jackpot
+    await animateCoinRain(msg, color, title, 4);
   } else if (hasBonus) {
     const freeSpins = 5;
     color = '#9B59B6';
-    title = '🎁 ・ BONUS FREE SPINS ・ 🎁';
+    title = '🎁 BONUS FREE SPINS 🎁';
     desc  = `🎁 **BONUS DÉCLENCHÉ !** +${freeSpins} tours gratuits offerts !\n*(Non implémentés en temps réel, valeur en coins offerte)*`;
     const bonusCoins = totalMise * 3;
     totalGain = bonusCoins;
     db.addCoins(userId, guildId, bonusCoins);
+
+    // Coin rain for bonus
+    await animateCoinRain(msg, color, title, 3);
   } else if (wins.length > 0) {
     for (const w of wins) {
       totalGain += Math.floor(mise * w.mult);
     }
     db.addCoins(userId, guildId, totalGain);
     color = totalGain > totalMise * 3 ? '#F1C40F' : '#2ECC71';
-    title = totalGain > totalMise * 5 ? '🌟 ・ GROS GAIN ! ・ 🌟' : '🎰 ・ Machine à Sous ・';
+    title = totalGain > totalMise * 5 ? '🌟 GROS GAIN ! 🌟' : '🎰 SLOT MACHINE ROYALE 🎰';
     desc  = wins.map(w =>
       `**Ligne ${w.row + 1}** : ${w.count}× ${w.symbol.emoji} ${w.symbol.name} → +${Math.floor(mise * w.mult)} ${coin}`
     ).join('\n');
+
+    // Coin rain for regular win
+    if (totalGain > 0) await animateCoinRain(msg, color, title, 2);
   } else {
     desc = '😔 Pas de combinaison gagnante. Retente ta chance !';
   }
@@ -318,42 +345,46 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
   );
 
   await msg.edit({ embeds: [finalEmbed], components: [row] });
+}
 
-  // Collector pour rejouer
-  const filter = i => i.user.id === userId;
-  const collector = msg.createMessageComponentCollector({ filter, time: 30_000 });
+// ─── Handle Component ──────────────────────────────────────
+async function handleComponent(interaction) {
+  const userId = interaction.user.id;
+  const guildId = interaction.guildId;
 
-  collector.on('collect', async i => {
-    if (i.customId.startsWith('slots_replay_')) {
-      await i.deferUpdate();
-      collector.stop();
-      const parts = i.customId.split('_');
-      const newMise   = parseInt(parts[3]);
-      const newLines  = parseInt(parts[4]);
-      await playSlots(source.channel ? { ...source, reply: (d) => source.channel.send(d) } : source, userId, guildId, newMise, newLines);
-    } else if (i.customId === 'slots_info') {
-      await i.deferUpdate();
-      const stats = db.db.prepare('SELECT * FROM slots_stats WHERE user_id=? AND guild_id=?').get(userId, guildId);
-      if (!stats) return i.followUp({ content: 'Aucune statistique trouvée.', ephemeral: true });
-      const winRate = stats.spins ? ((stats.wins / stats.spins) * 100).toFixed(1) : 0;
-      await i.followUp({
-        embeds: [new EmbedBuilder()
-          .setColor('#3498DB')
-          .setTitle('📊 ・ Tes Stats Slots ・')
-          .addFields(
-            { name: '🎰 Tours joués', value: `${stats.spins}`, inline: true },
-            { name: '✅ Victoires', value: `${stats.wins} (${winRate}%)`, inline: true },
-            { name: '🏆 Jackpots', value: `${stats.jackpots}`, inline: true },
-            { name: '💰 Plus gros gain', value: `${stats.biggest} ${coin}`, inline: true },
-          )],
-        ephemeral: true,
-      });
+  if (interaction.customId.startsWith('slots_replay_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
     }
-  });
 
-  collector.on('end', () => {
-    msg.edit({ components: [] }).catch(() => {});
-  });
+    const newMise = parseInt(parts[3]);
+    const newLines = parseInt(parts[4]) || 1;
+
+    await interaction.deferUpdate();
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playSlots(source, userId, guildId, newMise, newLines);
+  } else if (interaction.customId === 'slots_info') {
+    await interaction.deferUpdate();
+    const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+    const stats = db.db.prepare('SELECT * FROM slots_stats WHERE user_id=? AND guild_id=?').get(userId, guildId);
+    if (!stats) return interaction.followUp({ content: 'Aucune statistique trouvée.', ephemeral: true });
+    const winRate = stats.spins ? ((stats.wins / stats.spins) * 100).toFixed(1) : 0;
+    await interaction.followUp({
+      embeds: [new EmbedBuilder()
+        .setColor('#3498DB')
+        .setTitle('📊 Tes Stats Slots')
+        .addFields(
+          { name: '🎰 Tours joués', value: `${stats.spins}`, inline: true },
+          { name: '✅ Victoires', value: `${stats.wins} (${winRate}%)`, inline: true },
+          { name: '🏆 Jackpots', value: `${stats.jackpots}`, inline: true },
+          { name: '💰 Plus gros gain', value: `${stats.biggest} ${coin}`, inline: true },
+        )],
+      ephemeral: true,
+    });
+  }
 }
 
 // ─── Exports ──────────────────────────────────────────────
@@ -391,5 +422,6 @@ module.exports = {
     if (!mise || mise < 5) return message.reply('❌ Usage : `&slots <mise> [lignes]`\nEx: `&slots 100 3`');
     await playSlots(message, message.author.id, message.guildId, mise, Math.min(3, Math.max(1, lignes)));
   },
-};
 
+  handleComponent,
+};

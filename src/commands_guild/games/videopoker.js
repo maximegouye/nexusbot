@@ -55,8 +55,29 @@ function evalHand(hand) {
   return { name: 'Aucune combinaison', mult: 0 };
 }
 
-// ─── Sessions ─────────────────────────────────────────────
-const sessions = new Map();
+// ─── Game Sessions Map with TTL ───────────────────────────
+const gameSessions = new Map();
+
+function storeSession(userId, state) {
+  const existing = gameSessions.get(userId);
+  if (existing?.timeout) clearTimeout(existing.timeout);
+
+  const timeout = setTimeout(() => {
+    gameSessions.delete(userId);
+  }, 15 * 60 * 1000); // 15 minutes
+
+  gameSessions.set(userId, { ...state, timeout });
+}
+
+function getSession(userId) {
+  return gameSessions.get(userId);
+}
+
+function deleteSession(userId) {
+  const sess = gameSessions.get(userId);
+  if (sess?.timeout) clearTimeout(sess.timeout);
+  gameSessions.delete(userId);
+}
 
 async function playVideoPoker(source, userId, guildId, mise) {
   const isInteraction = !!source.editReply;
@@ -68,7 +89,7 @@ async function playVideoPoker(source, userId, guildId, mise) {
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
-  if (sessions.has(userId)) {
+  if (getSession(userId)) {
     const err = '⚠️ Tu as déjà une partie de Video Poker en cours !';
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
@@ -81,7 +102,7 @@ async function playVideoPoker(source, userId, guildId, mise) {
   const held = [false, false, false, false, false];
 
   const state = { userId, guildId, mise, deck, hand, held, phase: 'hold' };
-  sessions.set(userId, state);
+  storeSession(userId, state);
 
   function buildHoldEmbed() {
     const handStr = hand.map(cardStr).join(' ');
@@ -148,77 +169,142 @@ async function playVideoPoker(source, userId, guildId, mise) {
   // Affiche la vraie main avec boutons
   await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
 
-  const filter = i => i.user.id === userId && i.customId.startsWith(`vp_`);
-  const collector = msg.createMessageComponentCollector({ filter, time: 120_000 });
+  // Note: No collector — using persistent handleComponent instead
+}
 
-  collector.on('collect', async i => {
-    await i.deferUpdate().catch(() => {});
-    const st = sessions.get(userId);
-    if (!st || st.phase !== 'hold') return;
+// ─── Component Handler ────────────────────────────────────
+async function handleComponent(interaction) {
+  const customId = interaction.customId;
 
-    if (i.customId.startsWith(`vp_hold_${userId}_`)) {
-      // Toggle hold sur une carte
-      const idx = parseInt(i.customId.split('_').pop());
-      st.held[idx] = !st.held[idx];
-      await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+  // Play again handler
+  if (customId.startsWith('vp_replay_')) {
+    const parts = customId.split('_');
+    const userId = parts[2];
+    const mise = parseInt(parts[3]);
 
-    } else if (i.customId === `vp_hold_all_${userId}`) {
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    }
+
+    await interaction.deferUpdate().catch(() => {});
+    await playVideoPoker(interaction, userId, interaction.guildId, mise);
+    return;
+  }
+
+  // In-game button handling
+  if (!customId.startsWith('vp_')) return;
+
+  const parts = customId.split('_');
+  const userId = parts.length > 2 ? parts[2] : null;
+
+  if (!userId || interaction.user.id !== userId) {
+    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+  }
+
+  await interaction.deferUpdate().catch(() => {});
+  const st = getSession(userId);
+  if (!st || st.phase !== 'hold') return;
+
+  const action = parts[1];
+  const msg = interaction.message;
+  const guildId = interaction.guildId;
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+
+  function buildHoldEmbed() {
+    const handStr = st.hand.map(cardStr).join(' ');
+    const { name, mult } = evalHand(st.hand);
+    return new EmbedBuilder()
+      .setColor('#8E44AD')
+      .setTitle('🃏 ・ Video Poker — Jacks or Better ・')
+      .setDescription(`**Ta main :**\n${handStr}\n\n*Clique sur les cartes à **garder**, puis appuie sur **Tirer** !*`)
+      .addFields(
+        { name: '🔍 Combinaison actuelle', value: `${name}${mult > 0 ? ` (×${mult})` : ''}`, inline: true },
+        { name: '💰 Mise', value: `${st.mise} ${coin}`, inline: true },
+      )
+      .setFooter({ text: 'Sélectionnez 0 à 5 cartes à garder' });
+  }
+
+  function buildCardButtons() {
+    return new ActionRowBuilder().addComponents(
+      ...st.hand.map((c, i) =>
+        new ButtonBuilder()
+          .setCustomId(`vp_hold_${userId}_${i}`)
+          .setLabel(`${c.value}${c.suit.replace(/[^♠♥♦♣]/g, '')} ${st.held[i] ? '✅' : ''}`)
+          .setStyle(st.held[i] ? ButtonStyle.Success : ButtonStyle.Secondary)
+      )
+    );
+  }
+
+  function buildActionRow() {
+    return new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`vp_draw_${userId}`).setLabel('🃏 Tirer').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`vp_hold_all_${userId}`).setLabel('Tout garder').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`vp_hold_none_${userId}`).setLabel('Tout échanger').setStyle(ButtonStyle.Danger),
+    );
+  }
+
+  if (action === 'hold' && parts[3]) {
+    // Toggle hold sur une carte
+    const idx = parseInt(parts[3]);
+    st.held[idx] = !st.held[idx];
+    await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
+
+  } else if (action === 'hold' && parts[3] === undefined) {
+    // hold_all or hold_none
+    if (customId.includes('hold_all')) {
       for (let k = 0; k < 5; k++) st.held[k] = true;
-      await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
-
-    } else if (i.customId === `vp_hold_none_${userId}`) {
+    } else if (customId.includes('hold_none')) {
       for (let k = 0; k < 5; k++) st.held[k] = false;
-      await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
-
-    } else if (i.customId === `vp_draw_${userId}`) {
-      // Tirer les nouvelles cartes
-      st.phase = 'result';
-      for (let k = 0; k < 5; k++) {
-        if (!st.held[k]) st.hand[k] = st.deck.pop();
-      }
-      collector.stop('draw');
-
-      // Animation tirage
-      const animEmbed = new EmbedBuilder().setColor('#8E44AD').setTitle('🃏 ・ Video Poker ・').setDescription('*Tirage en cours...*\n🌀 🌀 🌀 🌀 🌀');
-      await msg.edit({ embeds: [animEmbed], components: [] });
-      await sleep(800);
-
-      const { name, mult } = evalHand(st.hand);
-      const gain = Math.floor(mise * mult);
-      if (gain > 0) db.addCoins(userId, guildId, gain);
-
-      const handStr = st.hand.map(cardStr).join(' ');
-      const color   = mult >= 9 ? '#F1C40F' : mult > 0 ? '#2ECC71' : '#E74C3C';
-      const desc    = mult > 0
-        ? `🎉 **${name}** ! +**${gain} ${coin}**`
-        : `😔 **${name}**. -**${mise} ${coin}**`;
-
-      const finalEmbed = new EmbedBuilder()
-        .setColor(color)
-        .setTitle('🃏 ・ Video Poker — Résultat ・')
-        .setDescription(`**Main finale :**\n${handStr}\n\n${desc}`)
-        .addFields(
-          { name: '🏆 Combinaison', value: name, inline: true },
-          { name: '📈 Multiplicateur', value: `×${mult}`, inline: true },
-          { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
-        )
-        .addFields({ name: '📋 Table de paiement', value:
-          '`Royal Flush ×800` · `Quinte Flush ×50` · `Carré ×25`\n`Full House ×9` · `Couleur ×6` · `Quinte ×4`\n`Brelan ×3` · `2 Paires ×2` · `Paire J+ ×1`',
-          inline: false })
-        .setTimestamp();
-
-      sessions.delete(userId);
-      await msg.edit({ embeds: [finalEmbed], components: [] });
     }
-  });
+    await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
 
-  collector.on('end', (_, reason) => {
-    if (reason === 'time') {
-      sessions.delete(userId);
-      db.addCoins(userId, guildId, Math.floor(mise / 2));
-      msg.edit({ content: '⏰ Temps écoulé.', components: [] }).catch(() => {});
+  } else if (action === 'draw') {
+    // Tirer les nouvelles cartes
+    st.phase = 'result';
+    for (let k = 0; k < 5; k++) {
+      if (!st.held[k]) st.hand[k] = st.deck.pop();
     }
-  });
+
+    // Animation tirage
+    const animEmbed = new EmbedBuilder().setColor('#8E44AD').setTitle('🃏 ・ Video Poker ・').setDescription('*Tirage en cours...*\n🌀 🌀 🌀 🌀 🌀');
+    await msg.edit({ embeds: [animEmbed], components: [] });
+    await sleep(800);
+
+    const { name, mult } = evalHand(st.hand);
+    const gain = Math.floor(st.mise * mult);
+    if (gain > 0) db.addCoins(userId, guildId, gain);
+
+    const handStr = st.hand.map(cardStr).join(' ');
+    const color   = mult >= 9 ? '#F1C40F' : mult > 0 ? '#2ECC71' : '#E74C3C';
+    const desc    = mult > 0
+      ? `🎉 **${name}** ! +**${gain} ${coin}**`
+      : `😔 **${name}**. -**${st.mise} ${coin}**`;
+
+    const payoutTable = '`Royal Flush ×800` · `Quinte Flush ×50` · `Carré ×25`\n' +
+                        '`Full House ×9` · `Couleur ×6` · `Quinte ×4`\n' +
+                        '`Brelan ×3` · `Deux Paires ×2` · `Paire J+ ×1`';
+
+    const finalEmbed = new EmbedBuilder()
+      .setColor(color)
+      .setTitle('🃏 ・ Video Poker — Résultat ・')
+      .setDescription(`**Main finale :**\n${handStr}\n\n${desc}`)
+      .addFields(
+        { name: '🏆 Combinaison', value: name, inline: true },
+        { name: '📈 Multiplicateur', value: `×${mult}`, inline: true },
+        { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
+        { name: '📋 Table de paiement', value: payoutTable, inline: false }
+      );
+
+    const playAgainButtons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`vp_replay_${userId}_${st.mise}`)
+        .setLabel('🎮 Rejouer')
+        .setStyle(ButtonStyle.Primary),
+    );
+
+    deleteSession(userId);
+    await msg.edit({ embeds: [finalEmbed], components: [playAgainButtons] });
+  }
 }
 
 module.exports = {
@@ -234,6 +320,10 @@ module.exports = {
     await playVideoPoker(interaction, interaction.user.id, interaction.guildId, interaction.options.getInteger('mise'));
   },
 
+  async handleComponent(interaction) {
+    return handleComponent(interaction);
+  },
+
   name: 'videopoker',
   aliases: ['poker', 'vpoker', 'jacks'],
   async run(message, args) {
@@ -242,4 +332,3 @@ module.exports = {
     await playVideoPoker(message, message.author.id, message.guildId, mise);
   },
 };
-

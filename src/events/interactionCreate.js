@@ -47,6 +47,17 @@ const COMPONENT_ROUTES = {
   // ── Nouveaux jeux de casino ──────────────────────────────
   'grattage_':    'grattage',
   'tour_':        'tour',
+  // ── Préfixes alternatifs jeux (replay persistent) ────────
+  'rl_':          'roulette',   // replay roulette
+  'plinko_':      'plinko',
+  'des_':         'des',
+  'rf_':          'roue-fortune',
+  'baccarat_':    'baccarat',
+  'vp_':          'videopoker',
+  'hilo_':        'hilo',
+  'hippo_':       'hippodrome',
+  'slots_':       'slots',
+  'bj_':          'blackjack',
 };
 
 module.exports = {

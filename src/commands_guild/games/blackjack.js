@@ -48,8 +48,30 @@ function isSoft17(hand)    {
   return handValue(hand) === 17 && hand.some(c => c.value === 'A');
 }
 
-// ─── Sessions actives ─────────────────────────────────────
-const sessions = new Map(); // userId → state
+// ─── Game Sessions Map with TTL ───────────────────────────
+const gameSessions = new Map(); // userId → { ...state, timeout: NodeJS.Timeout }
+
+function storeSession(userId, state) {
+  const existing = gameSessions.get(userId);
+  if (existing?.timeout) clearTimeout(existing.timeout);
+
+  const timeout = setTimeout(() => {
+    gameSessions.delete(userId);
+  }, 15 * 60 * 1000); // 15 minutes
+
+  gameSessions.set(userId, { ...state, timeout });
+}
+
+function getSession(userId) {
+  return gameSessions.get(userId);
+}
+
+function deleteSession(userId) {
+  const sess = gameSessions.get(userId);
+  if (sess?.timeout) clearTimeout(sess.timeout);
+  gameSessions.delete(userId);
+}
+
 
 // ─── Embed ────────────────────────────────────────────────
 function buildEmbed(state, status = '') {
@@ -109,14 +131,14 @@ function buildButtons(state) {
                  && state.player.length === 2;
 
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('bj_hit')   .setLabel('🃏 Tirer').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('bj_stand') .setLabel('✋ Rester').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('bj_double').setLabel('⬆️ Doubler').setStyle(ButtonStyle.Success).setDisabled(!canDouble),
+    new ButtonBuilder().setCustomId(`bj_hit_${state.userId}`)   .setLabel('🃏 Tirer').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`bj_stand_${state.userId}`) .setLabel('✋ Rester').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`bj_double_${state.userId}`).setLabel('⬆️ Doubler').setStyle(ButtonStyle.Success).setDisabled(!canDouble),
   );
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('bj_split')   .setLabel('✂️ Split').setStyle(ButtonStyle.Primary).setDisabled(!canSplit),
-    new ButtonBuilder().setCustomId('bj_insure')  .setLabel('🛡️ Assurance').setStyle(ButtonStyle.Danger).setDisabled(!canInsure),
-    new ButtonBuilder().setCustomId('bj_surrender').setLabel('🏳️ Abandonner').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`bj_split_${state.userId}`)   .setLabel('✂️ Split').setStyle(ButtonStyle.Primary).setDisabled(!canSplit),
+    new ButtonBuilder().setCustomId(`bj_insure_${state.userId}`)  .setLabel('🛡️ Assurance').setStyle(ButtonStyle.Danger).setDisabled(!canInsure),
+    new ButtonBuilder().setCustomId(`bj_surrender_${state.userId}`).setLabel('🏳️ Abandonner').setStyle(ButtonStyle.Danger),
   );
   return [row1, row2];
 }
@@ -124,6 +146,15 @@ function buildButtons(state) {
 function disabledButtons() {
   return [new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('bj_done').setLabel('Partie terminée').setStyle(ButtonStyle.Secondary).setDisabled(true),
+  )];
+}
+
+function playAgainButtons(userId, mise) {
+  return [new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`bj_replay_${userId}_${mise}`)
+      .setLabel('🎮 Rejouer')
+      .setStyle(ButtonStyle.Primary),
   )];
 }
 
@@ -146,8 +177,11 @@ async function endGame(msg, state, status, winMult = 0) {
     embed.addFields({ name: '💵 Perte', value: `-**${state.mise} ${coin}**`, inline: true });
   }
 
-  sessions.delete(state.userId);
-  await msg.edit({ embeds: [embed], components: disabledButtons() });
+  const newBalance = db.getUser(state.userId, state.guildId)?.balance || 0;
+  embed.setFooter({ text: `Solde: ${newBalance} ${coin}` });
+
+  deleteSession(state.userId);
+  await msg.edit({ embeds: [embed], components: playAgainButtons(state.userId, state.mise) });
 }
 
 // ─── Dealer play (révèle + tire) ──────────────────────────
@@ -187,7 +221,7 @@ async function startGame(source, userId, guildId, mise) {
     if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
-  if (sessions.has(userId)) {
+  if (getSession(userId)) {
     const errMsg = '⚠️ Tu as déjà une partie en cours ! Termines-la d\'abord.';
     if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
@@ -212,13 +246,15 @@ async function startGame(source, userId, guildId, mise) {
 
   // Animation distribution cartes — plus dramatique
   function quickEmbed(pCards, dCards, msg_txt) {
+    const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
     return new EmbedBuilder()
       .setColor('#2C3E50').setTitle('🃏 ・ BlackJack ・')
       .addFields(
         { name: '🎩 Croupier', value: dCards || '🂠', inline: false },
         { name: `🎮 Vous`, value: pCards || '🂠', inline: false },
       )
-      .setDescription(msg_txt || '');
+      .setDescription(msg_txt || '')
+      .setFooter({ text: `Solde: ${u?.balance || 0} ${coin}` });
   }
 
   const dealSteps = [
@@ -250,106 +286,128 @@ async function startGame(source, userId, guildId, mise) {
   if (isBlackjack(player)) {
     state.revealed = true;
     if (isBlackjack(dealer)) {
-      await msg.edit({ embeds: [buildEmbed(state, 'push')], components: disabledButtons() });
       db.addCoins(userId, guildId, mise); // remboursement
+      const embed = buildEmbed(state, 'push');
+      const newBalance = db.getUser(userId, guildId)?.balance || 0;
+      embed.setFooter({ text: `Solde: ${newBalance} ${coin}` });
+      deleteSession(userId);
+      await msg.edit({ embeds: [embed], components: playAgainButtons(userId, state.mise) });
       return;
     }
-    await msg.edit({ embeds: [buildEmbed(state, 'blackjack')], components: disabledButtons() });
     db.addCoins(userId, guildId, Math.floor(mise * 2.5)); // BJ paie 3:2 → x2.5 total
+    const embed = buildEmbed(state, 'blackjack');
+    const newBalance = db.getUser(userId, guildId)?.balance || 0;
+    embed.setFooter({ text: `Solde: ${newBalance} ${coin}` });
+    deleteSession(userId);
+    await msg.edit({ embeds: [embed], components: playAgainButtons(userId, state.mise) });
     return;
   }
 
-  sessions.set(userId, state);
+  storeSession(userId, state);
   await msg.edit({ embeds: [buildEmbed(state, '')], components: buildButtons(state) });
+}
 
-  // ─── Collecteur de boutons ────────────────────────────────
-  const filter = i => i.user.id === userId && i.customId.startsWith('bj_');
-  const collector = msg.createMessageComponentCollector({ filter, time: 120_000 });
+// ─── Component Handler ────────────────────────────────────
+async function handleComponent(interaction) {
+  const customId = interaction.customId;
 
-  collector.on('collect', async i => {
-    await i.deferUpdate().catch(() => {});
-    const st = sessions.get(userId);
-    if (!st) return;
+  // Play again handler
+  if (customId.startsWith('bj_replay_')) {
+    const parts = customId.split('_');
+    const userId = parts[2];
+    const mise = parseInt(parts[3]);
 
-    if (i.customId === 'bj_hit') {
-      st.player.push(st.deck.pop());
-      const pv = handValue(st.player);
-      if (pv > 21) {
-        collector.stop('bust');
-        return endGame(msg, st, 'bust', 0);
-      }
-      if (pv === 21) { // auto-stand à 21
-        collector.stop('stand');
-        return dealerPlay(msg, st);
-      }
-      await msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    }
 
-    } else if (i.customId === 'bj_stand') {
-      collector.stop('stand');
-      await dealerPlay(msg, st);
+    await interaction.deferUpdate().catch(() => {});
+    await startGame(interaction, userId, interaction.guildId, mise);
+    return;
+  }
 
-    } else if (i.customId === 'bj_double') {
-      const u2 = db.getUser(userId, guildId);
-      if (u2.balance < st.mise) {
-        return msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
-      }
-      db.addCoins(userId, guildId, -st.mise);
-      st.mise *= 2;
-      st.player.push(st.deck.pop());
-      const pv = handValue(st.player);
-      if (pv > 21) {
-        collector.stop('bust');
-        return endGame(msg, st, 'bust', 0);
-      }
-      collector.stop('double');
-      await dealerPlay(msg, st);
+  // In-game buttons
+  if (!customId.startsWith('bj_')) return;
 
-    } else if (i.customId === 'bj_split') {
-      const u2 = db.getUser(userId, guildId);
-      if (u2.balance < st.mise) return;
-      db.addCoins(userId, guildId, -st.mise);
-      st.split  = [st.player.pop(), st.deck.pop()];
-      st.player.push(st.deck.pop());
-      await msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
+  const parts = customId.split('_');
+  const userId = parts.length > 2 ? parts[2] : null;
 
-    } else if (i.customId === 'bj_insure') {
-      const insureCost = Math.floor(st.mise / 2);
-      const u2 = db.getUser(userId, guildId);
-      if (u2.balance < insureCost) return;
-      db.addCoins(userId, guildId, -insureCost);
-      st.insurance = true;
-      // Si le croupier a blackjack → assurance paie 2:1
-      if (isBlackjack(dealer)) {
-        st.revealed = true;
-        db.addCoins(userId, guildId, insureCost * 3); // remboursement + gain
-        sessions.delete(userId);
-        collector.stop('insurance_win');
-        const e = buildEmbed(st, 'lose');
-        e.setDescription('🛡️ Assurance payée 2:1 — le croupier avait blackjack !');
-        return msg.edit({ embeds: [e], components: disabledButtons() });
-      }
-      await msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
+  if (!userId || interaction.user.id !== userId) {
+    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+  }
 
-    } else if (i.customId === 'bj_surrender') {
-      sessions.delete(userId);
-      collector.stop('surrender');
-      db.addCoins(userId, guildId, Math.floor(st.mise / 2));
+  await interaction.deferUpdate().catch(() => {});
+  const st = getSession(userId);
+  if (!st) return;
+
+  const action = parts[1];
+  const msg = interaction.message;
+  const guildId = interaction.guildId;
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+
+  if (action === 'hit') {
+    st.player.push(st.deck.pop());
+    const pv = handValue(st.player);
+    if (pv > 21) {
+      return endGame(msg, st, 'bust', 0);
+    }
+    if (pv === 21) {
+      return dealerPlay(msg, st);
+    }
+    await msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
+
+  } else if (action === 'stand') {
+    await dealerPlay(msg, st);
+
+  } else if (action === 'double') {
+    const u2 = db.getUser(userId, guildId);
+    if (u2.balance < st.mise) {
+      return msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
+    }
+    db.addCoins(userId, guildId, -st.mise);
+    st.mise *= 2;
+    st.player.push(st.deck.pop());
+    const pv = handValue(st.player);
+    if (pv > 21) {
+      return endGame(msg, st, 'bust', 0);
+    }
+    await dealerPlay(msg, st);
+
+  } else if (action === 'split') {
+    const u2 = db.getUser(userId, guildId);
+    if (u2.balance < st.mise) return;
+    db.addCoins(userId, guildId, -st.mise);
+    st.split  = [st.player.pop(), st.deck.pop()];
+    st.player.push(st.deck.pop());
+    await msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
+
+  } else if (action === 'insure') {
+    const insureCost = Math.floor(st.mise / 2);
+    const u2 = db.getUser(userId, guildId);
+    if (u2.balance < insureCost) return;
+    db.addCoins(userId, guildId, -insureCost);
+    st.insurance = true;
+    if (isBlackjack(st.dealer)) {
+      st.revealed = true;
+      db.addCoins(userId, guildId, insureCost * 3);
+      deleteSession(userId);
       const e = buildEmbed(st, 'lose');
-      e.setDescription('🏳️ Abandonné — moitié de la mise remboursée.');
-      await msg.edit({ embeds: [e], components: disabledButtons() });
+      e.setDescription('🛡️ Assurance payée 2:1 — le croupier avait blackjack !');
+      const newBalance = db.getUser(userId, guildId)?.balance || 0;
+      e.setFooter({ text: `Solde: ${newBalance} ${coin}` });
+      return msg.edit({ embeds: [e], components: playAgainButtons(userId, st.mise) });
     }
-  });
+    await msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
 
-  collector.on('end', (_, reason) => {
-    if (reason === 'time') {
-      const st = sessions.get(userId);
-      if (st) {
-        sessions.delete(userId);
-        db.addCoins(userId, guildId, Math.floor(st.mise / 2));
-        msg.edit({ content: '⏰ Temps écoulé — moitié de la mise remboursée.', components: disabledButtons() }).catch(() => {});
-      }
-    }
-  });
+  } else if (action === 'surrender') {
+    deleteSession(userId);
+    db.addCoins(userId, guildId, Math.floor(st.mise / 2));
+    const e = buildEmbed(st, 'lose');
+    e.setDescription('🏳️ Abandonné — moitié de la mise remboursée.');
+    const newBalance = db.getUser(userId, guildId)?.balance || 0;
+    e.setFooter({ text: `Solde: ${newBalance} ${coin}` });
+    await msg.edit({ embeds: [e], components: playAgainButtons(userId, st.mise) });
+  }
 }
 
 // ─── Exports ──────────────────────────────────────────────
@@ -368,6 +426,10 @@ module.exports = {
     const userId  = interaction.user.id;
     const guildId = interaction.guildId;
     await startGame(interaction, userId, guildId, mise);
+  },
+
+  async handleComponent(interaction) {
+    return handleComponent(interaction);
   },
 
   // Préfixe : !blackjack <mise>

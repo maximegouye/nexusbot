@@ -30,11 +30,11 @@ const BET_HELP = [
 
 // Phases d'animation des dés
 const ROLL_PHASES = [
-  { delay:130, color:'#F39C12', text:'🎲 Lancement !' },
-  { delay:170, color:'#E67E22', text:'💨 Les dés roulent...' },
-  { delay:230, color:'#D35400', text:'🎯 Presque...' },
-  { delay:310, color:'#C0392B', text:'⏳ Dernière rotation...' },
-  { delay:400, color:'#922B21', text:'🤞 Résultat...' },
+  { delay:130, color:'#F39C12', text:'🎲 Les dés roulent... Lancement !' },
+  { delay:170, color:'#E67E22', text:'🎲 Les dés roulent... Vitesse maximale !' },
+  { delay:230, color:'#D35400', text:'🎲 Les dés roulent... Presque...' },
+  { delay:310, color:'#C0392B', text:'🎲 Les dés roulent... Dernière rotation...' },
+  { delay:400, color:'#922B21', text:'🎲 Les dés roulent... Suspense...' },
 ];
 
 async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
@@ -127,7 +127,7 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   const gain = won ? Math.floor(mise * (payout + 1)) : 0;
   if (won) db.addCoins(userId, guildId, gain);
 
-  const color  = won ? '#2ECC71' : '#E74C3C';
+  const color  = won ? '#27AE60' : '#E74C3C';
   const newBal = db.getUser(userId, guildId)?.balance || 0;
 
   let resultBox;
@@ -135,8 +135,9 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     resultBox = [
       '```',
       '╔══════════════════════════╗',
-      '║   🎉  GAGNÉ !  🎉         ║',
+      '║  🎉  VICTOIRE !  🎉        ║',
       `║  +${String(gain).padEnd(6,' ')} ${coin}        ║`,
+      '║  ████████████████████      ║',
       '╚══════════════════════════╝',
       '```',
     ].join('\n');
@@ -144,8 +145,9 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     resultBox = [
       '```',
       '╔══════════════════════════╗',
-      '║   ❌  PERDU !  ❌          ║',
+      '║  ❌  PERDU !  ❌           ║',
       `║  -${String(mise).padEnd(6,' ')} ${coin}        ║`,
+      '║  ░░░░░░░░░░░░░░░░░░░░      ║',
       '╚══════════════════════════╝',
       '```',
     ].join('\n');
@@ -178,22 +180,6 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     .setTimestamp();
 
   await msg.edit({ embeds: [finalEmbed], components: [row] });
-
-  // Collector rejouer
-  const filter = i => i.user.id === userId && i.customId.startsWith(`des_replay_${userId}`);
-  const collector = msg.createMessageComponentCollector({ filter, time: 30_000 });
-
-  collector.on('collect', async i => {
-    await i.deferUpdate();
-    collector.stop();
-    const parts    = i.customId.split('_');
-    const newMise  = parseInt(parts[3]);
-    const newBet   = parts[4];
-    const newNumD  = parseInt(parts[5]) || 1;
-    await playDice(source, userId, guildId, newMise, newBet, newNumD);
-  });
-
-  collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));
 }
 
 module.exports = {
@@ -226,6 +212,24 @@ module.exports = {
     const numD  = parseInt(args[2]) || 1;
     if (!mise || mise < 5) return message.reply('❌ Usage : `&des <mise> <pari> [dés]`\nEx: `&des 100 haut` ou `&des 200 somme7 2`');
     await playDice(message, message.author.id, message.guildId, mise, pari, numD);
+  },
+
+  async handleComponent(interaction, cid) {
+    if (cid.startsWith('des_replay_')) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const mise = parseInt(parts[3]);
+      const newBet = parts[4];
+      const newNumD = parseInt(parts[5]) || 1;
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.deferUpdate();
+      await playDice(interaction, userId, interaction.guildId, mise, newBet, newNumD);
+      return true;
+    }
+    return false;
   },
 };
 

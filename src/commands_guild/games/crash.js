@@ -50,11 +50,19 @@ function multColor(m) {
   return '#9B59B6';
 }
 
+// ─── Enhanced trajectory bar with color progression ───────
 function graphBar(current, crashPoint) {
   const pct  = Math.min(current / crashPoint, 1);
   const len  = 18;
   const fill = Math.floor(pct * len);
-  const bar  = '█'.repeat(fill) + '░'.repeat(len - fill);
+
+  // Color progression: green -> yellow -> orange -> red
+  let barColor = '';
+  if (pct < 0.33) barColor = '█';  // green
+  else if (pct < 0.66) barColor = '▓';  // yellow/orange
+  else barColor = '▒';  // orange/red
+
+  const bar  = barColor.repeat(fill) + '░'.repeat(len - fill);
   const pctStr = (pct * 100).toFixed(0).padStart(3);
   return `[${bar}] ${pctStr}%`;
 }
@@ -68,8 +76,9 @@ function rocketEmoji(mult) {
   return '🛫';
 }
 
+// ─── Enhanced altitude bar with stages ────────────────────
 function altitudeBar(current, crashPoint) {
-  const steps = 10;
+  const steps = 12;
   const pct   = Math.min(current / crashPoint, 1);
   const pos   = Math.floor(pct * steps);
   const bars  = Array(steps).fill('─');
@@ -78,7 +87,25 @@ function altitudeBar(current, crashPoint) {
 }
 
 // ─── Parties actives ──────────────────────────────────────
-const activeGames = new Map(); // userId → { cashedOut, mult, interval, msg }
+const activeGames = new Map(); // userId → { cashedOut, mult, interval, msg, gameLoop }
+
+// ─── Crash animation (flash red) ──────────────────────────
+async function animateCrash(msg) {
+  const crashFlashes = [
+    { color: '#E74C3C', desc: '💥 CRASH !' },
+    { color: '#C0392B', desc: '💥💥 CRASH !' },
+    { color: '#E74C3C', desc: '💥 CRASH !' },
+  ];
+
+  for (const { color, desc } of crashFlashes) {
+    const e = new EmbedBuilder()
+      .setColor(color)
+      .setTitle(desc)
+      .setDescription('*Explosion en cours...*');
+    await msg.edit({ embeds: [e] }).catch(() => {});
+    await sleep(100);
+  }
+}
 
 // ─── Jeu ─────────────────────────────────────────────────
 async function playCrash(source, userId, guildId, mise, autoCashout = null) {
@@ -92,7 +119,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     return source.reply(err);
   }
   if (activeGames.has(userId)) {
-    const err = '⚠️ Tu as déjà un crash en cours !';
+    const err = '⚠️ Tu as deja un crash en cours !';
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -108,14 +135,15 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
   let current      = 1.0;
   let cashedOut    = false;
   let cashoutMult  = null;
+  let gameLoop     = null;
 
   const history = getCrashHistory(guildId).map(h => `×${h.multiplier.toFixed(2)}`).join(' ');
 
   function buildCrashEmbed(crashed = false) {
     const color = crashed ? '#E74C3C' : cashedOut ? '#2ECC71' : multColor(current);
-    const title = crashed     ? '💥 ・ CRASH ! ・ 💥'
-                : cashedOut   ? '✅ ・ Cash-Out Réussi ! ・'
-                : '🚀 ・ Crash — En Vol ・';
+    const title = crashed     ? '💥 CRASH !'
+                : cashedOut   ? '✅ Cash-Out Reussi !'
+                : '🚀 Crash - En Vol';
 
     const bar    = graphBar(current, crashPoint);
     const rocket = rocketEmoji(current);
@@ -126,7 +154,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
       .setTitle(title)
       .addFields(
         {
-          name: crashed ? `💥 Crash à` : cashedOut ? `✅ Cash-out à` : `${rocket} Multiplicateur`,
+          name: crashed ? `💥 Crash a` : cashedOut ? `✅ Cash-out a` : `${rocket} Multiplicateur`,
           value: `## ×${current.toFixed(2)}`,
           inline: false,
         },
@@ -138,7 +166,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     if (!crashed && !cashedOut) {
       const potentialGain = Math.floor(mise * current);
       e.addFields({ name: '💵 Gain potentiel', value: `${potentialGain} ${coin}`, inline: true });
-      if (autoCashout) e.addFields({ name: '🤖 Auto cash-out', value: `à ×${autoCashout}`, inline: true });
+      if (autoCashout) e.addFields({ name: '🤖 Auto cash-out', value: `a ×${autoCashout}`, inline: true });
     }
 
     if (cashedOut && cashoutMult) {
@@ -150,7 +178,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
       const lostOrGain = cashedOut
         ? `+${Math.floor(mise * cashoutMult)} ${coin}`
         : `-${mise} ${coin}`;
-      e.addFields({ name: '💸 Résultat', value: lostOrGain, inline: true });
+      e.addFields({ name: '💸 Resultat', value: lostOrGain, inline: true });
       if (history) e.addFields({ name: '📜 Historique', value: history, inline: false });
     }
 
@@ -172,11 +200,11 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     msg = await source.reply({ embeds: [buildCrashEmbed()], components: [cashoutBtn] });
   }
 
-  activeGames.set(userId, { cashedOut: false, mult: 1.0, msg });
+  activeGames.set(userId, { cashedOut: false, mult: 1.0, msg, gameLoop: null });
 
-  // Collecteur bouton cash-out
+  // Collecteur bouton cash-out (5 minutes timeout)
   const filter = i => i.user.id === userId && i.customId === `crash_cashout_${userId}`;
-  const collector = msg.createMessageComponentCollector({ filter, time: 60_000 });
+  const collector = msg.createMessageComponentCollector({ filter, time: 5 * 60 * 1000 }); // 5 min
 
   collector.on('collect', async i => {
     await i.deferUpdate().catch(() => {});
@@ -192,9 +220,9 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
   const TICK = 400; // ms par tick
   const INCREMENT = 0.08; // +8% par tick (environ)
 
-  const gameLoop = setInterval(async () => {
+  gameLoop = setInterval(async () => {
     if (cashedOut) {
-      // Continuer à afficher mais cash-out déjà pris
+      // Continuer a afficher mais cash-out deja pris
       current = parseFloat((current + INCREMENT + current * 0.02).toFixed(2));
 
       if (current >= crashPoint) {
@@ -202,6 +230,10 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
         collector.stop();
         activeGames.delete(userId);
         addCrashHistory(guildId, crashPoint);
+
+        // Animate crash
+        await animateCrash(msg);
+
         await msg.edit({ embeds: [buildCrashEmbed(true)], components: [] }).catch(() => {});
       } else {
         // Update embed pour montrer progression
@@ -227,6 +259,9 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
       activeGames.delete(userId);
       addCrashHistory(guildId, crashPoint);
 
+      // Animate crash
+      await animateCrash(msg);
+
       const e = buildCrashEmbed(true);
       await msg.edit({ embeds: [e], components: [] }).catch(() => {});
     } else {
@@ -243,24 +278,47 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     }
   }, TICK);
 
+  // Store gameLoop reference
+  activeGames.get(userId).gameLoop = gameLoop;
+
   collector.on('end', () => {
-    if (activeGames.has(userId)) {
-      // Timeout sans cash-out
-      clearInterval(gameLoop);
+    const game = activeGames.get(userId);
+    if (game && game.gameLoop) {
+      clearInterval(game.gameLoop);
       activeGames.delete(userId);
     }
   });
+}
+
+// ─── Handle Component ──────────────────────────────────────
+async function handleComponent(interaction) {
+  const userId = interaction.user.id;
+  const guildId = interaction.guildId;
+
+  if (interaction.customId.startsWith('crash_replay_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const mise = parseInt(parts[3]);
+
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+
+    await interaction.deferUpdate();
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playCrash(source, userId, guildId, mise, null);
+  }
 }
 
 // ─── Exports ──────────────────────────────────────────────
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('crash')
-    .setDescription('🚀 Crash — regardez le multiplicateur monter et cashoutez avant le crash !')
+    .setDescription('🚀 Crash - regardez le multiplicateur monter et cashoutez avant le crash !')
     .addIntegerOption(o => o
-      .setName('mise').setDescription('Montant à miser (min 10)').setRequired(true).setMinValue(10))
+      .setName('mise').setDescription('Montant a miser (min 10)').setRequired(true).setMinValue(10))
     .addNumberOption(o => o
-      .setName('auto').setDescription('Cash-out automatique à ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
+      .setName('auto').setDescription('Cash-out automatique a ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
@@ -283,5 +341,6 @@ module.exports = {
     if (!mise || mise < 10) return message.reply('❌ Usage : `&crash <mise> [auto-cashout]`\nEx: `&crash 200 2.5`');
     await playCrash(message, message.author.id, message.guildId, mise, auto);
   },
-};
 
+  handleComponent,
+};

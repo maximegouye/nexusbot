@@ -34,13 +34,12 @@ function dropBall(rows = 8) {
 function renderBoard(path, step, mults, finalSlot = null) {
   const ROWS = 8;
   const COLS = 9;
-  const PEG  = '◦'; // chevilles
-  const BALL = '🔵';
+  const PEG  = '●'; // chevilles plus visibles
+  const BALL = '🎯';
   const lines = [];
 
   for (let r = 0; r < ROWS; r++) {
     // Chevillage
-    const pegCount = r + 2; // nb de chevilles par rangée (2 à 9)
     let rowStr = '';
 
     // Construire la rangée avec la balle si elle est là
@@ -49,43 +48,53 @@ function renderBoard(path, step, mults, finalSlot = null) {
     for (let c = 0; c < COLS; c++) {
       if (c === ballCol) rowStr += BALL;
       else rowStr += PEG;
-      if (c < COLS - 1) rowStr += ' ';
+      if (c < COLS - 1) rowStr += '  ';
     }
     lines.push(rowStr);
   }
 
-  // Ligne des slots avec multiplicateurs
+  // Ligne des slots avec multiplicateurs (plus colorés)
   const slotLine = mults.map((m, i) => {
     const isFinal = finalSlot !== null && i === finalSlot;
     if (isFinal) {
-      const color = m >= 2 ? '🟩' : m >= 1 ? '🟨' : '🟥';
-      return `${color}`;
+      if (m >= 10) return '🟦';
+      if (m >= 5) return '🟩';
+      if (m >= 2) return '🟨';
+      if (m >= 1) return '🟧';
+      return '🟥';
     }
-    return m >= 10 ? '🟦' : m >= 2 ? '🟩' : m >= 1 ? '🟨' : '🟥';
-  }).join(' ');
+    if (m >= 10) return '🟦';
+    if (m >= 5) return '🟩';
+    if (m >= 2) return '🟨';
+    if (m >= 1) return '🟧';
+    return '🟥';
+  }).join('  ');
 
   const multLine = mults.map((m, i) => {
     const isFinal = finalSlot !== null && i === finalSlot;
-    return isFinal ? `**×${m}**` : `×${m}`;
-  }).join('  ');
+    const isHighlight = isFinal ? '**' : '';
+    return `${isHighlight}×${m}${isHighlight}`;
+  }).join('   ');
 
+  lines.push('─'.repeat(50));
   lines.push(slotLine);
-  return { boardStr: lines.join('\n'), multLine };
+  lines.push(multLine);
+  return { boardStr: lines.join('\n'), multLine: '' };
 }
 
 // ─── Résumé compact de la grille (sans code block) ────────
 function buildBoardEmbed(path, step, mults, mise, coin, riskKey, finalSlot = null, done = false) {
-  const { boardStr, multLine } = renderBoard(path, step, mults, finalSlot);
+  const { boardStr } = renderBoard(path, step, mults, finalSlot);
   const color = done
     ? (mults[finalSlot] >= 2 ? '#27AE60' : mults[finalSlot] >= 1 ? '#F1C40F' : '#E74C3C')
     : RISK_COLORS[riskKey];
 
-  const title = done ? '🎯 Plinko — Résultat' : '🎯 Plinko';
+  const title = done ? '🎯 Plinko — Résultat' : '🎯 Plinko — La bille tombe...';
 
   return new EmbedBuilder()
     .setColor(color)
     .setTitle(title)
-    .setDescription('```\n' + boardStr + '\n```\n' + multLine)
+    .setDescription('```\n' + boardStr + '\n```')
     .addFields(
       { name: '⚠️ Risque', value: RISK_LABELS[riskKey], inline: true },
       { name: '💰 Mise',   value: `${mise} ${coin}`,     inline: true },
@@ -194,7 +203,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
   }
 
   const finalColor = mult >= 2 ? '#27AE60' : mult >= 1 ? '#F1C40F' : '#E74C3C';
-  const { boardStr, multLine } = renderBoard(path, 9, mults, finalSlot);
+  const { boardStr } = renderBoard(path, 9, mults, finalSlot);
 
   // Bouton rejouer
   const row = new ActionRowBuilder().addComponents(
@@ -208,7 +217,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     .setColor(finalColor)
     .setTitle('🎯 Plinko — Résultat')
     .setDescription(
-      '```\n' + boardStr + '\n```\n' + multLine + '\n\n' + resultMsg
+      '```\n' + boardStr + '\n```\n' + resultMsg
     )
     .addFields(
       { name: '⚠️ Risque',        value: RISK_LABELS[riskKey], inline: true },
@@ -219,21 +228,6 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     .setTimestamp();
 
   await msg.edit({ embeds: [finalEmbed], components: [row] });
-
-  // Collector rejouer
-  const filter = i => i.user.id === userId && i.customId.startsWith(`plinko_replay_${userId}`);
-  const collector = msg.createMessageComponentCollector({ filter, time: 30_000 });
-
-  collector.on('collect', async i => {
-    await i.deferUpdate();
-    collector.stop();
-    const parts     = i.customId.split('_');
-    const newMise   = parseInt(parts[3]);
-    const newRisk   = parts[4] || 'medium';
-    await playPlinko(source, userId, guildId, newMise, newRisk);
-  });
-
-  collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));
 }
 
 // ─── Mapping risque ────────────────────────────────────────
@@ -273,6 +267,23 @@ module.exports = {
     const risk  = parseRisk(args[1]) || 'medium';
     if (!mise || mise < 10) return message.reply('❌ Usage : `&plinko <mise> [faible/moyen/eleve]`');
     await playPlinko(message, message.author.id, message.guildId, mise, risk);
+  },
+
+  async handleComponent(interaction, cid) {
+    if (cid.startsWith('plinko_replay_')) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const mise = parseInt(parts[3]);
+      const newRisk = parts[4] || 'medium';
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.deferUpdate();
+      await playPlinko(interaction, userId, interaction.guildId, mise, newRisk);
+      return true;
+    }
+    return false;
   },
 };
 

@@ -3,7 +3,7 @@
 // Emplacement : src/commands_guild/games/baccarat.js
 // ============================================================
 
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -79,6 +79,30 @@ function playBaccarat() {
 // Joueur : 1:1, Banquier : 0.95:1 (5% commission), Tie : 8:1
 const PAYOUTS = { player: 2, banker: 1.95, tie: 9 };
 
+// ─── Game Sessions Map with TTL ───────────────────────────
+const gameSessions = new Map();
+
+function storeSession(userId, state) {
+  const existing = gameSessions.get(userId);
+  if (existing?.timeout) clearTimeout(existing.timeout);
+
+  const timeout = setTimeout(() => {
+    gameSessions.delete(userId);
+  }, 15 * 60 * 1000);
+
+  gameSessions.set(userId, { ...state, timeout });
+}
+
+function getSession(userId) {
+  return gameSessions.get(userId);
+}
+
+function deleteSession(userId) {
+  const sess = gameSessions.get(userId);
+  if (sess?.timeout) clearTimeout(sess.timeout);
+  gameSessions.delete(userId);
+}
+
 async function playBaccaratGame(source, userId, guildId, mise, betOn) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
@@ -100,6 +124,7 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
   db.addCoins(userId, guildId, -mise);
 
   const betLabels = { player: '👤 Joueur', banker: '🏦 Banquier', tie: '🤝 Égalité' };
+
   // Embed de départ — cartes dos visible
   const bacAnimFrames = [
     { desc:'🎴 Mélange du sabot...\n\n🃏 🃏 🃏 🃏', color:'#16A085', delay:500 },
@@ -122,14 +147,14 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
 
   const { player, banker, pTotal, bTotal } = playBaccarat();
 
-  // Distribution animée — cartes dos puis révèle
+  // Distribution animée — cartes dos puis révèle avec plus d'animations
   const steps = [
-    { p: ['🃏'], b: [],     desc:'1ère carte joueur...' },
-    { p: ['🃏'], b: ['🃏'], desc:'1ère carte banquier...' },
-    { p: [player[0]], b: ['🃏'],           desc:'Révèle la carte du joueur !' },
-    { p: [player[0]], b: [banker[0]],      desc:'Révèle la carte du banquier !' },
-    { p: player.slice(0,2).map(cardStr), b: [banker[0]], pRaw:true, bRaw:false, desc:'2ème carte joueur !' },
-    { p: player.slice(0,2).map(cardStr), b: banker.slice(0,2).map(cardStr), pRaw:true, bRaw:true, desc:'Main initiale complète !' },
+    { p: ['🃏'], b: [],     desc:'🎴 1ère carte joueur...' },
+    { p: ['🃏'], b: ['🃏'], desc:'🎴 1ère carte banquier...' },
+    { p: [player[0]], b: ['🃏'],           desc:'✨ Révèle la carte du joueur !' },
+    { p: [player[0]], b: [banker[0]],      desc:'✨ Révèle la carte du banquier !' },
+    { p: player.slice(0,2).map(cardStr), b: [banker[0]], pRaw:true, bRaw:false, desc:'🎴 2ème carte joueur !' },
+    { p: player.slice(0,2).map(cardStr), b: banker.slice(0,2).map(cardStr), pRaw:true, bRaw:true, desc:'✅ Main initiale complète !' },
   ];
   for (const s of steps) {
     const pVal = s.pRaw ? s.p.join(' ') : (Array.isArray(s.p) && s.p[0]?.value ? s.p.map(cardStr).join(' ') : s.p.join(' '));
@@ -139,23 +164,24 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
     const e = new EmbedBuilder()
       .setColor('#1ABC9C').setTitle('🎴 ・ Baccarat ・').setDescription(`*${s.desc}*`)
       .addFields(
-        {name:`👤 Joueur ${pScore}`,value:pVal||'—',inline:true},
-        {name:`🏦 Banquier ${bScore}`,value:bVal||'—',inline:true},
+        {name:`👤 Joueur ${pScore}`,value:`**${pVal}**`||'—',inline:true},
+        {name:`🏦 Banquier ${bScore}`,value:`**${bVal}**`||'—',inline:true},
       );
     await msg.edit({ embeds: [e] });
-    await sleep(420);
+    await sleep(500); // Slightly longer delay for drama
   }
 
   // Troisième carte si applicable
   if (player.length === 3) {
-    await sleep(300);
+    await sleep(600);
     const e = new EmbedBuilder().setColor('#1ABC9C').setTitle('🎴 ・ Baccarat — 3ème carte ・')
+      .setDescription('*Tirage de 3ème carte en cours...*')
       .addFields(
-        { name: `👤 Joueur (${pTotal})`, value: player.map(cardStr).join(' '), inline: true },
-        { name: `🏦 Banquier (${bTotal})`, value: banker.map(cardStr).join(' '), inline: true },
+        { name: `👤 Joueur **${pTotal}**`, value: player.map(cardStr).join(' '), inline: true },
+        { name: `🏦 Banquier **${bTotal}**`, value: banker.map(cardStr).join(' '), inline: true },
       );
     await msg.edit({ embeds: [e] });
-    await sleep(600);
+    await sleep(700);
   }
 
   // Résultat
@@ -189,15 +215,40 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
     .setTitle('🎴 ・ Baccarat — Résultat ・')
     .setDescription(desc)
     .addFields(
-      { name: `👤 Joueur (${pTotal})`, value: player.map(cardStr).join(' '), inline: true },
-      { name: `🏦 Banquier (${bTotal})`, value: banker.map(cardStr).join(' '), inline: true },
+      { name: `👤 Joueur **${pTotal}**`, value: player.map(cardStr).join(' '), inline: true },
+      { name: `🏦 Banquier **${bTotal}**`, value: banker.map(cardStr).join(' '), inline: true },
       { name: '🏆 Vainqueur', value: `${winEmoji[winner]} ${betLabels[winner]}`, inline: false },
       { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
     )
-    .setFooter({ text: 'Baccarat · Banquier: 5% commission · Égalité: ×9' })
-    .setTimestamp();
+    .setFooter({ text: 'Baccarat · Joueur ×2 · Banquier ×1.95 (5% commission) · Égalité ×9' });
 
-  await msg.edit({ embeds: [finalEmbed] });
+  const playAgainButtons = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`baccarat_replay_${userId}_${mise}_${betKey}`)
+      .setLabel('🎮 Rejouer')
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  await msg.edit({ embeds: [finalEmbed], components: [playAgainButtons] });
+}
+
+// ─── Component Handler ────────────────────────────────────
+async function handleComponent(interaction) {
+  if (!interaction.customId.startsWith('baccarat_replay_')) return;
+
+  const parts = interaction.customId.split('_');
+  const userId = parts[2];
+  const mise = parseInt(parts[3]);
+  const betKey = parts[4];
+
+  if (interaction.user.id !== userId) {
+    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+  }
+
+  await interaction.deferUpdate().catch(() => {});
+
+  const betLabels = { player: 'joueur', banker: 'banquier', tie: 'egalite' };
+  await playBaccaratGame(interaction, userId, interaction.guildId, mise, betLabels[betKey]);
 }
 
 module.exports = {
@@ -225,6 +276,10 @@ module.exports = {
     );
   },
 
+  async handleComponent(interaction) {
+    return handleComponent(interaction);
+  },
+
   name: 'baccarat',
   aliases: ['bac', 'punto'],
   async run(message, args) {
@@ -234,4 +289,3 @@ module.exports = {
     await playBaccaratGame(message, message.author.id, message.guildId, mise, pari);
   },
 };
-
