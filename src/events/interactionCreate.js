@@ -60,6 +60,8 @@ const COMPONENT_ROUTES = {
   'hippo_':       'hippodrome',
   'slots_':       'slots',
   'bj_':          'blackjack',
+  'crypto_':       'crypto',
+  'tournoi_':      'tournoi',
 };
 
 // Prefixes du panneau de configuration (cfg: / cfg_ et adv: / adv_)

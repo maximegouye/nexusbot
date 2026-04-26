@@ -238,5 +238,31 @@ module.exports = {
         new EmbedBuilder().setColor('#F1C40F').setTitle('🏆 Tournois').setDescription(desc)
       ]});
     }
-  }
+  },
+
+  async handleComponent(interaction) {
+    const cid = interaction.customId;
+    if (!cid.startsWith('tournoi_join_')) return false;
+
+    const db2     = require('../../database/db');
+    const id      = parseInt(cid.replace('tournoi_join_', ''));
+    const guildId = interaction.guildId;
+    const userId  = interaction.user.id;
+
+    const tournoi = db2.db.prepare('SELECT * FROM tournois WHERE id=? AND guild_id=?').get(id, guildId);
+    if (!tournoi) return interaction.reply({ content: `❌ Tournoi #${id} introuvable.`, ephemeral: true });
+    if (tournoi.status !== 'inscription') return interaction.reply({ content: '❌ Les inscriptions sont fermées.', ephemeral: true });
+
+    const count = db2.db.prepare('SELECT COUNT(*) as c FROM tournoi_players WHERE tournoi_id=?').get(id);
+    if (count.c >= tournoi.max_players) return interaction.reply({ content: '❌ Le tournoi est complet.', ephemeral: true });
+
+    try {
+      db2.db.prepare('INSERT INTO tournoi_players (tournoi_id, guild_id, user_id) VALUES (?,?,?)').run(id, guildId, userId);
+    } catch {
+      return interaction.reply({ content: '❌ Tu es déjà inscrit à ce tournoi.', ephemeral: true });
+    }
+
+    return interaction.reply({ content: `✅ Inscrit au tournoi **${tournoi.name}** ! (${count.c + 1}/${tournoi.max_players})`, ephemeral: true });
+  },
+
 };
