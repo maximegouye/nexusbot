@@ -9,6 +9,22 @@ const { ChannelType } = require('discord.js');
 
 let _voice = null;
 let _playdl = null;
+let _sodiumReady = false;
+
+// Pré-initialiser libsodium-wrappers AVANT @discordjs/voice pour éviter la
+// race condition dans l'IIFE d'initialisation de l'encryption (WASM async)
+async function ensureEncryption() {
+  if (_sodiumReady) return;
+  try {
+    const sodium = require('libsodium-wrappers');
+    if (sodium && sodium.ready) await sodium.ready;
+    console.log('[CasinoMusic] ✅ libsodium-wrappers prêt');
+  } catch {
+    // tweetnacl n'a pas besoin d'init async — pas de problème
+    console.log('[CasinoMusic] ℹ️ Fallback tweetnacl (pas de libsodium-wrappers)');
+  }
+  _sodiumReady = true;
+}
 
 function voice() {
   if (!_voice) _voice = require('@discordjs/voice');
@@ -120,6 +136,9 @@ async function startMusic(guild, channelId) {
 
   const channel = guild.channels.cache.get(channelId);
   if (!channel) return { success: false, reason: 'Salon vocal introuvable.' };
+
+  // Attendre que libsodium-wrappers soit initialisé avant @discordjs/voice
+  await ensureEncryption();
 
   const v = voice();
   let connection;
