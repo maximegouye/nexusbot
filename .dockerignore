@@ -15,3 +15,7 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 data_seed/
+*.test.js
+*.spec.js
+**/*.test.js
+**/*.spec.js

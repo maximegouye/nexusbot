@@ -55,7 +55,7 @@ function loadCommands(dir, tag) {
       if (!entry.name.includes('.disabled')) {
         loadCommands(fullPath, tag);
       }
-    } else if (entry.name.endsWith('.js') && !entry.name.includes('.disabled')) {
+    } else if (entry.name.endsWith('.js') && !entry.name.includes('.disabled') && !entry.name.includes('.test.') && !entry.name.includes('.spec.')) {
       try {
         const cmd = require(fullPath);
         if (cmd.data && cmd.execute) {
