@@ -71,10 +71,66 @@ module.exports = {
 
     db.incrementStat(guild.id, 'new_members');
 
-    // ── Suivi des invitations ───────────────────────────
+    // ── Suivi des invitations + récompenses ────────────
     try {
       const { handleInviteJoin } = require('../utils/inviteCache');
-      await handleInviteJoin(member);
+      const inviteResult = await handleInviteJoin(member);
+
+      if (inviteResult?.inviterId) {
+        const inviterId  = inviteResult.inviterId;
+        const guildId    = guild.id;
+
+        // Compter le total d'invitations valides de cet inviteur
+        let inviteCount = 0;
+        try {
+          const row = db.db.prepare(
+            'SELECT COUNT(*) as cnt FROM invites WHERE guild_id=? AND inviter_id=?'
+          ).get(guildId, inviterId);
+          inviteCount = row?.cnt || 0;
+        } catch {}
+
+        // Récompense en coins : 50 coins par invitation
+        const coinsReward = 50;
+        try { db.addCoins(inviterId, guildId, coinsReward); } catch {}
+
+        // Rôles paliers selon le nombre d'invitations
+        // Les rôles sont configurables via /invite-roles (créés par les admins)
+        const PALIERS = [1, 5, 10, 25, 50, 100];
+        if (PALIERS.includes(inviteCount)) {
+          try {
+            const palierRole = db.db.prepare(
+              "SELECT role_id FROM invite_role_rewards WHERE guild_id=? AND invite_count=?"
+            ).get(guildId, inviteCount);
+            if (palierRole?.role_id) {
+              const inviter = await guild.members.fetch(inviterId).catch(() => null);
+              if (inviter) {
+                const role = guild.roles.cache.get(palierRole.role_id);
+                if (role) await inviter.roles.add(role).catch(() => {});
+              }
+            }
+          } catch {}
+        }
+
+        // Notifier l'inviteur en DM (silencieux si DM bloqués)
+        try {
+          const inviterUser = await guild.client.users.fetch(inviterId).catch(() => null);
+          if (inviterUser) {
+            inviterUser.send({
+              embeds: [new EmbedBuilder()
+                .setColor('#57F287')
+                .setTitle('🎉 Nouvelle invitation !')
+                .setDescription(
+                  `**${user.username}** vient de rejoindre **${guild.name}** grâce à ton invitation !\n\n` +
+                  `💰 Tu reçois **+${coinsReward} coins**\n` +
+                  `📊 Total : **${inviteCount}** invitation(s) validée(s)`
+                )
+                .setThumbnail(user.displayAvatarURL({ size: 64 }))
+                .setTimestamp()
+              ]
+            }).catch(() => {});
+          }
+        } catch {}
+      }
     } catch {}
 
     // ── Auto-rôle ─────────────────────────────────────

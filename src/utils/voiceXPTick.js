@@ -1,4 +1,5 @@
 const db = require('../database/db');
+const { checkActivityRoles } = require('./activityRoleCheck');
 
 module.exports = async (client) => {
   // Créditer 1 min de XP/coins aux membres actuellement en vocal
@@ -21,6 +22,11 @@ module.exports = async (client) => {
           db.addCoins(member.id, guild.id, coinsGain);
           db.db.prepare('UPDATE users SET voice_minutes = voice_minutes + 1 WHERE user_id = ? AND guild_id = ?')
             .run(member.id, guild.id);
+
+          // Vérifier les paliers d'activité toutes les 5 minutes (toutes les 5 ticks)
+          if (Math.random() < 0.2) {
+            checkActivityRoles(member.id, guild.id, guild).catch(() => {});
+          }
         }
       }
     } catch {}
