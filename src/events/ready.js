@@ -79,13 +79,12 @@ async function autoSetupRecrutement(client, guildId) {
 
     if (!panelChannel) return;
 
-    // ─ Configurer rec_config ───────────────────────────────
-    // Log channel = #gestion-tickets (canal de logs staff existant)
-    const LOG_CHANNEL_ID = '1494390992290054154';
+    // ─ Configurer rec_config (INSERT OR IGNORE = ne pas écraser une config existante) ──
+    const LOG_CHANNEL_ID = process.env.REC_LOG_CHANNEL || '1494390992290054154';
 
-    db.db.prepare('INSERT OR IGNORE INTO rec_config (guild_id) VALUES (?)').run(guildId);
-    db.db.prepare('UPDATE rec_config SET log_channel=?, status=?, roles=? WHERE guild_id=?')
-      .run(LOG_CHANNEL_ID, JSON.stringify({}), JSON.stringify({}), guildId);
+    db.db.prepare('INSERT OR IGNORE INTO rec_config (guild_id, log_channel, status, roles) VALUES (?,?,?,?)').run(
+      guildId, LOG_CHANNEL_ID, JSON.stringify({}), JSON.stringify({})
+    );
 
     // ─ Construire et poster le panneau (design premium) ──
     const iconURL   = guild.iconURL({ size: 256, dynamic: true });

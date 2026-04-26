@@ -20,7 +20,7 @@ const COMPONENT_ROUTES = {
   'slot_':        'slots',
   'roulette_':    'roulette',
   'rob_':         'rob',
-  'fish_':        'fish',
+  'fish_':        'pecher',
   'quest_':       'quest',
   'suggest_':     'suggestion',
   'voice_':       'tempvoice',
@@ -30,26 +30,26 @@ const COMPONENT_ROUTES = {
   // ── Routes sans collector (handleComponent requis) ────────
   'prestige_':    'prestige',
   'roue_':        'roue',
-  'pet_':         'pets',
+  'pet_':         'pet',
   'rr_':          'reactionroles',
   'rolemenu_':    'rolemenu',
   // ── Autres composants ────────────────────────────────────
-  'app_':         'applications',
-  'apply_':       'applications',
+  'app_':         'candidature',
+  'apply_':       'candidature',
   'rec_':         'recrutement',
   'pay_'          : 'payer',
   'heist_'        : 'braquage',
-  'sondage_'      : 'sondage_avance',
+  'sondage_'      : 'sondage',
   'pendu_'        : 'pendu',
   'morpion_'      : 'morpion',
   'poll_'         : 'poll',
-  'appmodal_':    'applications',
+  'appmodal_':    'candidature',
   // ── Nouveaux jeux de casino ──────────────────────────────
   'grattage_':    'grattage',
   'tour_':        'tour',
   // ── Commandes persistantes (pas de collector) ─────────────
   'crypto_':      'crypto',
-  'tournoi_':     'tournoi',
+  'tournoi_':     'tournoi-admin',
   // ── Préfixes alternatifs jeux (replay persistent) ────────
   'rl_':          'roulette',   // replay roulette
   'plinko_':      'plinko',
@@ -133,7 +133,7 @@ module.exports = {
       if (isCfgInteraction(cid)) {
         try {
           const { handleConfigInteraction } = require('../utils/configPanel');
-          const dbHelpers = require("../database/db");
+          const dbHelpers = require('../database/db');
           const handled = await handleConfigInteraction(interaction, dbHelpers, client);
           if (handled) return;
         } catch (e) {
@@ -149,7 +149,7 @@ module.exports = {
       if (isAdvInteraction(cid)) {
         try {
           const { handleAdvancedInteraction } = require('../utils/configPanelAdvanced');
-          const dbHelpers = require("../database/db");
+          const dbHelpers = require('../database/db');
           const handled = await handleAdvancedInteraction(interaction, dbHelpers, client);
           if (handled) return;
         } catch (e) {

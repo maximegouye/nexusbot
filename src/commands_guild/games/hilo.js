@@ -1,321 +1,535 @@
 // ============================================================
-// hilo.js — Hi-Lo : la prochaine carte est-elle PLUS HAUTE ou PLUS BASSE ?
-// /hilo mise:500  |  &hilo 500
-// Deck 52 cartes, multiplicateur progressif, encaissez avant de vous tromper !
+// hilo.js — Hi-Lo Card Game
+// Emplacement : src/commands_guild/games/hilo.js
 // ============================================================
-'use strict';
+
 const {
-  SlashCommandBuilder, EmbedBuilder, ActionRowBuilder,
-  ButtonBuilder, ButtonStyle,
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require('discord.js');
+
 const db = require('../../database/db');
+const { C, chipStr, balanceLine, casinoFooter, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
-// ─── Deck 52 cartes ─────────────────────────────────────────
-const SUITS  = ['s', 'h', 'd', 'c'];
-const RANKS  = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-const VALUES = { '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
-const SUIT_EMOJI = { s: '♠️', h: '♥️', d: '♦️', c: '♣️' };
-const SUIT_COLOR = { s: '⬛', h: '🟥', d: '🟥', c: '⬛' };
+// ─── Game sessions storage (Map with TTL) ───────────────────
+const gamesSessions = new Map();
 
-function createDeck() {
-  const deck = [];
-  for (const suit of SUITS)
-    for (const rank of RANKS)
-      deck.push({ suit, rank, value: VALUES[rank] });
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  return deck;
-}
-
-function cardStr(card) {
-  return `${SUIT_COLOR[card.suit]} **${card.rank}${SUIT_EMOJI[card.suit]}** (valeur : ${card.value})`;
-}
-
-// Multiplicateur basé sur la probabilité + house edge 88%
-function calcMult(value, dir) {
-  const higher = Math.max(1, 14 - value);
-  const lower  = Math.max(1, value - 2);
-  const fav    = dir === 'higher' ? higher : lower;
-  const prob   = fav / 13;
-  return parseFloat(Math.max(1.08, (1 / prob) * 0.88).toFixed(2));
-}
-
-// ─── Sessions ────────────────────────────────────────────────
-const sessions = new Map();
-
-// ─── Embeds ──────────────────────────────────────────────────
-function buildEmbed(session, phase, guessDir) {
-  const card   = session.currentCard;
-  const gains  = Math.floor(session.mise * session.currentMult);
-  const hMult  = calcMult(card.value, 'higher');
-  const lMult  = calcMult(card.value, 'lower');
-  const streak = session.streak || 0;
-  const played = 52 - session.deck.length - 1;
-
-  if (phase === 'playing') {
-    const color = streak >= 5 ? '#FF6B35' : streak >= 3 ? '#FFD700' : streak >= 1 ? '#F39C12' : '#5865F2';
-    const streakLine = streak > 0
-      ? `🔥 **Série active : ${streak} bonne${streak > 1 ? 's' : ''} réponse${streak > 1 ? 's' : ''} !**\n\n`
-      : '';
-    return new EmbedBuilder()
-      .setColor(color)
-      .setTitle(`🃏 Hi-Lo${streak >= 3 ? ' 🔥 En feu !' : ''}`)
-      .setDescription(
-        '> *Le deck est battu. La prochaine carte décidera de ton sort...*\n\n' +
-        `🎴 Carte actuelle : ${cardStr(card)}\n\n` +
-        streakLine +
-        `📈 **PLUS HAUTE** → ×**${hMult}** appliqué au gain\n` +
-        `📉 **PLUS BASSE**  → ×**${lMult}** appliqué au gain\n\n` +
-        `💰 Gain actuel : **${gains.toLocaleString()} 💰** *(×${session.currentMult.toFixed(2)})*\n` +
-        `📦 Cartes restantes dans le deck : **${session.deck.length}**`
-      )
-      .setFooter({ text: `NexusBot Casino • Hi-Lo  |  ${played} carte${played !== 1 ? 's' : ''} jouée${played !== 1 ? 's' : ''}` });
-  }
-
-  if (phase === 'correct') {
-    const bonus = streak >= 5 ? ' 🔥🔥 SÉRIE INFERNALE !' : streak >= 3 ? ' 🔥 Série en feu !' : '';
-    return new EmbedBuilder()
-      .setColor('#2ECC71')
-      .setTitle(`✅ ${guessDir === 'higher' ? '📈 Plus haute !' : '📉 Plus basse !'}${bonus}`)
-      .setDescription(
-        `🎴 Nouvelle carte : ${cardStr(card)}\n\n` +
-        `🔥 Série : **${streak}** bonne${streak !== 1 ? 's' : ''} réponse${streak !== 1 ? 's' : ''} de suite !\n` +
-        `💰 Gain actuel : **${gains.toLocaleString()} 💰** *(×${session.currentMult.toFixed(2)})*\n\n` +
-        `📈 Monter → ×${hMult}   |   📉 Descendre → ×${lMult}\n\n` +
-        '**Continue l\'ascension ou encaisse tes gains ?**'
-      )
-      .setFooter({ text: `NexusBot Casino • Hi-Lo  |  ${session.deck.length} cartes restantes` });
-  }
-
-  if (phase === 'tie') {
-    return new EmbedBuilder()
-      .setColor('#95A5A6')
-      .setTitle('🟰 Égalité parfaite — Aucune perte, aucun gain')
-      .setDescription(
-        `🎴 Nouvelle carte : ${cardStr(card)} — Même valeur !\n\n` +
-        `💰 Gain actuel : **${gains.toLocaleString()} 💰** *(×${session.currentMult.toFixed(2)})*\n\n` +
-        'La série continue — retente ta chance !'
-      )
-      .setFooter({ text: 'NexusBot Casino • Hi-Lo  |  Égalité = on continue !' });
-  }
-
-  if (phase === 'wrong') {
-    const msgs = [
-      'Le deck ne pardonne pas. Retente ta chance !',
-      'Si près du but... La prochaine sera la bonne.',
-      'La fortune est cruelle, mais elle tourne !',
-      "Ton instinct t'a trahi cette fois. Revanche ?",
-    ];
-    return new EmbedBuilder()
-      .setColor('#E74C3C')
-      .setTitle('💥 Mauvaise carte — Game Over !')
-      .setDescription(
-        `🎴 La carte révélée : ${cardStr(card)}\n\n` +
-        `💸 **Perdu : ${session.mise.toLocaleString()} 💰**\n` +
-        `🔥 Série finale : **${streak}** bonne${streak !== 1 ? 's' : ''} réponse${streak !== 1 ? 's' : ''} avant la chute\n\n` +
-        `*${msgs[Math.floor(Math.random() * msgs.length)]}*`
-      )
-      .setFooter({ text: 'NexusBot Casino • Hi-Lo' });
-  }
-
-  if (phase === 'cashout') {
-    const msgs = [
-      "La prudence, c'est aussi une forme de victoire.",
-      'Vous avez su stopper au bon moment — sage décision !',
-      'Les vrais pros savent encaisser à temps.',
-      "Banque faite ! C'est ça la vraie stratégie.",
-    ];
-    return new EmbedBuilder()
-      .setColor('#FFD700')
-      .setTitle('💰 Encaissement — Bien joué !')
-      .setDescription(
-        `**${played}** cartes jouées avec succès !\n\n` +
-        `💰 **+${gains.toLocaleString()} 💰** *(×${session.currentMult.toFixed(2)})*\n\n` +
-        `*${msgs[Math.floor(Math.random() * msgs.length)]}*`
-      )
-      .setFooter({ text: 'NexusBot Casino • Hi-Lo' });
-  }
-
-  if (phase === 'deck_empty') {
-    return new EmbedBuilder()
-      .setColor('#FFD700')
-      .setTitle('👑 DECK ÉPUISÉ — Victoire absolue !')
-      .setDescription(
-        'Incroyable ! Tu as traversé les **52 cartes** du deck sans faute !\n\n' +
-        `💰 **+${gains.toLocaleString()} 💰** *(×${session.currentMult.toFixed(2)})*\n\n` +
-        '*Tu es une véritable légende du Hi-Lo.*'
-      )
-      .setFooter({ text: 'NexusBot Casino • Hi-Lo' });
-  }
-
-  return new EmbedBuilder().setColor('#5865F2').setTitle('Hi-Lo');
-}
-
-function buildButtons(sessionId, session) {
-  const card      = session.currentCard;
-  const gains     = Math.floor(session.mise * session.currentMult);
-  const hMult     = calcMult(card.value, 'higher');
-  const lMult     = calcMult(card.value, 'lower');
-  const canCashout = session.currentMult > 1.0;
-
-  return [new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`hilo_higher_${sessionId}`)
-      .setLabel(`📈 Plus haute  ×${hMult}`)
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`hilo_cashout_${sessionId}`)
-      .setLabel(`💰 Encaisser ${gains.toLocaleString()} 💰`)
-      .setStyle(ButtonStyle.Success)
-      .setDisabled(!canCashout),
-    new ButtonBuilder()
-      .setCustomId(`hilo_lower_${sessionId}`)
-      .setLabel(`📉 Plus basse  ×${lMult}`)
-      .setStyle(ButtonStyle.Danger),
-  )];
-}
-
-// ─── Module ──────────────────────────────────────────────────
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('hilo')
-    .setDescription('🃏 Hi-Lo : la prochaine carte est-elle plus haute ou plus basse ?')
-    .addIntegerOption(o => o
-      .setName('mise')
-      .setDescription('Mise (50–20 000 coins)')
-      .setRequired(true)
-      .setMinValue(50)
-      .setMaxValue(20000)
-    ),
-  cooldown: 5,
-
-  async execute(interaction) {
-    return runGame(interaction, interaction.options.getInteger('mise'), false);
-  },
-
-  run(message, args) {
-    const mise = parseInt(args[0]);
-    if (!mise || mise < 50 || mise > 20000)
-      return message.reply('❌ Usage : `&hilo <mise>` (50–20 000 coins)');
-    return runGame(message, mise, true);
-  },
-
-  handleComponent,
+const CARD_VALUES = {
+  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7,
+  '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14,
 };
 
-// ─── Logique partagée ────────────────────────────────────────
-async function runGame(ctx, mise, isPrefix) {
-  const userId  = isPrefix ? ctx.author.id : ctx.user.id;
-  const guildId = ctx.guildId;
-  const key     = `${userId}_${guildId}`;
+const CARD_NAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const CARD_SUITS = ['♠', '♥', '♦', '♣'];
+const CARD_EMOJIS = {
+  '♠': '🂡', '♥': '🂱', '♦': '🃁', '♣': '🃑',
+};
 
-  if (sessions.has(key)) {
-    const msg = "❌ Tu as déjà une partie Hi-Lo en cours ! Termine-la avant d'en lancer une nouvelle.";
-    return isPrefix ? ctx.reply(msg) : ctx.reply({ content: msg, ephemeral: true });
-  }
-
-  const userData = db.getUser(userId, guildId);
-  if (!userData || userData.balance < mise) {
-    const msg = `❌ Solde insuffisant ! Tu as **${(userData?.balance || 0).toLocaleString()} 💰** pour une mise de **${mise.toLocaleString()} 💰**.`;
-    return isPrefix ? ctx.reply(msg) : ctx.reply({ content: msg, ephemeral: true });
-  }
-
-  db.updateBalance(userId, guildId, -mise);
-
-  const deck        = createDeck();
-  const currentCard = deck.shift();
-  const session     = { deck, currentCard, currentMult: 1.0, mise, userId, guildId, streak: 0 };
-  sessions.set(key, session);
-
-  // Auto-cashout 5 min
-  setTimeout(() => {
-    const s = sessions.get(key);
-    if (s) {
-      const g = Math.floor(s.mise * s.currentMult);
-      if (g > s.mise) db.updateBalance(s.userId, s.guildId, g);
-      sessions.delete(key);
-    }
-  }, 5 * 60 * 1000);
-
-  const embed   = buildEmbed(session, 'playing');
-  const buttons = buildButtons(key, session);
-  return isPrefix ? ctx.reply({ embeds: [embed], components: buttons }) : ctx.reply({ embeds: [embed], components: buttons });
+function getRandomCard() {
+  const name = CARD_NAMES[Math.floor(Math.random() * CARD_NAMES.length)];
+  const suit = CARD_SUITS[Math.floor(Math.random() * CARD_SUITS.length)];
+  return { name, suit, value: CARD_VALUES[name] };
 }
 
-// ─── Gestion des boutons ─────────────────────────────────────
+function formatCard(card) {
+  return `**${card.name}${card.suit}**`;
+}
+
+function getGameId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function cleanupSession(userId, gameId) {
+  const key = `${userId}:${gameId}`;
+  gamesSessions.delete(key);
+}
+
+function saveSession(userId, gameId, data) {
+  const key = `${userId}:${gameId}`;
+  const timeout = setTimeout(() => {
+    gamesSessions.delete(key);
+  }, 5 * 60 * 1000); // 5 minutes TTL
+  gamesSessions.set(key, { ...data, timeout });
+}
+
+function getSession(userId, gameId) {
+  const key = `${userId}:${gameId}`;
+  return gamesSessions.get(key);
+}
+
+function buildGameEmbed(session, status = 'playing') {
+  const user = db.getUser(session.userId, session.guildId);
+  if (!user) return null;
+
+  const coin = (db.getConfig ? db.getConfig(session.guildId) : null)?.currency_emoji || '🪙';
+  const embed = new EmbedBuilder()
+    .setTitle('🃏 Hi-Lo — Prédis si la prochaine carte sera plus haute ou plus basse !')
+    .setColor(status === 'win' ? C.WIN : status === 'loss' ? C.LOSS : status === 'push' ? C.PUSH : C.NEUTRAL);
+
+  // Display current card
+  if (session.currentCard) {
+    embed.addFields({
+      name: '📍 Carte actuelle',
+      value: formatCard(session.currentCard),
+      inline: false,
+    });
+  }
+
+  // Display chain info
+  const chainText = session.rounds > 0
+    ? `**${session.rounds}** ${session.rounds === 1 ? 'manche' : 'manches'} gagnées\nMultiplicateur : **×${(1.9 ** session.rounds).toFixed(2)}**`
+    : 'Aucune manche gagnée encore';
+
+  embed.addFields({
+    name: '⛓️ Chaîne',
+    value: chainText,
+    inline: true,
+  });
+
+  embed.addFields({
+    name: '💰 Mise initiale',
+    value: chipStr(session.initialMise, coin),
+    inline: true,
+  });
+
+  const currentWinnings = Math.floor(session.initialMise * (1.9 ** session.rounds));
+  embed.addFields({
+    name: '🎯 Gains actuels',
+    value: chipStr(currentWinnings, coin),
+    inline: true,
+  });
+
+  embed.addFields({
+    name: '💳 Votre solde',
+    value: chipStr(user.balance, coin),
+    inline: true,
+  });
+
+  if (status === 'result') {
+    const diff = session.resultMessage ? '' : '';
+    embed.addFields({
+      name: '⏸️ Résultat',
+      value: session.resultMessage || 'En attente...',
+      inline: false,
+    });
+  }
+
+  embed.setFooter({ text: casinoFooter('Hi-Lo') });
+  return embed;
+}
+
+// ───────────────────────────────────────────────────────────
+// SlashCommand Definition
+// ───────────────────────────────────────────────────────────
+
+const data = new SlashCommandBuilder()
+  .setName('hilo')
+  .setDescription('🃏 Hi-Lo — Prédit si la prochaine carte sera plus haute ou plus basse !')
+  .addIntegerOption(o =>
+    o
+      .setName('mise')
+      .setDescription('Montant à miser')
+      .setRequired(true)
+      .setMinValue(1)
+  );
+
+async function execute(interaction) {
+  try {
+    const userId = interaction.user.id;
+    const guildId = interaction.guildId;
+    const mise = interaction.options.getInteger('mise');
+    const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+
+    const user = db.getUser(userId, guildId);
+    if (!user) {
+      return interaction.reply({
+        content: '❌ Profil non trouvé. Utilise `/daily` d\'abord.',
+        ephemeral: true,
+      });
+    }
+
+    if (mise < 1 || mise > 1000000) {
+      return interaction.reply({
+        content: `❌ Mise invalide. Entre 1 et 1 000 000 ${coin}.`,
+        ephemeral: true,
+      });
+    }
+
+    if (user.balance < mise) {
+      return interaction.reply({
+        content: `❌ Solde insuffisant.\nTu as **${user.balance} ${coin}** mais tu essaies de miser **${mise} ${coin}**.`,
+        ephemeral: true,
+      });
+    }
+
+    await interaction.deferReply();
+
+    // Deduct the bet from balance
+    db.addCoins(userId, guildId, -mise);
+
+    // Initialize game session
+    const gameId = getGameId();
+    const firstCard = getRandomCard();
+
+    const session = {
+      userId,
+      guildId,
+      gameId,
+      initialMise: mise,
+      currentCard: firstCard,
+      rounds: 0,
+      resultMessage: '',
+      messageId: null,
+    };
+
+    saveSession(userId, gameId, session);
+
+    // Build initial embed
+    const embed = buildGameEmbed(session, 'playing');
+    embed.setDescription(`La première carte est ${formatCard(firstCard)}.\n\nQuelle sera la prochaine ?`);
+
+    // Button row
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`hilo_higher_${userId}_${gameId}`)
+        .setLabel('📈 Plus haute')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`hilo_lower_${userId}_${gameId}`)
+        .setLabel('📉 Plus basse')
+        .setStyle(ButtonStyle.Danger),
+    );
+
+    const msg = await interaction.editReply({ embeds: [embed], components: [row] });
+    session.messageId = msg.id;
+    saveSession(userId, gameId, session);
+  } catch (err) {
+    console.error('[hilo execute]', err);
+    await interaction.reply({
+      content: '❌ Une erreur est survenue. Réessaie plus tard.',
+      ephemeral: true,
+    }).catch(() => {});
+  }
+}
+
 async function handleComponent(interaction, customId) {
   if (!customId.startsWith('hilo_')) return false;
 
-  const parts  = customId.split('_');
-  const action = parts[1]; // higher | lower | cashout
+  try {
+    const parts = customId.split('_');
+    const action = parts[1]; // 'higher', 'lower', 'collect', 'changemise', 'modal'
+    const userId = parts[2];
+    const gameId = parts[3] || null;
 
-  const userId  = interaction.user.id;
-  const guildId = interaction.guildId;
-  const key     = `${userId}_${guildId}`;
-  const session = sessions.get(key);
+    // Verify permission
+    if (interaction.user.id !== userId) {
+      return interaction.reply({
+        content: '❌ Ce n\'est pas ton jeu.',
+        ephemeral: true,
+      });
+    }
 
-  if (!session) {
-    await interaction.reply({ content: '❌ Session expirée (5 min). Lance une nouvelle partie avec `/hilo` !', ephemeral: true });
+    const coin = (db.getConfig ? db.getConfig(interaction.guildId) : null)?.currency_emoji || '🪙';
+
+    // ───── Modal for changing bet ─────
+    if (action === 'modal') {
+      try {
+        const newMiseRaw = interaction.fields.getTextInputValue('newmise');
+        const user = db.getUser(userId, interaction.guildId);
+        if (!user) {
+          return interaction.reply({
+            content: '❌ Profil non trouvé.',
+            ephemeral: true,
+          });
+        }
+
+        const newMise = parseMise(newMiseRaw, user.balance);
+        if (!newMise || newMise < 1) {
+          return interaction.reply({
+            content: `❌ Mise invalide. Entre 1 et ${user.balance} ${coin}.`,
+            ephemeral: true,
+          });
+        }
+
+        if (user.balance < newMise) {
+          return interaction.reply({
+            content: `❌ Solde insuffisant. Tu as **${user.balance} ${coin}** mais tu essaies de miser **${newMise} ${coin}**.`,
+            ephemeral: true,
+          });
+        }
+
+        await interaction.deferReply();
+
+        // Refund previous session if exists and collect/reset
+        const gameId = customId.includes('_modal_') ? null : parts[3];
+        const session = gameId ? getSession(userId, gameId) : null;
+
+        if (session) {
+          // Refund the initial bet
+          db.addCoins(userId, interaction.guildId, session.initialMise);
+          cleanupSession(userId, gameId);
+        }
+
+        // Start new game with new bet
+        db.addCoins(userId, interaction.guildId, -newMise);
+        const newGameId = getGameId();
+        const firstCard = getRandomCard();
+
+        const newSession = {
+          userId,
+          guildId: interaction.guildId,
+          gameId: newGameId,
+          initialMise: newMise,
+          currentCard: firstCard,
+          rounds: 0,
+          resultMessage: '',
+          messageId: null,
+        };
+
+        saveSession(userId, newGameId, newSession);
+
+        const embed = buildGameEmbed(newSession, 'playing');
+        embed.setDescription(`La première carte est ${formatCard(firstCard)}.\n\nQuelle sera la prochaine ?`);
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`hilo_higher_${userId}_${newGameId}`)
+            .setLabel('📈 Plus haute')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`hilo_lower_${userId}_${newGameId}`)
+            .setLabel('📉 Plus basse')
+            .setStyle(ButtonStyle.Danger),
+        );
+
+        const msg = await interaction.editReply({ embeds: [embed], components: [row] });
+        newSession.messageId = msg.id;
+        saveSession(userId, newGameId, newSession);
+      } catch (err) {
+        console.error('[hilo modal]', err);
+        await interaction.reply({
+          content: '❌ Erreur lors du traitement de la mise.',
+          ephemeral: true,
+        }).catch(() => {});
+      }
+      return true;
+    }
+
+    // Get session for other actions
+    const session = getSession(userId, gameId);
+    if (!session) {
+      return interaction.reply({
+        content: '❌ Partie expirée. Recommence avec `/hilo`.',
+        ephemeral: true,
+      });
+    }
+
+    await interaction.deferUpdate();
+
+    // ───── Change bet ─────
+    if (action === 'changemise') {
+      const modal = new ModalBuilder()
+        .setCustomId(`hilo_modal_${userId}`)
+        .setTitle('💰 Nouvelle mise')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('newmise')
+              .setLabel('Montant à miser (min 1)')
+              .setPlaceholder('Ex : 500 ou "all"')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMinLength(1)
+              .setMaxLength(12)
+          )
+        );
+
+      await interaction.showModal(modal);
+      return true;
+    }
+
+    // ───── Collect winnings ─────
+    if (action === 'collect') {
+      const winnings = Math.floor(session.initialMise * (1.9 ** session.rounds));
+      db.addCoins(userId, session.guildId, winnings);
+
+      const user = db.getUser(userId, session.guildId);
+      const newBalance = user?.balance || 0;
+
+      const embed = new EmbedBuilder()
+        .setColor(C.WIN)
+        .setTitle('💰 Gains encaissés !')
+        .setDescription(`Tu as remporté **${winnings} ${coin}** !`)
+        .addFields(
+          { name: '⛓️ Manches gagnées', value: session.rounds.toString(), inline: true },
+          { name: '📊 Multiplicateur', value: `×${(1.9 ** session.rounds).toFixed(2)}`, inline: true },
+          { name: '💳 Nouveau solde', value: balanceLine(newBalance, winnings, coin), inline: false },
+        )
+        .setFooter({ text: casinoFooter('Hi-Lo') });
+
+      await interaction.message.edit({
+        embeds: [embed],
+        components: [
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`hilo_replay_${userId}`)
+              .setLabel('🔄 Rejouer')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId(`hilo_changemise_${userId}`)
+              .setLabel('💰 Autre mise')
+              .setStyle(ButtonStyle.Secondary),
+          ),
+        ],
+      });
+
+      db.addGameStat(userId, session.guildId, 'hilo', {
+        won: true,
+        bet: session.initialMise,
+        payout: winnings,
+      });
+
+      cleanupSession(userId, gameId);
+      return true;
+    }
+
+    // ───── Predict Higher or Lower ─────
+    if (action === 'higher' || action === 'lower') {
+      // Check max 5 rounds
+      if (session.rounds >= 5) {
+        const embed = new EmbedBuilder()
+          .setColor(C.LOSS)
+          .setTitle('⚠️ Limite atteinte')
+          .setDescription('Maximum 5 manches. Encaisse tes gains !');
+
+        await interaction.message.edit({ embeds: [embed] });
+        return true;
+      }
+
+      const nextCard = getRandomCard();
+      const currentValue = session.currentCard.value;
+      const nextValue = nextCard.value;
+      const prediction = action === 'higher' ? 'higher' : 'lower';
+
+      let isCorrect = false;
+      if (prediction === 'higher' && nextValue > currentValue) {
+        isCorrect = true;
+      } else if (prediction === 'lower' && nextValue < currentValue) {
+        isCorrect = true;
+      } else if (nextValue === currentValue) {
+        // Exact match: player wins 2x (bonus)
+        isCorrect = true;
+      }
+
+      if (isCorrect) {
+        // Win: continue to next round
+        session.rounds += 1;
+        session.currentCard = nextCard;
+        session.resultMessage = `✅ Exact ! ${formatCard(nextCard)} ${nextValue > currentValue ? '(' : ''}${nextValue > currentValue ? 'Plus haute' : nextValue < currentValue ? 'Plus basse' : 'Identique'}${nextValue > currentValue ? ')' : nextValue < currentValue ? ')' : '!'}`;
+
+        const currentWinnings = Math.floor(session.initialMise * (1.9 ** session.rounds));
+        const embed = buildGameEmbed(session, 'playing');
+        embed.setDescription(
+          `${session.resultMessage}\n\nLa carte est maintenant ${formatCard(nextCard)}.\nGains actuels : **${currentWinnings} ${coin}**\n\nContinuer ou encaisser ?`
+        );
+
+        const buttons = [
+          new ButtonBuilder()
+            .setCustomId(`hilo_higher_${userId}_${gameId}`)
+            .setLabel('📈 Plus haute')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`hilo_lower_${userId}_${gameId}`)
+            .setLabel('📉 Plus basse')
+            .setStyle(ButtonStyle.Danger),
+        ];
+
+        // Can collect after first win
+        if (session.rounds > 0) {
+          buttons.push(
+            new ButtonBuilder()
+              .setCustomId(`hilo_collect_${userId}_${gameId}`)
+              .setLabel('💰 Encaisser')
+              .setStyle(ButtonStyle.Primary)
+          );
+        }
+
+        const row = new ActionRowBuilder().addComponents(buttons);
+
+        await interaction.message.edit({
+          embeds: [embed],
+          components: [row],
+        });
+
+        saveSession(userId, gameId, session);
+      } else {
+        // Loss: end game
+        const lostAmount = session.initialMise;
+        const user = db.getUser(userId, session.guildId);
+        const newBalance = user?.balance || 0;
+
+        const embed = new EmbedBuilder()
+          .setColor(C.LOSS)
+          .setTitle('❌ Perdu !')
+          .setDescription(
+            `${formatCard(nextCard)} n'était pas ${action === 'higher' ? 'plus haute' : 'plus basse'}.\nLa carte actuelle était ${formatCard(session.currentCard)}.`
+          )
+          .addFields(
+            { name: '⛓️ Manches gagnées', value: session.rounds.toString(), inline: true },
+            { name: '💸 Perdu', value: chipStr(lostAmount, coin), inline: true },
+            { name: '💳 Nouveau solde', value: balanceLine(newBalance, -lostAmount, coin), inline: false },
+          )
+          .setFooter({ text: casinoFooter('Hi-Lo') });
+
+        await interaction.message.edit({
+          embeds: [embed],
+          components: [
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`hilo_replay_${userId}`)
+                .setLabel('🔄 Rejouer')
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId(`hilo_changemise_${userId}`)
+                .setLabel('💰 Autre mise')
+                .setStyle(ButtonStyle.Secondary),
+            ),
+          ],
+        });
+
+        db.addGameStat(userId, session.guildId, 'hilo', {
+          won: false,
+          bet: session.initialMise,
+          payout: 0,
+        });
+
+        cleanupSession(userId, gameId);
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[hilo handleComponent]', err);
+    await interaction.reply({
+      content: '❌ Une erreur est survenue.',
+      ephemeral: true,
+    }).catch(() => {});
     return true;
   }
-  if (session.userId !== userId) {
-    await interaction.reply({ content: "❌ Ce n'est pas ta partie de Hi-Lo !", ephemeral: true });
-    return true;
-  }
-
-  await interaction.deferUpdate();
-
-  // ── Cashout ──────────────────────────────────────────────────
-  if (action === 'cashout') {
-    const gains = Math.floor(session.mise * session.currentMult);
-    db.updateBalance(session.userId, session.guildId, gains);
-    db.addXP(session.userId, session.guildId, Math.max(5, Math.floor(gains / 80)));
-    sessions.delete(key);
-    await interaction.editReply({ embeds: [buildEmbed(session, 'cashout')], components: [] });
-    return true;
-  }
-
-  // ── Deck épuisé ──────────────────────────────────────────────
-  if (session.deck.length === 0) {
-    const gains = Math.floor(session.mise * session.currentMult);
-    db.updateBalance(session.userId, session.guildId, gains);
-    db.addXP(session.userId, session.guildId, Math.max(50, Math.floor(gains / 30)));
-    sessions.delete(key);
-    await interaction.editReply({ embeds: [buildEmbed(session, 'deck_empty')], components: [] });
-    return true;
-  }
-
-  // ── Tirer la prochaine carte ──────────────────────────────────
-  const prevCard = session.currentCard;
-  const nextCard = session.deck.shift();
-  session.currentCard = nextCard;
-
-  const isTie    = nextCard.value === prevCard.value;
-  const isHigher = nextCard.value > prevCard.value;
-  const isLower  = nextCard.value < prevCard.value;
-
-  if (isTie) {
-    sessions.set(key, session);
-    await interaction.editReply({ embeds: [buildEmbed(session, 'tie')], components: buildButtons(key, session) });
-    return true;
-  }
-
-  const correct =
-    (action === 'higher' && isHigher) ||
-    (action === 'lower'  && isLower);
-
-  if (correct) {
-    session.streak = (session.streak || 0) + 1;
-    const mult = calcMult(prevCard.value, action);
-    session.currentMult = parseFloat((session.currentMult * mult).toFixed(4));
-    sessions.set(key, session);
-    await interaction.editReply({ embeds: [buildEmbed(session, 'correct', action)], components: buildButtons(key, session) });
-  } else {
-    sessions.delete(key);
-    await interaction.editReply({ embeds: [buildEmbed(session, 'wrong')], components: [] });
-  }
-
-  return true;
 }
+
+module.exports = {
+  data,
+  async execute(interaction) {
+    return execute(interaction);
+  },
+  async handleComponent(interaction, customId) {
+    return handleComponent(interaction, customId);
+  },
+};

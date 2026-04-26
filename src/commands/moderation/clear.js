@@ -5,11 +5,12 @@ module.exports = {
     .setName('clear')
     .setDescription('🗑️ Supprimer des messages en masse')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .addIntegerOption(o => o.setName('nombre').setDescription('Nombre de messages à supprimer (1–100)').setRequired(true).setMinValue(1).setMaxValue(100))
     .addUserOption(o => o.setName('membre').setDescription('Filtrer par membre (optionnel)').setRequired(false)),
   cooldown: 5,
 
   async execute(interaction) {
-    const nb     = parseInt(interaction.options.getString('nombre'));
+    const nb     = interaction.options.getInteger('nombre');
     const filter = interaction.options.getUser('membre');
 
     await interaction.deferReply({ ephemeral: true });

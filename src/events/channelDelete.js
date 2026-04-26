@@ -1,7 +1,7 @@
 'use strict';
 
 // Auto-ferme les tickets orphelins quand un salon est supprimé manuellement
-const db = require('../utils/db');
+const db = require('../database/db');
 
 module.exports = {
   name: 'channelDelete',

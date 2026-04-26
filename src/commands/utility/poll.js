@@ -9,12 +9,13 @@ module.exports = {
     .addStringOption(o => o.setName('choix1').setDescription('Choix 1').setRequired(true).setMaxLength(100))
     .addStringOption(o => o.setName('choix2').setDescription('Choix 2').setRequired(true).setMaxLength(100))
     .addStringOption(o => o.setName('choix3').setDescription('Choix 3 (optionnel)').setRequired(false).setMaxLength(100))
-    .addStringOption(o => o.setName('choix4').setDescription('Choix 4 (optionnel)').setRequired(false).setMaxLength(100)),
+    .addStringOption(o => o.setName('choix4').setDescription('Choix 4 (optionnel)').setRequired(false).setMaxLength(100))
+    .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée en heures (défaut : 24)').setRequired(false).setMinValue(1).setMaxValue(720)),
   cooldown: 30,
 
   async execute(interaction) {
     const question = interaction.options.getString('question');
-    const duration = (parseInt(interaction.options.getString('duree_heures')) || 24) * 3600;
+    const duration = (interaction.options.getInteger('duree_heures') || 24) * 3600;
     const cfg      = db.getConfig(interaction.guildId);
 
     const choices = [
