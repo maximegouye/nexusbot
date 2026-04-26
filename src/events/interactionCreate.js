@@ -133,8 +133,8 @@ module.exports = {
       if (isCfgInteraction(cid)) {
         try {
           const { handleConfigInteraction } = require('../utils/configPanel');
-          const { db } = require('../database/db');
-          const handled = await handleConfigInteraction(interaction, db, client);
+          const dbHelpers = require("../database/db");
+          const handled = await handleConfigInteraction(interaction, dbHelpers, client);
           if (handled) return;
         } catch (e) {
           console.error('[CFG] handleConfigInteraction crash:', e?.message || e);
@@ -149,8 +149,8 @@ module.exports = {
       if (isAdvInteraction(cid)) {
         try {
           const { handleAdvancedInteraction } = require('../utils/configPanelAdvanced');
-          const { db } = require('../database/db');
-          const handled = await handleAdvancedInteraction(interaction, db, client);
+          const dbHelpers = require("../database/db");
+          const handled = await handleAdvancedInteraction(interaction, dbHelpers, client);
           if (handled) return;
         } catch (e) {
           console.error('[ADV] handleAdvancedInteraction crash:', e?.message || e);
