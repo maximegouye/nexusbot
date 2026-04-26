@@ -322,7 +322,56 @@ async function autoInit(client, guildId) {
   }
 }
 
+// ─── Boucle de retry permanente (appelée une fois au démarrage) ─────────────
+let _bgRetryActive = false;
+
+async function startBackgroundRetry(client, guildId) {
+  if (_bgRetryActive) return;
+  _bgRetryActive = true;
+
+  while (true) {
+    await new Promise(r => setTimeout(r, 30_000)); // attendre 30s entre chaque cycle
+
+    if (guildStates.has(guildId)) continue; // déjà actif, rien à faire
+
+    try {
+      const guild = client.guilds.cache.get(guildId);
+      if (!guild) continue;
+
+      const channel = findCasinoVoiceChannel(guild);
+      if (!channel) continue;
+
+      console.log('[CasinoMusic] 🔄 Background retry — tentative connexion automatique...');
+      const result = await startMusic(guild, channel.id);
+      if (result.success) {
+        console.log('[CasinoMusic] ✅ Background retry réussi !');
+      }
+    } catch (e) {
+      console.log('[CasinoMusic] ⚠️ Background retry échoué:', e?.message);
+    }
+  }
+}
+
+// ─── Redémarrer la musique après shard resume ─────────────
+async function onShardResume(client, guildId) {
+  if (guildStates.has(guildId)) return; // déjà actif
+
+  console.log('[CasinoMusic] 📡 Shard repris — tentative reconnexion voice dans 8s...');
+  await new Promise(r => setTimeout(r, 8_000)); // laisser le shard se stabiliser
+
+  try {
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) return;
+    const channel = findCasinoVoiceChannel(guild);
+    if (!channel) return;
+    await startMusic(guild, channel.id);
+  } catch (e) {
+    console.log('[CasinoMusic] onShardResume retry échoué:', e?.message);
+  }
+}
+
 module.exports = {
   startMusic, stopMusic, setVolume, skipTrack,
   getState, autoInit, findCasinoVoiceChannel, CASINO_PLAYLIST,
+  startBackgroundRetry, onShardResume,
 };
