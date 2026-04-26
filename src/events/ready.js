@@ -82,26 +82,33 @@ async function autoSetupRecrutement(client, guildId) {
     db.db.prepare('UPDATE rec_config SET log_channel=?, status=?, roles=? WHERE guild_id=?')
       .run(LOG_CHANNEL_ID, JSON.stringify({}), JSON.stringify({}), guildId);
 
-    // ─ Construire et poster le panneau ────────────────────
+    // ─ Construire et poster le panneau (design premium) ──
+    const iconURL   = guild.iconURL({ size: 256, dynamic: true });
+    const bannerURL = guild.bannerURL({ size: 1024, forceStatic: false });
+
     const panelEmbed = new EmbedBuilder()
-      .setColor('#7B2FBE')
-      .setTitle('📋  Recrutement Staff — ' + guild.name)
+      .setColor('#5865F2')
+      .setAuthor({ name: `${guild.name} — Recrutement Staff`, iconURL: iconURL ?? undefined })
+      .setTitle('✨  Rejoins l\'équipe qui fait vivre le serveur !')
       .setDescription(
-        '> Rejoignez l\'équipe qui fait vivre le serveur !\n\n' +
-        '**Comment postuler ?**\nCliquez sur le bouton correspondant au poste qui vous intéresse, ' +
-        'remplissez le formulaire et soumettez votre candidature. Notre équipe l\'examinera dans les plus brefs délais.\n\n' +
-        '**⚠️ Conditions**\nRenseignez soigneusement chaque champ. Les candidatures incomplètes ou peu sérieuses ' +
-        'seront automatiquement refusées. Un seul poste à la fois.'
+        `> *Nous cherchons des personnes motivées et investies pour renforcer notre équipe.*\n\n` +
+        `**📌 Comment postuler ?**\n` +
+        `Clique sur le bouton du poste qui t'intéresse, remplis le formulaire et soumets ta candidature.\n` +
+        `Notre équipe te répondra sous **48–72h**.\n\n` +
+        `**📋 Postes disponibles — \`${Object.keys(POSTES).length}/${Object.keys(POSTES).length} ouverts\`**\n` +
+        Object.entries(POSTES).map(([, p]) => `${p.emoji} **${p.label}** — 🟢 Ouvert`).join('\n') + '\n\n' +
+        `**⚠️ Règles importantes**\n` +
+        `— Remplis chaque champ avec soin et honnêteté\n` +
+        `— Une seule candidature active à la fois\n` +
+        `— Toute candidature bâclée sera refusée automatiquement`
       )
-      .setThumbnail(guild.iconURL({ size: 256 }))
-      .setFooter({ text: `${guild.name}  ·  Candidatures traitées sous 48–72h` })
+      .setThumbnail(iconURL ?? null)
+      .setFooter({ text: `${guild.name}  •  Répond sous 48–72h  •  Bonne chance ! 🍀`, iconURL: iconURL ?? undefined })
       .setTimestamp();
 
-    for (const [, p] of Object.entries(POSTES)) {
-      panelEmbed.addFields({ name: `${p.emoji}  ${p.label}  🟢 Ouvert`, value: p.desc, inline: true });
-    }
+    if (bannerURL) panelEmbed.setImage(bannerURL);
 
-    // Boutons (4 max par rangée)
+    // Boutons bleus Primary (4 max par rangée)
     const entries = Object.entries(POSTES);
     const rows = [];
     for (let i = 0; i < entries.length; i += 4) {
@@ -112,7 +119,7 @@ async function autoSetupRecrutement(client, guildId) {
             .setCustomId(`rec_apply_${key}`)
             .setLabel(p.label)
             .setEmoji(p.emoji)
-            .setStyle(ButtonStyle.Secondary)
+            .setStyle(ButtonStyle.Primary)
         );
       }
       rows.push(row);

@@ -253,11 +253,18 @@ module.exports = {
           .setTimestamp()
           .setFooter({ text: 'Boost boost boost!' });
 
-        const messageContent = config.bump_role ? `<@&${config.bump_role}>` : '@everyone';
+        const messageContent = config.bump_role
+          ? `<@&${config.bump_role}> 🔔 **C'est l'heure du bump !**`
+          : '🔔 **C\'est l\'heure du bump !**';
 
         await channel.send({
           content: messageContent,
           embeds: [embed],
+          allowedMentions: {
+            roles: config.bump_role ? [config.bump_role] : [],
+            users: [],
+            parse: [],
+          },
         });
 
         // Update last bump time
