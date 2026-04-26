@@ -188,6 +188,40 @@ async function playRoueFortune(source, userId, guildId) {
 
   const newBalance = db.getUser(userId, guildId)?.balance || 0;
 
+  // ── 🎬 Animations pré-résultat selon secteur ────────────────
+  if (sector.type === 'jackpot') {
+    const jpFrames = [
+      { color: '#FFD700', title: '🌟 🌟 JACKPOT 🌟 🌟',     desc: '```\n' + '═'.repeat(42) + '\n' + '         🌟  J A C K P O T  🌟          \n' + '═'.repeat(42) + '\n```' },
+      { color: '#FFA500', title: '🎆 💥 10 000 coins ! 💥 🎆', desc: '*Le sol tremble ! Les pièces pleuvent !*' },
+      { color: '#FFD700', title: '🎊 FÉLICITATIONS ! 🎊',    desc: '🎊 🥳 🎆 🎇 💰 🪙 💰 🎇 🎆 🥳 🎊' },
+      { color: '#FFC107', title: '✨ Légende du Casino ✨',    desc: '```\n Vous entrez dans la légende du Casino ! \n```' },
+    ];
+    for (const { color, title, desc } of jpFrames) {
+      await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle(title).setDescription(desc)] }).catch(() => {});
+      await sleep(450);
+    }
+  } else if (sector.type === 'mystery') {
+    const mystFrames = [
+      { color: '#6C3483', title: '🎁 SECTEUR MYSTÈRE...',        desc: '*La boîte s\'ouvre lentement...*\n\n```\n▓░░░░░░░░░ 10%\n```' },
+      { color: '#7D3C98', title: '🎁 Que cache-t-il ?',          desc: '*Suspense total !*\n\n```\n▓▓▓▓░░░░░░ 40%\n```' },
+      { color: '#8E44AD', title: '🎁 Quelque chose de GRAND ?',  desc: '*Tout est possible !*\n\n```\n▓▓▓▓▓▓▓░░░ 70%\n```' },
+      { color: '#9B59B6', title: '🎁 Voici ce que tu gagnes !',  desc: '*Le rideau se lève...*\n\n```\n▓▓▓▓▓▓▓▓▓▓ 100%\n```' },
+    ];
+    for (const { color, title, desc } of mystFrames) {
+      await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle(title).setDescription(desc)] }).catch(() => {});
+      await sleep(500);
+    }
+  } else if (sector.type === 'double') {
+    const dblFrames = [
+      { color: '#F39C12', title: '⚡ MULTIPLICATEUR ACTIVÉ !', desc: '```\n× 1.0 → × 1.25 → × 1.5 → × 1.75 → × 2.0 !!!\n```' },
+      { color: '#E67E22', title: '⚡⚡ × 2 ⚡⚡',              desc: '*Ton solde est en train de doubler !*' },
+    ];
+    for (const { color, title, desc } of dblFrames) {
+      await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle(title).setDescription(desc)] }).catch(() => {});
+      await sleep(400);
+    }
+  }
+
   // ── Résultat ─────────────────────────────────────────────────
   let resTitle, resDesc, resColor;
 

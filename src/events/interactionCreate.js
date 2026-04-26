@@ -61,6 +61,7 @@ const COMPONENT_ROUTES = {
   'hippo_':       'hippodrome',
   'slots_':       'slots',
   'bj_':          'blackjack',
+  'cs_':          'casino-stats',
 };
 
 // ── Préfixes du panneau /config ───────────────────────────

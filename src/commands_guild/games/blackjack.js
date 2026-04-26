@@ -438,6 +438,21 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
       }
     }
 
+    // 🎬 Animation célébration Blackjack naturel !
+    const bjPayout = Math.floor(mise * 2.5);
+    const celebFrames = [
+      { color: '#FFD700', title: '🌟 BLACKJACK ! 🌟',           desc: '```\n' + '★'.repeat(34) + '\n' + '    🃏  BLACKJACK NATUREL ! 🃏    \n' + '           Payé 3:2 !           \n' + '★'.repeat(34) + '\n```' },
+      { color: '#F1C40F', title: '✨ 21 ! ✨',                   desc: `*La table frémit ! Vous avez **21** !*` },
+      { color: '#FFD700', title: `🎊 +${bjPayout} ${coin} 🎊`, desc: `**+${bjPayout} ${coin}** empochés !\n\n*Payé à 3:2 — la règle d'or du Blackjack !*` },
+    ];
+    for (const { color, title, desc: fDesc } of celebFrames) {
+      await msg.edit({ embeds: [new EmbedBuilder()
+        .setColor(color).setTitle(title).setDescription(fDesc)
+        .addFields({ name: '🎩 Croupier', value: handStr(dealer, false), inline: true }, { name: '🎮 Vous (21)', value: handStr(player), inline: true })
+      ], components: [] }).catch(() => {});
+      await sleep(500);
+    }
+
     const embed = buildEmbed(state, 'blackjack');
     const sNow  = getStreak(userId, guildId).streak;
     const sl    = streakLabel(sNow);
@@ -447,6 +462,7 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
     } else if (side21) {
       embed.addFields({ name: '🃏 21+3 : ❌ Pas de combo', value: `−${sideBet} ${coin}`, inline: false });
     }
+    embed.addFields({ name: '💵 Gain', value: `+**${bjPayout} ${coin}** (3:2)`, inline: true });
     embed.setFooter({ text: `Solde: ${db.getUser(userId, guildId)?.balance || 0} ${coin}` });
     deleteSession(userId);
     await msg.edit({ embeds: [embed], components: playAgainButtons(userId, state.mise) });

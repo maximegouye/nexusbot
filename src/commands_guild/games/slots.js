@@ -394,7 +394,39 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
     ).join('\n');
     if (totalGain > 0) await animateCoinRain(msg, color, title);
   } else {
-    desc = '😔 Pas de combinaison gagnante. Retente ta chance !';
+    // ── Détection Near-Miss ──────────────────────────────────
+    let nearMissSymbol = null;
+    for (let row = 0; row < 3; row++) {
+      const cells = grid.map(col => col[row]);
+      const counts = {};
+      for (const c of cells) {
+        if (c.id === 'wild' || c.id === 'bonus') continue;
+        counts[c.id] = (counts[c.id] || 0) + 1;
+      }
+      const bestEntry = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      if (bestEntry && bestEntry[1] === 2) {
+        nearMissSymbol = SYMBOLS.find(s => s.id === bestEntry[0]);
+        break;
+      }
+    }
+
+    if (nearMissSymbol) {
+      const nmFrames = [
+        { color: '#F39C12', title: '🎰 PRESQUE ! 🎰', text: `😱 **PRESQUE !** Deux ${nearMissSymbol.emoji} ${nearMissSymbol.name}... mais la troisième !` },
+        { color: '#E67E22', title: '💔 Si Proche ! 💔', text: `*La chance te fuit d'un souffle !*` },
+        { color: '#D35400', title: '🍀 La Prochaine Fois ! 🍀', text: `*Continue, le jackpot t'attend !*` },
+      ];
+      for (const f of nmFrames) {
+        await msg.edit({ embeds: [new EmbedBuilder()
+          .setColor(f.color).setTitle(f.title)
+          .setDescription(`\`\`\`\n${rows}\n\`\`\`\n\n${f.text}`)
+        ]}).catch(() => {});
+        await sleep(400);
+      }
+    }
+    desc = nearMissSymbol
+      ? `💔 **Presque !** Deux ${nearMissSymbol.emoji} mais pas trois...\nRetente ta chance !`
+      : '😔 Pas de combinaison gagnante. Retente ta chance !';
   }
 
   addStats(userId, guildId, totalGain > 0, totalGain, isJackpotWon);

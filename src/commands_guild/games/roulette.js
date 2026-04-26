@@ -261,11 +261,35 @@ async function playRoulette(source, userId, guildId, mise, betString) {
     return `${numColor(n)}${n}`;
   }).join(' ── ') + '\n' + '　　　　　　▲';
 
-  // Évaluer chaque pari
+  // ── Pré-évaluation (sans DB) pour l'animation flash ────
+  const betPreview = bets.map(bet => ({
+    bet,
+    won:  bet.numbers.includes(result),
+    gain: bet.numbers.includes(result) ? mise * (bet.payout + 1) : 0,
+  }));
+  const anyWonPre  = betPreview.some(r => r.won);
+  const totalGainPre = betPreview.reduce((s, r) => s + r.gain, 0);
+  const netPre     = totalGainPre - totalMise;
+
+  // ── 🎬 Flash révélation — bille claque dans sa case ─────
+  const flashWheelStr = nearbyNums + '\n\n**📢 La bille s\'immobilise !**';
+  const flashSeq = [
+    { color: '#FFFFFF', title: `🎡 💫 LA BILLE S'ARRÊTE ! 💫 🎡` },
+    { color: anyWonPre ? '#F1C40F' : '#1a1a2e', title: `🎡 ${col} NUMÉRO **${result}** ! ${col} 🎡` },
+    { color: anyWonPre ? '#FFD700'  : '#C0392B', title: anyWonPre ? `🎉✨ GAGNANT ! ✨🎉` : `💸 PERDU 💸` },
+    { color: anyWonPre ? '#2ECC71'  : '#E74C3C', title: `${col}${col} ${result} ${col}${col}` },
+  ];
+  for (const { color, title } of flashSeq) {
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(color).setTitle(title)
+      .setDescription([casinoHeader(), '', flashWheelStr, '', `**Paris :** ${betLabels}  |  **Mise :** ${chipDisplay(totalMise, coin)}`].join('\n'))
+    ] }).catch(() => {});
+    await sleep(320);
+  }
+
+  // ── Appliquer les gains en DB ────────────────────────────
   let totalGain = 0;
-  const betResults = bets.map(bet => {
-    const won  = bet.numbers.includes(result);
-    const gain = won ? mise * (bet.payout + 1) : 0;
+  const betResults = betPreview.map(({ bet, won, gain }) => {
     if (won) {
       db.addCoins(userId, guildId, gain);
       totalGain += gain;
@@ -273,7 +297,7 @@ async function playRoulette(source, userId, guildId, mise, betString) {
     return { bet, won, gain };
   });
 
-  const anyWon  = betResults.some(r => r.won);
+  const anyWon  = anyWonPre;
   const netDiff = totalGain - totalMise;
 
   // ── Croupier ────────────────────────────────────────────
