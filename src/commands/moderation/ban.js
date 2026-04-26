@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
 module.exports = {
@@ -16,11 +16,44 @@ module.exports = {
     const raison  = interaction.options.getString('raison') || 'Aucune raison fournie';
     const days    = interaction.options.getInteger('jours') || 0;
 
-    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.bannable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });
-    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te bannir toi-même.', ephemeral: true });
+    if (!target) return interaction.reply({ content: '❌ Membre introuvable.', ephemeral: true });
+    if (!target.bannable) return interaction.reply({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });
+    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas te bannir toi-même.', ephemeral: true });
 
-    // DM avant bannissement
+    // ── Confirmation ──────────────────────────────────────
+    const confirmEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setTitle('🔨 Confirmation de bannissement')
+      .setDescription(`Tu es sur le point de bannir **${target.user.tag}** de ce serveur.`)
+      .addFields(
+        { name: '👤 Membre',     value: `${target.user.tag} \`(${target.id})\``, inline: false },
+        { name: '📝 Raison',     value: raison, inline: false },
+        { name: '🗑️ Messages',   value: days > 0 ? `Suppression des ${days} derniers jours` : 'Aucune suppression', inline: true },
+      )
+      .setThumbnail(target.user.displayAvatarURL())
+      .setFooter({ text: '⚠️ Cette action est irréversible ! Tu as 30 secondes.' });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('ban_confirm').setLabel('✅ Confirmer le ban').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('ban_cancel').setLabel('❌ Annuler').setStyle(ButtonStyle.Secondary),
+    );
+
+    await interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+
+    let btnInteraction;
+    try {
+      btnInteraction = await interaction.fetchReply().then(msg =>
+        msg.awaitMessageComponent({ filter: i => i.user.id === interaction.user.id, time: 30_000 })
+      );
+    } catch {
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('⏰ Délai dépassé').setDescription('Le bannissement a été annulé.')], components: [] });
+    }
+
+    if (btnInteraction.customId === 'ban_cancel') {
+      return btnInteraction.update({ embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('❌ Bannissement annulé').setDescription('Aucune action effectuée.')], components: [] });
+    }
+
+    // ── Exécution du ban ──────────────────────────────────
     await target.user.send({
       embeds: [new EmbedBuilder()
         .setColor('#FF0000')
@@ -30,20 +63,19 @@ module.exports = {
     }).catch(() => {});
 
     await target.ban({ reason: `${interaction.user.tag}: ${raison}`, deleteMessageSeconds: days * 86400 });
+    try { db.incrementStat(interaction.guildId, 'bans'); } catch {}
 
-    db.incrementStat(interaction.guildId, 'bans');
-
-    const embed = new EmbedBuilder()
+    const resultEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setTitle('🔨 Membre banni')
       .addFields(
-        { name: '👤 Membre',     value: `${target.user.tag}`,           inline: true },
-        { name: '👮 Modérateur', value: `${interaction.user.tag}`,      inline: true },
-        { name: '📝 Raison',     value: raison,                         inline: false },
+        { name: '👤 Membre',     value: `${target.user.tag}`,      inline: true },
+        { name: '👮 Modérateur', value: `${interaction.user.tag}`, inline: true },
+        { name: '📝 Raison',     value: raison,                    inline: false },
       )
       .setThumbnail(target.user.displayAvatarURL())
       .setTimestamp();
 
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await btnInteraction.update({ embeds: [resultEmbed], components: [] });
   }
 };
