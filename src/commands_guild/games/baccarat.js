@@ -5,6 +5,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -222,33 +223,60 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
     )
     .setFooter({ text: 'Baccarat · Joueur ×2 · Banquier ×1.95 (5% commission) · Égalité ×9' });
 
-  const playAgainButtons = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`baccarat_replay_${userId}_${mise}_${betKey}`)
-      .setLabel('🎮 Rejouer')
-      .setStyle(ButtonStyle.Primary),
-  );
+  const playAgainButtons = makeGameRow('baccarat', userId, mise, betKey);
 
   await msg.edit({ embeds: [finalEmbed], components: [playAgainButtons] });
 }
 
 // ─── Component Handler ────────────────────────────────────
 async function handleComponent(interaction) {
-  if (!interaction.customId.startsWith('baccarat_replay_')) return;
+  const cid = interaction.customId;
 
-  const parts = interaction.customId.split('_');
-  const userId = parts[2];
-  const mise = parseInt(parts[3]);
-  const betKey = parts[4];
+  if (cid.startsWith('baccarat_replay_')) {
+    const parts = cid.split('_');
+    const userId = parts[2];
+    const mise = parseInt(parts[3]);
+    const betKey = parts[4];
 
-  if (interaction.user.id !== userId) {
-    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    }
+
+    await interaction.deferUpdate().catch(() => {});
+    const betLabels = { player: 'joueur', banker: 'banquier', tie: 'egalite' };
+    await playBaccaratGame(interaction, userId, interaction.guildId, mise, betLabels[betKey] || betKey);
+    return true;
   }
 
-  await interaction.deferUpdate().catch(() => {});
+  if (cid.startsWith('baccarat_changemise_')) {
+    const parts = cid.split('_');
+    const userId = parts[2];
+    const betKey = parts[3];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+    }
+    await interaction.showModal(changeMiseModal('baccarat', userId, betKey));
+    return true;
+  }
 
-  const betLabels = { player: 'joueur', banker: 'banquier', tie: 'egalite' };
-  await playBaccaratGame(interaction, userId, interaction.guildId, mise, betLabels[betKey]);
+  if (cid.startsWith('baccarat_modal_') && interaction.isModalSubmit()) {
+    const parts = cid.split('_');
+    const userId = parts[2];
+    const betKey = parts[3];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+    }
+    const rawMise = interaction.fields.getTextInputValue('newmise');
+    const u = db.getUser(userId, interaction.guildId);
+    const newMise = parseMise(rawMise, u?.balance || 0);
+    if (!newMise || newMise < 10) {
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+    }
+    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+    const betLabels = { player: 'joueur', banker: 'banquier', tie: 'egalite' };
+    await playBaccaratGame(interaction, userId, interaction.guildId, newMise, betLabels[betKey] || betKey);
+    return true;
+  }
 }
 
 module.exports = {

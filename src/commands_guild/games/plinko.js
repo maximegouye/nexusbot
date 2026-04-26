@@ -5,6 +5,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -205,13 +206,8 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
   const finalColor = mult >= 2 ? '#27AE60' : mult >= 1 ? '#F1C40F' : '#E74C3C';
   const { boardStr } = renderBoard(path, 9, mults, finalSlot);
 
-  // Bouton rejouer
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`plinko_replay_${userId}_${mise}_${riskKey}`)
-      .setLabel('🎯 Rejouer')
-      .setStyle(ButtonStyle.Primary),
-  );
+  // Boutons rejouer + changer la mise
+  const row = makeGameRow('plinko', userId, mise, riskKey);
 
   const finalEmbed = new EmbedBuilder()
     .setColor(finalColor)
@@ -281,6 +277,35 @@ module.exports = {
       }
       await interaction.deferUpdate();
       await playPlinko(interaction, userId, interaction.guildId, mise, newRisk);
+      return true;
+    }
+    if (cid.startsWith('plinko_changemise_')) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const riskKey = parts[3] || 'medium';
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.showModal(changeMiseModal('plinko', userId, riskKey));
+      return true;
+    }
+    if (cid.startsWith('plinko_modal_') && interaction.isModalSubmit()) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const riskKey = parts[3] || 'medium';
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      const rawMise = interaction.fields.getTextInputValue('newmise');
+      const u = db.getUser(userId, interaction.guildId);
+      const newMise = parseMise(rawMise, u?.balance || 0);
+      if (!newMise || newMise < 10) {
+        return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      }
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+      await playPlinko(interaction, userId, interaction.guildId, newMise, riskKey);
       return true;
     }
     return false;

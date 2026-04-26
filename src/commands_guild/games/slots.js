@@ -5,6 +5,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 // ─── Symboles & poids ─────────────────────────────────────
 const SYMBOLS = [
@@ -336,13 +337,8 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
     .setFooter({ text: `Solde actuel : ${db.getUser(userId, guildId)?.balance || 0} ${coin}` })
     .setTimestamp();
 
-  // Bouton rejouer
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`slots_replay_${userId}_${mise}_${lines}`)
-      .setLabel('🎰 Rejouer').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('slots_info')
-      .setLabel('📊 Mes Stats').setStyle(ButtonStyle.Secondary),
-  );
+  // Boutons rejouer + changer la mise
+  const row = makeGameRow('slots', userId, mise, `${lines}`);
 
   await msg.edit({ embeds: [finalEmbed], components: [row] });
 }
@@ -366,24 +362,31 @@ async function handleComponent(interaction) {
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playSlots(source, userId, guildId, newMise, newLines);
-  } else if (interaction.customId === 'slots_info') {
-    await interaction.deferUpdate();
-    const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
-    const stats = db.db.prepare('SELECT * FROM slots_stats WHERE user_id=? AND guild_id=?').get(userId, guildId);
-    if (!stats) return interaction.followUp({ content: 'Aucune statistique trouvée.', ephemeral: true });
-    const winRate = stats.spins ? ((stats.wins / stats.spins) * 100).toFixed(1) : 0;
-    await interaction.followUp({
-      embeds: [new EmbedBuilder()
-        .setColor('#3498DB')
-        .setTitle('📊 Tes Stats Slots')
-        .addFields(
-          { name: '🎰 Tours joués', value: `${stats.spins}`, inline: true },
-          { name: '✅ Victoires', value: `${stats.wins} (${winRate}%)`, inline: true },
-          { name: '🏆 Jackpots', value: `${stats.jackpots}`, inline: true },
-          { name: '💰 Plus gros gain', value: `${stats.biggest} ${coin}`, inline: true },
-        )],
-      ephemeral: true,
-    });
+  } else if (interaction.customId.startsWith('slots_changemise_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const lines = parseInt(parts[3]) || 1;
+
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+    await interaction.showModal(changeMiseModal('slots', userId, `${lines}`));
+  } else if (interaction.customId.startsWith('slots_modal_') && interaction.isModalSubmit()) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const lines = parseInt(parts[3]) || 1;
+
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true });
+    }
+    const rawMise = interaction.fields.getTextInputValue('newmise');
+    const u = db.getUser(userId, guildId);
+    const newMise = parseMise(rawMise, u?.balance || 0);
+    if (!newMise || newMise < 5) {
+      return interaction.reply({ content: '❌ Mise invalide (min 5 coins par ligne).', ephemeral: true });
+    }
+    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+    await playSlots(interaction, userId, guildId, newMise, lines);
   }
 }
 

@@ -5,6 +5,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 const DICE_EMOJIS = ['⚀','⚁','⚂','⚃','⚄','⚅'];
 
@@ -160,13 +161,8 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
     resultBox,
   ].filter(Boolean).join('\n');
 
-  // Bouton rejouer
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`des_replay_${userId}_${mise}_${betStr}_${numDice}`)
-      .setLabel('🎲 Rejouer')
-      .setStyle(ButtonStyle.Primary),
-  );
+  // Boutons rejouer + changer la mise
+  const row = makeGameRow('des', userId, mise, `${betStr}_${numDice}`);
 
   const finalEmbed = new EmbedBuilder()
     .setColor(color)
@@ -227,6 +223,37 @@ module.exports = {
       }
       await interaction.deferUpdate();
       await playDice(interaction, userId, interaction.guildId, mise, newBet, newNumD);
+      return true;
+    }
+    if (cid.startsWith('des_changemise_')) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const betStr = parts[3];
+      const numDice = parseInt(parts[4]) || 1;
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.showModal(changeMiseModal('des', userId, `${betStr}_${numDice}`));
+      return true;
+    }
+    if (cid.startsWith('des_modal_') && interaction.isModalSubmit()) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const betStr = parts[3];
+      const numDice = parseInt(parts[4]) || 1;
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      const rawMise = interaction.fields.getTextInputValue('newmise');
+      const u = db.getUser(userId, interaction.guildId);
+      const newMise = parseMise(rawMise, u?.balance || 0);
+      if (!newMise || newMise < 5) {
+        return interaction.reply({ content: '❌ Mise invalide (min 5 coins).', ephemeral: true });
+      }
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+      await playDice(interaction, userId, interaction.guildId, newMise, betStr, numDice);
       return true;
     }
     return false;

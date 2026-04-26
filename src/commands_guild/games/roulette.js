@@ -5,6 +5,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -278,17 +279,8 @@ async function playRoulette(source, userId, guildId, mise, betType) {
     `**Mise :** ${chipDisplay(mise, coin)}  |  **Solde :** ${newBal} ${coin}`,
   ].join('\n');
 
-  // Bouton rejouer
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`rl_replay_${userId}_${mise}_${betType}`)
-      .setLabel('🎡 Rejouer')
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`rl_table_${userId}`)
-      .setLabel('📋 Table des mises')
-      .setStyle(ButtonStyle.Secondary),
-  );
+  // Boutons rejouer + changer la mise
+  const row = makeGameRow('rl', userId, mise, betType);
 
   const resultTitle = won ? '🎡 🎉 VICTOIRE 🎉 Roulette Royale' : '🎡 💸 PERDU 💸 Roulette Royale';
 
@@ -374,6 +366,35 @@ module.exports = {
       }
       await interaction.deferUpdate();
       await playRoulette(interaction, userId, interaction.guildId, mise, betType);
+      return true;
+    }
+    if (cid.startsWith('rl_changemise_')) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const betType = parts.slice(3).join('_');
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.showModal(changeMiseModal('rl', userId, betType));
+      return true;
+    }
+    if (cid.startsWith('rl_modal_') && interaction.isModalSubmit()) {
+      const parts = cid.split('_');
+      const userId = parts[2];
+      const betType = parts.slice(3).join('_');
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      const rawMise = interaction.fields.getTextInputValue('newmise');
+      const u = db.getUser(userId, interaction.guildId);
+      const newMise = parseMise(rawMise, u?.balance || 0);
+      if (!newMise || newMise < 5) {
+        return interaction.reply({ content: '❌ Mise invalide (min 5 coins).', ephemeral: true });
+      }
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+      await playRoulette(interaction, userId, interaction.guildId, newMise, betType);
       return true;
     }
     return false;

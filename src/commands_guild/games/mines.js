@@ -5,6 +5,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -104,13 +105,8 @@ function buildGridComponents(state) {
     );
     rows.push(cashRow);
   } else {
-    // Replay button after game ends
-    const replayRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`mines_replay_${state.userId}_${state.mise}_${state.minesCount}`)
-        .setLabel('🎮 Rejouer')
-        .setStyle(ButtonStyle.Primary),
-    );
+    // Rejouer + Changer la mise après la partie
+    const replayRow = makeGameRow('mines', state.userId, state.mise, `${state.minesCount}`);
     rows.push(replayRow);
   }
 
@@ -370,6 +366,36 @@ async function handleComponent(interaction) {
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playMines(source, userId, guildId, mise, mines);
+    return true;
+  }
+
+  if (interaction.customId.startsWith('mines_changemise_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const minesCount = parseInt(parts[3]) || 3;
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+    await interaction.showModal(changeMiseModal('mines', userId, `${minesCount}`));
+    return true;
+  }
+
+  if (interaction.customId.startsWith('mines_modal_') && interaction.isModalSubmit()) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const minesCount = parseInt(parts[3]) || 3;
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true });
+    }
+    const rawMise = interaction.fields.getTextInputValue('newmise');
+    const u = db.getUser(userId, guildId);
+    const newMise = parseMise(rawMise, u?.balance || 0);
+    if (!newMise || newMise < 10) {
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+    }
+    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+    await playMines(interaction, userId, guildId, newMise, minesCount);
+    return true;
   }
 }
 

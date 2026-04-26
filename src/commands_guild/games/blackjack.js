@@ -8,6 +8,7 @@ const {
   ActionRowBuilder, ButtonBuilder, ButtonStyle,
 } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 // ─── Deck ─────────────────────────────────────────────────
 const SUITS   = ['♠️','♥️','♦️','♣️'];
@@ -150,12 +151,7 @@ function disabledButtons() {
 }
 
 function playAgainButtons(userId, mise) {
-  return [new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`bj_replay_${userId}_${mise}`)
-      .setLabel('🎮 Rejouer')
-      .setStyle(ButtonStyle.Primary),
-  )];
+  return [makeGameRow('bj', userId, mise)];
 }
 
 // ─── Fin de partie ────────────────────────────────────────
@@ -323,7 +319,36 @@ async function handleComponent(interaction) {
 
     await interaction.deferUpdate().catch(() => {});
     await startGame(interaction, userId, interaction.guildId, mise);
-    return;
+    return true;
+  }
+
+  // Changer la mise
+  if (customId.startsWith('bj_changemise_')) {
+    const parts = customId.split('_');
+    const userId = parts[2];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+    }
+    await interaction.showModal(changeMiseModal('bj', userId));
+    return true;
+  }
+
+  // Modal mise
+  if (customId.startsWith('bj_modal_') && interaction.isModalSubmit()) {
+    const parts = customId.split('_');
+    const userId = parts[2];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+    }
+    const rawMise = interaction.fields.getTextInputValue('newmise');
+    const u = db.getUser(userId, interaction.guildId);
+    const newMise = parseMise(rawMise, u?.balance || 0);
+    if (!newMise || newMise < 10) {
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+    }
+    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+    await startGame(interaction, userId, interaction.guildId, newMise);
+    return true;
   }
 
   // In-game buttons

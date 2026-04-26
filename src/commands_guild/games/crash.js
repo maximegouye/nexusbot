@@ -5,6 +5,7 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
+const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 // ─── DB stats ─────────────────────────────────────────────
 try {
@@ -234,7 +235,8 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
         // Animate crash
         await animateCrash(msg);
 
-        await msg.edit({ embeds: [buildCrashEmbed(true)], components: [] }).catch(() => {});
+        const replayRow = makeGameRow('crash', userId, mise);
+        await msg.edit({ embeds: [buildCrashEmbed(true)], components: [replayRow] }).catch(() => {});
       } else {
         // Update embed pour montrer progression
         const e = buildCrashEmbed();
@@ -262,8 +264,9 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
       // Animate crash
       await animateCrash(msg);
 
+      const replayRow2 = makeGameRow('crash', userId, mise);
       const e = buildCrashEmbed(true);
-      await msg.edit({ embeds: [e], components: [] }).catch(() => {});
+      await msg.edit({ embeds: [e], components: [replayRow2] }).catch(() => {});
     } else {
       // Update bouton avec nouveau multiplicateur
       const btn = new ActionRowBuilder().addComponents(
@@ -307,6 +310,34 @@ async function handleComponent(interaction) {
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playCrash(source, userId, guildId, mise, null);
+    return true;
+  }
+
+  if (interaction.customId.startsWith('crash_changemise_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+    await interaction.showModal(changeMiseModal('crash', userId));
+    return true;
+  }
+
+  if (interaction.customId.startsWith('crash_modal_') && interaction.isModalSubmit()) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true });
+    }
+    const rawMise = interaction.fields.getTextInputValue('newmise');
+    const u = db.getUser(userId, guildId);
+    const newMise = parseMise(rawMise, u?.balance || 0);
+    if (!newMise || newMise < 10) {
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+    }
+    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+    await playCrash(interaction, userId, guildId, newMise, null);
+    return true;
   }
 }
 
