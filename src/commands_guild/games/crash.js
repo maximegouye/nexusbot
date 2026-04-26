@@ -90,19 +90,23 @@ function altitudeBar(current, crashPoint) {
 // ─── Parties actives ──────────────────────────────────────
 const activeGames = new Map(); // userId → { cashedOut, mult, interval, msg, gameLoop }
 
-// ─── Crash animation (flash red) ──────────────────────────
+// ─── Crash animation (explosion dramatique avec 6+ frames) ──
 async function animateCrash(msg) {
   const crashFlashes = [
+    { color: '#FFD700', desc: '⚠️ ATTENTION !' },
+    { color: '#FFA500', desc: '🔴 ALERTE !' },
     { color: '#E74C3C', desc: '💥 CRASH !' },
-    { color: '#C0392B', desc: '💥💥 CRASH !' },
+    { color: '#C0392B', desc: '💥💥 EXPLOSION !' },
+    { color: '#8B0000', desc: '💥💥💥 DESTRUCTION !' },
     { color: '#E74C3C', desc: '💥 CRASH !' },
+    { color: '#000000', desc: '⚫ NÉANT ⚫' },
   ];
 
   for (const { color, desc } of crashFlashes) {
     const e = new EmbedBuilder()
       .setColor(color)
       .setTitle(desc)
-      .setDescription('*Explosion en cours...*');
+      .setDescription('*🎆 Explosion en cours... 🎆*');
     await msg.edit({ embeds: [e] }).catch(() => {});
     await sleep(100);
   }
@@ -144,11 +148,19 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     const color = crashed ? '#E74C3C' : cashedOut ? '#2ECC71' : multColor(current);
     const title = crashed     ? '💥 CRASH !'
                 : cashedOut   ? '✅ Cash-Out Reussi !'
-                : '🚀 Crash - En Vol';
+                : `${rocketEmoji(current)} Crash - En Vol`;
 
     const bar    = graphBar(current, crashPoint);
     const rocket = rocketEmoji(current);
     const alt    = altitudeBar(current, crashPoint);
+
+    // Affichage dramatique du multiplicateur avec styling amélioré
+    const multDisplay = `# ×${current.toFixed(2)}`.padStart(8);
+
+    // Alerte si le multiplicateur approche du crash point (90%)
+    const alertThreshold = crashPoint * 0.9;
+    const isWarning = !crashed && !cashedOut && current >= alertThreshold;
+    const warningText = isWarning ? '\n⚠️ **DANGER ! À 90% du crash !** ⚠️' : '';
 
     const e = new EmbedBuilder()
       .setColor(color)
@@ -156,7 +168,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
       .addFields(
         {
           name: crashed ? `💥 Crash a` : cashedOut ? `✅ Cash-out a` : `${rocket} Multiplicateur`,
-          value: `## ×${current.toFixed(2)}`,
+          value: `## ×${current.toFixed(2)}${warningText}`,
           inline: false,
         },
         { name: '✈️ Altitude', value: '`' + alt + '`', inline: false },
@@ -277,6 +289,19 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
           .setDisabled(cashedOut),
       );
       const e = buildCrashEmbed();
+
+      // Flash d'alerte si à 90% du crash point
+      const alertThreshold = crashPoint * 0.9;
+      if (current >= alertThreshold && !cashedOut) {
+        // Mini flash warning
+        const flashEmbed = new EmbedBuilder()
+          .setColor('#FF0000')
+          .setTitle('⚠️⚠️⚠️ DANGER IMMINENT ⚠️⚠️⚠️')
+          .setDescription(`Le crash va se produire bientôt !\n\n**×${current.toFixed(2)}** / ×${crashPoint.toFixed(2)}`);
+        await msg.edit({ embeds: [flashEmbed], components: [btn] }).catch(() => {});
+        await sleep(50);
+      }
+
       await msg.edit({ embeds: [e], components: [btn] }).catch(() => {});
     }
   }, TICK);

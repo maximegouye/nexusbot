@@ -83,9 +83,13 @@ function buildEmbed(state, status = '') {
               : status === 'push' ? '#F39C12'
               : '#2C3E50';
 
+  // Meilleur header ASCII — tableau de jeu
+  const headerAscii = '╔═══════════════════════════════╗\n║      ⚡ BLACKJACK TABLE ⚡    ║\n╚═══════════════════════════════╝';
+
   const embed = new EmbedBuilder()
     .setColor(color)
     .setTitle('🃏 ・ BlackJack ・')
+    .setDescription(headerAscii)
     .addFields(
       { name: `🎩 Croupier ${state.revealed ? `(${dealerVal})` : ''}`,
         value: handStr(state.dealer, !state.revealed), inline: false },
@@ -117,7 +121,7 @@ function buildEmbed(state, status = '') {
       bust:      '💥 Dépassé ! Perdu.',
       push:      '🤝 Égalité — mise remboursée.',
     };
-    embed.setDescription(msgs[status] || status);
+    embed.setDescription(headerAscii + '\n\n' + (msgs[status] || status));
   }
   return embed;
 }
@@ -164,6 +168,22 @@ async function endGame(msg, state, status, winMult = 0) {
   if (winMult > 0) {
     payout = Math.floor(state.mise * winMult);
     db.addCoins(state.userId, state.guildId, payout);
+  }
+
+  // Animation révélation — 1-2 frames avant résultat final
+  const revealFrames = [
+    { desc: '🎩 *Révélation de la main du croupier...*', delay: 600 },
+    { desc: '✨ *Calcul du résultat...*', delay: 400 },
+  ];
+  for (const frame of revealFrames) {
+    const tempEmbed = new EmbedBuilder()
+      .setColor('#F39C12')
+      .setTitle('🃏 ・ BlackJack ・')
+      .setDescription(frame.desc)
+      .addFields({ name: '🎩 Croupier', value: handStr(state.dealer), inline: false },
+                  { name: '🎮 Vous', value: handStr(state.player), inline: false });
+    await msg.edit({ embeds: [tempEmbed], components: [] }).catch(() => {});
+    await sleep(frame.delay);
   }
 
   const embed = buildEmbed(state, status);
@@ -254,10 +274,12 @@ async function startGame(source, userId, guildId, mise) {
   }
 
   const dealSteps = [
-    { pCards: '🂠',                        dCards: '―',               txt: '*Distribution...*', delay: 380 },
-    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '―',  txt: '*+1 carte joueur*', delay: 350 },
-    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '🂠', txt: '*+1 carte croupier*', delay: 380 },
-    { pCards: handStr(player),             dCards: '🂠',               txt: '*+2ème carte joueur*', delay: 380 },
+    { pCards: '🂠',                        dCards: '―',               txt: '🃏 *Le croupier bat les cartes...*', delay: 500 },
+    { pCards: '🂠',                        dCards: '―',               txt: '✨ *Distribution en cours...*', delay: 350 },
+    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '―',  txt: '🃏 *+1 carte joueur*', delay: 400 },
+    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '🂠', txt: '✨ *Les cartes volent !*', delay: 400 },
+    { pCards: handStr(player),             dCards: '🂠',               txt: '🃏 *+2ème carte joueur*', delay: 350 },
+    { pCards: handStr(player),             dCards: '🂠',               txt: '✅ *Main initiale prête !*', delay: 350 },
   ];
 
   let msg;

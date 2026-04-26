@@ -177,49 +177,121 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
     await sleep(180);
   }
 
-  // Phase 2 : ralentissement progressif (2 frames à 280ms)
-  for (let f = 0; f < 2; f++) {
+  // Phase 2 : ralentissement progressif (4 frames à 250ms avec couleurs intensifiantes)
+  const slowColors = ['#7D3C98','#6C3483','#5B2C7D','#4A235A'];
+  const slowTexts  = ['🔄 Ralentissement...', '🔄🔄 De plus en plus lent...', '⏱️ Presque là...', '⏳ Derniers symboles...'];
+  for (let f = 0; f < 4; f++) {
     const r1=rndRow(), r2=rndRow(), r3=rndRow();
     await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor('#8E44AD').setTitle('🎰 SLOT MACHINE ROYALE 🎰')
-      .setDescription(`\`\`\`\n${r1.join(' ')}\n${r2.join(' ')}\n${r3.join(' ')}\n\`\`\`\n*🔄 Ralentissement...*`)
+      .setColor(slowColors[f]).setTitle('🎰 SLOT MACHINE ROYALE 🎰')
+      .setDescription(`\`\`\`\n${r1.join(' ')}\n${r2.join(' ')}\n${r3.join(' ')}\n\`\`\`\n*${slowTexts[f]}*`)
       .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
     ]});
-    await sleep(280);
+    await sleep(250);
   }
 
-  // Phase 3 : rouleaux s'arrêtent un par un avec délai croissant
+  // Phase 3 : décélération avec affichage progressif du résultat final (+ 3 frames par colonne)
   const partial = Array.from({length:5}, () => Array.from({length:3}, () => ({emoji:'🌀'})));
   const stopColors = ['#6C3483','#1A5276','#1E8449','#117A65','#27AE60'];
+  const decelFrames = [
+    { delay: 100, text: '⚡ Symboles finaux apparaissent...' },
+    { delay: 150, text: '✨ Déceleration progressive...' },
+    { delay: 200, text: '🎯 Arrêt imminent...' },
+  ];
+
   for (let col = 0; col < 5; col++) {
     partial[col] = grid[col];
-    const rows = [0,1,2].map(row => partial.map(c => c[row]?.emoji || '🌀').join(' '));
-    const rem = 4 - col;
-    const stopTxt = rem > 0 ? `🌀 ${rem} rouleau${rem>1?'x':''} encore en rotation...` : '✨ Tous les rouleaux sont arrêtés !';
+
+    // 3 frames de transition pour chaque colonne (décélération visuelle)
+    for (let frame = 0; frame < decelFrames.length; frame++) {
+      const rows = [0,1,2].map(row => partial.map(c => c[row]?.emoji || '🌀').join(' '));
+      const rem = 4 - col;
+      const stopTxt = rem > 0 ? `🌀 ${rem} rouleau${rem>1?'x':''} encore en rotation...` : '✨ Tous les rouleaux sont arrêtés !';
+
+      await msg.edit({ embeds: [new EmbedBuilder()
+        .setColor(stopColors[col]).setTitle('🎰 SLOT MACHINE ROYALE 🎰')
+        .setDescription(`\`\`\`\n${rows[0]}\n${rows[1]}\n${rows[2]}\n\`\`\`\n*${stopTxt}*`)
+        .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
+      ]});
+      await sleep(decelFrames[frame].delay);
+    }
+  }
+}
+
+// ─── Animation jackpot dramatique ──────────────────────────
+async function animateJackpot(msg, amount, coin) {
+  const jackpotFrames = [
+    { color: '#FFD700', emoji: '🏆', text: '🎊 JACKPOT !! 🎊' },
+    { color: '#FFA500', emoji: '💎', text: '💥 MEGA JACKPOT !! 💥' },
+    { color: '#FFD700', emoji: '⭐', text: '🌟 JACKPOT PROGRESSIF ! 🌟' },
+    { color: '#FFA500', emoji: '✨', text: '✨✨ VOUS AVEZ GAGNE ✨✨' },
+    { color: '#FFD700', emoji: '🎆', text: `🎆 +${amount} ${coin} 🎆` },
+  ];
+
+  for (const { color, text } of jackpotFrames) {
     await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor(stopColors[col]).setTitle('🎰 SLOT MACHINE ROYALE 🎰')
-      .setDescription(`\`\`\`\n${rows[0]}\n${rows[1]}\n${rows[2]}\n\`\`\`\n*${stopTxt}*`)
-      .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
-    ]});
-    await sleep(320 + col * 80); // Chaque rouleau s'arrête plus lentement
+      .setColor(color)
+      .setTitle(text)
+      .setDescription('```\n' + '='.repeat(40) + '\n' + ' '.repeat(12) + '🏆 JACKPOT 🏆\n' + '='.repeat(40) + '\n```')
+    ]}).catch(() => {});
+    await sleep(120);
   }
 }
 
 // ─── Animation pluie de pièces (coin rain) ───────────────
 async function animateCoinRain(msg, color, title, lines = 4) {
-  const rainFrames = ['💰', '💸', '💵', '💴', '💶', '💷', '💳'];
-  const coins = Array.from({length: 3}, () => rainFrames[Math.floor(Math.random() * rainFrames.length)]);
-  const text = coins.join(' ');
+  const rainFrames = ['💰', '💸', '💵', '💴', '💶', '💷', '💳', '🪙'];
+  const fallFrames = ['↓', '↓', '↓', '↓', '↓'];
+  const rainTexts = [
+    '*🌧️ Pluie de pièces commence...*',
+    '*💨 Les pièces pleuvent !!*',
+    '*⛈️ TEMPETE DE MONNAIE !!*',
+    '*💰 FORTUNE DEVERSEE !!*',
+    '*✨ Les pièces tombent du ciel ✨*',
+    '*🎊 SPECTACULAIRE 🎊*',
+  ];
 
-  for (let i = 0; i < lines; i++) {
-    const frameCoins = Array.from({length: Math.min(3, i + 1)}, () => rainFrames[Math.floor(Math.random() * rainFrames.length)]);
+  // Phase 1 : accumulation de pièces (8 frames)
+  for (let i = 0; i < 8; i++) {
+    const coinCount = Math.min(i + 1, 5);
+    const frameCoins = Array.from({length: coinCount}, () => rainFrames[Math.floor(Math.random() * rainFrames.length)]);
     const frameText = frameCoins.join(' ');
+    const rainText = rainTexts[Math.floor(Math.random() * rainTexts.length)];
+
     await msg.edit({ embeds: [new EmbedBuilder()
       .setColor(color)
       .setTitle(title)
-      .setDescription(`${frameText}\n\n*Pluie de pièces...*`)
+      .setDescription(`${frameText}\n\n${rainText}`)
     ]}).catch(() => {});
-    await sleep(150);
+    await sleep(100);
+  }
+
+  // Phase 2 : pluie intense avec variations (6 frames)
+  for (let i = 0; i < 6; i++) {
+    const frameCoins = Array.from({length: 5 + Math.floor(Math.random() * 3)}, () => rainFrames[Math.floor(Math.random() * rainFrames.length)]);
+    const frameText = frameCoins.join(' ');
+    const rainText = rainTexts[Math.floor(Math.random() * rainTexts.length)];
+
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(color)
+      .setTitle(title)
+      .setDescription(`${frameText}\n\n${rainText}`)
+    ]}).catch(() => {});
+    await sleep(120);
+  }
+
+  // Phase 3 : descente finale (pièces qui disparaissent)
+  for (let i = 0; i < 4; i++) {
+    const remaining = 5 - i;
+    const frameCoins = Array.from({length: remaining}, () => rainFrames[Math.floor(Math.random() * rainFrames.length)]);
+    const frameText = frameCoins.join(' ');
+
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(color)
+      .setTitle(title)
+      .setDescription(`${frameText}\n\n*Les pièces s\'accumulent...*`)
+    ]}).catch(() => {});
+    await sleep(130);
   }
 }
 
@@ -248,7 +320,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
   const startEmbed = new EmbedBuilder()
     .setColor('#F39C12')
     .setTitle('🎰 SLOT MACHINE ROYALE 🎰')
-    .setDescription('`🌀 🌀 🌀 🌀 🌀\n🌀 🌀 🌀 🌀 🌀\n🌀 🌀 🌀 🌀 🌀`\n*Lancement des rouleaux...*')
+    .setDescription('```\n╔═══════════════════════╗\n║ 🍒 🍋 🍊 🍇 🍉 ║\n║ 🔔 ⭐ 7️⃣ 💎 🃏 ║\n║ 🎯  ♠️  ♥️  ♦️  ♣️ ║\n╚═══════════════════════╝\n```\n*Lancement des rouleaux...*')
     .addFields(
       { name: '💰 Mise', value: `${totalMise} ${coin} (${lines} ligne${lines > 1 ? 's' : ''})`, inline: true },
       { name: '🏆 Jackpot', value: `**${jackpot} ${coin}**`, inline: true },
@@ -293,6 +365,8 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
     desc   = `🎊 **FÉLICITATIONS !** Tu as décroché le **JACKPOT** !\n\n**+${jp} ${coin}** remportés !`;
     db.addCoins(userId, guildId, jp);
 
+    // Jackpot animation dramatique
+    await animateJackpot(msg, jp, coin);
     // Coin rain animation for jackpot
     await animateCoinRain(msg, color, title, 4);
   } else if (hasBonus) {

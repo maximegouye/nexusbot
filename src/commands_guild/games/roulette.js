@@ -86,22 +86,25 @@ const BET_HELP = [
 
 // Phases d'animation de la roulette
 const SPIN_PHASES = [
-  { label:'⚡ La bille part à toute vitesse !', color:'#C0392B', delay:100, frames:6 },
-  { label:'🌀 Elle tourne à vive allure...',    color:'#E74C3C', delay:160, frames:5 },
-  { label:'💨 La roue ralentit doucement...',   color:'#D35400', delay:240, frames:4 },
-  { label:'⏳ Elle ralentit encore...',         color:'#E67E22', delay:360, frames:3 },
-  { label:'🎯 Presque arrêtée...',              color:'#F39C12', delay:520, frames:2 },
-  { label:'🤫 Suspense...',                     color:'#F1C40F', delay:700, frames:1 },
+  { label:'⚡ *La bille part comme une flèche !*',           color:'#C0392B', delay:80,  frames:4 },
+  { label:'🌀 *Vitesse maximale ! La bille tourbillonne !*', color:'#E74C3C', delay:110, frames:5 },
+  { label:'💨 *Elle commence à ralentir...*',               color:'#D35400', delay:160, frames:4 },
+  { label:'🏓 *La bille rebondit sur les séparateurs !*',    color:'#E67E22', delay:220, frames:3 },
+  { label:'🎯 *Elle hésite entre deux cases...*',            color:'#F39C12', delay:320, frames:3 },
+  { label:'🤫 *Suspense total...*',                          color:'#F1C40F', delay:480, frames:2 },
+  { label:'🔔 *Clic ! La bille se pose !*',                  color:'#2ECC71', delay:700, frames:2 },
+  { label:'💫 *La bille claque dans sa case finale !*',      color:'#27AE60', delay:500, frames:1 },
 ];
 
 // ─── Table casino (header décoratif) ─────────────────────────
 function casinoHeader() {
   return [
     '```',
-    '┌─────────────────────────────┐',
-    '│    🎡  ROULETTE ROYALE  🎡   │',
-    '│   — Roue Européenne 0-36 —  │',
-    '└─────────────────────────────┘',
+    '╔═════════════════════════════╗',
+    '║  ✨  🎡  ROULETTE ROYALE  🎡  ✨  ║',
+    '║    Roue Européenne 0-36     ║',
+    '║   💎 Casino Premium 💎       ║',
+    '╚═════════════════════════════╝',
     '```',
   ].join('\n');
 }

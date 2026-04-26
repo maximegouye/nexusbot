@@ -35,19 +35,21 @@ function dropBall(rows = 8) {
 function renderBoard(path, step, mults, finalSlot = null) {
   const ROWS = 8;
   const COLS = 9;
-  const PEG  = '●'; // chevilles plus visibles
+  const PEG  = '◦'; // chevilles stylisées
   const BALL = '🎯';
+  const TRAIL = '●'; // traînée visuelle
   const lines = [];
 
   for (let r = 0; r < ROWS; r++) {
-    // Chevillage
     let rowStr = '';
 
-    // Construire la rangée avec la balle si elle est là
+    // Construire la rangée avec la balle et sa traînée
     const ballCol = (step > r && r < path.length) ? path[r] : -1;
+    const trailCol = (step > r + 1 && r < path.length - 1) ? path[r + 1] : -1;
 
     for (let c = 0; c < COLS; c++) {
       if (c === ballCol) rowStr += BALL;
+      else if (c === trailCol) rowStr += TRAIL;
       else rowStr += PEG;
       if (c < COLS - 1) rowStr += '  ';
     }
@@ -58,8 +60,8 @@ function renderBoard(path, step, mults, finalSlot = null) {
   const slotLine = mults.map((m, i) => {
     const isFinal = finalSlot !== null && i === finalSlot;
     if (isFinal) {
-      if (m >= 10) return '🟦';
-      if (m >= 5) return '🟩';
+      if (m >= 10) return '🔷';
+      if (m >= 5) return '🔶';
       if (m >= 2) return '🟨';
       if (m >= 1) return '🟧';
       return '🟥';
@@ -150,15 +152,43 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     msg = await source.reply({ embeds: [startEmbed] });
   }
 
-  // Animation bille rangée par rangée
-  const delays = [280, 270, 260, 250, 280, 300, 330, 360];
+  // Animation bille rangée par rangée avec accélération gravitationnelle
+  // Plus la bille tombe, plus elle va vite (delays décroissants = accélération)
+  const baseDelays = [320, 300, 270, 240, 220, 200, 180, 160];
+
   for (let step = 1; step <= 8; step++) {
-    await sleep(delays[step - 1] || 300);
-    const e = buildBoardEmbed(path, step, mults, mise, coin, riskKey);
-    await msg.edit({ embeds: [e] });
+    // Chaque rangée a 3 frames de transition pour plus de fluidité
+    const delayPerFrame = Math.floor(baseDelays[step - 1] / 3);
+
+    for (let frame = 0; frame < 3; frame++) {
+      // Transition progressive vers la prochaine position
+      const e = buildBoardEmbed(path, step, mults, mise, coin, riskKey);
+      await msg.edit({ embeds: [e] });
+      await sleep(delayPerFrame);
+    }
   }
 
-  await sleep(400);
+  await sleep(300);
+
+  // Animation finale dramatique : explosion/impact quand la bille arrive
+  for (let pulse = 0; pulse < 3; pulse++) {
+    const highlightEmbed = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle('💥 IMPACT ! 💥')
+      .setDescription(`*La bille a atteint le slot ${finalSlot + 1}...*\n\n✨ **×${mults[finalSlot]}** ✨`)
+      .addFields(
+        { name: '⚠️ Risque', value: RISK_LABELS[riskKey], inline: true },
+        { name: '💰 Mise',   value: `${mise} ${coin}`,     inline: true },
+      );
+    await msg.edit({ embeds: [highlightEmbed] }).catch(() => {});
+    await sleep(100);
+
+    const normalEmbed = buildBoardEmbed(path, 9, mults, mise, coin, riskKey, finalSlot, true);
+    await msg.edit({ embeds: [normalEmbed] }).catch(() => {});
+    await sleep(100);
+  }
+
+  await sleep(200);
 
   // Résultat final
   if (gain > 0) db.addCoins(userId, guildId, gain);

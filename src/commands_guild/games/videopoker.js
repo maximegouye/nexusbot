@@ -138,34 +138,46 @@ async function playVideoPoker(source, userId, guildId, mise) {
     );
   }
 
-  // Animation de distribution des cartes
-  const dealIntro = new EmbedBuilder()
-    .setColor('#6C3483')
+  // Animation de distribution des cartes AMÉLIORÉE avec frame de shuffle
+  const shuffleFrame = new EmbedBuilder()
+    .setColor('#5B2C6F')
     .setTitle('🃏 ・ Video Poker — Jacks or Better ・')
-    .setDescription('🂠 🂠 🂠 🂠 🂠\n\n*Distribution des cartes...*')
+    .setDescription('🎰 *Mélange du sabot...*\n\n🌀 🌀 🌀 🌀 🌀')
     .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
 
   let msg;
   if (isInteraction) {
-    msg = await source.editReply({ embeds: [dealIntro] });
+    msg = await source.editReply({ embeds: [shuffleFrame] });
   } else {
-    msg = await source.reply({ embeds: [dealIntro] });
+    msg = await source.reply({ embeds: [shuffleFrame] });
   }
+  await sleep(400);
 
-  // Révéler les cartes une par une
-  const revealOrder = [0, 2, 4, 1, 3]; // ordre plus dramatique
+  // Intro frame — cartes dos visibles avant révélation
+  const dealIntro = new EmbedBuilder()
+    .setColor('#6C3483')
+    .setTitle('🃏 ・ Video Poker — Jacks or Better ・')
+    .setDescription('🃏 *Distribution des cartes...*\n\n🂠 🂠 🂠 🂠 🂠')
+    .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
+
+  await msg.edit({ embeds: [dealIntro] });
+  await sleep(350);
+
+  // Révéler les cartes une par une avec ordre dramatique amélioré
+  const revealOrder = [2, 0, 4, 1, 3]; // centre puis coins, meilleure dramaturgie
   const revealedFlags = [false, false, false, false, false];
   for (const idx of revealOrder) {
     revealedFlags[idx] = true;
     const handPreview = hand.map((c, i) => revealedFlags[i] ? cardStr(c) : '🂠').join(' ');
-    await sleep(300);
+    const position = revealOrder.indexOf(idx) + 1;
+    await sleep(350); // 350ms au lieu de 300ms pour plus d'impact
     await msg.edit({ embeds: [new EmbedBuilder()
       .setColor('#8E44AD').setTitle('🃏 ・ Video Poker — Jacks or Better ・')
-      .setDescription(`${handPreview}\n\n*Carte ${revealOrder.indexOf(idx)+1}/5...*`)
+      .setDescription(`✨ *Révélation...*\n\n${handPreview}\n\n*Carte ${position}/5*`)
       .addFields({name:'💰 Mise',value:`${mise} ${coin}`,inline:true})
     ]});
   }
-  await sleep(350);
+  await sleep(400);
 
   // Affiche la vraie main avec boutons
   await msg.edit({ embeds: [buildHoldEmbed()], components: [buildCardButtons(), buildActionRow()] });
@@ -295,10 +307,18 @@ async function handleComponent(interaction) {
       if (!st.held[k]) st.hand[k] = st.deck.pop();
     }
 
-    // Animation tirage
-    const animEmbed = new EmbedBuilder().setColor('#8E44AD').setTitle('🃏 ・ Video Poker ・').setDescription('*Tirage en cours...*\n🌀 🌀 🌀 🌀 🌀');
-    await msg.edit({ embeds: [animEmbed], components: [] });
-    await sleep(800);
+    // Animation tirage AMÉLIORÉE — plus dramatique avec plusieurs frames
+    const drawFrames = [
+      { desc: '🎰 *Échange des cartes en cours...*\n\n🌀 🌀 🌀 🌀 🌀', color: '#8E44AD', delay: 300 },
+      { desc: '✨ *Les cartes volent dans l\'air...*\n\n💨 💨 💨 💨 💨', color: '#6C3483', delay: 300 },
+      { desc: '🃏 *Nouvelles cartes en place...*\n\n🌀 🌀 🌀 🌀 🌀', color: '#5B2C6F', delay: 200 },
+    ];
+    for (const frame of drawFrames) {
+      const animEmbed = new EmbedBuilder().setColor(frame.color).setTitle('🃏 ・ Video Poker ・').setDescription(frame.desc);
+      await msg.edit({ embeds: [animEmbed], components: [] });
+      await sleep(frame.delay);
+    }
+    await sleep(300);
 
     const { name, mult } = evalHand(st.hand);
     const gain = Math.floor(st.mise * mult);

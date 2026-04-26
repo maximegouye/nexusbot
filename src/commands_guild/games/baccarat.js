@@ -126,10 +126,11 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
 
   const betLabels = { player: '👤 Joueur', banker: '🏦 Banquier', tie: '🤝 Égalité' };
 
-  // Embed de départ — cartes dos visible
+  // Embed de départ — cartes dos visible (intro améliorée avec croupier qui distribue)
   const bacAnimFrames = [
-    { desc:'🎴 Mélange du sabot...\n\n🃏 🃏 🃏 🃏', color:'#16A085', delay:500 },
-    { desc:'🎴 Distribution en cours...\n\n🃏 🃏 🃏 🃏', color:'#1ABC9C', delay:400 },
+    { desc:'🎴 *Le croupier mélange le sabot...*\n\n🃏 🃏 🃏 🃏', color:'#16A085', delay:500 },
+    { desc:'🎴 *Préparation de la table...*\n\n🃏 🃏 🃏 🃏', color:'#158D63', delay:400 },
+    { desc:'🎴 *Distribution en cours...*\n\n🃏 🃏 🃏 🃏', color:'#1ABC9C', delay:400 },
   ];
   let msg;
   for (let fi = 0; fi < bacAnimFrames.length; fi++) {
@@ -148,14 +149,14 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
 
   const { player, banker, pTotal, bTotal } = playBaccarat();
 
-  // Distribution animée — cartes dos puis révèle avec plus d'animations
+  // Distribution animée — cartes dos puis révèle avec PLUS DE SUSPENSE et descriptions dramatiques
   const steps = [
-    { p: ['🃏'], b: [],     desc:'🎴 1ère carte joueur...' },
-    { p: ['🃏'], b: ['🃏'], desc:'🎴 1ère carte banquier...' },
-    { p: [player[0]], b: ['🃏'],           desc:'✨ Révèle la carte du joueur !' },
-    { p: [player[0]], b: [banker[0]],      desc:'✨ Révèle la carte du banquier !' },
-    { p: player.slice(0,2).map(cardStr), b: [banker[0]], pRaw:true, bRaw:false, desc:'🎴 2ème carte joueur !' },
-    { p: player.slice(0,2).map(cardStr), b: banker.slice(0,2).map(cardStr), pRaw:true, bRaw:true, desc:'✅ Main initiale complète !' },
+    { p: ['🃏'], b: [],     desc:'🎴 *1ère carte joueur...*' },
+    { p: ['🃏'], b: ['🃏'], desc:'🎴 *1ère carte banquier...*' },
+    { p: [player[0]], b: ['🃏'],           desc:'✨ *La première carte du joueur !*' },
+    { p: [player[0]], b: [banker[0]],      desc:'✨ *La première carte du banquier !*' },
+    { p: player.slice(0,2).map(cardStr), b: [banker[0]], pRaw:true, bRaw:false, desc:'🎯 *2ème carte joueur — tension monte !*' },
+    { p: player.slice(0,2).map(cardStr), b: banker.slice(0,2).map(cardStr), pRaw:true, bRaw:true, desc:'🎭 *2ème carte banquier — le jeu commence !*' },
   ];
   for (const s of steps) {
     const pVal = s.pRaw ? s.p.join(' ') : (Array.isArray(s.p) && s.p[0]?.value ? s.p.map(cardStr).join(' ') : s.p.join(' '));
@@ -163,13 +164,13 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
     const pScore = s.pRaw ? '' : (s.p[0]?.value ? `(${handTotal(s.p.filter(c=>c?.value))})` : '');
     const bScore = s.bRaw ? '' : (s.b[0]?.value ? `(${handTotal(s.b.filter(c=>c?.value))})` : '');
     const e = new EmbedBuilder()
-      .setColor('#1ABC9C').setTitle('🎴 ・ Baccarat ・').setDescription(`*${s.desc}*`)
+      .setColor('#1ABC9C').setTitle('🎴 ・ Baccarat ・').setDescription(`${s.desc}`)
       .addFields(
         {name:`👤 Joueur ${pScore}`,value:`**${pVal}**`||'—',inline:true},
         {name:`🏦 Banquier ${bScore}`,value:`**${bVal}**`||'—',inline:true},
       );
     await msg.edit({ embeds: [e] });
-    await sleep(500); // Slightly longer delay for drama
+    await sleep(600); // Plus de suspense : délai augmenté
   }
 
   // Troisième carte si applicable
@@ -203,7 +204,25 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
     won  = true; // remboursé
   }
 
+  // Animation finale de révélation du vainqueur (2-3 frames de transition dramatique)
   const winEmoji = { player: '👤', banker: '🏦', tie: '🤝' };
+  const winFrames = [
+    { desc: '⏱️ *Calcul des scores en cours...*', color: '#F39C12', delay: 500 },
+    { desc: '🎯 *Détermination du vainqueur...*', color: '#E67E22', delay: 400 },
+  ];
+  for (const frame of winFrames) {
+    const transEmbed = new EmbedBuilder()
+      .setColor(frame.color)
+      .setTitle('🎴 ・ Baccarat ・')
+      .setDescription(frame.desc)
+      .addFields(
+        { name: `👤 Joueur **${pTotal}**`, value: player.map(cardStr).join(' '), inline: true },
+        { name: `🏦 Banquier **${bTotal}**`, value: banker.map(cardStr).join(' '), inline: true },
+      );
+    await msg.edit({ embeds: [transEmbed] }).catch(() => {});
+    await sleep(frame.delay);
+  }
+
   const color    = won && betKey === winner ? '#2ECC71' : winner === 'tie' && betKey !== 'tie' ? '#F39C12' : '#E74C3C';
   const desc     = betKey === winner
     ? `🎉 **${betLabels[betKey]} gagne !** +${gain} ${coin}`

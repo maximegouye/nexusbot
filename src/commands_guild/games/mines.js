@@ -150,26 +150,41 @@ function buildEmbed(state, status = '') {
 
 // ─── Explosion animation ──────────────────────────────────
 async function animateExplosion(msg, state) {
-  const explosionEmojis = ['💥', '⚡', '🔥', '💫'];
-  for (let i = 0; i < 3; i++) {
-    const emoji = explosionEmojis[i % explosionEmojis.length];
+  // 6-7 frames avec couleurs et emojis progressifs pour maximum d'impact
+  const explosionFrames = [
+    { color:'#E74C3C', title:'💥 Mines — BOOM !',   desc:'*...* 🔥', delay: 120 },
+    { color:'#C0392B', title:'💥💥 EXPLOSION !',     desc:'🔥 💥 🔥', delay: 120 },
+    { color:'#E74C3C', title:'💣 KA-BOOM ! 💣',     desc:'💥 🔥 💥 🔥 💥', delay: 100 },
+    { color:'#922B21', title:'☠️ Mine touchée !',   desc:'💣 💥 ☠️ 💥 💣', delay: 100 },
+    { color:'#7B241C', title:'💀 Partie terminée',  desc:'*Boom.* 💀', delay: 120 },
+    { color:'#641E16', title:'🔥 Total annihilation 🔥', desc:'☠️ 💣 💥 💀 🔥', delay: 100 },
+  ];
+  for (const { color, title, desc, delay } of explosionFrames) {
     const embed = new EmbedBuilder()
-      .setColor('#E74C3C')
-      .setTitle(`${emoji} Mines - BOOM ! ${emoji}`)
-      .setDescription('*Explosion....*');
+      .setColor(color)
+      .setTitle(title)
+      .setDescription(desc);
     await msg.edit({ embeds: [embed] }).catch(() => {});
-    await sleep(100);
+    await sleep(delay);
   }
 }
 
 // ─── Safe reveal animation ────────────────────────────────
 async function animateSafeReveal(msg, state) {
-  const flashEmbed = new EmbedBuilder()
-    .setColor('#52BE80')
-    .setTitle('💎 Mines - Case Sure !')
-    .setDescription('*Flash vert...*');
-  await msg.edit({ embeds: [flashEmbed] }).catch(() => {});
-  await sleep(100);
+  // 2-3 frames avec animation verte progressive pour plus de punch
+  const safeFrames = [
+    { color:'#16A085', title:'✨ Case Sûre !', desc:'*Révélation...*', delay: 150 },
+    { color:'#1E8449', title:'💎 Case Sûre !', desc:'✨ *Ouf !*', delay: 120 },
+    { color:'#0E6251', title:'✅ Case Sûre !', desc:'💎 *Bravo !*', delay: 100 },
+  ];
+  for (const { color, title, desc, delay } of safeFrames) {
+    const embed = new EmbedBuilder()
+      .setColor(color)
+      .setTitle(title)
+      .setDescription(desc);
+    await msg.edit({ embeds: [embed] }).catch(() => {});
+    await sleep(delay);
+  }
 }
 
 // ─── Jeu principal ────────────────────────────────────────
@@ -226,13 +241,16 @@ async function playMines(source, userId, guildId, mise, minesCount) {
     msg = await source.reply({ embeds: [introEmbed] });
   }
 
-  // 2 frames d'intro (grille qui s'initialise)
+  // 4-5 frames d'intro AMÉLIORÉES — placement des mines avec suspense progressif
   const introFrames = [
-    { desc:'💣 *Melange des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ❓ ⬜ ❓ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#1A252F' },
-    { desc:'💣 *Pret ! Bonne chance...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#2C3E50' },
+    { desc:'💣 *Placement des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#1A252F', delay: 350 },
+    { desc:'💣 *Mélange des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ❓ ⬜ ❓ ⬜\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#244C45', delay: 380 },
+    { desc:'⚡ *Mines en place...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ❓ ⬜ ❓ ⬜\n❓ ⬜ ⬜ ⬜ ❓\n⬜ ⬜ ❓ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#1F4A43', delay: 350 },
+    { desc:'✨ *Grille prête...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#2C3E50', delay: 300 },
+    { desc:'🎯 *C\'est parti ! Bonne chance...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜', color:'#34495E', delay: 250 },
   ];
-  for (const { desc, color } of introFrames) {
-    await sleep(380);
+  for (const { desc, color, delay } of introFrames) {
+    await sleep(delay);
     await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle('💣 Mines').setDescription(desc)
       .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true})] });
   }

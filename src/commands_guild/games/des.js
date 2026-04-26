@@ -31,11 +31,14 @@ const BET_HELP = [
 
 // Phases d'animation des dés
 const ROLL_PHASES = [
-  { delay:130, color:'#F39C12', text:'🎲 Les dés roulent... Lancement !' },
-  { delay:170, color:'#E67E22', text:'🎲 Les dés roulent... Vitesse maximale !' },
-  { delay:230, color:'#D35400', text:'🎲 Les dés roulent... Presque...' },
-  { delay:310, color:'#C0392B', text:'🎲 Les dés roulent... Dernière rotation...' },
-  { delay:400, color:'#922B21', text:'🎲 Les dés roulent... Suspense...' },
+  { delay:80,  color:'#E74C3C', text:'🎲 *Le gobelet est agité violemment !*' },
+  { delay:100, color:'#C0392B', text:'🎲 *Les dés s\'entrechoquent !*' },
+  { delay:130, color:'#E67E22', text:'🎲 *Ils roulent à toute vitesse !*' },
+  { delay:170, color:'#D35400', text:'🎲 *Ralentissement...*' },
+  { delay:230, color:'#F39C12', text:'🎲 *Presque...*' },
+  { delay:310, color:'#F1C40F', text:'🎲 *Les dés s\'immobilisent...*' },
+  { delay:420, color:'#2ECC71', text:'🎲 *Résultat dans...*' },
+  { delay:600, color:'#27AE60', text:'🎲 *🔔 CLAC !*' },
 ];
 
 async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
@@ -135,21 +138,23 @@ async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   if (won) {
     resultBox = [
       '```',
-      '╔══════════════════════════╗',
-      '║  🎉  VICTOIRE !  🎉        ║',
-      `║  +${String(gain).padEnd(6,' ')} ${coin}        ║`,
-      '║  ████████████████████      ║',
-      '╚══════════════════════════╝',
+      '╔════════════════════════════╗',
+      '║   🎉  VICTOIRE !  🎉        ║',
+      '║  ✨  DÉS CHANCEUX  ✨       ║',
+      `║   +${String(gain).padEnd(6,' ')} ${coin}             ║`,
+      '║  ████████████████████████  ║',
+      '╚════════════════════════════╝',
       '```',
     ].join('\n');
   } else {
     resultBox = [
       '```',
-      '╔══════════════════════════╗',
-      '║  ❌  PERDU !  ❌           ║',
-      `║  -${String(mise).padEnd(6,' ')} ${coin}        ║`,
-      '║  ░░░░░░░░░░░░░░░░░░░░      ║',
-      '╚══════════════════════════╝',
+      '╔════════════════════════════╗',
+      '║   ❌  PERDU !  ❌           ║',
+      '║  😢  Pas de chance...      ║',
+      `║   -${String(mise).padEnd(6,' ')} ${coin}             ║`,
+      '║  ░░░░░░░░░░░░░░░░░░░░░░░░  ║',
+      '╚════════════════════════════╝',
       '```',
     ].join('\n');
   }
