@@ -6,11 +6,15 @@ module.exports = {
     .setName('quest')
     .setDescription('🗺️ Quêtes communautaires — progressez ensemble !')
     .addSubcommand(s => s.setName('voir').setDescription('📋 Voir les quêtes actives'))
-    .addSubcommand(s => s.setName('contribuer').setDescription('🙋 Contribuer à une quête'))
+    .addSubcommand(s => s.setName('contribuer').setDescription('🙋 Contribuer à une quête')
+      .addIntegerOption(o => o.setName('quest_id').setDescription('ID de la quête').setRequired(true).setMinValue(1))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à contribuer').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s.setName('creer').setDescription('➕ Créer une quête (Admin)')
       .addStringOption(o => o.setName('titre').setDescription('Titre').setRequired(true).setMaxLength(100))
       .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(500))
-      .addStringOption(o => o.setName('recompense').setDescription('Récompense à distribuer').setRequired(true))),
+      .addIntegerOption(o => o.setName('objectif').setDescription('Objectif en coins').setRequired(true).setMinValue(1))
+      .addStringOption(o => o.setName('recompense').setDescription('Récompense à distribuer').setRequired(true))
+      .addIntegerOption(o => o.setName('jours').setDescription('Durée en jours').setMinValue(1).setRequired(false))),
   cooldown: 5,
 
   async execute(interaction) {
@@ -56,8 +60,8 @@ module.exports = {
 
     // ── CONTRIBUER ──
     if (sub === 'contribuer') {
-      const questId = parseInt(interaction.options.getString('quest_id'));
-      const amount  = parseInt(interaction.options.getString('montant'));
+      const questId = interaction.options.getInteger('quest_id');
+      const amount  = interaction.options.getInteger('montant');
       const quest   = db.db.prepare('SELECT * FROM quests WHERE id = ? AND guild_id = ? AND status = "active"').get(questId, interaction.guildId);
 
       if (!quest) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Quête **#${questId}** introuvable.`, ephemeral: true });
@@ -110,9 +114,9 @@ module.exports = {
 
       const titre    = interaction.options.getString('titre');
       const desc     = interaction.options.getString('description');
-      const objectif = parseInt(interaction.options.getString('objectif'));
+      const objectif = interaction.options.getInteger('objectif');
       const reward   = interaction.options.getString('recompense');
-      const days     = parseInt(interaction.options.getString('jours')) || null;
+      const days     = interaction.options.getInteger('jours') || null;
       const endsAt   = days ? Math.floor(Date.now() / 1000) + days * 86400 : null;
 
       const result = db.db.prepare(`INSERT INTO quests (guild_id, title, description, target, current, reward, status, ends_at, created_at)

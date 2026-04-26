@@ -8,13 +8,18 @@ module.exports = {
     .addSubcommand(s => s.setName('voir').setDescription('📋 Voir les annonces du marché'))
     .addSubcommand(s => s
       .setName('vendre')
-      .setDescription('📤 Mettre un article en vente'))
+      .setDescription('📤 Mettre un article en vente')
+      .addStringOption(o => o.setName('item_id').setDescription('ID de l\'item').setRequired(true))
+      .addIntegerOption(o => o.setName('prix').setDescription('Prix de vente').setMinValue(1).setRequired(true))
+      .addIntegerOption(o => o.setName('quantite').setDescription('Quantité').setMinValue(1).setRequired(false)))
     .addSubcommand(s => s
       .setName('acheter')
-      .setDescription('📥 Acheter une annonce du marché'))
+      .setDescription('📥 Acheter une annonce du marché')
+      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce').setMinValue(1).setRequired(true)))
     .addSubcommand(s => s
       .setName('retirer')
-      .setDescription('❌ Retirer ta propre annonce')),
+      .setDescription('❌ Retirer ta propre annonce')
+      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce à retirer').setMinValue(1).setRequired(true))),
   cooldown: 5,
 
   async execute(interaction) {
@@ -54,9 +59,9 @@ module.exports = {
 
     // ── VENDRE ──
     if (sub === 'vendre') {
-      const itemId = parseInt(interaction.options.getString('item_id'));
-      const price  = parseInt(interaction.options.getString('prix'));
-      const qty    = parseInt(interaction.options.getString('quantite')) || 1;
+      const itemId = interaction.options.getString('item_id');
+      const price  = interaction.options.getInteger('prix');
+      const qty    = interaction.options.getInteger('quantite') || 1;
 
       const invItem = db.db.prepare(`
         SELECT i.*, s.name, s.emoji FROM inventory i
@@ -87,7 +92,7 @@ module.exports = {
 
     // ── ACHETER ──
     if (sub === 'acheter') {
-      const listingId = parseInt(interaction.options.getString('annonce_id'));
+      const listingId = interaction.options.getInteger('annonce_id');
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id
@@ -128,7 +133,7 @@ module.exports = {
 
     // ── RETIRER ──
     if (sub === 'retirer') {
-      const listingId = parseInt(interaction.options.getString('annonce_id'));
+      const listingId = interaction.options.getInteger('annonce_id');
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id

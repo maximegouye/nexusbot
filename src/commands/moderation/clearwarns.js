@@ -6,12 +6,13 @@ module.exports = {
     .setName('clearwarns')
     .setDescription('🧹 Effacer les avertissements d\'un membre')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true)),
+    .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
+    .addIntegerOption(o => o.setName('warn_id').setDescription('ID du warn à supprimer (optionnel, sinon supprime tous)').setMinValue(1).setRequired(false)),
   cooldown: 3,
 
   async execute(interaction) {
     const target  = interaction.options.getUser('membre');
-    const warnId  = parseInt(interaction.options.getString('warn_id'));
+    const warnId  = interaction.options.getInteger('warn_id');
 
     if (warnId) {
       const result = db.db.prepare('DELETE FROM warnings WHERE id = ? AND guild_id = ? AND user_id = ?')

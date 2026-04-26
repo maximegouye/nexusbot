@@ -23,10 +23,12 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand(s => s.setName('setup').setDescription('Configurer le starboard')
       .addChannelOption(o => o.setName('salon').setDescription('Salon starboard').setRequired(true))
+      .addIntegerOption(o => o.setName('seuil').setDescription('Nombre d\'étoiles minimum (défaut: 3)').setMinValue(1).setMaxValue(100).setRequired(false))
       .addStringOption(o => o.setName('emoji').setDescription('Emoji de vote (défaut: ⭐)'))
       .addBooleanOption(o => o.setName('selfstar').setDescription('Autoriser de voter son propre message')))
     .addSubcommand(s => s.setName('statut').setDescription('Voir la configuration et les statistiques'))
-    .addSubcommand(s => s.setName('top').setDescription('🏆 Top 10 des messages les plus étoilés'))
+    .addSubcommand(s => s.setName('top').setDescription('🏆 Top des messages les plus étoilés')
+      .addIntegerOption(o => o.setName('limite').setDescription('Nombre de messages (défaut: 10)').setMinValue(1).setMaxValue(50).setRequired(false)))
     .addSubcommand(s => s.setName('aleatoire').setDescription('🎲 Afficher un message étoilé au hasard'))
     .addSubcommand(s => s.setName('desactiver').setDescription('Désactiver le starboard'))
     .addSubcommand(s => s.setName('reset').setDescription('🗑️ Réinitialiser tous les messages étoilés')),
@@ -38,7 +40,7 @@ module.exports = {
     // ── SETUP ──────────────────────────────────────────────────
     if (sub === 'setup') {
       const ch       = interaction.options.getChannel('salon');
-      const seuil    = parseInt(interaction.options.getString('seuil')) ?? 3;
+      const seuil    = interaction.options.getInteger('seuil') ?? 3;
       const emoji    = interaction.options.getString('emoji') ?? '⭐';
       const selfstar = interaction.options.getBoolean('selfstar') ?? false;
 
@@ -95,7 +97,7 @@ module.exports = {
 
     // ── TOP ────────────────────────────────────────────────────
     if (sub === 'top') {
-      const limite = parseInt(interaction.options.getString('limite')) ?? 10;
+      const limite = interaction.options.getInteger('limite') ?? 10;
       const top = db.db.prepare('SELECT * FROM starboard_messages WHERE guild_id=? ORDER BY stars DESC LIMIT ?').all(guildId, limite);
 
       if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message dans le starboard pour l\'instant.', ephemeral: true });

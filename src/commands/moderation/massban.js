@@ -7,14 +7,15 @@ module.exports = {
     .setDescription('🔨 Bannir plusieurs membres en une seule commande (anti-raid)')
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addStringOption(o => o.setName('ids').setDescription('IDs séparés par des espaces ou virgules').setRequired(true))
-    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false)),
+    .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
+    .addIntegerOption(o => o.setName('supprimer_messages').setDescription('Supprimer les messages des N derniers jours (0-7)').setMinValue(0).setMaxValue(7).setRequired(false)),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
     const idsRaw  = interaction.options.getString('ids');
     const raison  = interaction.options.getString('raison') || 'Bannissement de masse';
-    const delDays = parseInt(interaction.options.getString('supprimer_messages')) ?? 1;
+    const delDays = interaction.options.getInteger('supprimer_messages') ?? 1;
 
     const ids = idsRaw.split(/[\s,]+/).map(s => s.trim()).filter(s => /^\d{17,19}$/.test(s));
     if (!ids.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun ID valide fourni.' });

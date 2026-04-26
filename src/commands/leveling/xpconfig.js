@@ -16,7 +16,9 @@ module.exports = {
     .addSubcommand(s => s.setName('statut').setDescription('Voir la configuration XP actuelle'))
     .addSubcommand(s => s.setName('activer').setDescription('Activer/désactiver le système XP')
       .addBooleanOption(o => o.setName('actif').setDescription('Actif ?').setRequired(true)))
-    .addSubcommand(s => s.setName('taux').setDescription('Modifier le taux de XP par message'))
+    .addSubcommand(s => s.setName('taux').setDescription('Modifier le taux de XP par message')
+      .addIntegerOption(o => o.setName('xp_min').setDescription('XP par message').setMinValue(1).setRequired(false))
+      .addIntegerOption(o => o.setName('coins').setDescription('Pièces par message').setMinValue(1).setRequired(false)))
     .addSubcommand(s => s.setName('noxp_canal').setDescription('Ajouter/retirer un canal sans XP')
       .addChannelOption(o => o.setName('canal').setDescription('Canal').setRequired(true))
       .addBooleanOption(o => o.setName('ajouter').setDescription('Ajouter (true) ou retirer (false)').setRequired(true)))
@@ -24,7 +26,8 @@ module.exports = {
       .addRoleOption(o => o.setName('role').setDescription('Rôle').setRequired(true))
       .addBooleanOption(o => o.setName('ajouter').setDescription('Ajouter (true) ou retirer (false)').setRequired(true)))
     .addSubcommand(s => s.setName('multiplicateur').setDescription('XP x2, x3... pour un rôle (ex: Booster)')
-      .addRoleOption(o => o.setName('role').setDescription('Rôle').setRequired(true)))
+      .addRoleOption(o => o.setName('role').setDescription('Rôle').setRequired(true))
+      .addNumberOption(o => o.setName('valeur').setDescription('Multiplicateur (ex: 2.0 pour x2)').setMinValue(0).setRequired(true)))
     .addSubcommand(s => s.setName('message_levelup').setDescription('Personnaliser le message de montée de niveau')
       .addStringOption(o => o.setName('message').setDescription('Message ({user}, {level}, {guild} dispo)').setRequired(true)))
     .addSubcommand(s => s.setName('canal_levelup').setDescription('Canal où afficher les montées de niveau')
@@ -60,8 +63,8 @@ module.exports = {
     }
 
     if (sub === 'taux') {
-      const xpMin = parseInt(interaction.options.getString('xp_min'));
-      const coins = parseInt(interaction.options.getString('coins'));
+      const xpMin = interaction.options.getInteger('xp_min');
+      const coins = interaction.options.getInteger('coins');
       if (xpMin !== null) db.db.prepare('UPDATE guild_config SET xp_rate=? WHERE guild_id=?').run(xpMin, interaction.guildId);
       if (coins !== null) db.db.prepare('UPDATE guild_config SET coins_per_msg=? WHERE guild_id=?').run(coins, interaction.guildId);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Taux XP mis à jour.`)], ephemeral: true });
@@ -93,7 +96,7 @@ module.exports = {
 
     if (sub === 'multiplicateur') {
       const role   = interaction.options.getRole('role');
-      const valeur = parseFloat(interaction.options.getString('valeur'));
+      const valeur = interaction.options.getNumber('valeur');
       if (valeur <= 0) {
         db.db.prepare('DELETE FROM xp_multipliers WHERE guild_id=? AND role_id=?').run(interaction.guildId, role.id);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Multiplicateur de <@&${role.id}> supprimé.`)], ephemeral: true });

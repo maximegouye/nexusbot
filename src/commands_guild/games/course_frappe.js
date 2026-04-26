@@ -86,7 +86,8 @@ module.exports = {
           { name: '🔥 Moyen', value: 'moyen' },
           { name: '💀 Difficile', value: 'difficile' },
           { name: '💻 Code', value: 'code' },
-        )))
+        ))
+      .addIntegerOption(o => o.setName('temps').setDescription('Temps en secondes').setMinValue(10).setMaxValue(300)))
     .addSubcommand(s => s.setName('solo')
       .setDescription('⏱️ Entraînement solo — mesure ta vitesse')
       .addStringOption(o => o.setName('difficulte').setDescription('Niveau')
@@ -94,7 +95,8 @@ module.exports = {
           { name: '😊 Facile', value: 'facile' },
           { name: '🔥 Moyen', value: 'moyen' },
           { name: '💀 Difficile', value: 'difficile' },
-        )))
+        ))
+      .addIntegerOption(o => o.setName('temps').setDescription('Temps en secondes').setMinValue(10).setMaxValue(300)))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la course en cours')),
 
   cooldown: 5,

@@ -56,13 +56,15 @@ module.exports = {
     .addSubcommand(s => s.setName('serveur').setDescription('📊 Statistiques des sanctions du serveur'))
 
     .addSubcommand(s => s.setName('seuils').setDescription('⚙️ Configurer les actions automatiques selon les avertissements')
+      .addIntegerOption(o => o.setName('nb_warn').setDescription('À quel nombre d\'avertissements').setRequired(true).setMinValue(1).setMaxValue(20))
       .addStringOption(o => o.setName('action').setDescription('Action à effectuer').setRequired(true)
         .addChoices(
           { name: '⚠️ Rien (garder en note)', value: 'none' },
           { name: '🔇 Mute temporaire', value: 'mute' },
           { name: '👢 Kick', value: 'kick' },
           { name: '🔨 Ban', value: 'ban' },
-        ))),
+        ))
+      .addIntegerOption(o => o.setName('duree_minutes').setDescription('Durée du mute en minutes (si mute)').setMinValue(1))),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

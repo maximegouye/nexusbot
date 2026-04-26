@@ -7,6 +7,7 @@ module.exports = {
     .setDescription('🛠️ Définir l\'XP d\'un membre')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
+    .addIntegerOption(o => o.setName('xp').setDescription('Valeur XP').setMinValue(0).setRequired(true))
     .addStringOption(o => o.setName('action').setDescription('Action').setRequired(false)
       .addChoices(
         { name: 'Définir (remplace)', value: 'set' },
@@ -17,7 +18,7 @@ module.exports = {
 
   async execute(interaction) {
     const target = interaction.options.getUser('membre');
-    const xpVal  = parseInt(interaction.options.getString('xp'));
+    const xpVal  = interaction.options.getInteger('xp');
     const action = interaction.options.getString('action') || 'set';
     const user   = db.getUser(target.id, interaction.guildId);
 

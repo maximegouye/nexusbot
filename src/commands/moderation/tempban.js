@@ -6,6 +6,7 @@ module.exports = {
     .setName('tempban')
     .setDescription('⛔ Bannir temporairement un membre')
     .addUserOption(o => o.setName('membre').setDescription('Membre à bannir').setRequired(true))
+    .addIntegerOption(o => o.setName('duree').setDescription('Durée du ban en heures').setMinValue(1).setRequired(true))
     .addStringOption(o => o.setName('raison').setDescription('Raison du bannissement').setRequired(false))
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
   cooldown: 5,
@@ -15,7 +16,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const target  = interaction.options.getUser('membre');
-    const duree   = parseInt(interaction.options.getString('duree'));
+    const duree   = interaction.options.getInteger('duree');
     const raison  = interaction.options.getString('raison') || 'Aucune raison fournie';
     const member  = interaction.guild.members.cache.get(target.id);
 

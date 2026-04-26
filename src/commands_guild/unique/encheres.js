@@ -32,9 +32,13 @@ module.exports = {
     .setDescription('🏷️ Système d\'enchères — vendez et achetez aux enchères !')
     .addSubcommand(s => s.setName('creer').setDescription('🏷️ Créer une enchère')
       .addStringOption(o => o.setName('article').setDescription('Nom de l\'article').setRequired(true).setMaxLength(80))
-      .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200)))
+      .addStringOption(o => o.setName('description').setDescription('Description de l\'article').setMaxLength(200))
+      .addIntegerOption(o => o.setName('prix_depart').setDescription('Prix de départ').setRequired(true).setMinValue(1))
+      .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée en heures').setRequired(true).setMinValue(1).setMaxValue(168))
+      .addIntegerOption(o => o.setName('increment_min').setDescription('Incrément minimum').setMinValue(1)))
     .addSubcommand(s => s.setName('encherir').setDescription('💰 Faire une enchère')
-      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
+      .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à enchérir').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir une enchère')
       .addStringOption(o => o.setName('id').setDescription('ID de l\'enchère').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Liste des enchères actives'))
@@ -55,10 +59,10 @@ module.exports = {
     if (sub === 'creer') {
       const u = db.getUser(userId, guildId);
       const article = interaction.options.getString('article');
-      const prixDepart = parseInt(interaction.options.getString('prix_depart'));
-      const duree = parseInt(interaction.options.getString('duree_heures'));
+      const prixDepart = interaction.options.getInteger('prix_depart');
+      const duree = interaction.options.getInteger('duree_heures');
       const desc = interaction.options.getString('description') || '';
-      const increment = parseInt(interaction.options.getString('increment_min')) || 10;
+      const increment = interaction.options.getInteger('increment_min') || 10;
       const endTime = now + duree * 3600;
 
       // Coût de mise en vente : 50 coins
@@ -82,7 +86,7 @@ module.exports = {
 
     if (sub === 'encherir') {
       const id = parseInt(interaction.options.getString('id'));
-      const montant = parseInt(interaction.options.getString('montant'));
+      const montant = interaction.options.getInteger('montant');
       const enc = db.db.prepare('SELECT * FROM encheres WHERE id=? AND guild_id=?').get(id, guildId);
       if (!enc) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Enchère #${id} introuvable.`, ephemeral: true });
       if (enc.status !== 'active') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette enchère est terminée.', ephemeral: true });

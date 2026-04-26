@@ -45,7 +45,8 @@ module.exports = {
       .addStringOption(o => o.setName('choix').setDescription('Votre choix').setRequired(true).addChoices(
         { name: '🅰️ Option A', value: 'a' },
         { name: '🅱️ Option B', value: 'b' },
-      )))
+      ))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à miser').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s.setName('voir')
       .setDescription('👁️ Voir un pari')
       .addStringOption(o => o.setName('id').setDescription('ID du pari').setRequired(true)))

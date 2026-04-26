@@ -37,7 +37,7 @@ module.exports = {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission refusée.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
-      const duree = parseInt(interaction.options.getString('duree'));
+      const duree = interaction.options.getInteger('duree');
       const motif = interaction.options.getString('motif');
       const caution = parseInt(interaction.options.getString('caution')) || 0;
 

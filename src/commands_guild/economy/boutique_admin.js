@@ -61,9 +61,9 @@ module.exports = {
       const desc   = interaction.options.getString('description') || '';
       const emoji  = interaction.options.getString('emoji') || '📦';
       const role   = interaction.options.getRole('role');
-      const stock  = parseInt(interaction.options.getString('stock')) ?? -1;
-      const maxPU  = parseInt(interaction.options.getString('max_par_joueur')) ?? null;
-      const duree  = parseInt(interaction.options.getString('duree_heures')) ?? 0;
+      const stock  = interaction.options.getInteger('stock') ?? -1;
+      const maxPU  = interaction.options.getInteger('max_par_joueur') ?? null;
+      const duree  = interaction.options.getInteger('duree_heures') ?? 0;
 
       const result = db.db.prepare(`
         INSERT INTO shop (guild_id,name,description,emoji,price,stock,role_id,max_per_user,duration_hours,active)
@@ -95,7 +95,7 @@ module.exports = {
       const prix  = parseInt(interaction.options.getString('prix'));
       const desc  = interaction.options.getString('description');
       const emoji = interaction.options.getString('emoji');
-      const stock = parseInt(interaction.options.getString('stock'));
+      const stock = interaction.options.getInteger('stock');
       const actif = interaction.options.getBoolean('actif');
 
       if (nom   !== null) changes.name        = nom;
@@ -151,7 +151,7 @@ module.exports = {
     // ── STOCK AJOUTER ─────────────────────────────────────────────────
     if (sub === 'stock_ajouter') {
       const id  = parseInt(interaction.options.getString('id'));
-      const qty = parseInt(interaction.options.getString('quantite'));
+      const qty = interaction.options.getInteger('quantite');
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
       if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (item.stock === -1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cet article a un stock illimité.', ephemeral: true });
@@ -209,7 +209,7 @@ module.exports = {
     // ── PROMO ─────────────────────────────────────────────────────────
     if (sub === 'promo') {
       const id  = parseInt(interaction.options.getString('id'));
-      const pct = parseInt(interaction.options.getString('reduction'));
+      const pct = interaction.options.getInteger('reduction');
       const item = db.db.prepare('SELECT * FROM shop WHERE id=? AND guild_id=?').get(id, guildId);
       if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       const newPrice = Math.max(1, Math.floor(item.price * (1 - pct / 100)));

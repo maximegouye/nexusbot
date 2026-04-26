@@ -78,6 +78,8 @@ module.exports = {
     .setName('password')
     .setDescription('🔐 Générateur de mots de passe sécurisés')
     .addSubcommand(s => s.setName('generer').setDescription('🔑 Générer un mot de passe')
+      .addIntegerOption(o => o.setName('longueur').setDescription('Longueur du mot de passe (défaut: 16)').setMinValue(4).setMaxValue(128).setRequired(false))
+      .addIntegerOption(o => o.setName('quantite').setDescription('Nombre de mots de passe (défaut: 1)').setMinValue(1).setMaxValue(10).setRequired(false))
       .addBooleanOption(o => o.setName('majuscules').setDescription('Inclure des majuscules (défaut: oui)'))
       .addBooleanOption(o => o.setName('chiffres').setDescription('Inclure des chiffres (défaut: oui)'))
       .addBooleanOption(o => o.setName('symboles').setDescription('Inclure des symboles (défaut: non)'))
@@ -89,12 +91,12 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'generer') {
-      const length  = parseInt(interaction.options.getString('longueur'))  ?? 16;
+      const length  = interaction.options.getInteger('longueur')  ?? 16;
       const upper   = interaction.options.getBoolean('majuscules')  ?? true;
       const digits  = interaction.options.getBoolean('chiffres')    ?? true;
       const symbols = interaction.options.getBoolean('symboles')    ?? false;
       const nosim   = interaction.options.getBoolean('nosimilaires') ?? false;
-      const qty     = parseInt(interaction.options.getString('quantite'))    ?? 1;
+      const qty     = interaction.options.getInteger('quantite')    ?? 1;
 
       const passwords = Array.from({ length: qty }, () => generate(length, { lower: true, upper, digits, symbols, nosimilar: nosim }));
       const { label, color } = strength(passwords[0]);
@@ -118,7 +120,7 @@ module.exports = {
 
       const details = [
         `📏 Longueur : **${pwd.length}**`,
-        `/[a-z]/.test(pwd) ? '✅' : '❌'} Minuscules`,
+        `${/[a-z]/.test(pwd) ? '✅' : '❌'} Minuscules`,
         `${/[A-Z]/.test(pwd) ? '✅' : '❌'} Majuscules`,
         `${/[0-9]/.test(pwd) ? '✅' : '❌'} Chiffres`,
         `${/[^a-zA-Z0-9]/.test(pwd) ? '✅' : '❌'} Symboles`,

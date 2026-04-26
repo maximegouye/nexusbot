@@ -22,6 +22,7 @@ module.exports = {
       .addRoleOption(o => o.setName('role5').setDescription('Rôle 5').setRequired(false))
       .addStringOption(o => o.setName('description').setDescription('Description / instructions').setRequired(false))
       .addChannelOption(o => o.setName('salon').setDescription('Salon où envoyer le menu').setRequired(false))
+      .addIntegerOption(o => o.setName('max').setDescription('Maximum de rôles sélectionnables').setMinValue(0).setMaxValue(5).setRequired(false))
     )
     .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer un menu (par ID)')
       .addStringOption(o => o.setName('id').setDescription('ID du menu').setRequired(true)))
@@ -35,7 +36,7 @@ module.exports = {
       const titre  = interaction.options.getString('titre');
       const desc   = interaction.options.getString('description') || 'Clique sur un bouton pour obtenir/retirer le rôle correspondant.';
       const salon  = interaction.options.getChannel('salon') || interaction.channel;
-      const maxC   = parseInt(interaction.options.getString('max')) ?? 0;
+      const maxC   = interaction.options.getInteger('max') ?? 0;
 
       const roles = [];
       for (let i = 1; i <= 5; i++) {

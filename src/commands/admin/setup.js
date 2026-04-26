@@ -22,7 +22,8 @@ module.exports = {
     .addSubcommand(s => s.setName('autorole').setDescription('🤖 Rôle automatique à l\'arrivée')
       .addRoleOption(o => o.setName('role').setDescription('Rôle à donner (aucun = désactiver)').setRequired(false)))
     .addSubcommand(s => s.setName('xp').setDescription('⭐ Paramètres XP')
-      .addBooleanOption(o => o.setName('actif').setDescription('Activer/désactiver le gain d\'XP').setRequired(true))),
+      .addBooleanOption(o => o.setName('actif').setDescription('Activer/désactiver le gain d\'XP').setRequired(true))
+      .addIntegerOption(o => o.setName('multiplicateur').setDescription('Multiplicateur XP').setMinValue(1).setMaxValue(10).setRequired(false))),
   cooldown: 5,
 
   async execute(interaction) {
@@ -93,7 +94,7 @@ module.exports = {
 
     if (sub === 'xp') {
       const actif = interaction.options.getBoolean('actif');
-      const multi = parseInt(interaction.options.getString('multiplicateur'));
+      const multi = interaction.options.getInteger('multiplicateur');
       db.setConfig(interaction.guildId, 'xp_enabled', actif ? 1 : 0);
       if (multi) db.setConfig(interaction.guildId, 'xp_multiplier', multi);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ XP ${actif ? 'activé' : 'désactivé'}${multi ? ` — Multiplicateur ×${multi}` : ''}.`)], ephemeral: true });

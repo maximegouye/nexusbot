@@ -10,6 +10,7 @@ module.exports = {
     .setName('resume')
     .setDescription('🧠 Résume les derniers messages du salon via l\'IA')
     .addChannelOption(o => o.setName('salon').setDescription('Salon à résumer (défaut: ici)').addChannelTypes(ChannelType.GuildText))
+    .addIntegerOption(o => o.setName('messages').setDescription('Nombre de messages à résumer (défaut: 50)').setMinValue(5).setMaxValue(100).setRequired(false))
     .addStringOption(o => o.setName('langue').setDescription('Langue du résumé').setChoices(
       { name: 'Français', value: 'français' },
       { name: 'Anglais',  value: 'anglais' },
@@ -20,7 +21,7 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
-    const n = parseInt(interaction.options.getString('messages')) ?? 50;
+    const n = interaction.options.getInteger('messages') ?? 50;
     const chan = interaction.options.getChannel('salon') ?? interaction.channel;
     const lang = interaction.options.getString('langue') ?? 'français';
     const cfg = ai.getAIConfig(interaction.guildId, db);

@@ -18,7 +18,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('loto')
     .setDescription('🎰 Loterie hebdomadaire avec jackpot')
-    .addSubcommand(s => s.setName('acheter').setDescription('🎟️ Acheter des tickets de loto'))
+    .addSubcommand(s => s.setName('acheter').setDescription('🎟️ Acheter des tickets de loto')
+      .addIntegerOption(o => o.setName('quantite').setDescription('Nombre de tickets à acheter (défaut: 1)').setMinValue(1).setMaxValue(100).setRequired(false)))
     .addSubcommand(s => s.setName('jackpot').setDescription('💰 Voir le jackpot actuel et ton nombre de tickets'))
     .addSubcommand(s => s.setName('classement').setDescription('📋 Qui a le plus de chances de gagner ?'))
     .addSubcommand(s => s.setName('tirage').setDescription('🎲 Effectuer le tirage au sort (Admin)')
@@ -40,7 +41,7 @@ module.exports = {
     }
 
     if (sub === 'acheter') {
-      const qte = parseInt(interaction.options.getString('quantite'));
+      const qte = interaction.options.getInteger('quantite');
       const prix = (lotoCfg.ticket_price || 100) * qte;
       const u = db.getUser(userId, guildId);
 

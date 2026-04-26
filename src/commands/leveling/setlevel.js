@@ -6,12 +6,13 @@ module.exports = {
     .setName('setlevel')
     .setDescription('🛠️ Définir le niveau d\'un membre')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true)),
+    .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
+    .addIntegerOption(o => o.setName('niveau').setDescription('Nouveau niveau').setMinValue(1).setRequired(true)),
   cooldown: 3,
 
   async execute(interaction) {
     const target = interaction.options.getUser('membre');
-    const level  = parseInt(interaction.options.getString('niveau'));
+    const level  = interaction.options.getInteger('niveau');
     const xp     = Math.floor(100 * Math.pow(1.35, level - 1));
 
     db.db.prepare('UPDATE users SET level = ?, xp = ? WHERE user_id = ? AND guild_id = ?')

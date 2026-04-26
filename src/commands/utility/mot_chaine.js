@@ -26,7 +26,8 @@ module.exports = {
           { name: '🐾 Animaux', value: 'animaux' },
           { name: '🌆 Villes', value: 'villes' },
         ))
-      .addStringOption(o => o.setName('mot_debut').setDescription('Mot de départ (optionnel)')))
+      .addStringOption(o => o.setName('mot_debut').setDescription('Mot de départ (optionnel)'))
+      .addIntegerOption(o => o.setName('temps').setDescription('Temps par tour en secondes (défaut: 30)').setMinValue(5).setMaxValue(120).setRequired(false)))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la partie en cours'))
     .addSubcommand(s => s.setName('status').setDescription('📊 Voir la partie en cours')),
 
@@ -43,7 +44,7 @@ module.exports = {
       }
 
       const theme   = interaction.options.getString('theme') || 'libre';
-      const temps   = parseInt(interaction.options.getString('temps')) || 30;
+      const temps   = interaction.options.getInteger('temps') || 30;
       const debutOpt = interaction.options.getString('mot_debut');
       const motDebut = (debutOpt || getRandomWord(theme) || 'DRAGON').toUpperCase().trim();
 

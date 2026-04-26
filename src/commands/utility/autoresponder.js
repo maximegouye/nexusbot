@@ -17,7 +17,8 @@ module.exports = {
     .addSubcommand(s => s.setName('ajouter').setDescription('Ajouter une réponse automatique')
       .addStringOption(o => o.setName('declencheur').setDescription('Texte qui déclenche la réponse').setRequired(true))
       .addStringOption(o => o.setName('reponse').setDescription('Réponse à envoyer').setRequired(true))
-      .addBooleanOption(o => o.setName('exact').setDescription('Correspondance exacte du message entier (sinon: contient)')))
+      .addBooleanOption(o => o.setName('exact').setDescription('Correspondance exacte du message entier (sinon: contient)'))
+      .addIntegerOption(o => o.setName('cooldown').setDescription('Cooldown en secondes (défaut: 0)').setMinValue(0).setMaxValue(3600).setRequired(false)))
     .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer une réponse automatique')
       .addStringOption(o => o.setName('id').setDescription('ID de la réponse').setRequired(true)))
     .addSubcommand(s => s.setName('liste').setDescription('Voir toutes les réponses automatiques'))
@@ -30,7 +31,7 @@ module.exports = {
       const trigger  = interaction.options.getString('declencheur').toLowerCase();
       const response = interaction.options.getString('reponse');
       const exact    = interaction.options.getBoolean('exact') ?? false;
-      const cooldown = parseInt(interaction.options.getString('cooldown')) ?? 0;
+      const cooldown = interaction.options.getInteger('cooldown') ?? 0;
 
       const count = db.db.prepare('SELECT COUNT(*) as c FROM autoresponder WHERE guild_id=?').get(interaction.guildId)?.c ?? 0;
       const max   = (db.isPremium && db.isPremium(interaction.guildId)) ? 100 : 25;

@@ -68,19 +68,24 @@ module.exports = {
       .setDescription('💰 Gestion économique complète')
 
       .addSubcommand(s => s.setName('donner').setDescription('Donner des coins à un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addStringOption(o => o.setName('montant').setDescription('Montant à donner').setRequired(true).setMaxLength(30)))
 
       .addSubcommand(s => s.setName('retirer').setDescription('Retirer des coins à un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addStringOption(o => o.setName('montant').setDescription('Montant à retirer').setRequired(true).setMaxLength(30)))
 
       .addSubcommand(s => s.setName('definir-solde').setDescription('Définir précisément le solde d\'un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addStringOption(o => o.setName('montant').setDescription('Nouveau solde').setRequired(true).setMaxLength(30)))
 
       .addSubcommand(s => s.setName('donner-xp').setDescription('Donner de l\'XP à un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addStringOption(o => o.setName('montant').setDescription('XP à donner').setRequired(true).setMaxLength(30)))
 
       .addSubcommand(s => s.setName('definir-niveau').setDescription('Définir le niveau d\'un membre')
-        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
+        .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+        .addStringOption(o => o.setName('niveau').setDescription('Nouveau niveau').setRequired(true).setMaxLength(10)))
 
       .addSubcommand(s => s.setName('reset-user').setDescription('Réinitialiser le profil économique d\'un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre à réinitialiser').setRequired(true)))
@@ -102,11 +107,14 @@ module.exports = {
         .addStringOption(o => o.setName('nom').setDescription('Nom de la monnaie').setRequired(false))
         .addStringOption(o => o.setName('emoji').setDescription('Emoji de la monnaie').setRequired(false)))
 
-      .addSubcommand(s => s.setName('daily').setDescription('Configurer la récompense journalière'))
+      .addSubcommand(s => s.setName('daily').setDescription('Configurer la récompense journalière')
+        .addIntegerOption(o => o.setName('montant').setDescription('Montant du daily').setRequired(true).setMinValue(1)))
 
-      .addSubcommand(s => s.setName('xp-multiplicateur').setDescription('Configurer le multiplicateur d\'XP'))
+      .addSubcommand(s => s.setName('xp-multiplicateur').setDescription('Configurer le multiplicateur d\'XP')
+        .addNumberOption(o => o.setName('valeur').setDescription('Multiplicateur (ex: 1.5)').setRequired(true).setMinValue(0.1)))
 
-      .addSubcommand(s => s.setName('coins-par-message').setDescription('Définir les coins gagnés par message'))
+      .addSubcommand(s => s.setName('coins-par-message').setDescription('Définir les coins gagnés par message')
+        .addIntegerOption(o => o.setName('montant').setDescription('Coins par message').setRequired(true).setMinValue(0)))
 
       .addSubcommand(s => s.setName('bienvenue').setDescription('Configurer le canal et message de bienvenue')
         .addChannelOption(o => o.setName('canal').setDescription('Canal de bienvenue').setRequired(true))
@@ -149,16 +157,20 @@ module.exports = {
         .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
         .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(200))
         .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false))
-        .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat').setRequired(false)))
+        .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat').setRequired(false))
+        .addIntegerOption(o => o.setName('prix').setDescription('Prix').setRequired(true).setMinValue(1))
+        .addIntegerOption(o => o.setName('stock').setDescription('Stock (-1 = illimité)').setRequired(true).setMinValue(-1)))
 
       .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer un article de la boutique')
         .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
 
       .addSubcommand(s => s.setName('modifier-prix').setDescription('Modifier le prix d\'un article')
-        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
+        .addIntegerOption(o => o.setName('prix').setDescription('Nouveau prix').setRequired(true).setMinValue(1)))
 
       .addSubcommand(s => s.setName('modifier-stock').setDescription('Modifier le stock d\'un article')
-        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
+        .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
+        .addIntegerOption(o => o.setName('stock').setDescription('Nouveau stock (-1 = illimité)').setRequired(true).setMinValue(-1)))
 
       .addSubcommand(s => s.setName('activer').setDescription('Activer ou désactiver un article')
         .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))
@@ -182,7 +194,8 @@ module.exports = {
           { name: '📅 Double Daily', value: 'double_daily' },
           { name: '💬 Bonus Messages', value: 'msg_bonus' },
           { name: '🎰 Jackpot (gains x5)', value: 'jackpot' }
-        )))
+        ))
+        .addIntegerOption(o => o.setName('duree').setDescription('Durée en heures').setRequired(true).setMinValue(1).setMaxValue(720)))
 
       .addSubcommand(s => s.setName('terminer').setDescription('Terminer un événement en cours')
         .addStringOption(o => o.setName('id').setDescription('ID de l\'événement').setRequired(true)))

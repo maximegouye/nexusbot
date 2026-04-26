@@ -4,7 +4,9 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('buy')
-    .setDescription('🛍️ Achète un article dans la boutique'),
+    .setDescription('🛍️ Achète un article dans la boutique')
+    .addIntegerOption(o => o.setName('id').setDescription("ID de l'article à acheter").setMinValue(1).setRequired(true))
+    .addIntegerOption(o => o.setName('quantite').setDescription('Quantité (défaut: 1)').setMinValue(1).setRequired(false)),
   cooldown: 5,
 
   async execute(interaction) {
@@ -12,8 +14,8 @@ module.exports = {
     const cfg   = db.getConfig(interaction.guildId);
     const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Euros';
-    const id    = parseInt(interaction.options.getString('id'));
-    const qty   = parseInt(interaction.options.getString('quantite')) || 1;
+    const id    = interaction.options.getInteger('id');
+    const qty   = (interaction.options.getInteger('quantite') || 1);
 
     const item = db.db.prepare('SELECT * FROM shop WHERE id = ? AND guild_id = ? AND active = 1').get(id, interaction.guildId);
     if (!item) {

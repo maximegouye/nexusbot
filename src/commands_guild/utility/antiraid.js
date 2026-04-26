@@ -46,7 +46,10 @@ module.exports = {
           { name: '🔇 Timeout 1h', value: 'timeout' },
           { name: '🚫 Lockdown serveur', value: 'lockdown' },
         ))
-      .addChannelOption(o => o.setName('log').setDescription('Salon de logs anti-raid')))
+      .addChannelOption(o => o.setName('log').setDescription('Salon de logs anti-raid'))
+      .addIntegerOption(o => o.setName('seuil').setDescription('Nombre de joins avant action').setMinValue(1))
+      .addIntegerOption(o => o.setName('fenetre').setDescription('Fenêtre de temps en secondes').setMinValue(10))
+      .addIntegerOption(o => o.setName('age_compte').setDescription('Age minimum du compte en jours').setMinValue(0)))
     .addSubcommand(s => s.setName('lockdown')
       .setDescription('🚨 Activer/désactiver le lockdown d\'urgence')
       .addBooleanOption(o => o.setName('activer').setDescription('true = activer, false = désactiver').setRequired(true))

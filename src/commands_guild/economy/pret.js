@@ -23,7 +23,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('pret')
     .setDescription('🏦 Système de prêts — Empruntez des coins avec intérêts')
-    .addSubcommand(s => s.setName('emprunter').setDescription('💸 Emprunter des coins'))
+    .addSubcommand(s => s.setName('emprunter').setDescription('💸 Emprunter des coins')
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à emprunter').setMinValue(1).setRequired(true)))
     .addSubcommand(s => s.setName('rembourser').setDescription('💰 Rembourser votre prêt actif'))
     .addSubcommand(s => s.setName('statut').setDescription('📋 Voir votre situation de prêt'))
     .addSubcommand(s => s.setName('taux').setDescription('📊 Voir les taux selon votre niveau')),
@@ -60,7 +61,7 @@ module.exports = {
       const active = db.db.prepare("SELECT * FROM prets WHERE guild_id=? AND user_id=? AND repaid=0").get(guildId, userId);
       if (active) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà un prêt actif ! Remboursez-le d\'abord.', ephemeral: true });
 
-      const montant = parseInt(interaction.options.getString('montant'));
+      const montant = interaction.options.getInteger('montant');
       if (montant > tier.max) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Maximum **${tier.max} ${coin}** pour votre niveau (${level}).`, ephemeral: true });
 
       const dueAt = now + tier.duration;
