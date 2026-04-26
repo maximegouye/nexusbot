@@ -4,6 +4,7 @@
 // ============================================================
 const { REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
 const { checkBumpReminders } = require('../utils/bumpReminderCheck');
+const { autoInit: casinoMusicAutoInit } = require('../utils/casinoMusicManager');
 
 // ── Postes recrutement (miroir de recrutement.js) ──────────
 const POSTES = {
@@ -152,6 +153,9 @@ module.exports = {
 
     // ── Auto-setup recrutement (15s après démarrage pour laisser le cache se remplir)
     setTimeout(() => autoSetupRecrutement(client, guildId).catch(() => {}), 15_000);
+
+    // ── Musique casino — auto-démarrage (20s pour que le cache vocal soit prêt)
+    casinoMusicAutoInit(client, guildId).catch(() => {});
 
     const token = process.env.TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN;
     if (!token) {
