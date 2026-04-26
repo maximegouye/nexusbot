@@ -123,6 +123,8 @@ async function startMusic(guild, channelId) {
 
   const v = voice();
   let connection;
+  let lastState = 'initial';
+
   try {
     connection = v.joinVoiceChannel({
       channelId: channel.id,
@@ -130,11 +132,17 @@ async function startMusic(guild, channelId) {
       adapterCreator: guild.voiceAdapterCreator,
       selfDeaf:  true,
     });
-    await v.entersState(connection, v.VoiceConnectionStatus.Ready, 15_000);
+
+    connection.on('stateChange', (_, newState) => {
+      lastState = newState.status;
+      console.log(`[CasinoMusic] State → ${newState.status} (${guildId})`);
+    });
+
+    await v.entersState(connection, v.VoiceConnectionStatus.Ready, 45_000);
   } catch (err) {
-    console.error('[CasinoMusic] Échec connexion vocale:', err?.message);
+    console.error(`[CasinoMusic] Échec connexion (lastState=${lastState}):`, err?.message);
     try { connection?.destroy(); } catch (_) {}
-    return { success: false, reason: `Erreur connexion vocale: ${err?.message || err}` };
+    return { success: false, reason: `Bloqué en "${lastState}" : ${err?.message || err}` };
   }
 
   const player = v.createAudioPlayer({
