@@ -130,11 +130,11 @@ async function startMusic(guild, channelId) {
       adapterCreator: guild.voiceAdapterCreator,
       selfDeaf:  true,
     });
-    await v.entersState(connection, v.VoiceConnectionStatus.Ready, 30_000);
+    await v.entersState(connection, v.VoiceConnectionStatus.Ready, 15_000);
   } catch (err) {
     console.error('[CasinoMusic] Échec connexion vocale:', err?.message);
     try { connection?.destroy(); } catch (_) {}
-    return { success: false, reason: 'Impossible de rejoindre le salon vocal.' };
+    return { success: false, reason: `Erreur connexion vocale: ${err?.message || err}` };
   }
 
   const player = v.createAudioPlayer({
