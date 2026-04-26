@@ -139,31 +139,72 @@ module.exports = {
 
     // Collector navigation
     const filter = i => i.user.id === interaction.user.id && i.customId.startsWith('lb_');
-    const collector = msg.createMessageComponentCollector({ filter, time: 60_000 });
 
+    // Fonction interne qui rebâtit l'embed pour une catégorie donnée
+    async function renderCat(targetMsg, newCat) {
+      const newInfo = CATEGORIES[newCat];
+      if (!newInfo) return;
+
+      let newRows, newValueGetter, newValueSuffix;
+      if (newCat === 'coins') {
+        newRows = db.db.prepare('SELECT user_id, balance, COALESCE(bank,0) as bank FROM users WHERE guild_id=? ORDER BY (balance + COALESCE(bank,0)) DESC LIMIT 10').all(guildId);
+        newValueGetter = r => r.balance + r.bank; newValueSuffix = coin;
+      } else if (newCat === 'xp') {
+        newRows = db.db.prepare('SELECT user_id, xp FROM users WHERE guild_id=? ORDER BY xp DESC LIMIT 10').all(guildId);
+        newValueGetter = r => r.xp; newValueSuffix = 'XP';
+      } else if (newCat === 'niveau') {
+        newRows = db.db.prepare('SELECT user_id, level, xp FROM users WHERE guild_id=? ORDER BY level DESC, xp DESC LIMIT 10').all(guildId);
+        newValueGetter = r => r.level; newValueSuffix = 'lvl';
+      } else if (newCat === 'reputation') {
+        newRows = db.db.prepare('SELECT user_id, reputation FROM users WHERE guild_id=? ORDER BY reputation DESC LIMIT 10').all(guildId);
+        newValueGetter = r => r.reputation || 0; newValueSuffix = 'rep';
+      } else if (newCat === 'messages') {
+        newRows = db.db.prepare('SELECT user_id, message_count FROM users WHERE guild_id=? ORDER BY message_count DESC LIMIT 10').all(guildId);
+        newValueGetter = r => r.message_count || 0; newValueSuffix = 'msgs';
+      }
+
+      if (!newRows?.length) {
+        await targetMsg.edit({ content: '📭 Aucune donnée disponible.', embeds: [], components: [] }).catch(() => {});
+        return;
+      }
+
+      const newLines = await Promise.all(newRows.map(async (r, idx) => {
+        const username = await getTag(interaction.client, r.user_id);
+        return `${MEDALS[idx]} **${username}** — ${fmt(newValueGetter(r))} ${newValueSuffix}`;
+      }));
+
+      const newRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('lb_coins').setLabel('💰').setStyle(ButtonStyle.Secondary).setDisabled(newCat === 'coins'),
+        new ButtonBuilder().setCustomId('lb_xp').setLabel('⭐ XP').setStyle(ButtonStyle.Secondary).setDisabled(newCat === 'xp'),
+        new ButtonBuilder().setCustomId('lb_niveau').setLabel('🏆 Niv').setStyle(ButtonStyle.Secondary).setDisabled(newCat === 'niveau'),
+        new ButtonBuilder().setCustomId('lb_reputation').setLabel('❤️ Rep').setStyle(ButtonStyle.Secondary).setDisabled(newCat === 'reputation'),
+        new ButtonBuilder().setCustomId('lb_messages').setLabel('💬 Msgs').setStyle(ButtonStyle.Secondary).setDisabled(newCat === 'messages'),
+      );
+
+      const newEmbed = new EmbedBuilder()
+        .setColor(newInfo.color)
+        .setTitle(`${newInfo.label} — Top 10`)
+        .setDescription(newInfo.desc + '\n\n' + newLines.join('\n'))
+        .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+        .setTimestamp();
+
+      await targetMsg.edit({ embeds: [newEmbed], components: [newRow] }).catch(() => {});
+
+      // Nouveau collector pour la navigation continue
+      const nc = targetMsg.createMessageComponentCollector({ filter, time: 60_000 });
+      nc.on('collect', async j => {
+        await j.deferUpdate();
+        nc.stop();
+        await renderCat(targetMsg, j.customId.replace('lb_', ''));
+      });
+      nc.on('end', () => targetMsg.edit({ components: [] }).catch(() => {}));
+    }
+
+    const collector = msg.createMessageComponentCollector({ filter, time: 60_000 });
     collector.on('collect', async i => {
       await i.deferUpdate();
       collector.stop();
-      const newCat = i.customId.replace('lb_', '');
-      // Relancer la commande avec la nouvelle catégorie
-      const fakeInteraction = Object.create(interaction);
-      fakeInteraction.options = {
-        getSubcommand: () => null,
-        getString: () => newCat,
-      };
-      // Appeler execute directement
-      await module.exports.execute(Object.assign(Object.create(interaction), {
-        options: { getString: () => newCat, getSubcommand: () => null },
-        deferReply: async () => {},
-        editReply: async (opts) => msg.edit(opts),
-        followUp: interaction.followUp.bind(interaction),
-        replied: true,
-        deferred: true,
-        guildId: interaction.guildId,
-        guild: interaction.guild,
-        user: interaction.user,
-        client: interaction.client,
-      }));
+      await renderCat(msg, i.customId.replace('lb_', ''));
     });
 
     collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));

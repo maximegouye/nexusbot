@@ -147,5 +147,10 @@ module.exports = {
           )
       ]});
     }
-  }
+  },
+
+
+  // Prefix-only: accessible via &artisan (not registered as slash command)
+  _prefixOnly: true,
+  name: 'artisan',
 };

@@ -316,5 +316,10 @@ module.exports = {
         .setTitle('🏆 Classement RPG')
         .setDescription(desc)] });
     }
-  }
+  },
+
+
+  // Prefix-only: accessible via &rpg (not registered as slash command)
+  _prefixOnly: true,
+  name: 'rpg',
 };

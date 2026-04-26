@@ -1,6 +1,19 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../../database/db');
 
+// Création table portfolio si inexistante
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS portfolio (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    userId    TEXT NOT NULL,
+    guildId   TEXT NOT NULL,
+    symbole   TEXT NOT NULL,
+    quantite  INTEGER DEFAULT 0,
+    prixAchat INTEGER DEFAULT 0,
+    UNIQUE(userId, guildId, symbole)
+  )`).run();
+} catch {}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('bourse')
@@ -74,14 +87,15 @@ module.exports = {
       if (!marche[sym]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Action **${sym}** introuvable.`, ephemeral: true });
       if (isNaN(qty) || qty <= 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Quantité invalide.', ephemeral: true });
       const total = marche[sym].prix * qty;
-      const row = await db.get('SELECT coins FROM economy WHERE userId = ? AND guildId = ?', [userId, guildId]);
-      if (!row || row.coins < total) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Fonds insuffisants. Besoin: **${total.toLocaleString()} 🪙**, Solde: **${(row?.coins || 0).toLocaleString()} 🪙**.`, ephemeral: true });
-      await db.run('UPDATE economy SET coins = coins - ? WHERE userId = ? AND guildId = ?', [total, userId, guildId]);
-      const existing = await db.get('SELECT quantite FROM portfolio WHERE userId = ? AND guildId = ? AND symbole = ?', [userId, guildId, sym]);
+      const ecoRow = db.getUser(userId, guildId);
+      const balance = ecoRow?.balance || 0;
+      if (balance < total) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Fonds insuffisants. Besoin: **${total.toLocaleString()} 🪙**, Solde: **${balance.toLocaleString()} 🪙**.`, ephemeral: true });
+      db.addCoins(userId, guildId, -total);
+      const existing = db.db.prepare('SELECT quantite FROM portfolio WHERE userId = ? AND guildId = ? AND symbole = ?').get(userId, guildId, sym);
       if (existing) {
-        await db.run('UPDATE portfolio SET quantite = quantite + ? WHERE userId = ? AND guildId = ? AND symbole = ?', [qty, userId, guildId, sym]);
+        db.db.prepare('UPDATE portfolio SET quantite = quantite + ? WHERE userId = ? AND guildId = ? AND symbole = ?').run(qty, userId, guildId, sym);
       } else {
-        await db.run('INSERT INTO portfolio (userId, guildId, symbole, quantite, prixAchat) VALUES (?, ?, ?, ?, ?)', [userId, guildId, sym, qty, marche[sym].prix]);
+        db.db.prepare('INSERT INTO portfolio (userId, guildId, symbole, quantite, prixAchat) VALUES (?, ?, ?, ?, ?)').run(userId, guildId, sym, qty, marche[sym].prix);
       }
       const embed = new EmbedBuilder().setTitle('✅ Achat confirmé').setColor(0x00c853)
         .addFields({ name: 'Action', value: `**${sym}**`, inline: true }, { name: 'Quantité', value: `${qty}`, inline: true }, { name: 'Total', value: `${total.toLocaleString()} 🪙`, inline: true }).setTimestamp();
@@ -93,14 +107,14 @@ module.exports = {
       const qty = parseInt(interaction.options.getString('quantite'));
       if (!marche[sym]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Action **${sym}** introuvable.`, ephemeral: true });
       if (isNaN(qty) || qty <= 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Quantité invalide.', ephemeral: true });
-      const existing = await db.get('SELECT quantite FROM portfolio WHERE userId = ? AND guildId = ? AND symbole = ?', [userId, guildId, sym]);
+      const existing = db.db.prepare('SELECT quantite FROM portfolio WHERE userId = ? AND guildId = ? AND symbole = ?').get(userId, guildId, sym);
       if (!existing || existing.quantite < qty) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pas assez d'actions **${sym}**.`, ephemeral: true });
       const total = marche[sym].prix * qty;
-      await db.run('UPDATE economy SET coins = coins + ? WHERE userId = ? AND guildId = ?', [total, userId, guildId]);
+      db.addCoins(userId, guildId, total);
       if (existing.quantite === qty) {
-        await db.run('DELETE FROM portfolio WHERE userId = ? AND guildId = ? AND symbole = ?', [userId, guildId, sym]);
+        db.db.prepare('DELETE FROM portfolio WHERE userId = ? AND guildId = ? AND symbole = ?').run(userId, guildId, sym);
       } else {
-        await db.run('UPDATE portfolio SET quantite = quantite - ? WHERE userId = ? AND guildId = ? AND symbole = ?', [qty, userId, guildId, sym]);
+        db.db.prepare('UPDATE portfolio SET quantite = quantite - ? WHERE userId = ? AND guildId = ? AND symbole = ?').run(qty, userId, guildId, sym);
       }
       const embed = new EmbedBuilder().setTitle('✅ Vente confirmée').setColor(0xff6d00)
         .addFields({ name: 'Action', value: `**${sym}**`, inline: true }, { name: 'Quantité', value: `${qty}`, inline: true }, { name: 'Reçu', value: `${total.toLocaleString()} 🪙`, inline: true }).setTimestamp();
@@ -109,7 +123,7 @@ module.exports = {
 
     if (sub === 'portefeuille') {
       const target = interaction.options.getUser('membre') || interaction.user;
-      const rows = await db.all('SELECT * FROM portfolio WHERE userId = ? AND guildId = ?', [target.id, guildId]);
+      const rows = db.db.prepare('SELECT * FROM portfolio WHERE userId = ? AND guildId = ?').all(target.id, guildId);
       if (!rows || rows.length === 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `📭 **${target.username}** n'a aucune action.`, ephemeral: true });
       const embed = new EmbedBuilder().setTitle(`💼 Portefeuille de ${target.username}`).setColor(0x6200ea).setTimestamp();
       let total = 0;
@@ -125,7 +139,7 @@ module.exports = {
     }
 
     if (sub === 'classement') {
-      const rows = await db.all('SELECT userId, SUM(quantite * 150) as valeur FROM portfolio WHERE guildId = ? GROUP BY userId ORDER BY valeur DESC LIMIT 10', [guildId]);
+      const rows = db.db.prepare('SELECT userId, SUM(quantite * 150) as valeur FROM portfolio WHERE guildId = ? GROUP BY userId ORDER BY valeur DESC LIMIT 10').all(guildId);
       if (!rows || rows.length === 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📭 Aucun investisseur pour le moment.', ephemeral: true });
       const embed = new EmbedBuilder().setTitle('🏆 Top Investisseurs').setColor(0xffd700).setTimestamp();
       let desc = '';

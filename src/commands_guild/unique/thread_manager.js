@@ -176,5 +176,10 @@ module.exports = {
         );
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
-  }
+  },
+
+
+  // Prefix-only: accessible via &thread (not registered as slash command)
+  _prefixOnly: true,
+  name: 'thread',
 };

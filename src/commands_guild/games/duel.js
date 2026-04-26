@@ -52,7 +52,7 @@ module.exports = {
         if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
         return Math.floor(n);
       };
-      const miseRaw = interaction.options.get('mise')?.value;
+      const miseRaw = interaction.options.getString('mise');
       const mise = parseBet(miseRaw, _me.balance);
       if (!Number.isFinite(mise) || mise < 0) {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide.', ephemeral: true });

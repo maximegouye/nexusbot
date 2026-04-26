@@ -180,5 +180,10 @@ module.exports = {
       }).join('\n');
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🏢 Top Entreprises').setDescription(desc)] });
     }
-  }
+  },
+
+
+  // Prefix-only: accessible via &entreprise (not registered as slash command)
+  _prefixOnly: true,
+  name: 'entreprise',
 };

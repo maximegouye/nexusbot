@@ -243,5 +243,10 @@ module.exports = {
       db.db.prepare('DELETE FROM battlepass WHERE guild_id=? AND season=?').run(guildId, season);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`✅ Battle Pass de tout le serveur réinitialisé pour la saison ${season}.`)] });
     }
-  }
+  },
+
+
+  // Prefix-only: accessible via &battlepass (not registered as slash command)
+  _prefixOnly: true,
+  name: 'battlepass',
 };

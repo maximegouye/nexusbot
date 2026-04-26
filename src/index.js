@@ -61,7 +61,10 @@ function loadCommands(dir, tag) {
         if (cmd.data && cmd.execute) {
           cmd._sourceDir = tag;
           client.commands.set(cmd.data.name, cmd); // guild écrase global si même nom
-          if (tag === 'global') {
+          if (cmd._prefixOnly) {
+            // Commande prefix-only : chargée pour &cmd mais NON enregistrée comme slash
+            // (ne compte pas vers la limite de 100 commandes Discord)
+          } else if (tag === 'global') {
             client.globalCommandsList.push(cmd.data);
           } else {
             client.guildCommandsList.push(cmd.data);

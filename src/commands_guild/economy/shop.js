@@ -25,6 +25,7 @@ module.exports = {
       });
     }
 
+    const guild = interaction.guild;
     const user = db.getUser(interaction.user.id, interaction.guildId);
     const PAGE_SIZE = 8;
     const pages = Math.ceil(items.length / PAGE_SIZE);
@@ -49,8 +50,6 @@ module.exports = {
       }
       return embed;
     };
-
-    const guild = interaction.guild;
 
     const buildRow = (p) => {
       return new ActionRowBuilder().addComponents(

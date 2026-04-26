@@ -260,5 +260,10 @@ module.exports = {
       }).join('\n');
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2C3E50').setTitle('🕵️ Classement des Agents').setDescription(desc)] });
     }
-  }
+  },
+
+
+  // Prefix-only: accessible via &espion (not registered as slash command)
+  _prefixOnly: true,
+  name: 'espion',
 };
