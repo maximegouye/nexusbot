@@ -137,10 +137,16 @@ async function startMusic(guild, channelId) {
   const channel = guild.channels.cache.get(channelId);
   if (!channel) return { success: false, reason: 'Salon vocal introuvable.' };
 
-  // Attendre que libsodium-wrappers soit initialisé avant @discordjs/voice
+  // 1. Pré-initialiser sodium (WASM async) AVANT de charger @discordjs/voice
   await ensureEncryption();
 
+  // 2. Charger @discordjs/voice — son IIFE démarre (async)
   const v = voice();
+
+  // 3. Céder le thread UN tick pour que l'IIFE puisse finir son "await lib.ready"
+  //    Sans ça : joinVoiceChannel() est appelé avant que methods soit initialisé → destroyed
+  await new Promise(resolve => setImmediate(resolve));
+
   let connection;
   let lastState = 'initial';
 
