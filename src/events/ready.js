@@ -11,7 +11,7 @@ const POSTES = {
   technicien:  { label: 'Technicien Bots',     emoji: '⚙️', desc: 'Développe, configure et maintient les bots du serveur.' },
   animateur:   { label: 'Animateur Events',    emoji: '🎉', desc: 'Organise et anime des événements pour faire vivre la communauté.' },
   helper:      { label: 'Helper Support',      emoji: '🤝', desc: 'Aide et oriente les membres qui ont besoin d\'assistance.' },
-  partenariat: { label: 'Chargé Partenariats', emoji: '🤝', desc: 'Gère et développe les partenariats avec d\'autres serveurs.' },
+  partenariat: { label: 'Chargé Partenariats', emoji: '🌐', desc: 'Développe et gère les partenariats avec d\'autres serveurs.' },
   contenu:     { label: 'Responsable Contenu', emoji: '📝', desc: 'Crée et gère le contenu éditorial et les annonces du serveur.' },
   graphiste:   { label: 'Graphiste',           emoji: '🎨', desc: 'Conçoit l\'identité visuelle et les assets graphiques du serveur.' },
 };
