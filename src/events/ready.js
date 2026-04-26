@@ -34,13 +34,6 @@ async function autoSetupRecrutement(client, guildId) {
       `);
     } catch (_) {}
 
-    // Vérifier si déjà configuré
-    const existing = db.db.prepare('SELECT log_channel FROM rec_config WHERE guild_id=?').get(guildId);
-    if (existing?.log_channel) {
-      console.log('[Recrutement] Auto-setup : déjà configuré, skip.');
-      return;
-    }
-
     const guild = client.guilds.cache.get(guildId);
     if (!guild) return;
 
@@ -49,6 +42,16 @@ async function autoSetupRecrutement(client, guildId) {
       c.type === ChannelType.GuildText &&
       (c.name.includes('candidature') || c.name.includes('recrutement') || c.name.includes('postul'))
     );
+
+    // Si le canal existe déjà ET contient déjà un message du bot → skip
+    if (panelChannel) {
+      const msgs = await panelChannel.messages.fetch({ limit: 5 }).catch(() => null);
+      const hasPanel = msgs?.some(m => m.author.id === client.user.id && m.embeds.length > 0);
+      if (hasPanel) {
+        console.log('[Recrutement] Auto-setup : panneau déjà présent dans #' + panelChannel.name + ', skip.');
+        return;
+      }
+    }
 
     if (!panelChannel) {
       panelChannel = await guild.channels.create({
