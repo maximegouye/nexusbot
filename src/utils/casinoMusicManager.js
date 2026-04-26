@@ -158,16 +158,19 @@ async function startMusic(guild, channelId) {
       selfDeaf:  true,
     });
 
-    connection.on('stateChange', (_, newState) => {
+    const stateHistory = ['initial'];
+    connection.on('stateChange', (oldS, newState) => {
       lastState = newState.status;
-      console.log(`[CasinoMusic] State → ${newState.status} (${guildId})`);
+      stateHistory.push(newState.status);
+      console.log(`[CasinoMusic] State ${oldS.status} → ${newState.status} (${guildId})`);
     });
 
     await v.entersState(connection, v.VoiceConnectionStatus.Ready, 45_000);
   } catch (err) {
     console.error(`[CasinoMusic] Échec connexion (lastState=${lastState}):`, err?.message);
     try { connection?.destroy(); } catch (_) {}
-    return { success: false, reason: `Bloqué en "${lastState}" : ${err?.message || err}` };
+    const hist = stateHistory.join('→');
+    return { success: false, reason: `États: ${hist} | ${err?.message || err}` };
   }
 
   const player = v.createAudioPlayer({
