@@ -1,53 +1,36 @@
 // ============================================================
-// casinoMusicManager.js — Gestionnaire de musique casino permanent
-// Emplacement : src/utils/casinoMusicManager.js
+// casinoMusicManager.js — Musique casino permanente v3
+// Source: streams radio jazz/lounge HTTP (plus fiable que YouTube)
 // ============================================================
+'use strict';
 
 const { ChannelType } = require('discord.js');
 
 let _voice = null;
-let _playdl = null;
-
 function voice() {
   if (!_voice) _voice = require('@discordjs/voice');
   return _voice;
 }
-function playdl() {
-  if (!_playdl) _playdl = require('play-dl');
-  return _playdl;
-}
 
-// ─── Playlist premium — 10 styles casino différents ──────────
-const CASINO_PLAYLIST = [
-  { title: '🎷 Casino Jazz Lounge',        query: 'casino jazz lounge music ambient 1 hour' },
-  { title: '🎹 Las Vegas Piano Bar',        query: 'las vegas piano bar jazz lounge music' },
-  { title: '🃏 Casino Royale Ambiance',     query: 'casino royale james bond jazz lounge soundtrack' },
-  { title: '🌙 Bossa Nova Casino Night',    query: 'bossa nova jazz lounge bar smooth elegant' },
-  { title: '🎸 Rat Pack Vegas Swing',       query: 'rat pack vegas style jazz swing music sinatra' },
-  { title: '🎺 Big Band Casino Night',      query: 'big band swing jazz casino elegant night club' },
-  { title: '🥂 Cocktail Jazz Piano',        query: 'cocktail jazz piano lounge elegant ambiance bar' },
-  { title: '🎻 Smooth Jazz Saxophone',      query: 'smooth jazz saxophone evening lounge relaxing' },
-  { title: '💎 VIP Lounge Ambiance',        query: 'vip lounge ambient music luxury sophisticated jazz' },
-  { title: '🌟 Vegas Nights Jazz',          query: 'vegas nights jazz cool vibes lounge modern' },
+// ─── Stations radio jazz/lounge — HTTP direct, 0 auth, 100% Railway ───
+const RADIO_STATIONS = [
+  { title: '🎷 Smooth Jazz Florida',    url: 'http://smoothjazz.cdnstream1.com/2585_128.mp3' },
+  { title: '🎹 Jazz 24 (KPLU)',         url: 'https://kplu.streamguys1.com/jazz24-free' },
+  { title: '🃏 Radio Paradise Jazz',    url: 'https://stream.radioparadise.com/jazz-aac-320' },
+  { title: '🌙 1.FM Jazz & Blues',      url: 'http://strm112.1.fm/jazzblues_mobile_mp3' },
+  { title: '🥂 181.FM Smooth Jazz',     url: 'http://listen.181fm.com/181-smooth_128k.mp3' },
+  { title: '💎 SomaFM Lush',           url: 'http://ice6.somafm.com/lush-128-mp3' },
+  { title: '🌟 SomaFM Groove Salad',   url: 'http://ice6.somafm.com/groovesalad-128-mp3' },
+  { title: '🎵 SomaFM Illinois Street', url: 'http://ice6.somafm.com/illstreet-128-mp3' },
+  { title: '🎺 SomaFM Suburb',         url: 'http://ice6.somafm.com/suburbsofgoa-128-mp3' },
+  { title: '🎸 SomaFM Left Coast 70s',  url: 'http://ice6.somafm.com/seventies-128-mp3' },
 ];
 
 // ─── État par guild ───────────────────────────────────────────
 const guildStates = new Map();
-
-// ─── Background retry state ───────────────────────────────────
 let _bgRetryActive = false;
 
-// ─── Shuffle Fisher-Yates ─────────────────────────────────────
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// ─── Auto-détection du salon vocal casino ─────────────────────
+// ─── Trouver le salon vocal casino ───────────────────────────
 function findCasinoVoiceChannel(guild) {
   const PATTERNS = ['casino', 'musique', 'music', 'ambiance', 'lounge', 'jeux', '🎰', '🎵', '🎶', '🎸'];
   for (const pattern of PATTERNS) {
@@ -60,25 +43,28 @@ function findCasinoVoiceChannel(guild) {
   return guild.channels.cache.find(c => c.type === ChannelType.GuildVoice) || null;
 }
 
-// ─── Joindre le vocal avec retry (3 tentatives) ──────────────
+// ─── Joindre le vocal (3 tentatives, backoff exponentiel) ────
 async function joinWithRetry(guild, channel, maxAttempts = 3) {
   const v = voice();
-  let lastErr = null;
+  let lastErr;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    // stateHistory DOIT être déclarée AVANT le try (block scoping JS)
-    const stateHistory = [`attempt${attempt}:initial`];
     let connection;
+    const history = [`att${attempt}:start`];
 
     try {
-      // Vérification permissions avant chaque tentative
+      // Vérifier permissions avant chaque tentative
       const me = guild.members.me;
       if (me) {
         const perms = channel.permissionsFor(me);
         if (!perms?.has('Connect') || !perms?.has('Speak')) {
-          throw new Error(`Permissions insuffisantes (Connect/Speak) dans #${channel.name}`);
+          throw new Error(`Permissions manquantes (Connect/Speak) dans #${channel.name}`);
         }
       }
+
+      // Détruire proprement toute connexion zombie
+      const zombie = v.getVoiceConnection(guild.id);
+      if (zombie) { try { zombie.destroy(); } catch (_) {} await new Promise(r => setTimeout(r, 600)); }
 
       connection = v.joinVoiceChannel({
         channelId:      channel.id,
@@ -87,328 +73,255 @@ async function joinWithRetry(guild, channel, maxAttempts = 3) {
         selfDeaf:       true,
       });
 
-      connection.on('stateChange', (oldS, newS) => {
-        stateHistory.push(newS.status);
-      });
+      connection.on('stateChange', (_, ns) => history.push(ns.status));
 
-      await v.entersState(connection, v.VoiceConnectionStatus.Ready, 30_000);
-      console.log(`[CasinoMusic] ✅ Connexion ready (tentative ${attempt}) — ${stateHistory.join('→')}`);
-      return { connection, stateHistory: stateHistory.join('→') };
+      await v.entersState(connection, v.VoiceConnectionStatus.Ready, 40_000);
+      console.log(`[CasinoMusic] ✅ Connexion ready (att.${attempt}) — ${history.join('→')}`);
+      return connection;
 
     } catch (err) {
       lastErr = err;
-      const hist = stateHistory.join('→');
-      console.warn(`[CasinoMusic] ⚠️ Tentative ${attempt}/${maxAttempts} échouée — ${hist} — ${err?.message}`);
+      console.warn(`[CasinoMusic] ⚠️ Att.${attempt}/${maxAttempts} — ${history.join('→')} — ${err?.message}`);
       try { connection?.destroy(); } catch (_) {}
-
-      if (attempt < maxAttempts) {
-        const delay = 3000 * attempt; // 3s puis 6s
-        await new Promise(r => setTimeout(r, delay));
-      }
+      if (attempt < maxAttempts) await new Promise(r => setTimeout(r, 5_000 * attempt));
     }
   }
-
   throw new Error(lastErr?.message || 'Impossible de rejoindre le salon vocal');
 }
 
-// ─── Jouer la piste suivante ──────────────────────────────────
-async function playNext(guildId) {
-  const state = guildStates.get(guildId);
-  if (!state || state.stopping) return;
+// ─── Lancer le stream radio ───────────────────────────────────
+async function playStation(guildId, station) {
+  const s = guildStates.get(guildId);
+  if (!s || s.stopping) return;
 
-  state.playlistIndex = (state.playlistIndex + 1) % state.shuffledList.length;
-  if (state.playlistIndex === 0) state.shuffledList = shuffle(CASINO_PLAYLIST);
-
-  const track = state.shuffledList[state.playlistIndex];
-  state.currentTrack = track;
+  const v   = voice();
+  const idx = Math.floor(Math.random() * RADIO_STATIONS.length);
+  const st  = station || RADIO_STATIONS[idx];
 
   try {
-    const pd = playdl();
-    const results = await pd.search(track.query, {
-      source: { youtube: 'video' },
-      limit: 5,
-    });
-
-    if (!results || results.length === 0) {
-      console.warn(`[CasinoMusic] Aucun résultat pour "${track.query}" — passage suivante`);
-      setTimeout(() => playNext(guildId).catch(() => {}), 2500);
-      return;
-    }
-
-    const pick = results[Math.floor(Math.random() * Math.min(3, results.length))];
-    const stream = await pd.stream(pick.url, { quality: 2 });
-
-    const v = voice();
-    const resource = v.createAudioResource(stream.stream, {
-      inputType: stream.type,
+    const resource = v.createAudioResource(st.url, {
+      inputType:    v.StreamType.Arbitrary,
       inlineVolume: true,
     });
-
-    if (resource.volume) resource.volume.setVolume(state.volume);
-    state.player.play(resource);
-    state.currentYTTitle = pick.title || track.title;
-
-    console.log(`[CasinoMusic] 🎵 [${guildId}] Now playing: "${pick.title}"`);
-
+    if (resource.volume) resource.volume.setVolume(s.volume);
+    s.player.play(resource);
+    s.currentStation = st;
+    s.currentTitle   = st.title;
+    console.log(`[CasinoMusic] 🎵 [${guildId}] → ${st.title}`);
   } catch (err) {
-    console.error(`[CasinoMusic] Erreur lecture "${track.title}":`, err?.message || err);
-    setTimeout(() => playNext(guildId).catch(() => {}), 3000);
+    console.error(`[CasinoMusic] Erreur lecture "${st.title}":`, err?.message);
+    const next = RADIO_STATIONS[(RADIO_STATIONS.indexOf(st) + 1) % RADIO_STATIONS.length];
+    setTimeout(() => playStation(guildId, next).catch(() => {}), 3_000);
   }
 }
 
-// ─── Démarrer la musique dans un guild ───────────────────────
+// ─── Démarrer la musique ──────────────────────────────────────
 async function startMusic(guild, channelId) {
   const guildId = guild.id;
+  const v       = voice();
 
-  // Déjà actif et connexion vivante → rien à faire
+  // Déjà actif ?
   if (guildStates.has(guildId)) {
-    const existing = guildStates.get(guildId);
-    const v = voice();
-    const status = existing.connection?.state?.status;
+    const s      = guildStates.get(guildId);
+    const status = s.connection?.state?.status;
     if (status && status !== v.VoiceConnectionStatus.Destroyed) {
-      return { success: true, alreadyPlaying: true, channelId: existing.channelId };
+      return { success: true, alreadyPlaying: true, channelId: s.channelId };
     }
-    // Connexion morte → nettoyer
-    try { existing.connection?.destroy(); } catch (_) {}
+    try { s.connection?.destroy(); } catch (_) {}
     guildStates.delete(guildId);
   }
 
   const channel = guild.channels.cache.get(channelId);
   if (!channel) return { success: false, reason: 'Salon vocal introuvable.' };
 
-  const v = voice();
   let connection;
-
   try {
-    const result = await joinWithRetry(guild, channel, 3);
-    connection = result.connection;
+    connection = await joinWithRetry(guild, channel, 3);
   } catch (err) {
-    console.error('[CasinoMusic] Échec connexion après 3 tentatives:', err?.message);
-    return { success: false, reason: 'Impossible de rejoindre le salon vocal.' };
+    return { success: false, reason: err?.message };
   }
 
   const player = v.createAudioPlayer({
     behaviors: { noSubscriber: v.NoSubscriberBehavior.Play },
   });
-
   connection.subscribe(player);
 
   const state = {
-    connection,
-    player,
+    connection, player,
     channelId:      channel.id,
     guildRef:       guild,
     volume:         0.5,
-    shuffledList:   shuffle(CASINO_PLAYLIST),
-    playlistIndex:  -1,
-    currentTrack:   null,
-    currentYTTitle: null,
+    currentStation: null,
+    currentTitle:   null,
     stopping:       false,
     reconnectTimer: null,
   };
-
   guildStates.set(guildId, state);
 
-  // ── Piste suivante quand idle ──────────────────────────────
+  // ── Idle → relancer le même stream (radio = flux continu, ne finit pas normalement) ──
   player.on(v.AudioPlayerStatus.Idle, () => {
-    const s = guildStates.get(guildId);
-    if (s && !s.stopping) {
-      playNext(guildId).catch(err =>
-        console.error('[CasinoMusic] playNext (idle) error:', err?.message)
-      );
-    }
+    const s2 = guildStates.get(guildId);
+    if (!s2 || s2.stopping) return;
+    const next = s2.currentStation || RADIO_STATIONS[0];
+    console.log(`[CasinoMusic] Stream interrompu — reprise dans 2s : ${next.title}`);
+    setTimeout(() => playStation(guildId, next).catch(() => {}), 2_000);
   });
 
   player.on('error', err => {
     console.error('[CasinoMusic] Player error:', err?.message);
-    const s = guildStates.get(guildId);
-    if (s && !s.stopping) setTimeout(() => playNext(guildId).catch(() => {}), 2000);
+    const s2 = guildStates.get(guildId);
+    if (s2 && !s2.stopping) {
+      const next = RADIO_STATIONS[Math.floor(Math.random() * RADIO_STATIONS.length)];
+      setTimeout(() => playStation(guildId, next).catch(() => {}), 3_000);
+    }
   });
 
-  // ── Reconnexion automatique sur Disconnected ───────────────
+  // ── Disconnected → tenter reconnexion rapide, sinon restart ──
   connection.on(v.VoiceConnectionStatus.Disconnected, async () => {
-    const s = guildStates.get(guildId);
-    if (!s || s.stopping) return;
-
+    const s2 = guildStates.get(guildId);
+    if (!s2 || s2.stopping) return;
     try {
       await Promise.race([
-        v.entersState(connection, v.VoiceConnectionStatus.Signalling, 5_000),
-        v.entersState(connection, v.VoiceConnectionStatus.Connecting,  5_000),
+        v.entersState(connection, v.VoiceConnectionStatus.Signalling, 6_000),
+        v.entersState(connection, v.VoiceConnectionStatus.Connecting,  6_000),
       ]);
-      console.log(`[CasinoMusic] 🔄 Reconnexion auto réussie (${guildId})`);
+      console.log(`[CasinoMusic] 🔄 Reconnexion auto OK (${guildId})`);
     } catch {
-      console.log(`[CasinoMusic] 🔁 Reconnexion manuelle dans 6s (${guildId})`);
       try { connection.destroy(); } catch (_) {}
       guildStates.delete(guildId);
-
-      if (s.reconnectTimer) clearTimeout(s.reconnectTimer);
-      s.reconnectTimer = setTimeout(async () => {
-        try { await startMusic(guild, channelId); }
-        catch (e) { console.error('[CasinoMusic] Échec reconnexion manuelle:', e?.message); }
-      }, 6_000);
-    }
-  });
-
-  // ── AUTO-RESTART sur Destroyed ─────────────────────────────
-  // Déclenché par: shard Discord RESUMED, kick bot, ou destroy() explicite
-  connection.on(v.VoiceConnectionStatus.Destroyed, () => {
-    const s = guildStates.get(guildId);
-    const wasStopping = s?.stopping || false;
-    guildStates.delete(guildId);
-
-    if (!wasStopping) {
-      console.log(`[CasinoMusic] ♻️ Connexion détruite (shard reset?) — restart dans 8s (${guildId})`);
-      setTimeout(async () => {
-        // Vérifier que personne d'autre n'a déjà relancé entre-temps
+      if (s2.reconnectTimer) clearTimeout(s2.reconnectTimer);
+      s2.reconnectTimer = setTimeout(async () => {
         if (guildStates.has(guildId)) return;
         try { await startMusic(guild, channelId); }
-        catch (e) { console.error('[CasinoMusic] Échec restart après Destroyed:', e?.message); }
+        catch (e) { console.error('[CasinoMusic] Reconnexion manuelle échouée:', e?.message); }
       }, 8_000);
-    } else {
-      console.log(`[CasinoMusic] ⏹️ Connexion détruite proprement — ${guildId}`);
     }
   });
 
-  await playNext(guildId);
+  // ── Destroyed → restart automatique après 10s ─────────────
+  connection.on(v.VoiceConnectionStatus.Destroyed, () => {
+    const s2      = guildStates.get(guildId);
+    const wasLive = !s2?.stopping;
+    guildStates.delete(guildId);
+    if (!wasLive) return;
+    console.log(`[CasinoMusic] ♻️ Connexion détruite → restart 10s (${guildId})`);
+    setTimeout(async () => {
+      if (guildStates.has(guildId)) return;
+      try { await startMusic(guild, channelId); }
+      catch (e) { console.error('[CasinoMusic] Restart post-Destroyed échoué:', e?.message); }
+    }, 10_000);
+  });
+
+  // Démarrer la lecture avec une station aléatoire
+  const first = RADIO_STATIONS[Math.floor(Math.random() * RADIO_STATIONS.length)];
+  await playStation(guildId, first);
+
   return { success: true, alreadyPlaying: false, channel };
 }
 
-// ─── Arrêter proprement ───────────────────────────────────────
+// ─── Stop propre ──────────────────────────────────────────────
 function stopMusic(guildId) {
-  const state = guildStates.get(guildId);
-  if (!state) return false;
-
-  state.stopping = true;
-  if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
-  try { state.player.stop(true); } catch (_) {}
-  try { state.connection.destroy(); } catch (_) {}
-
+  const s = guildStates.get(guildId);
+  if (!s) return false;
+  s.stopping = true;
+  if (s.reconnectTimer) clearTimeout(s.reconnectTimer);
+  try { s.player.stop(true); } catch (_) {}
+  try { s.connection.destroy(); } catch (_) {}
   guildStates.delete(guildId);
   return true;
 }
 
-// ─── Changer le volume (0.0 → 1.0) ──────────────────────────
-function setVolume(guildId, ratio) {
-  const state = guildStates.get(guildId);
-  if (!state) return false;
-
-  state.volume = Math.max(0, Math.min(1, ratio));
-  try {
-    const resource = state.player.state?.resource;
-    if (resource?.volume) resource.volume.setVolume(state.volume);
-  } catch (_) {}
-
-  return true;
-}
-
-// ─── Passer à la piste suivante ──────────────────────────────
+// ─── Skip → station suivante ─────────────────────────────────
 async function skipTrack(guildId) {
-  const state = guildStates.get(guildId);
-  if (!state) return false;
-  await playNext(guildId);
+  const s = guildStates.get(guildId);
+  if (!s) return false;
+  const idx  = RADIO_STATIONS.indexOf(s.currentStation);
+  const next = RADIO_STATIONS[(idx + 1) % RADIO_STATIONS.length];
+  await playStation(guildId, next);
   return true;
 }
 
-// ─── État actuel ─────────────────────────────────────────────
-function getState(guildId) {
-  return guildStates.get(guildId) || null;
+// ─── Volume ───────────────────────────────────────────────────
+function setVolume(guildId, ratio) {
+  const s = guildStates.get(guildId);
+  if (!s) return false;
+  s.volume = Math.max(0, Math.min(1, ratio));
+  try {
+    const res = s.player.state?.resource;
+    if (res?.volume) res.volume.setVolume(s.volume);
+  } catch (_) {}
+  return true;
 }
 
-// ─── Initialisation automatique au démarrage ─────────────────
+// ─── État ─────────────────────────────────────────────────────
+function getState(guildId) { return guildStates.get(guildId) || null; }
+
+// ─── Auto-init — attend que le cache guild soit prêt ─────────
 async function autoInit(client, guildId) {
   try {
-    await new Promise(r => setTimeout(r, 20_000));
-
-    const guild = client.guilds.cache.get(guildId);
-    if (!guild) {
-      console.log('[CasinoMusic] Guild introuvable dans le cache — skip auto-init');
-      return;
+    let guild = null;
+    for (let i = 0; i < 10; i++) { // jusqu'à 50s
+      guild = client.guilds.cache.get(guildId);
+      if (guild) break;
+      await new Promise(r => setTimeout(r, 5_000));
     }
+    if (!guild) { console.log('[CasinoMusic] Guild introuvable après 50s — skip'); return; }
 
     const channel = findCasinoVoiceChannel(guild);
-    if (!channel) {
-      console.log('[CasinoMusic] Aucun salon vocal casino détecté — utilisez /casino-musique play');
-      return;
-    }
+    if (!channel) { console.log('[CasinoMusic] Aucun salon casino/musique détecté — /casino-musique play'); return; }
 
     const result = await startMusic(guild, channel.id);
     if (result.success && !result.alreadyPlaying) {
-      console.log(`[CasinoMusic] ✅ Auto-démarrage réussi dans #${channel.name} (${channel.id})`);
+      console.log(`[CasinoMusic] ✅ Auto-démarrage : ${result.channel?.name || channelId}`);
     }
   } catch (err) {
-    console.error('[CasinoMusic] Erreur autoInit:', err?.message || err);
+    console.error('[CasinoMusic] autoInit error:', err?.message);
   }
 }
 
-// ─── Background retry — tourne toutes les 45s ────────────────
-// Si la connexion tombe et que le Destroyed listener ne relance pas (ex: erreur réseau)
+// ─── Background retry (boucle 45s si plus rien dans guildStates) ─
 async function startBackgroundRetry(client, guildId) {
   if (_bgRetryActive) return;
   _bgRetryActive = true;
-
-  console.log('[CasinoMusic] 🔄 Background retry loop démarré (45s interval)');
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    await new Promise(r => setTimeout(r, 45_000));
-
-    if (guildStates.has(guildId)) continue; // Déjà actif
-
-    try {
-      const guild = client.guilds.cache.get(guildId);
-      if (!guild) continue;
-
-      const channel = findCasinoVoiceChannel(guild);
-      if (!channel) continue;
-
-      console.log('[CasinoMusic] 🔁 Background retry: tentative reconnexion...');
-      const result = await startMusic(guild, channel.id);
-      if (result.success) {
-        console.log(`[CasinoMusic] ✅ Background retry réussi dans #${channel.name}`);
-      }
-    } catch (e) {
-      console.error('[CasinoMusic] Background retry échec:', e?.message);
+  console.log('[CasinoMusic] 🔄 Background retry actif (45s interval)');
+  try {
+    while (true) {
+      await new Promise(r => setTimeout(r, 45_000));
+      if (guildStates.has(guildId)) continue;
+      try {
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) continue;
+        const ch = findCasinoVoiceChannel(guild);
+        if (!ch) continue;
+        console.log('[CasinoMusic] 🔁 Retry background...');
+        const r = await startMusic(guild, ch.id);
+        if (r.success) console.log(`[CasinoMusic] ✅ Retry OK dans #${ch.name}`);
+      } catch (e) { console.error('[CasinoMusic] Retry error:', e?.message); }
     }
+  } finally {
+    _bgRetryActive = false;
   }
 }
 
-// ─── Appelé quand le shard Discord se reconnecte (RESUMED) ───
+// ─── Post-shard resume ────────────────────────────────────────
 async function onShardResume(client, guildId) {
-  console.log('[CasinoMusic] 📡 Shard RESUMED — restart musique dans 10s...');
-
-  // Attendre que le shard soit stable et que le Destroyed listener ait eu le temps d'agir
-  await new Promise(r => setTimeout(r, 10_000));
-
-  if (guildStates.has(guildId)) {
-    console.log('[CasinoMusic] ✅ Déjà reconnecté après shard resume — skip');
-    return;
-  }
-
+  console.log('[CasinoMusic] 📡 Shard resumed — vérification dans 12s');
+  await new Promise(r => setTimeout(r, 12_000));
+  if (guildStates.has(guildId)) { console.log('[CasinoMusic] ✅ Déjà connecté'); return; }
   try {
     const guild = client.guilds.cache.get(guildId);
     if (!guild) return;
-
-    const channel = findCasinoVoiceChannel(guild);
-    if (!channel) return;
-
-    const result = await startMusic(guild, channel.id);
-    if (result.success && !result.alreadyPlaying) {
-      console.log(`[CasinoMusic] ✅ Reconnexion post-shard-resume réussie dans #${channel.name}`);
-    }
-  } catch (e) {
-    console.error('[CasinoMusic] Erreur reconnexion post-shard-resume:', e?.message);
-  }
+    const ch = findCasinoVoiceChannel(guild);
+    if (!ch) return;
+    const r = await startMusic(guild, ch.id);
+    if (r.success) console.log(`[CasinoMusic] ✅ Reconnecté post-shard dans #${ch.name}`);
+  } catch (e) { console.error('[CasinoMusic] Post-shard error:', e?.message); }
 }
 
 module.exports = {
-  startMusic,
-  stopMusic,
-  setVolume,
-  skipTrack,
-  getState,
-  autoInit,
+  startMusic, stopMusic, setVolume, skipTrack, getState,
+  autoInit, startBackgroundRetry, onShardResume,
   findCasinoVoiceChannel,
-  startBackgroundRetry,
-  onShardResume,
-  CASINO_PLAYLIST,
+  RADIO_STATIONS,
+  get CASINO_PLAYLIST() { return RADIO_STATIONS; }, // compat
 };

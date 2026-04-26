@@ -135,14 +135,14 @@ module.exports = {
         .setColor('#1DB954')
         .setTitle('🎰 Casino Music — En cours !')
         .setDescription(
-          `**🎵 Now Playing :**\n> ${s?.currentYTTitle || s?.currentTrack?.title || '*Chargement...*'}\n\n` +
+          `**🎵 Now Playing :**\n> ${s?.currentStation?.title || s?.currentTitle || s?.currentStation?.title || s?.currentTitle || '*Chargement...*'}\n\n` +
           `*La musique tourne en boucle 24h/24 — même quand le salon est vide.*`
         )
         .addFields(
           { name: '📻 Salon',         value: `<#${channel.id}>`,                                  inline: true },
           { name: '🔊 Volume',        value: `${Math.round((s?.volume || 0.5) * 100)}%`,          inline: true },
-          { name: '🎭 Style actuel',  value: s?.currentTrack?.title || '...',                      inline: true },
-          { name: '🔁 Playlist',      value: '10 styles · Jazz · Lounge · Vegas · Bossa Nova',    inline: false },
+          { name: '🎭 Style actuel',  value: s?.currentStation?.title || s?.currentTitle || '...',                      inline: true },
+          { name: '📡 Source',         value: '10 stations radio · Jazz · Lounge · SomaFM · 24h/24', inline: false },
         )
         .setFooter({ text: 'Casino Music · Musique de haute qualité · Playlist aléatoire infinie' })
         .setTimestamp();
@@ -183,7 +183,7 @@ module.exports = {
         });
       }
 
-      const oldStyle = state.currentTrack?.title || '...';
+      const oldStyle = state.currentStation?.title || state.currentTitle || '...';
       const oldTitle = state.currentYTTitle || oldStyle;
 
       await skipTrack(guildId);
@@ -198,10 +198,10 @@ module.exports = {
           .setTitle('⏭️ Piste suivante')
           .setDescription(
             `**Précédente :** ~~${oldTitle}~~\n\n` +
-            `**Maintenant :** 🎵 ${ns?.currentYTTitle || ns?.currentTrack?.title || '*Chargement...*'}`
+            `**Maintenant :** 🎵 ${ns?.currentYTTitle || ns?.currentStation?.title || s?.currentTitle || '*Chargement...*'}`
           )
           .addFields(
-            { name: '🎭 Style', value: ns?.currentTrack?.title || '...', inline: true },
+            { name: '🎭 Style', value: ns?.currentStation?.title || s?.currentTitle || '...', inline: true },
             { name: '🔊 Volume', value: `${Math.round((ns?.volume || 0.5) * 100)}%`, inline: true },
           )
           .setTimestamp()
@@ -249,11 +249,11 @@ module.exports = {
         embeds: [new EmbedBuilder()
           .setColor('#F39C12')
           .setTitle('🎵 Now Playing — Casino Music')
-          .setDescription(`**${state.currentYTTitle || state.currentTrack?.title || 'Chargement...'}**`)
+          .setDescription(`**${state.currentStation?.title || state.currentTitle || 'Chargement...'}**`)
           .addFields(
             { name: '📻 Salon',        value: `<#${state.channelId}>`,                         inline: true },
             { name: '🔊 Volume',       value: volumeBar(Math.round(state.volume * 100)),        inline: true },
-            { name: '🎭 Style',        value: state.currentTrack?.title || '...',               inline: true },
+            { name: '🎭 Style',        value: state.currentStation?.title || state.currentTitle || '...',               inline: true },
           )
           .setFooter({ text: 'Casino Music · 10 styles · Playlist aléatoire infinie' })
           .setTimestamp()
