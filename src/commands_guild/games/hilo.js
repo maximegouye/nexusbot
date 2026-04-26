@@ -525,11 +525,32 @@ async function handleComponent(interaction, customId) {
 }
 
 module.exports = {
+  name: 'hilo',
+  aliases: ['hi-lo', 'hilow'],
   data,
   async execute(interaction) {
     return execute(interaction);
   },
   async handleComponent(interaction, customId) {
     return handleComponent(interaction, customId);
+  },
+  async run(message, args) {
+    const mise = parseInt(args[0]) || 50;
+    if (mise < 5) return message.reply('❌ Mise minimale : 5 coins. Usage : `&hilo <mise>`');
+    const fake = {
+      user: message.author, member: message.member,
+      guild: message.guild, guildId: message.guildId,
+      channel: message.channel, client: message.client,
+      deferred: false, replied: false,
+      options: {
+        getInteger: (k) => k === 'mise' ? mise : null,
+        getString: () => null, getUser: () => null, getBoolean: () => null,
+      },
+      deferReply: async () => {},
+      editReply:  async (d) => message.channel.send(d).catch(() => {}),
+      reply:      async (d) => message.reply(d).catch(() => message.channel.send(d).catch(() => {})),
+      followUp:   async (d) => message.channel.send(d).catch(() => {}),
+    };
+    await execute(fake);
   },
 };

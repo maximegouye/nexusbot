@@ -341,6 +341,8 @@ async function execute(interaction) {
 }
 
 module.exports = {
+  name: 'hippodrome',
+  aliases: ['hippo', 'horse', 'course'],
   data,
   async execute(interaction) {
     return execute(interaction);
@@ -349,5 +351,26 @@ module.exports = {
     const userId = interaction.user.id;
     if (!customId.startsWith('hippo_')) return false;
     return await handleComponent(interaction, customId, userId);
+  },
+  async run(message, args) {
+    const mise   = parseInt(args[0]) || 50;
+    const cheval = parseInt(args[1]) || 1;
+    if (mise < 5) return message.reply('❌ Mise minimale : 5 coins. Usage : `&hippodrome <mise> [1-5]`');
+    if (cheval < 1 || cheval > 5) return message.reply('❌ Choisir un cheval entre 1 et 5. Usage : `&hippodrome <mise> <cheval>`');
+    const fake = {
+      user: message.author, member: message.member,
+      guild: message.guild, guildId: message.guildId,
+      channel: message.channel, client: message.client,
+      deferred: false, replied: false,
+      options: {
+        getInteger: (k) => k === 'mise' ? mise : k === 'cheval' ? cheval : null,
+        getString: () => null, getUser: () => null, getBoolean: () => null,
+      },
+      deferReply: async () => {},
+      editReply:  async (d) => message.channel.send(d).catch(() => {}),
+      reply:      async (d) => message.reply(d).catch(() => message.channel.send(d).catch(() => {})),
+      followUp:   async (d) => message.channel.send(d).catch(() => {}),
+    };
+    await execute(fake);
   },
 };
