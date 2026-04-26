@@ -4,8 +4,61 @@ const path = require('path');
 const fs   = require('fs');
 const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
+const { checkActivityRoles } = require('../utils/activityRoleCheck');
 
 const PREFIX = '&';
+
+// ── XP par message ────────────────────────────────────────
+// Cooldown par utilisateur pour éviter le spam (60 secondes)
+const _xpCooldown = new Map(); // key: `${userId}-${guildId}`
+
+async function handleMessageXP(message) {
+  try {
+    if (!message.guild) return;
+    const cfg = db.getConfig(message.guild.id);
+    if (cfg.xp_enabled === 0) return;
+
+    const key = `${message.author.id}-${message.guild.id}`;
+    const now  = Date.now();
+    const last = _xpCooldown.get(key) || 0;
+    if (now - last < 60_000) return; // 60s cooldown anti-spam
+    _xpCooldown.set(key, now);
+
+    // XP aléatoire entre 5 et 15
+    const xpGain    = Math.floor(Math.random() * 11) + 5;
+    const coinsGain = 1;
+
+    const before = db.addXP(message.author.id, message.guild.id, xpGain);
+    db.addCoins(message.author.id, message.guild.id, coinsGain);
+
+    // Level-up ?
+    const newLevel = db.checkLevelUp(message.author.id, message.guild.id);
+    if (newLevel && before) {
+      const lvlCfg = cfg;
+      // Chercher le salon de level-up configuré
+      const lvlChannel = lvlCfg.level_channel
+        ? message.guild.channels.cache.get(lvlCfg.level_channel)
+        : message.channel;
+      if (lvlChannel) {
+        const embed = new EmbedBuilder()
+          .setColor('#f1c40f')
+          .setTitle('⬆️ Level Up !')
+          .setDescription(
+            `Félicitations <@${message.author.id}> ! Tu passes au **niveau ${newLevel}** 🎉\n\n` +
+            `Continue comme ça pour débloquer des récompenses !`
+          )
+          .setThumbnail(message.author.displayAvatarURL({ size: 128 }))
+          .setTimestamp();
+        lvlChannel.send({ embeds: [embed] }).catch(() => {});
+      }
+    }
+
+    // Vérifier les rôles d'activité (20% de chance pour ne pas surcharger)
+    if (Math.random() < 0.2) {
+      checkActivityRoles(message.author.id, message.guild.id, message.guild).catch(() => {});
+    }
+  } catch (_) {}
+}
 
 // -- Chargement recursif de toutes les commandes slash
 function loadAllCommands(dir, map = new Map()) {
@@ -322,8 +375,13 @@ module.exports = {
 
   async execute(message) {
     if (message.author.bot) return;
-    if (!message.content.startsWith(PREFIX)) return;
     if (!message.guild) return;
+
+    // ── XP par message (tous les messages, pas seulement les commandes) ──
+    handleMessageXP(message);
+
+    // ── Commandes préfixe & ──────────────────────────────────────────
+    if (!message.content.startsWith(PREFIX)) return;
 
     const raw     = message.content.slice(PREFIX.length).trim();
     const parts   = raw.split(/\s+/);
