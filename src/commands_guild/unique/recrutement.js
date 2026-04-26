@@ -325,33 +325,42 @@ module.exports = {
 
       await interaction.deferReply({ ephemeral: true });
 
-      // Embed principal
+      const guild = interaction.guild;
+
+      // ── Embed principal ─────────────────────────────────────────────────
+      const openCount   = Object.keys(POSTES).filter(k => cfg.status[k] !== false).length;
+      const totalCount  = Object.keys(POSTES).length;
+      const bannerURL   = guild.bannerURL({ size: 1024, forceStatic: false });
+      const iconURL     = guild.iconURL({ size: 256, dynamic: true });
+
       const panelEmbed = new EmbedBuilder()
-        .setColor('#7B2FBE')
-        .setTitle('📋  Recrutement Staff — ' + interaction.guild.name)
+        .setColor('#5865F2')
+        .setAuthor({ name: guild.name + ' — Recrutement Staff', iconURL: iconURL ?? undefined })
+        .setTitle('✨  Rejoins l\'équipe qui fait vivre le serveur !')
         .setDescription(
-          '> Rejoignez l\'équipe qui fait vivre le serveur !\n\n' +
-          '**Comment postuler ?**\nCliquez sur le bouton correspondant au poste qui vous intéresse, ' +
-          'remplissez le formulaire et soumettez votre candidature. Notre équipe l\'examinera dans les plus brefs délais.\n\n' +
-          '**⚠️ Conditions**\nRenseignez soigneusement chaque champ. Les candidatures incomplètes ou peu sérieuses ' +
-          'seront automatiquement refusées. Un seul poste à la fois.'
+          `> *Nous cherchons des personnes motivées et investies pour renforcer notre équipe.*\n\n` +
+          `**📌 Comment postuler ?**\n` +
+          `Clique sur le bouton du poste qui t'intéresse, remplis le formulaire et soumets ta candidature.\n` +
+          `Notre équipe te répondra sous **48–72h**.\n\n` +
+          `**📋 Postes disponibles** — \`${openCount}/${totalCount} ouverts\`\n` +
+          `${Object.entries(POSTES).map(([k, p]) => {
+            const isOpen = cfg.status[k] !== false;
+            return `${p.emoji} **${p.label}** — ${isOpen ? '🟢 Ouvert' : '🔴 Fermé'}`;
+          }).join('\n')}\n\n` +
+          `**⚠️ Règles importantes**\n` +
+          `— Remplis chaque champ avec soin et honnêteté\n` +
+          `— Une seule candidature active à la fois\n` +
+          `— Toute candidature bâclée sera refusée automatiquement`
         )
-        .setImage(interaction.guild.bannerURL({ size: 1024 }) || null)
-        .setThumbnail(interaction.guild.iconURL({ size: 256 }))
-        .setFooter({ text: `${interaction.guild.name}  ·  Candidatures traitées sous 48–72h` })
+        .setThumbnail(iconURL ?? null);
+
+      if (bannerURL) panelEmbed.setImage(bannerURL);
+
+      panelEmbed
+        .setFooter({ text: `${guild.name}  •  Répond sous 48–72h  •  Bonne chance ! 🍀`, iconURL: iconURL ?? undefined })
         .setTimestamp();
 
-      // Champs pour chaque poste
-      for (const [key, p] of Object.entries(POSTES)) {
-        const isOpen = cfg.status[key] !== false;
-        panelEmbed.addFields({
-          name:   `${p.emoji}  ${p.label}  ${isOpen ? '🟢 Ouvert' : '🔴 Fermé'}`,
-          value:  p.desc,
-          inline: true,
-        });
-      }
-
-      // Boutons (max 4 par rangée, 2 rangées)
+      // ── Boutons (max 4 par rangée) ────────────────────────────────────
       const entries = Object.entries(POSTES);
       const rows    = [];
       for (let i = 0; i < entries.length; i += 4) {
@@ -363,7 +372,7 @@ module.exports = {
               .setCustomId(`rec_apply_${key}`)
               .setLabel(p.label)
               .setEmoji(p.emoji)
-              .setStyle(isOpen ? ButtonStyle.Secondary : ButtonStyle.Danger)
+              .setStyle(isOpen ? ButtonStyle.Primary : ButtonStyle.Danger)
               .setDisabled(!isOpen)
           );
         }
