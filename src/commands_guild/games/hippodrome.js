@@ -1,5 +1,5 @@
 // ============================================================
-// hippodrome.js — Hippodrome ultra-complet avec animations
+// hippodrome.js — Hippodrome ultra-complet avec 3 types de paris
 // ============================================================
 'use strict';
 
@@ -12,466 +12,667 @@ const { C, chipStr, balanceLine, casinoFooter, changeMiseModal, parseMise } = re
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ─── Sessions & stats par joueur ──────────────────────────
-const hippoSessions = new Map(); // userId → { mise, selectedHorse }
-const hippoStats    = new Map(); // userId → { wins, losses, totalWagered, totalWon, gamesPlayed, biggestWin }
+// ══════════════════════════════════════════════════════════
+// DONNÉES
+// ══════════════════════════════════════════════════════════
+
+const HORSE_POOL = [
+  { id: 1,  name: 'Éclair',   emoji: '⚡',  jockey: 'J. Dupont',   baseOdds: 1.8,  spec: 'sec',    form: '🟢🟢🟢🟡🟢' },
+  { id: 2,  name: 'Tonnerre', emoji: '🌩️', jockey: 'M. Martin',   baseOdds: 2.5,  spec: 'pluie',  form: '🟢🟢🟡🟡🟢' },
+  { id: 3,  name: 'Mistral',  emoji: '🌬️', jockey: 'P. Bernard',  baseOdds: 3.5,  spec: 'vent',   form: '🟡🟢🔴🟢🟡' },
+  { id: 4,  name: 'Alizé',    emoji: '🌊',  jockey: 'S. Leblanc',  baseOdds: 5.0,  spec: 'pluie',  form: '🟡🔴🟢🟡🟡' },
+  { id: 5,  name: 'Tempête',  emoji: '🌪️', jockey: 'A. Rousseau', baseOdds: 7.0,  spec: 'vent',   form: '🔴🟡🔴🟢🔴' },
+  { id: 6,  name: 'Ouragan',  emoji: '💨',  jockey: 'C. Petit',    baseOdds: 10.0, spec: 'sec',    form: '🔴🔴🟡🔴🟢' },
+  { id: 7,  name: 'Foudre',   emoji: '☁️',  jockey: 'T. Moreau',   baseOdds: 15.0, spec: 'pluie',  form: '🟡🔴🔴🔴🟡' },
+  { id: 8,  name: 'Cyclone',  emoji: '🌀',  jockey: 'E. Leroy',    baseOdds: 20.0, spec: 'sec',    form: '🔴🔴🔴🟡🔴' },
+  { id: 9,  name: 'Rafale',   emoji: '🌫️', jockey: 'N. Simon',    baseOdds: 28.0, spec: 'vent',   form: '🔴🔴🔴🔴🟡' },
+  { id: 10, name: 'Zephyr',   emoji: '🍃',  jockey: 'L. Richard',  baseOdds: 40.0, spec: 'sec',    form: '🔴🔴🔴🔴🔴' },
+];
+
+// Conditions de piste du jour
+const TRACK_CONDITIONS = [
+  {
+    id: 'sec', label: '☀️ Piste sèche', short: 'Sec',
+    desc: 'Conditions optimales — les favoris sont avantagés',
+    modifier: h => h.spec === 'sec' ? 0.78 : h.spec === 'pluie' ? 1.25 : 1.0,
+  },
+  {
+    id: 'pluie', label: '🌧️ Piste mouillée', short: 'Pluie',
+    desc: 'Piste glissante — les spécialistes pluie brillent',
+    modifier: h => h.spec === 'pluie' ? 0.75 : h.spec === 'sec' ? 1.3 : 1.05,
+  },
+  {
+    id: 'vent', label: '💨 Vent violent', short: 'Vent',
+    desc: 'Rafales perturbantes — seuls les spécialistes résistent',
+    modifier: h => h.spec === 'vent' ? 0.78 : 1.1,
+  },
+  {
+    id: 'boue', label: '⛈️ Boue profonde', short: 'Boue',
+    desc: 'Chaos total — les outsiders adorent ça !',
+    modifier: h => h.baseOdds > 10 ? 0.65 : 1.35,
+  },
+];
+
+const RACE_STEPS = 8;
+const TRACK_W    = 15;
+
+const LIVE_COMMENTS = [
+  '🎙️ Les chevaux s\'élancent dans le premier virage !',
+  '🎙️ Le peloton se forme — la stratégie commence !',
+  '🎙️ Ça joue des coudes dans le groupe de tête !',
+  '🎙️ Le public est en délire dans les tribunes !',
+  '🎙️ Les jockeys donnent leurs dernières consignes !',
+  '🎙️ On aborde le virage décisif — tout peut arriver !',
+  '🎙️ Les chevaux entrent dans la ligne droite finale !',
+  '🎙️ Sprint final — qui va franchir la ligne ?!',
+];
+
+// ══════════════════════════════════════════════════════════
+// ÉTAT EN MÉMOIRE
+// ══════════════════════════════════════════════════════════
+
+const hippoSessions = new Map(); // userId → { mise, betType, horse1, horse2 }
+const hippoStats    = new Map(); // userId → { wins, losses, wagered, won, gamesPlayed, bestWin }
 
 function getStat(userId) {
-  if (!hippoStats.has(userId)) {
-    hippoStats.set(userId, { wins: 0, losses: 0, totalWagered: 0, totalWon: 0, gamesPlayed: 0, biggestWin: 0 });
-  }
+  if (!hippoStats.has(userId))
+    hippoStats.set(userId, { wins: 0, losses: 0, wagered: 0, won: 0, gamesPlayed: 0, bestWin: 0 });
   return hippoStats.get(userId);
 }
 
-// ─── Configuration des chevaux ────────────────────────────
-const HORSES = [
-  { id: 1, name: 'Éclair',   emoji: '⚡', odds: 1.8,  color: '🟢', tier: 'Favori'   },
-  { id: 2, name: 'Tonnerre', emoji: '⛈️', odds: 2.5,  color: '🟢', tier: 'Solide'   },
-  { id: 3, name: 'Mistral',  emoji: '🌬️', odds: 3.5,  color: '🟡', tier: 'Correct'  },
-  { id: 4, name: 'Alizé',    emoji: '🌊', odds: 5.0,  color: '🟡', tier: 'Risqué'   },
-  { id: 5, name: 'Tempête',  emoji: '🌪️', odds: 8.0,  color: '🔴', tier: 'Longshot' },
-  { id: 6, name: 'Ouragan',  emoji: '💨', odds: 15.0, color: '🔴', tier: 'Outsider' },
-];
+// ══════════════════════════════════════════════════════════
+// LOGIQUE DU JOUR
+// ══════════════════════════════════════════════════════════
 
-const TRACK_LEN = 18;
-const STEPS     = 6; // étapes d'animation
+// 8 chevaux du jour (seed par date → cohérent toute la journée)
+function getDayHorses() {
+  const dateStr = new Date().toISOString().split('T')[0];
+  let seed = dateStr.split('-').reduce((acc, n) => acc + parseInt(n, 10), 0);
+  const pool = [...HORSE_POOL];
+  for (let i = pool.length - 1; i > 0; i--) {
+    seed = ((seed * 1664525) + 1013904223) & 0x7fffffff;
+    const j = seed % (i + 1);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, 8);
+}
 
-// ─── Gagnant pondéré inversement aux cotes ────────────────
-function determineWinner() {
-  const weights  = HORSES.map(h => 1 / h.odds);
-  const total    = weights.reduce((a, b) => a + b, 0);
-  let r          = Math.random() * total;
-  for (let i = 0; i < HORSES.length; i++) {
+// Condition du jour (change toutes les 6 heures)
+function getDayCondition() {
+  const slot = Math.floor(new Date().getHours() / 6);
+  return TRACK_CONDITIONS[slot % TRACK_CONDITIONS.length];
+}
+
+function getAdjustedOdds(horse, condition) {
+  return Math.round(horse.baseOdds * condition.modifier(horse) * 10) / 10;
+}
+
+// ══════════════════════════════════════════════════════════
+// MOTEUR DE COURSE
+// ══════════════════════════════════════════════════════════
+
+// Gagnant pondéré inversement aux cotes
+function pickWeighted(pool, condition) {
+  const weights = pool.map(h => 1 / getAdjustedOdds(h, condition));
+  const total   = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) {
     r -= weights[i];
-    if (r <= 0) return HORSES[i];
+    if (r <= 0) return pool[i];
   }
-  return HORSES[0];
+  return pool[0];
 }
 
-// ─── Positions simulées sur N étapes ─────────────────────
-function generatePositions(winner) {
-  // Chaque cheval a une progression de base + bruit
-  // Le gagnant est garanti d'être en tête à la fin
-  const base = {};
-  HORSES.forEach(h => {
-    base[h.id] = { speed: 0.8 + Math.random() * 0.4, positions: [] };
-  });
+// Classement final complet (pondéré par les cotes)
+function buildFinalRanking(horses, condition) {
+  const ranked    = [];
+  const remaining = [...horses];
+  while (remaining.length > 0) {
+    const winner = pickWeighted(remaining, condition);
+    ranked.push(winner);
+    remaining.splice(remaining.indexOf(winner), 1);
+  }
+  return ranked; // ranked[0] = 1er
+}
 
-  for (let step = 0; step <= STEPS; step++) {
-    const t = step / STEPS;
-    HORSES.forEach(h => {
-      const progress = t * base[h.id].speed + (Math.random() - 0.5) * 0.08;
-      base[h.id].positions.push(Math.min(Math.max(progress, 0), 0.95 + t * 0.05));
+// Cartes d'animation : pour chaque étape, position de chaque cheval (0..1)
+function buildPositionMaps(ranking) {
+  const n    = ranking.length;
+  const maps = [];
+  for (let step = 0; step <= RACE_STEPS; step++) {
+    const t     = step / RACE_STEPS;
+    const entry = {};
+    ranking.forEach((horse, rank) => {
+      const rankBonus = 1 - (rank / n) * 0.18;
+      const noise     = (Math.random() - 0.5) * 0.1;
+      entry[horse.id] = Math.max(0, Math.min(t * rankBonus + noise, step === RACE_STEPS ? 1 - rank * 0.07 : 0.93));
     });
+    maps.push(entry);
   }
-
-  // Garantir que le gagnant est en premier à la fin
-  const lastStep  = STEPS;
-  const maxOthers = Math.max(...HORSES.filter(h => h.id !== winner.id).map(h => base[h.id].positions[lastStep]));
-  if (base[winner.id].positions[lastStep] <= maxOthers) {
-    base[winner.id].positions[lastStep] = Math.min(maxOthers + 0.05 + Math.random() * 0.1, 1.0);
-  }
-
-  return base;
+  // Garantir le classement à l'arrivée
+  const last     = maps[RACE_STEPS];
+  const maxOther = Math.max(...ranking.slice(1).map(h => last[h.id]));
+  if (last[ranking[0].id] <= maxOther) last[ranking[0].id] = Math.min(1.0, maxOther + 0.06);
+  return maps;
 }
 
-// ─── Rendu visuel d'une piste ─────────────────────────────
+// ── Rendu d'une piste ─────────────────────────────────────
 function renderTrack(progress) {
-  const filled = Math.min(Math.floor(progress * TRACK_LEN), TRACK_LEN - 1);
-  let track = '';
-  for (let i = 0; i < TRACK_LEN; i++) {
-    if (i < filled)      track += '▬';
-    else if (i === filled) track += '🐴';
-    else                 track += '░';
-  }
-  track += '🏁';
-  return track;
+  const p    = Math.max(0, Math.min(progress, 1));
+  const fill = Math.floor(p * TRACK_W);
+  return '═'.repeat(fill) + '🐴' + '─'.repeat(TRACK_W - fill) + '🏁';
 }
 
-// ─── Tri des positions à une étape donnée ─────────────────
-function getRanking(positions, step) {
-  return HORSES
-    .map(h => ({ horse: h, pos: positions[h.id].positions[step] }))
-    .sort((a, b) => b.pos - a.pos);
-}
+// ── Embed d'une frame de course ───────────────────────────
+function buildRaceEmbed(step, posMap, horses, focusIds, mise, betLbl, coin) {
+  const sorted  = [...horses].sort((a, b) => (posMap[b.id] || 0) - (posMap[a.id] || 0));
+  const comment = step > 0 ? LIVE_COMMENTS[Math.min(step - 1, LIVE_COMMENTS.length - 1)] : '🎙️ Ils sont sur la ligne de départ !';
 
-// ─── Embed d'animation ───────────────────────────────────
-function buildRaceEmbed(positions, step, selected, mise, coin, state = 'racing') {
-  const ranking = getRanking(positions, step);
-  const colors  = { racing: C.NEUTRAL, win: C.WIN, loss: C.LOSS };
-
-  const desc = ranking.map((r, idx) => {
-    const { horse, pos } = r;
-    const track   = renderTrack(pos);
-    const marker  = horse.id === selected ? '👤' : `${idx + 1}.`;
-    const pct     = Math.floor(pos * 100);
-    return `${marker} ${horse.emoji}**${horse.name.padEnd(8)}** ${track} ${pct}%`;
+  const lines = sorted.map((h, idx) => {
+    const pos    = posMap[h.id] || 0;
+    const track  = renderTrack(pos);
+    const marker = focusIds.includes(h.id) ? '👤' : `${idx + 1}.`;
+    const pct    = Math.floor(pos * 100);
+    return `${marker}${h.emoji}**${h.name.padEnd(9)}** ${track} ${pct}%`;
   }).join('\n');
 
-  const selectedHorse = HORSES.find(h => h.id === selected);
-  const embed = new EmbedBuilder()
-    .setColor(colors[state] || C.NEUTRAL)
-    .setTitle(state === 'racing'
-      ? `🏇 Hippodrome — Étape ${step}/${STEPS}`
-      : state === 'win' ? '🏆 Hippodrome — VICTOIRE !' : '❌ Hippodrome — Défaite')
-    .setDescription(`\`\`\`\n${desc}\n\`\`\``)
+  return new EmbedBuilder()
+    .setColor(step === RACE_STEPS ? '#8E44AD' : C.NEUTRAL)
+    .setTitle(`🏇 Course en direct — Tour ${step}/${RACE_STEPS}`)
+    .setDescription(`${lines}\n\n${comment}`)
     .addFields(
       { name: '💰 Mise', value: chipStr(mise, coin), inline: true },
-      { name: `${selectedHorse.emoji} Ton cheval`, value: `**#${selected} ${selectedHorse.name}**`, inline: true },
-      { name: '📊 Cote', value: `**×${selectedHorse.odds}**`, inline: true },
+      { name: '🎯 Pari', value: betLbl,              inline: true },
     )
     .setFooter({ text: casinoFooter('Hippodrome') });
-
-  return embed;
 }
 
-// ─── Podium final ─────────────────────────────────────────
-function buildPodium(positions, winner) {
-  const ranking = getRanking(positions, STEPS);
-  const medals  = ['🥇', '🥈', '🥉'];
-  return ranking.slice(0, 3)
-    .map((r, i) => `${medals[i]} **${r.horse.emoji} ${r.horse.name}** (×${r.horse.odds})`)
-    .join('\n');
+// ══════════════════════════════════════════════════════════
+// CALCUL DES GAINS
+// ══════════════════════════════════════════════════════════
+
+function computePayout(betType, mise, horse1, horse2, ranking, condition) {
+  const pos1  = ranking.findIndex(h => h.id === horse1.id);
+  const odds1 = getAdjustedOdds(horse1, condition);
+
+  if (betType === 'gagnant') {
+    if (pos1 === 0) {
+      const payout = Math.floor(mise * odds1);
+      return { win: true, payout, desc: `🥇 **${horse1.emoji} ${horse1.name}** remporte la victoire ! Gain : **×${odds1}**` };
+    }
+    return { win: false, payout: 0, desc: `💨 **${horse1.emoji} ${horse1.name}** finit ${pos1 + 1}ème — raté de peu...` };
+  }
+
+  if (betType === 'place') {
+    if (pos1 <= 2) {
+      const placeOdds = Math.round(Math.max(1.3, odds1 / 3) * 10) / 10;
+      const payout    = Math.floor(mise * placeOdds);
+      const medal     = pos1 === 0 ? '🥇' : pos1 === 1 ? '🥈' : '🥉';
+      return { win: true, payout, desc: `${medal} **${horse1.emoji} ${horse1.name}** finit ${pos1 + 1}ème — dans le top 3 ! (×${placeOdds})` };
+    }
+    return { win: false, payout: 0, desc: `💨 **${horse1.emoji} ${horse1.name}** finit ${pos1 + 1}ème — hors du top 3.` };
+  }
+
+  if (betType === 'couple' && horse2) {
+    const pos2   = ranking.findIndex(h => h.id === horse2.id);
+    const odds2  = getAdjustedOdds(horse2, condition);
+    if (pos1 === 0 && pos2 === 1) {
+      const coupleOdds = Math.round(odds1 * odds2 * 0.55 * 10) / 10;
+      const payout     = Math.floor(mise * coupleOdds);
+      return { win: true, payout, desc: `🎉 **Couplé gagnant !** ${horse1.emoji}${horse1.name} 1er & ${horse2.emoji}${horse2.name} 2ème ! (×${coupleOdds})` };
+    }
+    return { win: false, payout: 0, desc: `💨 Couplé raté — ${horse1.emoji}${horse1.name} finit ${pos1+1}ème, ${horse2.emoji}${horse2.name} finit ${pos2+1}ème.` };
+  }
+
+  return { win: false, payout: 0, desc: 'Résultat inconnu.' };
 }
 
-// ─── Boutons post-course ──────────────────────────────────
-function buildGameRow(userId) {
+// ══════════════════════════════════════════════════════════
+// INTERFACES DISCORD
+// ══════════════════════════════════════════════════════════
+
+function makeBetLabel(betType, h1, h2) {
+  if (betType === 'gagnant') return `🏆 Gagnant — ${h1.emoji}${h1.name}`;
+  if (betType === 'place')   return `🎯 Placé — ${h1.emoji}${h1.name}`;
+  if (betType === 'couple')  return `🔗 Couplé — ${h1.emoji}${h1.name} + ${h2 ? h2.emoji + h2.name : '?'}`;
+  return '?';
+}
+
+function buildPostRaceRow(userId) {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`hippo_replay_${userId}`)
-      .setLabel('🔄 Rejouer')
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`hippo_changemise_${userId}`)
-      .setLabel('💰 Changer la mise')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`hippo_stats_${userId}`)
-      .setLabel('📊 Mes stats')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`hippo_cotes_${userId}`)
-      .setLabel('📋 Cotes')
-      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`hippo_replay_${userId}`).setLabel('🔄 Rejouer').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`hippo_newbet_${userId}`).setLabel('🎯 Nouveau pari').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`hippo_changemise_${userId}`).setLabel('💰 Changer mise').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`hippo_stats_${userId}`).setLabel('📊 Stats').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`hippo_cotes_${userId}`).setLabel('📋 Cotes').setStyle(ButtonStyle.Secondary),
   );
 }
 
-// ─── Jeu principal ───────────────────────────────────────
-async function playRace(source, userId, guildId, mise, selectedHorse) {
-  const cfg  = db.getConfig ? db.getConfig(guildId) : {};
-  const coin = cfg?.currency_emoji || '🪙';
-  const u    = db.getUser(userId, guildId);
+// ── Écran pré-course ──────────────────────────────────────
+async function showPreRace(source, userId, guildId, mise, asReply = false) {
+  const horses    = getDayHorses();
+  const condition = getDayCondition();
+  const cfg       = (db.getConfig ? db.getConfig(guildId) : null) || {};
+  const coin      = cfg.currency_emoji || '🪙';
+
+  const horseLines = horses.map((h, i) => {
+    const adj    = getAdjustedOdds(h, condition);
+    const isSpec = h.spec === condition.id;
+    return `${isSpec ? '⭐' : '▫️'} ${h.emoji} **#${i + 1} ${h.name}** — ×${adj} | ${h.form} | 🏇 *${h.jockey}*${isSpec ? ' *(Spécialiste)*' : ''}`;
+  }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor('#2C3E50')
+    .setTitle('🏇 Hippodrome — Programme du jour')
+    .setDescription(
+      `**${condition.label}** — *${condition.desc}*\n\n${horseLines}`
+    )
+    .addFields(
+      { name: '💰 Mise', value: chipStr(mise, coin), inline: true },
+      { name: '🏆 Gagnant', value: '×cote si 1er', inline: true },
+      { name: '🎯 Placé', value: '×(cote÷3) si top 3', inline: true },
+      { name: '🔗 Couplé', value: '×(c1×c2×0.55) si 1er+2ème en ordre', inline: false },
+    )
+    .setFooter({ text: '⭐ = Spécialiste de la condition du jour | 🟢=Victoire 🟡=Podium 🔴=Défaite' });
+
+  const betRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`hippo_bet_${userId}_gagnant_${mise}`).setLabel('🏆 Gagnant').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`hippo_bet_${userId}_place_${mise}`).setLabel('🎯 Placé top 3').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`hippo_bet_${userId}_couple_${mise}`).setLabel('🔗 Couplé').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`hippo_cotes_${userId}`).setLabel('📋 Cotes').setStyle(ButtonStyle.Secondary),
+  );
+
+  const opts = { embeds: [embed], components: [betRow] };
+  if (asReply) await source.reply({ ...opts, ephemeral: true }).catch(() => {});
+  else         await source.editReply(opts).catch(() => {});
+}
+
+// ── Sélection du cheval ───────────────────────────────────
+async function showHorsePicker(source, userId, guildId, mise, betType, excludeHorseId = null, asReply = false) {
+  const horses    = getDayHorses();
+  const condition = getDayCondition();
+  const available = excludeHorseId ? horses.filter(h => h.id !== excludeHorseId) : horses;
+
+  const isSecond = excludeHorseId !== null;
+  const prefix   = isSecond
+    ? `hippo_h2_${userId}_${betType}_${mise}_${excludeHorseId}`
+    : `hippo_h1_${userId}_${betType}_${mise}`;
+
+  const descLines = available.map(h => {
+    const adj    = getAdjustedOdds(h, condition);
+    const isSpec = h.spec === condition.id;
+    let gainInfo;
+    if (betType === 'gagnant')       gainInfo = `🏆 ×${adj}`;
+    else if (betType === 'place')    gainInfo = `🎯 ×${Math.round(Math.max(1.3, adj / 3) * 10) / 10}`;
+    else if (!isSecond)              gainInfo = `🔗 cote ×${adj}`;
+    else {
+      const h1    = horses.find(x => x.id === excludeHorseId);
+      const odds1 = getAdjustedOdds(h1, condition);
+      gainInfo    = `🔗 ×${Math.round(odds1 * adj * 0.55 * 10) / 10} si gagnant`;
+    }
+    return `${isSpec ? '⭐' : '▫️'} ${h.emoji} **${h.name}** — ${gainInfo} — ${h.form}`;
+  }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(C.NEUTRAL)
+    .setTitle(`🏇 Hippodrome — ${isSecond ? 'Choisis le 2ème cheval (couplé)' : 'Choisis ton cheval'}`)
+    .setDescription(descLines)
+    .setFooter({ text: casinoFooter('Hippodrome') });
+
+  const rows = [];
+  for (let i = 0; i < available.length; i += 4) {
+    const chunk = available.slice(i, i + 4);
+    rows.push(new ActionRowBuilder().addComponents(
+      ...chunk.map(h => {
+        const adj    = getAdjustedOdds(h, condition);
+        const isSpec = h.spec === condition.id;
+        const style  = adj <= 3 ? ButtonStyle.Success : adj <= 8 ? ButtonStyle.Primary : ButtonStyle.Danger;
+        return new ButtonBuilder()
+          .setCustomId(`${prefix}_${h.id}`)
+          .setLabel(`${h.name} ×${adj}${isSpec ? '⭐' : ''}`)
+          .setStyle(style);
+      })
+    ));
+  }
+
+  const opts = { embeds: [embed], components: rows };
+  if (asReply) await source.reply({ ...opts, ephemeral: true }).catch(() => {});
+  else         await source.editReply(opts).catch(() => {});
+}
+
+// ── Course principale ─────────────────────────────────────
+async function runRace(source, userId, guildId, mise, betType, horse1Id, horse2Id) {
+  const cfg       = (db.getConfig ? db.getConfig(guildId) : null) || {};
+  const coin      = cfg.currency_emoji || '🪙';
+  const u         = db.getUser(userId, guildId);
+  const horses    = getDayHorses();
+  const condition = getDayCondition();
+
+  const horse1 = horses.find(h => h.id === horse1Id);
+  const horse2 = horse2Id ? horses.find(h => h.id === horse2Id) : null;
 
   // Validations
-  if (!u) return source.editReply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {});
-  if (mise < 5)     return source.editReply({ content: '❌ Mise minimale : **5 coins**.', ephemeral: true }).catch(() => {});
-  if (mise > u.balance) return source.editReply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, ephemeral: true }).catch(() => {});
-  if (selectedHorse < 1 || selectedHorse > 6) return source.editReply({ content: '❌ Cheval invalide (1–6).', ephemeral: true }).catch(() => {});
+  if (!u)      return source.editReply({ content: '❌ Profil introuvable.', components: [] }).catch(() => {});
+  if (!horse1) return source.editReply({ content: '❌ Cheval introuvable.', components: [] }).catch(() => {});
+  if (betType === 'couple' && !horse2)
+    return source.editReply({ content: '❌ Sélectionne un 2ème cheval pour le couplé.', components: [] }).catch(() => {});
+  if (mise < 5)
+    return source.editReply({ content: '❌ Mise minimale : **5 coins**.', components: [] }).catch(() => {});
+  if (mise > u.balance)
+    return source.editReply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, components: [] }).catch(() => {});
 
-  // Déduire la mise
+  // Déduire la mise & sauvegarder session
   db.addCoins(userId, guildId, -mise);
-  const balBeforeMise = u.balance;
+  const balBefore = u.balance;
+  hippoSessions.set(userId, { mise, betType, horse1: horse1Id, horse2: horse2Id || null });
 
-  // Sauvegarder session
-  hippoSessions.set(userId, { mise, selectedHorse });
+  const focusIds = [horse1Id, horse2Id].filter(Boolean);
+  const betLbl   = makeBetLabel(betType, horse1, horse2);
 
-  // Déterminer résultat et positions
-  const winner    = determineWinner();
-  const positions = generatePositions(winner);
-  const horse     = HORSES.find(h => h.id === selectedHorse);
+  // Générer le résultat & positions
+  const ranking     = buildFinalRanking(horses, condition);
+  const positionMaps = buildPositionMaps(ranking);
 
-  // ─── Phase 1 : Préparation ────────────────────────────
-  const prepEmbed = new EmbedBuilder()
-    .setColor(C.NEUTRAL)
-    .setTitle('🏇 Hippodrome — Les chevaux se préparent...')
-    .setDescription(
-      '```\n' +
-      HORSES.map(h => `  ${h.emoji} ${h.name.padEnd(9)} — ×${h.odds} (${h.tier})`).join('\n') +
-      '\n```'
-    )
-    .addFields(
-      { name: '💰 Mise', value: chipStr(mise, coin), inline: true },
-      { name: `${horse.emoji} Cheval choisi`, value: `**#${selectedHorse} ${horse.name}** (×${horse.odds})`, inline: true },
-    )
-    .setFooter({ text: casinoFooter('Hippodrome') });
+  // ── Prépration ──────────────────────────────────────────
+  const horseSummary = horses.slice(0, 4).map(h => `${h.emoji}${h.name} ×${getAdjustedOdds(h, condition)}`).join(' | ') + '\n'
+    + horses.slice(4).map(h => `${h.emoji}${h.name} ×${getAdjustedOdds(h, condition)}`).join(' | ');
 
-  await source.editReply({ embeds: [prepEmbed], components: [] }).catch(() => {});
-  await sleep(1200);
+  await source.editReply({
+    embeds: [new EmbedBuilder()
+      .setColor('#8E44AD')
+      .setTitle('🏇 Hippodrome — Préparation au départ')
+      .setDescription(`**${condition.label}** — *${condition.desc}*\n\n${horseSummary}`)
+      .addFields(
+        { name: '💰 Mise', value: chipStr(mise, coin), inline: true },
+        { name: '🎯 Ton pari', value: betLbl, inline: true },
+      )
+      .setFooter({ text: casinoFooter('Hippodrome') })
+    ],
+    components: [],
+  }).catch(() => {});
 
-  // ─── Phase 2 : Compte à rebours ───────────────────────
-  for (const txt of ['3…', '2…', '1…', '🚀 PARTIS !']) {
-    const countEmbed = new EmbedBuilder()
-      .setColor('#F1C40F')
-      .setTitle('🏇 Hippodrome — Départ imminent !')
-      .setDescription(`\n# ${txt}\n`)
-      .setFooter({ text: casinoFooter('Hippodrome') });
-    await source.editReply({ embeds: [countEmbed] }).catch(() => {});
-    await sleep(txt === '🚀 PARTIS !' ? 800 : 700);
-  }
-
-  // ─── Phase 3 : Animation de la course ─────────────────
-  for (let step = 1; step <= STEPS; step++) {
-    const raceEmbed = buildRaceEmbed(positions, step, selectedHorse, mise, coin, 'racing');
-    await source.editReply({ embeds: [raceEmbed] }).catch(() => {});
-    await sleep(step === STEPS ? 500 : 1100);
-  }
-
-  // ─── Phase 4 : Photo-finish ───────────────────────────
-  const photoEmbed = new EmbedBuilder()
-    .setColor('#8E44AD')
-    .setTitle('📸 Hippodrome — PHOTO-FINISH !')
-    .setDescription('```\n⚡ Analyse de l\'arrivée en cours...\n```')
-    .setFooter({ text: casinoFooter('Hippodrome') });
-  await source.editReply({ embeds: [photoEmbed] }).catch(() => {});
   await sleep(900);
 
-  // ─── Phase 5 : Résultat ───────────────────────────────
-  const isWin = winner.id === selectedHorse;
-  const stat  = getStat(userId);
+  // ── Compte à rebours ──────────────────────────────────────
+  const countdown = [
+    ['3…', '#E74C3C'], ['2…', '#E67E22'], ['1…', '#F1C40F'], ['🚀 PARTIS !', '#2ECC71'],
+  ];
+  for (const [txt, color] of countdown) {
+    await source.editReply({
+      embeds: [new EmbedBuilder()
+        .setColor(color)
+        .setTitle('🏁 Hippodrome — Départ !')
+        .setDescription(`\n# ${txt}\n`)
+        .setFooter({ text: casinoFooter('Hippodrome') })
+      ],
+    }).catch(() => {});
+    await sleep(txt === '🚀 PARTIS !' ? 650 : 600);
+  }
 
+  // ── Animation de la course ───────────────────────────────
+  for (let step = 1; step <= RACE_STEPS; step++) {
+    const frame = buildRaceEmbed(step, positionMaps[step], horses, focusIds, mise, betLbl, coin);
+    await source.editReply({ embeds: [frame] }).catch(() => {});
+    await sleep(step === RACE_STEPS ? 500 : 950);
+  }
+
+  // ── Photo-finish ─────────────────────────────────────────
+  await source.editReply({
+    embeds: [new EmbedBuilder()
+      .setColor('#9B59B6')
+      .setTitle('📸 Photo-finish en cours...')
+      .setDescription('```\n⚡ Dépouillement de l\'image...\n```')
+      .setFooter({ text: casinoFooter('Hippodrome') })
+    ],
+  }).catch(() => {});
+  await sleep(1000);
+
+  // ── Résultat ────────────────────────────────────────────
+  const result = computePayout(betType, mise, horse1, horse2, ranking, condition);
+  const stat   = getStat(userId);
   stat.gamesPlayed++;
-  stat.totalWagered += mise;
+  stat.wagered += mise;
 
-  let gain, newBalance, resultText;
-
-  if (isWin) {
-    const winnings = Math.floor(mise * winner.odds);
-    gain       = winnings - mise;
-    newBalance = balBeforeMise - mise + winnings;
-    db.addCoins(userId, guildId, winnings);
+  let gain, newBalance;
+  if (result.win) {
+    gain       = result.payout - mise;
+    newBalance = balBefore - mise + result.payout;
+    db.addCoins(userId, guildId, result.payout);
     stat.wins++;
-    stat.totalWon += winnings;
-    if (gain > stat.biggestWin) stat.biggestWin = gain;
-    resultText = `🎉 **${winner.emoji} ${winner.name} gagne la course !**\nTu remportes **${winnings.toLocaleString('fr-FR')} ${coin}** × ${winner.odds} !`;
+    stat.won += result.payout;
+    if (gain > stat.bestWin) stat.bestWin = gain;
   } else {
     gain       = -mise;
-    newBalance = balBeforeMise - mise;
+    newBalance = balBefore - mise;
     stat.losses++;
-    resultText = `💨 **${winner.emoji} ${winner.name} remporte la victoire...**\nTon cheval **${horse.emoji} ${horse.name}** n'a pas suffi.`;
   }
 
-  const podium   = buildPodium(positions, winner);
-  const finalEmbed = buildRaceEmbed(positions, STEPS, selectedHorse, mise, coin, isWin ? 'win' : 'loss');
-  finalEmbed.setDescription(null);
-  finalEmbed.addFields(
-    { name: isWin ? '🏆 Résultat' : '❌ Résultat', value: resultText, inline: false },
-    { name: '🏇 Podium', value: podium, inline: true },
-    { name: '💰 Bilan', value: balanceLine(newBalance, gain, coin), inline: true },
-    {
-      name: '📊 Session',
-      value: `✅ ${stat.wins}V  ❌ ${stat.losses}D  🎮 ${stat.gamesPlayed} parties`,
-      inline: false,
-    },
-  );
+  // Podium final
+  const medals    = ['🥇', '🥈', '🥉'];
+  const podiumStr = ranking.slice(0, 3).map((h, i) => {
+    const adj = getAdjustedOdds(h, condition);
+    return `${medals[i]} ${h.emoji} **${h.name}** (×${adj} | ${h.form})`;
+  }).join('\n');
 
-  await source.editReply({ embeds: [finalEmbed], components: [buildGameRow(userId)] }).catch(() => {});
+  const finalEmbed = new EmbedBuilder()
+    .setColor(result.win ? C.WIN : C.LOSS)
+    .setTitle(result.win ? '🏆 Hippodrome — Victoire !' : '❌ Hippodrome — Défaite')
+    .addFields(
+      { name: result.win ? '🎉 Résultat' : '💨 Résultat', value: result.desc, inline: false },
+      { name: '🏇 Podium', value: podiumStr, inline: true },
+      { name: '💰 Bilan', value: balanceLine(newBalance, gain, coin), inline: true },
+      {
+        name: '📊 Session',
+        value: `✅ ${stat.wins} victoire${stat.wins > 1 ? 's' : ''}  ❌ ${stat.losses} défaite${stat.losses > 1 ? 's' : ''}  🎮 ${stat.gamesPlayed} partie${stat.gamesPlayed > 1 ? 's' : ''}`,
+        inline: false,
+      },
+    )
+    .setFooter({ text: casinoFooter('Hippodrome') });
+
+  await source.editReply({ embeds: [finalEmbed], components: [buildPostRaceRow(userId)] }).catch(() => {});
 }
 
-// ─── Sélection du cheval (embed + boutons) ────────────────
-async function showHorseSelection(source, userId, guildId, mise, isReply = false) {
-  const cfg  = db.getConfig ? db.getConfig(guildId) : {};
-  const coin = cfg?.currency_emoji || '🪙';
+// ══════════════════════════════════════════════════════════
+// HANDLER DES COMPOSANTS
+// ══════════════════════════════════════════════════════════
 
-  const embed = new EmbedBuilder()
-    .setColor(C.NEUTRAL)
-    .setTitle('🏇 Hippodrome — Choisis ton cheval')
-    .setDescription(
-      HORSES.map(h =>
-        `${h.color} **#${h.id} ${h.emoji} ${h.name}** — Cote ×${h.odds} *(${h.tier})*`
-      ).join('\n')
-    )
-    .addFields({ name: '💰 Mise', value: chipStr(mise, coin) })
-    .setFooter({ text: 'Plus la cote est élevée, plus le gain est grand — mais la victoire est rare !' });
-
-  const row1 = new ActionRowBuilder().addComponents(
-    ...HORSES.slice(0, 3).map(h =>
-      new ButtonBuilder()
-        .setCustomId(`hippo_pick_${userId}_${h.id}_${mise}`)
-        .setLabel(`${h.name} ×${h.odds}`)
-        .setEmoji(h.id === 1 ? '⚡' : h.id === 2 ? '🌩️' : '🌬️')
-        .setStyle(h.odds <= 2.5 ? ButtonStyle.Success : ButtonStyle.Primary)
-    )
-  );
-  const row2 = new ActionRowBuilder().addComponents(
-    ...HORSES.slice(3, 6).map(h =>
-      new ButtonBuilder()
-        .setCustomId(`hippo_pick_${userId}_${h.id}_${mise}`)
-        .setLabel(`${h.name} ×${h.odds}`)
-        .setEmoji(h.id === 4 ? '🌊' : h.id === 5 ? '🌪️' : '💨')
-        .setStyle(ButtonStyle.Danger)
-    )
-  );
-
-  const opts = { embeds: [embed], components: [row1, row2] };
-  if (isReply) {
-    await source.reply({ ...opts, ephemeral: true }).catch(() => {});
-  } else {
-    await source.editReply(opts).catch(() => {});
-  }
-}
-
-// ─── handleComponent ─────────────────────────────────────
-module.exports.handleComponent = async function(interaction, customId) {
+async function handleComponent(interaction, customId) {
   if (!customId.startsWith('hippo_')) return false;
 
-  const userId = interaction.user.id;
+  const userId  = interaction.user.id;
+  const guildId = interaction.guildId;
 
-  // ── Sélection de cheval ──
-  if (customId.startsWith(`hippo_pick_`)) {
+  // Vérif propriétaire (userId encodé en 3ème segment après hippo_xxx_)
+  function isOwner(minParts) {
     const parts = customId.split('_');
-    // hippo_pick_{userId}_{horseId}_{mise}
-    const targetUser  = parts[2];
-    if (targetUser !== userId) {
-      await interaction.reply({ content: '❌ Ce n\'est pas ton jeu.', ephemeral: true }).catch(() => {});
+    return parts.length >= minParts && parts[2] === userId;
+  }
+
+  // ── Sélection du type de pari ──────────────────────────
+  // hippo_bet_{userId}_{betType}_{mise}
+  if (customId.startsWith('hippo_bet_')) {
+    if (!isOwner(5)) {
+      await interaction.reply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
       return true;
     }
-    const selectedHorse = parseInt(parts[3]);
-    const mise          = parseInt(parts[4]);
+    const parts   = customId.split('_');
+    const betType = parts[3];
+    const mise    = parseInt(parts[4]);
     await interaction.deferUpdate().catch(() => {});
-    await playRace(interaction, userId, interaction.guildId, mise, selectedHorse);
+    await showHorsePicker(interaction, userId, guildId, mise, betType);
     return true;
   }
 
-  // ── Rejouer ──
-  if (customId.startsWith(`hippo_replay_${userId}`)) {
+  // ── 1er cheval choisi ──────────────────────────────────
+  // hippo_h1_{userId}_{betType}_{mise}_{horseId}
+  if (customId.startsWith('hippo_h1_')) {
+    if (!isOwner(6)) {
+      await interaction.reply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+    const parts   = customId.split('_');
+    const betType = parts[3];
+    const mise    = parseInt(parts[4]);
+    const horseId = parseInt(parts[5]);
+
+    await interaction.deferUpdate().catch(() => {});
+    if (betType === 'couple') {
+      await showHorsePicker(interaction, userId, guildId, mise, 'couple', horseId);
+    } else {
+      await runRace(interaction, userId, guildId, mise, betType, horseId, null);
+    }
+    return true;
+  }
+
+  // ── 2ème cheval choisi (couplé) ────────────────────────
+  // hippo_h2_{userId}_{betType}_{mise}_{horse1Id}_{horse2Id}
+  if (customId.startsWith('hippo_h2_')) {
+    if (!isOwner(7)) {
+      await interaction.reply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+    const parts  = customId.split('_');
+    const betType = parts[3];
+    const mise   = parseInt(parts[4]);
+    const horse1 = parseInt(parts[5]);
+    const horse2 = parseInt(parts[6]);
+    await interaction.deferUpdate().catch(() => {});
+    await runRace(interaction, userId, guildId, mise, betType, horse1, horse2);
+    return true;
+  }
+
+  // ── Rejouer (même pari) ───────────────────────────────
+  if (customId === `hippo_replay_${userId}`) {
     const session = hippoSessions.get(userId);
     if (!session) {
       await interaction.reply({ content: '⚠️ Session expirée. Relance `/hippodrome`.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
-    await playRace(interaction, userId, interaction.guildId, session.mise, session.selectedHorse);
+    await runRace(interaction, userId, guildId, session.mise, session.betType, session.horse1, session.horse2);
     return true;
   }
 
-  // ── Changer la mise ──
-  if (customId.startsWith(`hippo_changemise_${userId}`)) {
+  // ── Nouveau pari (retour à l'écran pré-course) ─────────
+  if (customId === `hippo_newbet_${userId}`) {
+    const mise = hippoSessions.get(userId)?.mise || 100;
+    await interaction.deferUpdate().catch(() => {});
+    await showPreRace(interaction, userId, guildId, mise);
+    return true;
+  }
+
+  // ── Changer la mise ───────────────────────────────────
+  if (customId === `hippo_changemise_${userId}`) {
     await interaction.showModal(changeMiseModal('hippo', userId)).catch(() => {});
     return true;
   }
 
-  // ── Modal mise ──
+  // ── Modal mise ────────────────────────────────────────
   if (customId.startsWith(`hippo_modal_${userId}`)) {
-    const u        = db.getUser(userId, interaction.guildId);
-    const cfg      = db.getConfig ? db.getConfig(interaction.guildId) : {};
-    const coin     = cfg?.currency_emoji || '🪙';
-    const rawMise  = interaction.fields.getTextInputValue('newmise');
-    const newMise  = parseMise(rawMise, u?.balance || 0);
-
-    if (!u) {
-      await interaction.reply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {});
-      return true;
-    }
-    if (newMise === null || isNaN(newMise)) {
-      await interaction.reply({ content: '❌ Mise invalide.', ephemeral: true }).catch(() => {});
-      return true;
-    }
-    if (newMise < 5) {
-      await interaction.reply({ content: `❌ Mise minimale : 5 ${coin}`, ephemeral: true }).catch(() => {});
+    const u    = db.getUser(userId, guildId);
+    const cfg  = (db.getConfig ? db.getConfig(guildId) : null) || {};
+    const coin = cfg.currency_emoji || '🪙';
+    if (!u) { await interaction.reply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {}); return true; }
+    const raw     = interaction.fields.getTextInputValue('newmise');
+    const newMise = parseMise(raw, u.balance);
+    if (!newMise || isNaN(newMise) || newMise < 5) {
+      await interaction.reply({ content: `❌ Mise invalide (min 5 ${coin}).`, ephemeral: true }).catch(() => {});
       return true;
     }
     if (newMise > u.balance) {
-      await interaction.reply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**`, ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, ephemeral: true }).catch(() => {});
       return true;
     }
-
-    await showHorseSelection(interaction, userId, interaction.guildId, newMise, true);
+    await showPreRace(interaction, userId, guildId, newMise, true);
     return true;
   }
 
-  // ── Stats session ──
-  if (customId.startsWith(`hippo_stats_${userId}`)) {
-    const stat = getStat(userId);
-    const netGain = stat.totalWon - stat.totalWagered;
-    const winRate = stat.gamesPlayed > 0 ? Math.round((stat.wins / stat.gamesPlayed) * 100) : 0;
-    const cfg  = db.getConfig ? db.getConfig(interaction.guildId) : {};
-    const coin = cfg?.currency_emoji || '🪙';
-
-    const embed = new EmbedBuilder()
-      .setColor('#5865F2')
-      .setTitle('📊 Tes stats Hippodrome (session)')
-      .addFields(
-        { name: '🎮 Parties', value: `**${stat.gamesPlayed}**`, inline: true },
-        { name: '✅ Victoires', value: `**${stat.wins}**`, inline: true },
-        { name: '❌ Défaites', value: `**${stat.losses}**`, inline: true },
-        { name: '📈 Win rate', value: `**${winRate}%**`, inline: true },
-        { name: '💰 Total misé', value: `**${stat.totalWagered.toLocaleString('fr-FR')} ${coin}**`, inline: true },
-        { name: `${netGain >= 0 ? '📈' : '📉'} Bilan net`, value: `**${netGain >= 0 ? '+' : ''}${netGain.toLocaleString('fr-FR')} ${coin}**`, inline: true },
-        { name: '🏆 Plus gros gain', value: `**${stat.biggestWin.toLocaleString('fr-FR')} ${coin}**`, inline: true },
-      )
-      .setFooter({ text: 'Stats réinitialisées à chaque redémarrage du bot' });
-
-    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
+  // ── Stats session ──────────────────────────────────────
+  if (customId === `hippo_stats_${userId}`) {
+    const stat    = getStat(userId);
+    const cfg     = (db.getConfig ? db.getConfig(guildId) : null) || {};
+    const coin    = cfg.currency_emoji || '🪙';
+    const net     = stat.won - stat.wagered;
+    const winRate = stat.gamesPlayed > 0 ? Math.round(stat.wins / stat.gamesPlayed * 100) : 0;
+    await interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('📊 Tes stats Hippodrome — Session')
+        .addFields(
+          { name: '🎮 Parties', value: `**${stat.gamesPlayed}**`, inline: true },
+          { name: '✅ Victoires', value: `**${stat.wins}**`, inline: true },
+          { name: '❌ Défaites', value: `**${stat.losses}**`, inline: true },
+          { name: '📈 Win rate', value: `**${winRate}%**`, inline: true },
+          { name: '💰 Total misé', value: `**${stat.wagered.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+          { name: `${net >= 0 ? '📈' : '📉'} Bilan net`, value: `**${net >= 0 ? '+' : ''}${net.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+          { name: '🏆 Meilleur gain', value: `**${stat.bestWin.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+        )
+        .setFooter({ text: 'Stats de la session en cours uniquement' })
+      ],
+      ephemeral: true,
+    }).catch(() => {});
     return true;
   }
 
-  // ── Cotes ──
-  if (customId.startsWith(`hippo_cotes_${userId}`)) {
-    const embed = new EmbedBuilder()
-      .setColor('#F1C40F')
-      .setTitle('📋 Tableau des cotes — Hippodrome')
-      .setDescription(
-        HORSES.map(h => {
-          const chance = Math.round((1 / h.odds) * 100 * 10) / 10; // Probabilité approximative
-          return `${h.color} **${h.emoji} #${h.id} ${h.name}** — ×${h.odds} *(${h.tier})* — ~${chance}% de victoire`;
-        }).join('\n')
-      )
-      .setFooter({ text: 'Les cotes sont pondérées — le favori ne gagne pas toujours !' });
+  // ── Tableau des cotes ────────────────────────────────
+  if (customId.startsWith('hippo_cotes_')) {
+    const horses    = getDayHorses();
+    const condition = getDayCondition();
+    const cfg       = (db.getConfig ? db.getConfig(guildId) : null) || {};
+    const coin      = cfg.currency_emoji || '🪙';
 
-    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
+    const lines = horses.map((h, i) => {
+      const adj    = getAdjustedOdds(h, condition);
+      const place  = Math.round(Math.max(1.3, adj / 3) * 10) / 10;
+      const isSpec = h.spec === condition.id;
+      const chance = Math.round(100 / adj);
+      return `${isSpec ? '⭐' : '▫️'} ${h.emoji} **${h.name}** *(${h.jockey})*\n` +
+        `　└ 🏆 Gagnant: ×**${adj}** | 🎯 Placé: ×**${place}** | ~${chance}% de victoire | Forme: ${h.form}`;
+    }).join('\n\n');
+
+    await interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor('#F1C40F')
+        .setTitle(`📋 Cotes du jour — ${condition.label}`)
+        .setDescription(`*${condition.desc}*\n\n${lines}`)
+        .setFooter({ text: '⭐ = Spécialiste de la condition | Cotes changent selon la météo du jour' })
+      ],
+      ephemeral: true,
+    }).catch(() => {});
     return true;
   }
 
   return false;
-};
+}
 
-// ─── Données slash ────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+// EXPORTS
+// ══════════════════════════════════════════════════════════
+
 const data = new SlashCommandBuilder()
   .setName('hippodrome')
-  .setDescription('🏇 Hippodrome — Mise sur un cheval et regarde la course en direct !')
+  .setDescription('🏇 Course de chevaux avec 3 types de paris — Gagnant, Placé, Couplé !')
   .addIntegerOption(o =>
     o.setName('mise')
       .setDescription('Montant à miser (min 5)')
       .setRequired(true)
       .setMinValue(1)
-  )
-  .addIntegerOption(o =>
-    o.setName('cheval')
-      .setDescription('Numéro du cheval (1=Favori ×1.8 → 6=Outsider ×15)')
-      .setRequired(false)
-      .setMinValue(1)
-      .setMaxValue(6)
   );
 
-// ─── execute ──────────────────────────────────────────────
 async function execute(interaction) {
-  const userId        = interaction.user.id;
-  const guildId       = interaction.guildId;
-  const mise          = interaction.options.getInteger('mise');
-  const selectedHorse = interaction.options.getInteger('cheval');
+  const userId = interaction.user.id;
+  const guildId = interaction.guildId;
+  const mise   = interaction.options.getInteger('mise');
 
   if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply().catch(() => {});
   }
-
-  if (selectedHorse) {
-    await playRace(interaction, userId, guildId, mise, selectedHorse);
-  } else {
-    await showHorseSelection(interaction, userId, guildId, mise);
-  }
+  await showPreRace(interaction, userId, guildId, mise);
 }
 
-// ─── run (préfixe &) ─────────────────────────────────────
 async function run(message, args) {
-  const mise   = parseInt(args[0]);
-  const cheval = parseInt(args[1]) || null;
-
-  if (!mise || mise < 5) {
-    return message.reply('❌ Usage : `&hippodrome <mise> [1-6]` — Mise minimale : 5 coins.');
-  }
-  if (cheval !== null && (cheval < 1 || cheval > 6)) {
-    return message.reply('❌ Cheval invalide. Choisis entre 1 et 6.');
-  }
+  const mise = parseInt(args[0]);
+  if (!mise || mise < 5) return message.reply('❌ Usage : `&hippodrome <mise>` — Mise minimale : 5 coins.');
 
   let sentMsg = null;
   const fake = {
@@ -483,30 +684,13 @@ async function run(message, args) {
     client:  message.client,
     deferred: false,
     replied:  false,
-    options: {
-      getInteger: (k) => k === 'mise' ? mise : k === 'cheval' ? cheval : null,
-      getString:  () => null,
-      getUser:    () => null,
-      getBoolean: () => null,
-    },
+    options:  { getInteger: (k) => k === 'mise' ? mise : null, getString: () => null, getUser: () => null, getBoolean: () => null },
     deferReply: async () => {},
-    editReply:  async (d) => {
-      if (sentMsg) { await sentMsg.edit(d).catch(() => {}); }
-      else { sentMsg = await message.channel.send(d).catch(() => {}); }
-      return sentMsg;
-    },
-    reply:   async (d) => message.reply(d).catch(() => message.channel.send(d).catch(() => {})),
-    followUp: async (d) => message.channel.send(d).catch(() => {}),
+    editReply:  async (d) => { if (sentMsg) { await sentMsg.edit(d).catch(() => {}); } else { sentMsg = await message.channel.send(d).catch(() => {}); } return sentMsg; },
+    reply:      async (d) => message.reply(d).catch(() => message.channel.send(d).catch(() => {})),
+    followUp:   async (d) => message.channel.send(d).catch(() => {}),
   };
-
   await execute(fake);
 }
 
-module.exports = {
-  name: 'hippodrome',
-  aliases: ['hippo', 'horse', 'course'],
-  data,
-  execute,
-  run,
-  handleComponent: module.exports.handleComponent,
-};
+module.exports = { name: 'hippodrome', aliases: ['hippo', 'horse', 'course'], data, execute, run, handleComponent };
