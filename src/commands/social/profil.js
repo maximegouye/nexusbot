@@ -94,6 +94,24 @@ module.exports = {
     });
   },
 
+
+  async run(message, args) {
+    const target = message.mentions.users.first() || message.author;
+    const fakeInteraction = {
+      user: message.author,
+      member: message.member,
+      guild: message.guild,
+      guildId: message.guildId,
+      channel: message.channel,
+      deferred: false,
+      replied: false,
+      options: { getUser: () => target },
+      async reply(opts) { return await message.channel.send(opts).catch(() => {}); },
+      async editReply(opts) { return await message.channel.send(opts).catch(() => {}); },
+    };
+    await this.execute(fakeInteraction);
+  },
+
   _build: { buildMainEmbed, buildButtons },
 
   async handleComponent(interaction, cid) {

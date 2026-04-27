@@ -69,7 +69,14 @@ async function updatePrices(db) {
     if (!prices) { console.warn('[CryptoPrices] Rate-limited, fallback CoinCap'); prices = await fetchFromCoinCap(symbols); }
     if (prices && Object.keys(prices).length>0) {
       _priceCache = prices;
-      if (db && typeof db.setCryptoPrices==='function') await db.setCryptoPrices(prices);
+      // Synchronous call: better-sqlite3 is not async
+      if (db && typeof db.setCryptoPrices==='function') {
+        try {
+          db.setCryptoPrices(prices);
+        } catch (e) {
+          console.warn('[CryptoPrices] setCryptoPrices not implemented or failed:', e.message);
+        }
+      }
       console.log('[CryptoPrices] '+Object.keys(prices).length+' prix mis a jour.');
     }
   } catch(err) { console.error('[CryptoPrices] Erreur:', err.message); }

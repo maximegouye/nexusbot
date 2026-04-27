@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
-const pending = new Map(); // messageId -> challenge
+const pending = new Map();
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -38,7 +38,6 @@ module.exports = {
     const challenger = db.getUser(userId, interaction.guildId);
     if ((challenger.balance || 0) < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant : **${(challenger.balance ?? 0).toLocaleString('fr-FR')}** 🪙 · il te faut **${mise.toLocaleString('fr-FR')}** 🪙.`, ephemeral: true });
 
-    // Réserver la mise
     db.db.prepare('UPDATE users SET balance=balance-? WHERE user_id=? AND guild_id=?').run(mise, userId, interaction.guildId);
 
     const choixOpposé = choix === 'face' ? 'pile' : 'face';
@@ -89,7 +88,6 @@ module.exports = {
         pending.delete(msg.id);
         collector.stop();
 
-        // Résultat
         const result = Math.random() < 0.5 ? 'face' : 'pile';
         const resultEmoji = result === 'face' ? '👑' : '🪙';
         const winnerId = result === ch.choix ? ch.challengerId : i.user.id;
@@ -117,5 +115,34 @@ module.exports = {
         msg.edit({ embeds: [new EmbedBuilder().setColor('Red').setDescription('⏰ Défi expiré. Mise remboursée.')], components: [] }).catch(() => {});
       }
     });
-  }
+  },
+
+  async run(message, args) {
+    const [miseRaw] = args;
+    
+    if (!miseRaw) {
+      return message.reply('❌ Usage: &coinflip <mise> [pile|face] [@adversaire]');
+    }
+
+    const choix = args.includes('pile') ? 'pile' : 'face';
+    const adversaire = message.mentions.users.first();
+
+    const fakeInteraction = {
+      user: message.author,
+      member: message.member,
+      guild: message.guild,
+      guildId: message.guildId,
+      channel: message.channel,
+      deferred: false,
+      replied: false,
+      options: {
+        get: (key) => key === 'mise' ? { value: miseRaw } : null,
+        getString: (key) => key === 'choix' ? choix : null,
+        getUser: (key) => key === 'adversaire' ? adversaire : null,
+      },
+      async reply(opts) { return await message.channel.send(opts).catch(() => {}); },
+      async editReply(opts) { return await message.channel.send(opts).catch(() => {}); },
+    };
+    await this.execute(fakeInteraction);
+  },
 };

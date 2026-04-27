@@ -25,8 +25,12 @@ function addCrashHistory(guildId, mult) {
   } catch {}
 }
 function getCrashHistory(guildId) {
-  return db.db.prepare('SELECT multiplier FROM crash_history WHERE guild_id=? ORDER BY id DESC LIMIT 10').all(guildId);
+  return db.db.prepare('SELECT multiplier FROM crash_history WHERE guild_id=? ORDER BY id DESC LIMIT 8').all(guildId);
 }
+
+// ─── Parties actives ──────────────────────────────────────
+const activeGames = new Map(); // userId → { cashedOut, mult, interval, msg, gameLoop }
+const crashHistoryMap = new Map(); // guildId → [mult1, mult2, ...] (max 8 en mémoire)
 
 // ─── Génération du multiplicateur de crash ────────────────
 // Courbe : beaucoup de crashes bas (1.0-2.0), rares grands (>10)
@@ -87,9 +91,6 @@ function altitudeBar(current, crashPoint) {
   return bars.join('');
 }
 
-// ─── Parties actives ──────────────────────────────────────
-const activeGames = new Map(); // userId → { cashedOut, mult, interval, msg, gameLoop }
-
 // ─── Crash animation (explosion dramatique avec 6+ frames) ──
 async function animateCrash(msg) {
   const crashFlashes = [
@@ -142,8 +143,6 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
   let cashoutMult  = null;
   let gameLoop     = null;
 
-  const history = getCrashHistory(guildId).map(h => `×${h.multiplier.toFixed(2)}`).join(' ');
-
   function buildCrashEmbed(crashed = false) {
     const color = crashed ? '#E74C3C' : cashedOut ? '#2ECC71' : multColor(current);
     const title = crashed     ? '💥 CRASH !'
@@ -161,6 +160,16 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     const alertThreshold = crashPoint * 0.9;
     const isWarning = !crashed && !cashedOut && current >= alertThreshold;
     const warningText = isWarning ? '\n⚠️ **DANGER ! À 90% du crash !** ⚠️' : '';
+
+    // Sparkline de l'historique (derniers 8 crashes)
+    const hist = crashHistoryMap.get(guildId) || [];
+    let sparkline = '';
+    if (hist.length > 0) {
+      sparkline = hist.map(m => {
+        const val = m.toFixed(1) + '×';
+        return m > 5 ? `**${val}**` : val;
+      }).join(' | ');
+    }
 
     const e = new EmbedBuilder()
       .setColor(color)
@@ -192,7 +201,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
         ? `+${Math.floor(mise * cashoutMult)} ${coin}`
         : `-${mise} ${coin}`;
       e.addFields({ name: '💸 Resultat', value: lostOrGain, inline: true });
-      if (history) e.addFields({ name: '📜 Historique', value: history, inline: false });
+      if (sparkline) e.addFields({ name: '📊 Historique', value: sparkline, inline: false });
     }
 
     return e;
@@ -243,6 +252,12 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
         collector.stop();
         activeGames.delete(userId);
         addCrashHistory(guildId, crashPoint);
+        
+        // Mettre à jour crashHistoryMap
+        if (!crashHistoryMap.has(guildId)) crashHistoryMap.set(guildId, []);
+        const hist = crashHistoryMap.get(guildId);
+        hist.push(crashPoint);
+        if (hist.length > 8) hist.shift();
 
         // Animate crash
         await animateCrash(msg);
@@ -272,6 +287,12 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
       collector.stop();
       activeGames.delete(userId);
       addCrashHistory(guildId, crashPoint);
+      
+      // Mettre à jour crashHistoryMap
+      if (!crashHistoryMap.has(guildId)) crashHistoryMap.set(guildId, []);
+      const hist = crashHistoryMap.get(guildId);
+      hist.push(crashPoint);
+      if (hist.length > 8) hist.shift();
 
       // Animate crash
       await animateCrash(msg);

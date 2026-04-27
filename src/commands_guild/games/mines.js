@@ -21,6 +21,15 @@ function calcMult(totalCases, minesCount, revealed) {
   return parseFloat((0.99 / mult).toFixed(2)); // house edge 1%
 }
 
+// ─── Probabilité de sécurité pour la prochaine case ───────
+function calcNextSafeProbability(totalCases, minesCount, revealed) {
+  const safeCells = totalCases - minesCount;
+  const safeRemaining = safeCells - revealed;
+  const cellsRemaining = totalCases - revealed;
+  if (cellsRemaining === 0) return 0;
+  return Math.round((safeRemaining / cellsRemaining) * 100);
+}
+
 // ─── Parties actives avec TTL (10 minutes) ────────────────
 const sessions = new Map(); // userId → { state, timeout }
 const SESSION_TTL = 10 * 60 * 1000; // 10 minutes
@@ -120,6 +129,11 @@ function buildEmbed(state, status = '') {
               : status === 'lose' ? '#E74C3C'
               : '#2C3E50';
 
+  // Calculer les stats pour le jeu en cours
+  const safeCells = TOTAL_CELLS - state.minesCount;
+  const nextSafePct = calcNextSafeProbability(TOTAL_CELLS, state.minesCount, state.safeRevealed);
+  const cellsRemaining = TOTAL_CELLS - state.safeRevealed;
+
   const e = new EmbedBuilder()
     .setColor(color)
     .setTitle(
@@ -133,6 +147,14 @@ function buildEmbed(state, status = '') {
       { name: '📈 Multiplicateur', value: `×${mult.toFixed(2)}`, inline: true },
       { name: '💰 Mise', value: `${state.mise} ${coin}`, inline: true },
     );
+
+  // Ajouter les stats en temps réel si la partie est en cours
+  if (!status) {
+    e.addFields(
+      { name: '🎯 Prochaine case sûre', value: `${nextSafePct}% de probabilité`, inline: true },
+      { name: '📊 Cellules restantes', value: `${cellsRemaining}`, inline: true }
+    );
+  }
 
   if (status === 'win') {
     const gain = Math.floor(state.mise * mult);

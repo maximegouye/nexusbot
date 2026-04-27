@@ -1,11 +1,14 @@
 // ============================================================
-// slots.js — Machine à sous 5 rouleaux ultra-complète (v4)
-// Nouveautés : vrais free spins + bouton Gamble (double ou rien)
+// slots.js — Machine à sous 5 rouleaux ultra-complète (v5)
+// Nouveautés : bouton mise max + stats session + multiplicateur
 // ============================================================
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
+
+// ─── Stats de session en mémoire (userId -> {gains, pertes}) ─
+const sessionStats = new Map();
 
 // ─── Symboles & poids ─────────────────────────────────────
 const SYMBOLS = [
@@ -74,6 +77,19 @@ function addStats(userId, guildId, won, amount, isJackpot) {
     biggest=MAX(biggest,?)
     WHERE user_id=? AND guild_id=?
   `).run(won ? 1 : 0, isJackpot ? 1 : 0, amount, userId, guildId);
+}
+
+// ─── Gestion de la session utilisateur ───────────────────
+function trackSessionGain(userId, gain) {
+  if (!sessionStats.has(userId)) {
+    sessionStats.set(userId, { gains: 0, losses: 0 });
+  }
+  const stats = sessionStats.get(userId);
+  if (gain > 0) stats.gains += gain;
+  else stats.losses += Math.abs(gain);
+}
+function getSessionStats(userId) {
+  return sessionStats.get(userId) || { gains: 0, losses: 0 };
 }
 
 // ─── 5 rouleaux × 3 rangées ───────────────────────────────
@@ -334,6 +350,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
   let desc  = '';
   let isJackpotWon = false;
   let isFreeSpins  = false;
+  let maxMultiplier = 0;
 
   const rows = [0, 1, 2].map(row => {
     const r    = results[row];
@@ -385,6 +402,7 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
   } else if (wins.length > 0) {
     for (const w of wins) {
       totalGain += Math.floor(mise * w.mult);
+      maxMultiplier = Math.max(maxMultiplier, w.mult);
     }
     db.addCoins(userId, guildId, totalGain);
     color = totalGain > totalMise * 3 ? '#F1C40F' : '#2ECC71';
@@ -429,7 +447,11 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
       : '😔 Pas de combinaison gagnante. Retente ta chance !';
   }
 
+  trackSessionGain(userId, totalGain > 0 ? totalGain : -totalMise);
   addStats(userId, guildId, totalGain > 0, totalGain, isJackpotWon);
+
+  const sessionData = getSessionStats(userId);
+  const netSession = sessionData.gains - sessionData.losses;
 
   const finalEmbed = new EmbedBuilder()
     .setColor(color)
@@ -439,12 +461,35 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
       { name: '💰 Mise', value: `${totalMise} ${coin}`, inline: true },
       { name: totalGain > 0 ? '✅ Gain' : '❌ Perte', value: `${totalGain > 0 ? '+' : '-'}${totalGain > 0 ? totalGain : totalMise} ${coin}`, inline: true },
       { name: '🏆 Jackpot', value: `${getJackpot(guildId)} ${coin}`, inline: true },
-    )
+    );
+
+  // Ajouter champ multiplicateur si win
+  if (maxMultiplier > 0) {
+    finalEmbed.addFields({ name: '🎰 Multiplicateur', value: `×${maxMultiplier}`, inline: true });
+  }
+
+  // Ajouter champ session
+  finalEmbed.addFields({
+    name: '📈 Session',
+    value: `${netSession >= 0 ? '+' : ''}${netSession} ${coin}`,
+    inline: true
+  });
+
+  finalEmbed
     .setFooter({ text: `Solde : ${db.getUser(userId, guildId)?.balance || 0} ${coin}` })
     .setTimestamp();
 
-  // ── Boutons : rejouer + changer mise + (gamble si gain) ──
+  // ── Boutons : rejouer + changer mise + mise max + (gamble si gain) ──
   const replayRow = makeGameRow('slots', userId, mise, `${lines}`);
+
+  // Ajouter le bouton Mise Max (plafonné à 10000)
+  const maxMise = Math.min(u.balance, 10000);
+  replayRow.addComponents(
+    new ButtonBuilder()
+      .setCustomId(`slots_maxmise_${userId}_${maxMise}_${lines}`)
+      .setLabel(`💎 Mise max (${maxMise})`)
+      .setStyle(ButtonStyle.Primary)
+  );
 
   // Ajouter le bouton Gamble si gain > 0 et pas jackpot / free spins
   if (totalGain > 0 && !isJackpotWon && !isFreeSpins) {
@@ -464,8 +509,21 @@ async function handleComponent(interaction) {
   const userId  = interaction.user.id;
   const guildId = interaction.guildId;
 
+  // ── Mise Max ──────────────────────────────────────────────
+  if (interaction.customId.startsWith('slots_maxmise_')) {
+    const parts        = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const maxMise      = parseInt(parts[3]);
+    const lines        = parseInt(parts[4]) || 1;
+    if (customUserId !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+    await interaction.deferUpdate();
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playSlots(source, userId, guildId, maxMise, lines);
+
   // ── Rejouer ──────────────────────────────────────────────
-  if (interaction.customId.startsWith('slots_replay_')) {
+  } else if (interaction.customId.startsWith('slots_replay_')) {
     const parts        = interaction.customId.split('_');
     const customUserId = parts[2];
     if (customUserId !== userId) {
@@ -522,6 +580,7 @@ async function handleComponent(interaction) {
 
     if (won) {
       db.addCoins(userId, guildId, amount); // double le gain (déjà crédité, on ajoute pareil)
+      trackSessionGain(userId, amount);
       const nb = db.getUser(userId, guildId)?.balance || 0;
       const winEmbed = new EmbedBuilder()
         .setColor('#F1C40F')
@@ -539,6 +598,7 @@ async function handleComponent(interaction) {
       await interaction.editReply({ embeds: [winEmbed], components: [] }).catch(() => {});
     } else {
       db.addCoins(userId, guildId, -amount); // retire le gain
+      trackSessionGain(userId, -amount);
       const nb = db.getUser(userId, guildId)?.balance || 0;
       const loseEmbed = new EmbedBuilder()
         .setColor('#E74C3C')

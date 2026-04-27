@@ -7,51 +7,27 @@ const COMPONENT_ROUTES = {
   'ticket_':      'ticket',
   'giveaway_':    'giveaway',
   // ── Nouvelles routes avec handleComponent ────────────────
-  'banque_':      'banque',
   'hist_':        'historique',
   'help_':        'aide',
   'profil_':      'profil',
-  // ── Jeux/eco avec handleComponent ou re-dispatch ─────────
+  // ── Jeux/eco avec handleComponent ─────────────────────────
   'casino_':      'casino',
-  'blackjack_':   'blackjack',
   'crash_':       'crash',
   'mines_':       'mines',
-  'poker_':       'poker',
-  'slot_':        'slots',
-  'roulette_':    'roulette',
-  'rob_':         'rob',
-  'fish_':        'pecher',
-  'quest_':       'quest',
-  'suggest_':     'suggestion',
-  'voice_':       'tempvoice',
-  'conf_':        'confession',
-  'rep_':         'rep',
-  'bump_':        'bump',
+  'roue_':        'roue',
   // ── Routes sans collector (handleComponent requis) ────────
   'prestige_':    'prestige',
-  'roue_':        'roue',
   'pet_':         'pet',
   'rr_':          'reactionroles',
   'rolemenu_':    'rolemenu',
-  // ── Autres composants ────────────────────────────────────
-  'app_':         'candidature',
+  // ── Autres composants avec handleComponent ─────────────────
   'apply_':       'candidature',
   'rec_':         'recrutement',
-  'pay_'          : 'payer',
-  'heist_'        : 'braquage',
-  'sondage_'      : 'sondage',
-  'pendu_'        : 'pendu',
-  'morpion_'      : 'morpion',
-  'poll_'         : 'poll',
-  'appmodal_':    'candidature',
-  // ── Nouveaux jeux de casino ──────────────────────────────
+  'pendu_':       'pendu',
+  'poll_':        'poll',
+  // ── Jeux de casino (replay persistent) ─────────────────────
   'grattage_':    'grattage',
   'tour_':        'tour',
-  // ── Commandes persistantes (pas de collector) ─────────────
-  'crypto_':      'crypto',
-  'tournoi_':     'tournoi-admin',
-  // ── Préfixes alternatifs jeux (replay persistent) ────────
-  'rl_':          'roulette',   // replay roulette
   'plinko_':      'plinko',
   'des_':         'des',
   'rf_':          'roue-fortune',
@@ -63,6 +39,9 @@ const COMPONENT_ROUTES = {
   'bj_':          'blackjack',
   'cs_':          'casino-stats',
   'keno_':        'keno',
+  'rl_':          'roulette',   // replay roulette
+  // ── Sondage avancé (handles persistent components) ────────
+  'sondagev_':    'sondage-avance',
 };
 
 // ── Préfixes du panneau /config ───────────────────────────

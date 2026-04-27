@@ -1,6 +1,6 @@
 // ============================================================
-// blackjack.js — Blackjack complet (v4)
-// Nouveautés : série de victoires (streak bonus) + pari annexe 21+3
+// blackjack.js — Blackjack complet (v5)
+// Nouveautés : bouton conseil + probabilité bust
 // ============================================================
 
 const {
@@ -50,6 +50,31 @@ function streakLabel(streak) {
   if (streak >= 3) return `🔥 ${streak} victoires de suite ! ×1.5`;
   if (streak >= 2) return `✨ ${streak} victoires de suite ! ×1.25`;
   return null;
+}
+
+// ─── Conseils de stratégie simple ─────────────────────────
+function getBasicAdvice(playerTotal, dealerCard) {
+  const dealerVal = cardVal(dealerCard);
+  
+  if (playerTotal <= 11) return '🃏 Toujours tirer avec 11 ou moins.';
+  if (playerTotal >= 17) return '✋ Rester avec 17 ou plus (risque de bust trop élevé).';
+  
+  // 12-16 : zone dangereuse, dépend de la carte du dealer
+  if (playerTotal >= 12 && playerTotal <= 16) {
+    if (dealerVal >= 7) return '🃏 Tirer (dealer fort, faut prendre le risque).';
+    return '✋ Rester (dealer faible, attends sa main).';
+  }
+  
+  return '✋ Rester.';
+}
+
+// ─── Calcul de probabilité de bust ──────────────────────
+function estimateBustProbability(playerTotal) {
+  // Formule simplifiée : plus la main est haute, plus c'est probable de buster
+  if (playerTotal >= 21) return 100;
+  if (playerTotal <= 11) return 0;
+  // Entre 12 et 20, on estime : (total - 11) * 8 pour un approximation
+  return Math.min(100, (playerTotal - 11) * 8);
 }
 
 // ─── Évaluation 21+3 ─────────────────────────────────────
@@ -163,6 +188,10 @@ function buildEmbed(state, status = '') {
     embed.addFields({ name: '🃏 21+3 Side bet', value: `**${state.sideBet} ${coin}**`, inline: true });
   }
 
+  // Probabilité de bust
+  const bustProb = estimateBustProbability(playerVal);
+  embed.addFields({ name: '🃏 Probabilité bust', value: `${bustProb}%`, inline: true });
+
   // Afficher la série si active
   const streakData = getStreak(state.userId, state.guildId);
   if (streakData.streak >= 2) {
@@ -200,7 +229,7 @@ function buildButtons(state) {
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`bj_split_${state.userId}`)    .setLabel('✂️ Split')     .setStyle(ButtonStyle.Primary).setDisabled(!canSplit),
     new ButtonBuilder().setCustomId(`bj_insure_${state.userId}`)   .setLabel('🛡️ Assurance') .setStyle(ButtonStyle.Danger).setDisabled(!canInsure),
-    new ButtonBuilder().setCustomId(`bj_surrender_${state.userId}`).setLabel('🏳️ Abandonner').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`bj_counsel_${state.userId}`)  .setLabel('💡 Conseil')   .setStyle(ButtonStyle.Secondary),
   );
   return [row1, row2];
 }
@@ -517,6 +546,26 @@ async function handleComponent(interaction) {
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await startGame(interaction, userId, interaction.guildId, newMise);
     return true;
+  }
+
+  // ── Conseil stratégique ──────────────────────────────────
+  if (customId.startsWith('bj_counsel_')) {
+    const parts  = customId.split('_');
+    const userId = parts[2];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+    }
+    const st = getSession(userId);
+    if (!st) {
+      return interaction.reply({ content: '❌ Pas de partie en cours.', ephemeral: true });
+    }
+    const playerTotal = handValue(st.player);
+    const dealerCard = st.dealer[0];
+    const advice = getBasicAdvice(playerTotal, dealerCard);
+    return interaction.reply({
+      content: `**💡 Conseil Stratégie Basique :**\n\nTa main : ${handStr(st.player)} (${playerTotal})\nCarte dealer : ${cardStr(dealerCard)}\n\n${advice}`,
+      ephemeral: true
+    });
   }
 
   // ── Boutons in-game ──────────────────────────────────────

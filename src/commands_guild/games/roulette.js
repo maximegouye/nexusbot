@@ -1,6 +1,6 @@
 // ============================================================
-// roulette.js — Roulette européenne (v4)
-// Nouveautés : multi-paris (max 3), voisins/tiers/orphelins, numéros chauds
+// roulette.js — Roulette européenne (v5)
+// Nouveautés : 3 boutons de paris rapides
 // ============================================================
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -373,6 +373,22 @@ async function playRoulette(source, userId, guildId, mise, betString) {
   const encodedBets = bets.map(b => b.key).join('~');
   const row = makeGameRow('rl', userId, mise, encodedBets);
 
+  // Ajouter une deuxième ActionRow avec les boutons rapides
+  const quickBetsRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`rl_quickbet_${userId}_${mise}_rouge`)
+      .setLabel('🔴 Rouge x2')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`rl_quickbet_${userId}_${mise}_noir`)
+      .setLabel('⚫ Noir x2')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`rl_quickbet_${userId}_${mise}_pairimpair`)
+      .setLabel('🟢 Pair/Impair')
+      .setStyle(ButtonStyle.Primary),
+  );
+
   await msg.edit({
     embeds: [new EmbedBuilder()
       .setColor(finalColor)
@@ -380,7 +396,7 @@ async function playRoulette(source, userId, guildId, mise, betString) {
       .setDescription(finalDesc)
       .setFooter({ text: 'Jouez de manière responsable · Mise min : 5 coins/pari · Max 3 paris simultanés' })
       .setTimestamp()],
-    components: [row],
+    components: [row, quickBetsRow],
   });
 }
 
@@ -430,6 +446,29 @@ module.exports = {
   betHelp: BET_HELP,
 
   async handleComponent(interaction, cid) {
+    // ── Pari rapide (rouge, noir, pair/impair) ─────────────
+    if (cid.startsWith('rl_quickbet_')) {
+      const parts   = cid.split('_');
+      const userId  = parts[2];
+      const mise    = parseInt(parts[3]);
+      const betType = parts[4]; // rouge, noir, ou pairimpair
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.deferUpdate();
+      
+      // Convertir le type de pari en string pour playRoulette
+      let betStr = betType;
+      if (betType === 'pairimpair') {
+        // Choisir aléatoirement pair ou impair
+        betStr = Math.random() < 0.5 ? 'pair' : 'impair';
+      }
+      
+      await playRoulette(interaction, userId, interaction.guildId, mise, betStr);
+      return true;
+    }
+
     // ── Table des mises ────────────────────────────────────
     if (cid.startsWith('rl_table_')) {
       const userId = cid.split('_')[2];

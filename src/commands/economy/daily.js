@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -16,6 +16,11 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    // DEFER IMMÉDIATEMENT pour éviter le timeout Discord (3s)
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply().catch(() => {});
+    }
+
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
@@ -28,7 +33,7 @@ module.exports = {
       const remaining = cooldown - (now - lastDaily);
       const h = Math.floor(remaining / 3600);
       const m = Math.floor((remaining % 3600) / 60);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+      return await interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setTitle('⏳ Récompense déjà récupérée')
@@ -39,8 +44,8 @@ module.exports = {
     }
 
     // ── Animation de récupération ─────────────────────────
-    const isInteraction = !!(interaction.editReply || interaction.deferred || interaction.replied);
-    const replyFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+    // Après defer, toujours utiliser editReply
+    const replyFn = interaction.editReply.bind(interaction);
 
     const loadingEmbed = new EmbedBuilder()
       .setColor('#5865F2')
@@ -108,6 +113,8 @@ module.exports = {
 
     const flames = '🔥'.repeat(Math.min(newStreak, 7));
 
+    const nextDailyTimestamp = Math.floor((Date.now() + cooldown * 1000) / 1000);
+
     const embed = new EmbedBuilder()
       .setColor(milestone > 0 ? '#FFD700' : cfg.color || '#7B2FBE')
       .setTitle(`${symbol} Récompense quotidienne récupérée !`)
@@ -119,10 +126,63 @@ module.exports = {
         ...(milestone ? [{ name: '🎉 Palier', value: `**+${milestone.toLocaleString('fr-FR')}${symbol}**`, inline: true }] : []),
         { name: `${flames} Série`,          value: `**${newStreak} jour${newStreak > 1 ? 's' : ''}** consécutif${newStreak > 1 ? 's' : ''}`, inline: true },
         { name: `${symbol} Nouveau solde`,  value: `**${(user.balance + total).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+        { name: '⏰ Prochain daily',         value: `<t:${nextDailyTimestamp}:R>`, inline: true },
       )
       .setFooter({ text: 'Reviens demain pour conserver ta série !' });
 
-    await interaction.editReply({ embeds: [embed] }).catch(() => {});
+    // ── Créer les boutons d'action ────────────────────────
+    const statsButton = new ButtonBuilder()
+      .setCustomId('daily_stats')
+      .setLabel('Mes stats')
+      .setEmoji('📊')
+      .setStyle(ButtonStyle.Secondary);
+
+    const reminderButton = new ButtonBuilder()
+      .setCustomId('daily_reminder')
+      .setLabel('Rappel')
+      .setEmoji('🔔')
+      .setStyle(ButtonStyle.Secondary);
+
+    const actionRow = new ActionRowBuilder().addComponents(statsButton, reminderButton);
+
+    const message = await interaction.editReply({ embeds: [embed], components: [actionRow] }).catch(() => {});
+
+    // ── Collector local pour les boutons (30s timeout) ────
+    if (message) {
+      const collector = message.createMessageComponentCollector({
+        filter: (i) => i.user.id === interaction.user.id,
+        time: 30000,
+      });
+
+      collector.on('collect', async (buttonInteraction) => {
+        if (buttonInteraction.customId === 'daily_stats') {
+          await buttonInteraction.reply({
+            embeds: [new EmbedBuilder()
+              .setColor('#5865F2')
+              .setTitle('📊 Tes statistiques daily')
+              .addFields(
+                { name: '🔥 Série actuelle', value: `**${newStreak} jour${newStreak > 1 ? 's' : ''}**`, inline: true },
+                { name: '🏆 Record personnel', value: `**${user.best_streak || 0} jours**`, inline: true },
+                { name: `${symbol} Total gagné en daily`, value: `**${(user.total_daily_earned || 0).toLocaleString('fr-FR')}${symbol}**`, inline: false },
+              )
+              .setFooter({ text: 'Continue à jouer chaque jour pour battre ton record !' })
+            ],
+            ephemeral: true,
+          }).catch(() => {});
+        } else if (buttonInteraction.customId === 'daily_reminder') {
+          await buttonInteraction.reply({
+            content: `🔔 Ton prochain **daily** sera disponible <t:${nextDailyTimestamp}:R>`,
+            ephemeral: true,
+          }).catch(() => {});
+        }
+        await buttonInteraction.deferUpdate().catch(() => {});
+      });
+
+      collector.on('end', () => {
+        // Retirer les boutons après le timeout
+        interaction.editReply({ components: [] }).catch(() => {});
+      });
+    }
   },
 
   async run(message, args) {

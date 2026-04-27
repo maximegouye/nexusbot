@@ -32,10 +32,33 @@ module.exports = {
     } else if (subcommand === 'classement') {
       await handleClassement(interaction);
     }
-  }
+  },
+
+  async run(message, args) {
+    const [subcommandArg] = args;
+    const subcommand = subcommandArg?.toLowerCase() || 'voir';
+    
+    const fakeInteraction = {
+      user: message.author,
+      member: message.member,
+      guild: message.guild,
+      guildId: message.guildId,
+      channel: message.channel,
+      deferred: false,
+      replied: false,
+      options: {
+        getSubcommand: () => subcommand,
+        getUser: (key) => message.mentions.users.first() || message.author,
+        getString: () => null,
+      },
+      async reply(opts) { return await message.channel.send(opts).catch(() => {}); },
+      async editReply(opts) { return await message.channel.send(opts).catch(() => {}); },
+      async deferReply() { this.deferred = true; },
+    };
+    await this.execute(fakeInteraction);
+  },
 };
 
-// ──── SUBCOMMAND: donner ────
 async function handleDonner(interaction) {
   const target = interaction.options.getUser('membre');
   const message = interaction.options.getString('message') || null;
@@ -72,13 +95,11 @@ async function handleDonner(interaction) {
     });
   }
 
-  // Insert rep log
   db.db.prepare(
     `INSERT INTO rep_log (guild_id, giver_id, receiver_id, message, created_at)
      VALUES (?, ?, ?, ?, ?)`
   ).run(interaction.guildId, interaction.user.id, target.id, message, now);
 
-  // Update user reputation
   db.db.prepare(
     `UPDATE users SET reputation = reputation + 1
      WHERE user_id = ? AND guild_id = ?`
@@ -86,102 +107,56 @@ async function handleDonner(interaction) {
 
   const newRep = db.getUser(target.id, interaction.guildId).reputation || 1;
 
-  // Milestone bonuses
   const milestones = { 10: 200, 25: 500, 50: 1000, 100: 2500, 500: 10000 };
-  let bonusMsg = '';
   if (milestones[newRep]) {
-    db.addCoins(target.id, interaction.guildId, milestones[newRep]);
-    bonusMsg = `\n🎁 **Milestone ${newRep} rep !** +${milestones[newRep].toLocaleString('fr-FR')} ${cfg.currency_name || 'coins'} bonus !`;
+    db.db.prepare(
+      `UPDATE users SET balance = balance + ?
+       WHERE user_id = ? AND guild_id = ?`
+    ).run(milestones[newRep], target.id, interaction.guildId);
   }
+
+  const newRank = await getUserRank(interaction.guildId, target.id);
+  const embed = new EmbedBuilder()
+    .setColor('#52B788')
+    .setTitle('⭐ Réputation donnée !')
+    .setDescription(`Tu as donné **+1 rep** à **${target.username}**!`)
+    .addFields(
+      { name: 'Nouvelle réputation', value: `**${newRep}** (rang: **#${newRank}**)`, inline: true },
+      message ? { name: 'Message', value: `*"${message}"*`, inline: false } : { name: '​', value: '​', inline: false }
+    )
+    .setThumbnail(target.displayAvatarURL({ size: 256 }))
+    .setFooter({ text: `${target.username}` })
+    .setTimestamp();
+
+  if (milestones[newRep]) {
+    embed.setFooter({ text: `${target.username} a atteint une réputation de ${newRep} ! Bonus: +${milestones[newRep]} coins` });
+  }
+
+  return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+}
+
+async function handleVoir(interaction) {
+  const target = interaction.options.getUser('utilisateur') || interaction.user;
+
+  const user = db.getUser(target.id, interaction.guildId) || {};
+  const rank = await getUserRank(interaction.guildId, target.id);
+  const total = db.db.prepare(`SELECT COUNT(*) as count FROM users WHERE guild_id = ? AND reputation > 0`).get(interaction.guildId).count;
 
   const embed = new EmbedBuilder()
     .setColor('#F39C12')
-    .setTitle('⭐ Réputation donnée !')
-    .setDescription(`**${interaction.user.username}** a donné une ⭐ rep à **${target.username}** !${bonusMsg}`)
+    .setTitle(`⭐ Réputation de ${target.username}`)
+    .setDescription(`**${user.reputation || 0}** réputation(s)`)
     .addFields(
-      {
-        name: '⭐ Réputation totale',
-        value: `**${newRep}** ${newRep === 1 ? 'rep' : 'reps'}`,
-        inline: true
-      },
-      {
-        name: '👤 Rang du serveur',
-        value: await getRankText(interaction.guildId, target.id),
-        inline: true
-      },
-      ...(message ? [{ name: '💬 Message', value: message, inline: false }] : [])
+      { name: 'Rang', value: `**#${rank}** sur ${total}`, inline: true },
+      { name: 'Profil', value: `<@${target.id}>`, inline: true }
     )
-    .setThumbnail(target.displayAvatarURL({ size: 128 }))
-    .setFooter({ text: `Donnée par ${interaction.user.username}` });
+    .setThumbnail(target.displayAvatarURL({ size: 256 }))
+    .setFooter({ text: interaction.guild.name })
+    .setTimestamp();
 
-  await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+  return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
 }
 
-// ──── SUBCOMMAND: voir ────
-async function handleVoir(interaction) {
-  const targetUser = interaction.options.getUser('utilisateur') || interaction.user;
-
-  try {
-    await interaction.deferReply();
-
-    const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-    if (!member) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
-        content: '❌ Utilisateur non trouvé sur ce serveur.',
-        ephemeral: true
-      });
-    }
-
-    const user = db.getUser(targetUser.id, interaction.guildId);
-    const reputation = user.reputation || 0;
-    const rank = await getUserRank(interaction.guildId, targetUser.id);
-    const givenCount = db.db.prepare(
-      `SELECT COUNT(*) as count FROM rep_log
-       WHERE guild_id = ? AND giver_id = ?`
-    ).get(interaction.guildId, targetUser.id).count;
-    const receivedCount = db.db.prepare(
-      `SELECT COUNT(*) as count FROM rep_log
-       WHERE guild_id = ? AND receiver_id = ?`
-    ).get(interaction.guildId, targetUser.id).count;
-
-    const embed = new EmbedBuilder()
-      .setColor('#F39C12')
-      .setTitle(`⭐ Réputation de ${targetUser.username}`)
-      .setThumbnail(targetUser.displayAvatarURL({ size: 256 }))
-      .addFields(
-        {
-          name: '⭐ Réputation totale',
-          value: `**${reputation}** rep${reputation !== 1 ? 's' : ''}`,
-          inline: true
-        },
-        {
-          name: '🏆 Classement',
-          value: `**#${rank}** du serveur`,
-          inline: true
-        },
-        {
-          name: '📊 Stats détaillées',
-          value: [
-            `Reps données: **${givenCount}**`,
-            `Reps reçues: **${receivedCount}**`,
-            `Ratio: **${receivedCount > 0 ? (givenCount / receivedCount).toFixed(2) : givenCount > 0 ? '∞' : '0'}**`
-          ].join('\n'),
-          inline: false
-        }
-      )
-      .setFooter({ text: targetUser.id });
-
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  } catch (err) {
-    console.error('[Rep voir] Erreur:', err);
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
-      content: '❌ Une erreur est survenue.',
-      ephemeral: true
-    });
-  }
-}
-
-// ──── SUBCOMMAND: classement ────
 async function handleClassement(interaction) {
   try {
     await interaction.deferReply();
@@ -203,7 +178,6 @@ async function handleClassement(interaction) {
       });
     }
 
-    // Build leaderboard description
     let description = '🏆 **Top 10 Réputation**\n\n';
     for (let i = 0; i < topUsers.length; i++) {
       const user = topUsers[i];
@@ -230,11 +204,6 @@ async function handleClassement(interaction) {
   }
 }
 
-// ──── HELPERS ────
-
-/**
- * Get user's rank in server by reputation
- */
 async function getUserRank(guildId, userId) {
   const result = db.db.prepare(
     `SELECT COUNT(*) as rank
@@ -247,9 +216,6 @@ async function getUserRank(guildId, userId) {
   return result.rank + 1;
 }
 
-/**
- * Get user's rank text for inline display
- */
 async function getRankText(guildId, userId) {
   const rank = await getUserRank(guildId, userId);
   const total = db.db.prepare(

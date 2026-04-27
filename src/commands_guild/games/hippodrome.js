@@ -9,6 +9,9 @@ const { C, chipStr, balanceLine, casinoFooter, changeMiseModal, parseMise } = re
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ─── Sessions de jeu (pour rejouer avec les mêmes paramètres) ──
+const hippoSessions = new Map(); // userId → { mise, selectedHorse }
+
 // ─── Configuration des chevaux ────────────────────────────
 const HORSES = [
   { id: 1, name: 'Éclair',   odds: 1.5 },
@@ -72,6 +75,23 @@ function renderTrack(horseId, position) {
   return { track, progressPercent };
 }
 
+// ─── Générer le podium (top 3 chevaux) ───────────────────
+function generatePodium(positions, winner) {
+  const finalPositions = Object.entries(positions).map(([horseId, posArr]) => ({
+    id: parseInt(horseId),
+    finalPos: posArr[4] || 0,
+  })).sort((a, b) => b.finalPos - a.finalPos);
+
+  const podium = finalPositions.slice(0, 3);
+  let podiumStr = '';
+  podium.forEach((p, idx) => {
+    const h = HORSES.find(x => x.id === p.id);
+    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
+    podiumStr += `${medal} #${h.id} ${h.name}\n`;
+  });
+  return podiumStr;
+}
+
 // ─── Générer l'embed de la course ────────────────────────
 function buildRaceEmbed(positions, step, selectedHorse, mise, coin, isFinished = false) {
   const horse = HORSES.find(h => h.id === selectedHorse);
@@ -131,6 +151,9 @@ async function playHippodrome(source, userId, guildId, mise, selectedHorse) {
   // Déduire la mise
   db.addCoins(userId, guildId, -mise);
 
+  // Sauvegarder la session pour le bouton "Rejouer"
+  hippoSessions.set(userId, { mise, selectedHorse });
+
   // Déterminer le gagnant et générer les positions
   const winner = determineWinner();
   const positions = generateRacePositions();
@@ -168,11 +191,12 @@ async function playHippodrome(source, userId, guildId, mise, selectedHorse) {
     }
   }
 
-  // Étape finale : afficher le gagnant
+  // Étape finale : afficher le gagnant et le podium
   await sleep(1000);
 
   const isWin = winner.id === selectedHorse;
   const finalEmbed = buildRaceEmbed(positions, 4, selectedHorse, mise, coin, true);
+  const podiumStr = generatePodium(positions, winner);
 
   let result = '';
   let newBalance = u.balance;
@@ -195,7 +219,10 @@ async function playHippodrome(source, userId, guildId, mise, selectedHorse) {
     result += `${balanceLine(newBalance, -loss, coin)}`;
   }
 
-  finalEmbed.addFields({ name: '🏁 Résultat', value: result });
+  finalEmbed.addFields(
+    { name: '🏇 Podium', value: podiumStr, inline: true },
+    { name: '🏁 Résultat', value: result }
+  );
   finalEmbed.setFooter({ text: casinoFooter('Hippodrome') });
 
   // Boutons
@@ -223,11 +250,11 @@ async function handleComponent(interaction, customId, userId) {
 
   // Rejouer avec le même cheval
   if (customId.startsWith(`hippo_replay_${userId}`)) {
-    // Récupérer la mise et le cheval de l'interaction précédente
-    // Pour simplifier, on va utiliser une mise par défaut de 100
-    const mise = 100;
-    const selectedHorse = 1; // on peut aussi parser depuis les parametres
-
+    const session = hippoSessions.get(userId);
+    if (!session) {
+      return interaction.reply({ content: '⚠️ Session expirée, relance /hippodrome', ephemeral: true });
+    }
+    const { mise, selectedHorse } = session;
     await interaction.deferReply();
     await playHippodrome(interaction, userId, interaction.guildId, mise, selectedHorse);
     return true;
@@ -355,8 +382,8 @@ module.exports = {
   async run(message, args) {
     const mise   = parseInt(args[0]) || 50;
     const cheval = parseInt(args[1]) || 1;
-    if (mise < 5) return message.reply('❌ Mise minimale : 5 coins. Usage : `&hippodrome <mise> [1-5]`');
-    if (cheval < 1 || cheval > 5) return message.reply('❌ Choisir un cheval entre 1 et 5. Usage : `&hippodrome <mise> <cheval>`');
+    if (mise < 5) return message.reply('❌ Mise minimale : 5 coins. Usage : `&hippodrome <mise> [1-6]`');
+    if (cheval < 1 || cheval > 6) return message.reply('❌ Choisir un cheval entre 1 et 6. Usage : `&hippodrome <mise> <cheval>`');
     const fake = {
       user: message.author, member: message.member,
       guild: message.guild, guildId: message.guildId,

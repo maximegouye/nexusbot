@@ -41,6 +41,19 @@ function formatCard(card) {
   return `**${card.name}${card.suit}**`;
 }
 
+function getProbabilityInfo(cardValue) {
+  // Cartes basses (A-6): environ 67% de chances que la suivante soit plus haute
+  if (cardValue <= 6) {
+    return { emoji: '📈', text: '~67% de chances que la suivante soit plus haute' };
+  }
+  // Cartes hautes (8-K): environ 67% de chances que la suivante soit plus basse
+  if (cardValue >= 8) {
+    return { emoji: '📉', text: '~67% de chances que la suivante soit plus basse' };
+  }
+  // 7: 50/50
+  return { emoji: '⚖️', text: '~50/50' };
+}
+
 function getGameId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
@@ -80,6 +93,14 @@ function buildGameEmbed(session, status = 'playing') {
       inline: false,
     });
   }
+
+  // Display probability
+  const probInfo = getProbabilityInfo(session.currentCard.value);
+  embed.addFields({
+    name: '🎯 Probabilité',
+    value: `${probInfo.emoji} ${probInfo.text}`,
+    inline: false,
+  });
 
   // Display chain info
   const chainText = session.rounds > 0
@@ -204,6 +225,10 @@ async function execute(interaction) {
         .setCustomId(`hilo_lower_${userId}_${gameId}`)
         .setLabel('📉 Plus basse')
         .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`hilo_rules_${userId}`)
+        .setLabel('📋 Règles')
+        .setStyle(ButtonStyle.Secondary),
     );
 
     const msg = await interaction.editReply({ embeds: [embed], components: [row] });
@@ -223,7 +248,7 @@ async function handleComponent(interaction, customId) {
 
   try {
     const parts = customId.split('_');
-    const action = parts[1]; // 'higher', 'lower', 'collect', 'changemise', 'modal'
+    const action = parts[1]; // 'higher', 'lower', 'collect', 'changemise', 'modal', 'rules'
     const userId = parts[2];
     const gameId = parts[3] || null;
 
@@ -236,6 +261,24 @@ async function handleComponent(interaction, customId) {
     }
 
     const coin = (db.getConfig ? db.getConfig(interaction.guildId) : null)?.currency_emoji || '🪙';
+
+    // ───── Rules button ─────
+    if (action === 'rules') {
+      const rulesEmbed = new EmbedBuilder()
+        .setColor('#3498DB')
+        .setTitle('📋 Règles du Hi-Lo')
+        .setDescription('Prédit si la prochaine carte sera plus haute ou plus basse que la carte actuelle.')
+        .addFields(
+          { name: '🎮 Gameplay', value: 'Chaque bonne prédiction gagne et accumule un multiplicateur de ×1.9', inline: false },
+          { name: '⛓️ Chaîne de victoires', value: 'Chaque manche gagnée multiplie vos gains par 1.9x', inline: false },
+          { name: '💰 Encaisser', value: 'Encaissez vos gains à tout moment après la première victoire', inline: false },
+          { name: '❌ Défaite', value: 'Une mauvaise prédiction termine la partie et perd votre mise', inline: false },
+          { name: '🔄 Cartes identiques', value: 'Si deux cartes sont identiques, c\'est une victoire bonus!', inline: false },
+          { name: '📊 Probabilités', value: 'Les cartes basses (2-6) ont plus de chances d\'être suivies par une carte plus haute (~67%)', inline: false },
+        )
+        .setFooter({ text: 'Hi-Lo · Maximum 5 manches par partie' });
+      return interaction.reply({ embeds: [rulesEmbed], ephemeral: true });
+    }
 
     // ───── Modal for changing bet ─────
     if (action === 'modal') {
@@ -306,6 +349,10 @@ async function handleComponent(interaction, customId) {
             .setCustomId(`hilo_lower_${userId}_${newGameId}`)
             .setLabel('📉 Plus basse')
             .setStyle(ButtonStyle.Danger),
+          new ButtonBuilder()
+            .setCustomId(`hilo_rules_${userId}`)
+            .setLabel('📋 Règles')
+            .setStyle(ButtonStyle.Secondary),
         );
 
         const msg = await interaction.editReply({ embeds: [embed], components: [row] });

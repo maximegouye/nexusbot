@@ -189,6 +189,31 @@ async function playVideoPoker(source, userId, guildId, mise) {
 async function handleComponent(interaction) {
   const customId = interaction.customId;
 
+  // Paytable handler
+  if (customId.startsWith('vp_paytable_')) {
+    const userId = customId.split('_')[2];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+    }
+    const paytableEmbed = new EmbedBuilder()
+      .setColor('#F39C12')
+      .setTitle('🃏 Table de paiement')
+      .setDescription('Mains gagnantes et leurs multiplicateurs')
+      .addFields(
+        { name: 'Royal Flush', value: '× 250', inline: true },
+        { name: 'Straight Flush', value: '× 50', inline: true },
+        { name: 'Carré', value: '× 25', inline: true },
+        { name: 'Full House', value: '× 9', inline: true },
+        { name: 'Flush', value: '× 6', inline: true },
+        { name: 'Suite', value: '× 4', inline: true },
+        { name: 'Brelan', value: '× 3', inline: true },
+        { name: 'Double Paire', value: '× 2', inline: true },
+        { name: 'Jacks or Better', value: '× 1', inline: true },
+      )
+      .setFooter({ text: 'Video Poker · Jacks or Better' });
+    return interaction.reply({ embeds: [paytableEmbed], ephemeral: true });
+  }
+
   // Play again handler
   if (customId.startsWith('vp_replay_')) {
     const parts = customId.split('_');
@@ -346,9 +371,15 @@ async function handleComponent(interaction) {
       );
 
     const playAgainButtons = makeGameRow('vp', userId, st.mise);
+    const paytableButton = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`vp_paytable_${userId}`)
+        .setLabel('🃏 Combinaisons')
+        .setStyle(ButtonStyle.Secondary)
+    );
 
     deleteSession(userId);
-    await msg.edit({ embeds: [finalEmbed], components: [playAgainButtons] });
+    await msg.edit({ embeds: [finalEmbed], components: [playAgainButtons, paytableButton] });
   }
 }
 

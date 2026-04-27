@@ -82,6 +82,7 @@ const PAYOUTS = { player: 2, banker: 1.95, tie: 9 };
 
 // ─── Game Sessions Map with TTL ───────────────────────────
 const gameSessions = new Map();
+const sessionScoreboard = new Map(); // Scoreboard per userId
 
 function storeSession(userId, state) {
   const existing = gameSessions.get(userId);
@@ -102,6 +103,29 @@ function deleteSession(userId) {
   const sess = gameSessions.get(userId);
   if (sess?.timeout) clearTimeout(sess.timeout);
   gameSessions.delete(userId);
+}
+
+function getScoreboard(userId) {
+  if (!sessionScoreboard.has(userId)) {
+    sessionScoreboard.set(userId, {
+      playerWins: 0,
+      bankerWins: 0,
+      ties: 0,
+      gamesPlayed: 0,
+      netGain: 0,
+    });
+  }
+  return sessionScoreboard.get(userId);
+}
+
+function updateScoreboard(userId, winner, payout, mise) {
+  const sb = getScoreboard(userId);
+  sb.gamesPlayed += 1;
+  const netDiff = payout ? (payout - mise) : -mise;
+  sb.netGain += netDiff;
+  if (winner === 'player') sb.playerWins += 1;
+  else if (winner === 'banker') sb.bankerWins += 1;
+  else if (winner === 'tie') sb.ties += 1;
 }
 
 async function playBaccaratGame(source, userId, guildId, mise, betOn) {
@@ -230,6 +254,10 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
     ? `🤝 Égalité ! Mise remboursée.`
     : `😔 **${betLabels[winner]} gagne.** -${mise} ${coin}`;
 
+  // Update scoreboard
+  updateScoreboard(userId, winner, betKey === winner ? gain : (winner === 'tie' && betKey !== 'tie' ? mise : 0), mise);
+  const sb = getScoreboard(userId);
+
   const finalEmbed = new EmbedBuilder()
     .setColor(color)
     .setTitle('🎴 ・ Baccarat — Résultat ・')
@@ -239,17 +267,46 @@ async function playBaccaratGame(source, userId, guildId, mise, betOn) {
       { name: `🏦 Banquier **${bTotal}**`, value: banker.map(cardStr).join(' '), inline: true },
       { name: '🏆 Vainqueur', value: `${winEmoji[winner]} ${betLabels[winner]}`, inline: false },
       { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
+      { name: '📊 Session', value: `🎭 J:${sb.playerWins} | 🏦 B:${sb.bankerWins} | 🤝 T:${sb.ties} | Net: ${sb.netGain >= 0 ? '+' : ''}${sb.netGain} ${coin}`, inline: false }
     )
     .setFooter({ text: 'Baccarat · Joueur ×2 · Banquier ×1.95 (5% commission) · Égalité ×9' });
 
   const playAgainButtons = makeGameRow('baccarat', userId, mise, betKey);
+  const statsButton = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`baccarat_stats_${userId}`)
+      .setLabel('📊 Stats session')
+      .setStyle(ButtonStyle.Secondary)
+  );
 
-  await msg.edit({ embeds: [finalEmbed], components: [playAgainButtons] });
+  await msg.edit({ embeds: [finalEmbed], components: [playAgainButtons, statsButton] });
 }
 
 // ─── Component Handler ────────────────────────────────────
 async function handleComponent(interaction) {
   const cid = interaction.customId;
+
+  if (cid.startsWith('baccarat_stats_')) {
+    const userId = cid.split('_')[2];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '❌ Ces stats ne t\'appartiennent pas.', ephemeral: true });
+    }
+    const sb = getScoreboard(userId);
+    const winRate = sb.gamesPlayed > 0 ? ((sb.playerWins + sb.bankerWins + sb.ties) / sb.gamesPlayed * 100).toFixed(1) : '0.0';
+    const statsEmbed = new EmbedBuilder()
+      .setColor('#8E44AD')
+      .setTitle('📊 Statistiques de session')
+      .addFields(
+        { name: '🎯 Parties jouées', value: sb.gamesPlayed.toString(), inline: true },
+        { name: '🎭 Joueur gagnées', value: sb.playerWins.toString(), inline: true },
+        { name: '🏦 Banquier gagnées', value: sb.bankerWins.toString(), inline: true },
+        { name: '🤝 Égalités', value: sb.ties.toString(), inline: true },
+        { name: '📈 Taux de gain', value: `${winRate}%`, inline: true },
+        { name: '💰 Gain/Perte net', value: `${sb.netGain >= 0 ? '+' : ''}${sb.netGain} coins`, inline: true }
+      )
+      .setFooter({ text: 'Stats en mémoire (session seulement)' });
+    return interaction.reply({ embeds: [statsEmbed], ephemeral: true });
+  }
 
   if (cid.startsWith('baccarat_replay_')) {
     const parts = cid.split('_');

@@ -31,34 +31,15 @@ module.exports = {
 
     // ─── Économie ────────────────────────────────────────────
     let econStats = { total: 0, users: 0, top: null };
-    const econColumns = ['coins', 'balance', 'cash'];
-    for (const col of econColumns) {
-      try {
-        const row = db.prepare(`SELECT SUM(${col}) as total, COUNT(*) as users FROM economy WHERE guild_id = ?`).get(gid);
-        if (row && (row.total || 0) > 0) {
-          econStats.total = row.total || 0;
-          econStats.users = row.users || 0;
-          const top = db.prepare(`SELECT user_id, ${col} as coins FROM economy WHERE guild_id = ? ORDER BY ${col} DESC LIMIT 1`).get(gid);
-          if (top) econStats.top = top;
-          break;
-        }
-      } catch (e) { /* column n'existe pas */ }
-    }
-    // Fallback sans guild_id
-    if (econStats.users === 0) {
-      for (const col of econColumns) {
-        try {
-          const row = db.prepare(`SELECT SUM(${col}) as total, COUNT(*) as users FROM economy`).get();
-          if (row && (row.total || 0) > 0) {
-            econStats.total = row.total || 0;
-            econStats.users = row.users || 0;
-            const top = db.prepare(`SELECT user_id, ${col} as coins FROM economy ORDER BY ${col} DESC LIMIT 1`).get();
-            if (top) econStats.top = top;
-            break;
-          }
-        } catch (e) {}
+    try {
+      const row = db.prepare(`SELECT SUM(balance + bank) as total, COUNT(*) as users FROM users WHERE guild_id = ?`).get(gid);
+      if (row && (row.total || 0) > 0) {
+        econStats.total = row.total || 0;
+        econStats.users = row.users || 0;
+        const top = db.prepare(`SELECT user_id, (balance + bank) as coins FROM users WHERE guild_id = ? ORDER BY (balance + bank) DESC LIMIT 1`).get(gid);
+        if (top) econStats.top = top;
       }
-    }
+    } catch (e) { /* table users n'existe pas ou colonne manquante */ }
 
     // ─── Tickets ─────────────────────────────────────────────
     let ticketStats = { open: 0, closed: 0, total: 0 };
