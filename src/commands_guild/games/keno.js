@@ -56,7 +56,7 @@ async function runGame(ctx, rawNums, mise, isPrefix = false) {
     return isPrefix ? ctx.reply(msg) : ctx.reply({ content: msg, ephemeral: true });
   }
 
-  db.updateBalance(userId, guildId, -mise);
+  db.addCoins(userId, guildId, -mise);
 
   // ── Tirage animé ─────────────────────────────────────────
   const sendFn = isPrefix
@@ -102,7 +102,7 @@ async function runGame(ctx, rawNums, mise, isPrefix = false) {
   const gain = Math.floor(mise * mult);
 
   if (gain > 0) {
-    db.updateBalance(userId, guildId, gain);
+    db.addCoins(userId, guildId, gain);
     try { db.addXP(userId, guildId, Math.max(5, Math.floor(gain / 100))); } catch {}
   }
 

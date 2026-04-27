@@ -6,7 +6,7 @@ const { REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle
 
 // ── Statuts rotatifs du bot ────────────────────────────────
 const ACTIVITIES = [
-  { name: '🎰 /setup global=99 guild=96 — deploy-commands ✅',  type: ActivityType.Playing   },
+  { name: '🎰 /casino — 15+ jeux exclusifs',        type: ActivityType.Playing   },
   { name: '🏇 /hippodrome — Course de chevaux',     type: ActivityType.Competing },
   { name: '💰 /daily — Récompense quotidienne',     type: ActivityType.Watching  },
   { name: '🎯 /aide — Toutes les commandes',        type: ActivityType.Listening },
@@ -313,6 +313,30 @@ module.exports = {
       console.log('⚠️  Migration 5000€ skip:', e?.message);
     }
 
+    // ── Auto-remboursement : traiter les compensations en attente au démarrage ──
+    setTimeout(async () => {
+      try {
+        const db = require('../database/db');
+        const { sendRemboursement } = require('../commands_guild/admin/remboursement');
+        const pending = db.db.prepare(
+          'SELECT * FROM remboursements WHERE sent=0 ORDER BY id ASC'
+        ).all();
+        if (pending.length > 0) {
+          console.log(`💸 Auto-remboursement : ${pending.length} remboursement(s) en attente...`);
+          for (const r of pending) {
+            const ok = await sendRemboursement(client, r.guild_id, r.user_id, r.amount, r.raison);
+            if (ok) {
+              db.db.prepare('UPDATE remboursements SET sent=1, sent_at=? WHERE id=?')
+                .run(Math.floor(Date.now() / 1000), r.id);
+              console.log(`  ✅ Remboursé <@${r.user_id}> +${r.amount}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.log('⚠️  Auto-remboursement skip:', e?.message);
+      }
+    }, 20_000);
+
     const guildId = process.env.HOME_GUILD_ID || '1492886135159128227';
 
     // ── Auto-setup recrutement (15s après démarrage pour laisser le cache se remplir)
@@ -320,32 +344,6 @@ module.exports = {
 
     // ── Topics des canaux (30s pour laisser le cache se remplir)
     setTimeout(() => setupChannelTopics(client, guildId).catch(() => {}), 30_000);
-
-    // ── Auto-config canaux essentiels (45s après démarrage) ─────────────
-    setTimeout(async () => {
-      try {
-        const guild = client.guilds.cache.get(guildId);
-        if (!guild) return;
-        const dbCfg = db.getConfig(guildId);
-        // Mapping nom de canal → clé db
-        const channelMap = [
-          { names: ['staff-général', 'staff-general', 'staff-logs', 'logs-staff'], key: 'mod_log_channel'     },
-          { names: ['classement', 'leaderboard', 'top-semaine'],                   key: 'leaderboard_channel' },
-          { names: ['événements', 'evenements', 'events', 'events-auto'],          key: 'events_channel'      },
-        ];
-        for (const { names, key } of channelMap) {
-          if (dbCfg[key]) continue; // déjà configuré
-          const ch = guild.channels.cache.find(c =>
-            c.isTextBased() && names.some(n => c.name.toLowerCase().includes(n.toLowerCase()))
-          );
-          if (ch) {
-            db.setConfig(guildId, key, ch.id);
-            console.log(`[AutoConfig] ${key} → #${ch.name} (${ch.id})`);
-          }
-        }
-      } catch (e) { console.error('[AutoConfig] erreur:', e.message); }
-    }, 45_000);
-
 
     // ── Musique casino — auto-démarrage (20s pour que le cache vocal soit prêt)
     casinoMusicAutoInit(client, guildId).catch(() => {});
@@ -410,29 +408,19 @@ module.exports = {
     }
 
     // ── Enregistrement GUILD commands ──────────────────────
-    if (guildCmds.length > 100) {
-      console.error(`❌ Guild commands OVER LIMIT: ${guildCmds.length}/100 — registration SKIPPED`);
-    } else {
-      try {
-        await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: guildCmds });
-        console.log(`✅ ${guildCmds.length} guild commands enregistrées`);
-      } catch (error) {
-        console.error('❌ Guild registration FAILED:', error.message);
-        if (error.rawError) console.error('  rawError:', JSON.stringify(error.rawError));
-      }
+    try {
+      await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: guildCmds });
+      console.log(`✅ ${guildCmds.length} guild commands enregistrées`);
+    } catch (error) {
+      console.error('❌ Guild registration:', error.message);
     }
 
     // ── Enregistrement GLOBAL commands ─────────────────────
-    if (globalCmds.length > 100) {
-      console.error(`❌ Global commands OVER LIMIT: ${globalCmds.length}/100 — registration SKIPPED`);
-    } else {
-      try {
-        await rest.put(Routes.applicationCommands(appId), { body: globalCmds });
-        console.log(`✅ ${globalCmds.length} global commands enregistrées`);
-      } catch (error) {
-        console.error('❌ Global registration FAILED:', error.message);
-        if (error.rawError) console.error('  rawError:', JSON.stringify(error.rawError));
-      }
+    try {
+      await rest.put(Routes.applicationCommands(appId), { body: globalCmds });
+      console.log(`✅ ${globalCmds.length} global commands enregistrées`);
+    } catch (error) {
+      console.error('❌ Global registration:', error.message);
     }
 
     // ── Workers automatiques ───────────────────────────────

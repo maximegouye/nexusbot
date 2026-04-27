@@ -210,7 +210,7 @@ async function runGame(ctx, mise, diff, isPrefix) {
     return isPrefix ? ctx.reply(msg) : ctx.reply({ content: msg, ephemeral: true });
   }
 
-  db.updateBalance(userId, guildId, -mise);
+  db.addCoins(userId, guildId, -mise);
 
   const session = {
     mise, diff,
@@ -227,7 +227,7 @@ async function runGame(ctx, mise, diff, isPrefix) {
     const s = sessions.get(sessionId);
     if (s) {
       const gains = Math.floor(s.mise * s.currentMult);
-      if (gains > 0) db.updateBalance(s.userId, s.guildId, gains);
+      if (gains > 0) db.addCoins(s.userId, s.guildId, gains);
       sessions.delete(sessionId);
     }
   }, 10 * 60 * 1000);
@@ -267,7 +267,7 @@ async function handleComponent(interaction, customId) {
   // ── Cashout ──────────────────────────────────────────────────
   if (action === 'cashout') {
     const gains = Math.floor(session.mise * session.currentMult);
-    db.updateBalance(session.userId, session.guildId, gains);
+    db.addCoins(session.userId, session.guildId, gains);
     db.addXP(session.userId, session.guildId, Math.max(5, Math.floor(gains / 100)));
     sessions.delete(key);
 
@@ -310,7 +310,7 @@ async function handleComponent(interaction, customId) {
 
       if (session.floor > cfg.maxFloor) {
         // 👑 Sommet atteint
-        db.updateBalance(session.userId, session.guildId, gains);
+        db.addCoins(session.userId, session.guildId, gains);
         db.addXP(session.userId, session.guildId, Math.max(20, Math.floor(gains / 50)));
         sessions.delete(key);
         const embed = buildEmbed(session, 'summit');

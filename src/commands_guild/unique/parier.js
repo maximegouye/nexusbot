@@ -103,7 +103,7 @@ module.exports = {
       if (pari.status !== 'open') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce pari est fermé.' });
 
       const user = db.getUser(userId, guildId);
-      if (user.coins < amount) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${user.coins}** coins.` });
+      if (user.balance < amount) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${(user.balance || 0).toLocaleString('fr-FR')}** coins.` });
 
       const existing = db.db.prepare('SELECT * FROM paris_bets WHERE pari_id=? AND user_id=?').get(id, userId);
       if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu as déjà misé sur ce pari !' });

@@ -66,10 +66,11 @@ module.exports = {
       rows.push(currentRow);
 
       const sent = await salon.send({ embeds: [embed], components: rows });
-      const menuId = db.db.prepare('INSERT INTO role_menus (guild_id,channel_id,message_id,title,description,roles,max_choices) VALUES (?,?,?,?,?,?,?) RETURNING id')
-        .get(interaction.guildId, salon.id, sent.id, titre, desc, JSON.stringify(roles.map(r => r.id)), maxC);
+      const menuInsert = db.db.prepare('INSERT INTO role_menus (guild_id,channel_id,message_id,title,description,roles,max_choices) VALUES (?,?,?,?,?,?,?)')
+        .run(interaction.guildId, salon.id, sent.id, titre, desc, JSON.stringify(roles.map(r => r.id)), maxC);
+      const menuId = menuInsert.lastInsertRowid;
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Menu de rôles créé dans <#${salon.id}> (ID: ${menuId?.id})` });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Menu de rôles créé dans <#${salon.id}> (ID: ${menuId})` });
     }
 
     if (sub === 'supprimer') {

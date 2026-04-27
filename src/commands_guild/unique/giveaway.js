@@ -10,6 +10,11 @@ const db = require('../../database/db');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function safeParseEntries(raw) {
+  try { const r = JSON.parse(raw || '[]'); return Array.isArray(r) ? r : []; }
+  catch { return []; }
+}
+
 function pickWinners(entries, count) {
   const arr = [...new Set(entries)];
   const winners = [];
@@ -52,7 +57,7 @@ function parseDuration(str) {
 }
 
 async function endGiveaway(giveaway, client) {
-  const entries = JSON.parse(giveaway.entries || '[]');
+  const entries = safeParseEntries(giveaway.entries);
   const winners = pickWinners(entries, giveaway.winners_count);
   db.db.prepare('UPDATE giveaways SET status = ?, winner_ids = ? WHERE id = ?')
     .run('ended', JSON.stringify(winners), giveaway.id);
@@ -99,7 +104,7 @@ async function handleGiveawayButton(interaction) {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Balance minimum requise : **${giveaway.min_balance}**. Ta balance : **${balance}**.`, ephemeral: true });
     }
   }
-  const entries = JSON.parse(giveaway.entries || '[]');
+  const entries = safeParseEntries(giveaway.entries);
   const alreadyIn = entries.includes(interaction.user.id);
   if (alreadyIn) {
     const newEntries = entries.filter(id => id !== interaction.user.id);
@@ -178,7 +183,7 @@ module.exports = {
       const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE (id = ? OR message_id = ?) AND guild_id = ?').get(idRaw, idRaw, interaction.guildId);
       if (!giveaway) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Giveaway introuvable.', ephemeral: true });
       if (giveaway.status === 'active') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Giveaway encore actif. Terminez-le d\'abord.', ephemeral: true });
-      const entries = JSON.parse(giveaway.entries || '[]');
+      const entries = safeParseEntries(giveaway.entries);
       if (entries.length === 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun participant.', ephemeral: true });
       const winners = pickWinners(entries, nombre);
       const mentions = winners.map(id => `<@${id}>`).join(', ');
@@ -188,7 +193,7 @@ module.exports = {
       const idRaw = interaction.options.getString('id');
       const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE (id = ? OR message_id = ?) AND guild_id = ?').get(idRaw, idRaw, interaction.guildId);
       if (!giveaway) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Giveaway introuvable.', ephemeral: true });
-      const entries = JSON.parse(giveaway.entries || '[]');
+      const entries = safeParseEntries(giveaway.entries);
       const embed = buildEmbed(giveaway, entries);
       embed.setTitle(`📋 Giveaway #${giveaway.id} — ${giveaway.prize}`);
       embed.addFields({ name: '🆔 ID', value: `${giveaway.id}`, inline: true });

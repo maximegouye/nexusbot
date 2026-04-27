@@ -192,7 +192,7 @@ async function runGame(ctx, mise, isPrefix = false) {
   }
 
   // Débiter
-  db.updateBalance(userId, guildId, -mise);
+  db.addCoins(userId, guildId, -mise);
 
   const grid     = genGrid();
   const revealed = Array(9).fill(false);
@@ -262,7 +262,7 @@ async function handleComponent(interaction, customId) {
     result = calcGain(session.grid, session.mise);
     // Créditer les gains
     if (result.gain > 0) {
-      db.updateBalance(session.userId, session.guildId, result.gain);
+      db.addCoins(session.userId, session.guildId, result.gain);
       db.addXP(session.userId, session.guildId, Math.max(5, Math.floor(result.gain / 50)));
     }
     sessions.delete(sessionId);
