@@ -1,403 +1,512 @@
 // ============================================================
-// hippodrome.js — Hippodrome avec animation de course
-// Emplacement : src/commands_guild/games/hippodrome.js
+// hippodrome.js — Hippodrome ultra-complet avec animations
 // ============================================================
+'use strict';
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+  SlashCommandBuilder, EmbedBuilder,
+  ActionRowBuilder, ButtonBuilder, ButtonStyle,
+} = require('discord.js');
 const db = require('../../database/db');
 const { C, chipStr, balanceLine, casinoFooter, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ─── Sessions de jeu (pour rejouer avec les mêmes paramètres) ──
+// ─── Sessions & stats par joueur ──────────────────────────
 const hippoSessions = new Map(); // userId → { mise, selectedHorse }
+const hippoStats    = new Map(); // userId → { wins, losses, totalWagered, totalWon, gamesPlayed, biggestWin }
+
+function getStat(userId) {
+  if (!hippoStats.has(userId)) {
+    hippoStats.set(userId, { wins: 0, losses: 0, totalWagered: 0, totalWon: 0, gamesPlayed: 0, biggestWin: 0 });
+  }
+  return hippoStats.get(userId);
+}
 
 // ─── Configuration des chevaux ────────────────────────────
 const HORSES = [
-  { id: 1, name: 'Éclair',   odds: 1.5 },
-  { id: 2, name: 'Tonnerre', odds: 2.0 },
-  { id: 3, name: 'Mistral',  odds: 3.0 },
-  { id: 4, name: 'Alizé',    odds: 4.0 },
-  { id: 5, name: 'Tempête',  odds: 6.0 },
-  { id: 6, name: 'Ouragan',  odds: 10.0 },
+  { id: 1, name: 'Éclair',   emoji: '⚡', odds: 1.8,  color: '🟢', tier: 'Favori'   },
+  { id: 2, name: 'Tonnerre', emoji: '⛈️', odds: 2.5,  color: '🟢', tier: 'Solide'   },
+  { id: 3, name: 'Mistral',  emoji: '🌬️', odds: 3.5,  color: '🟡', tier: 'Correct'  },
+  { id: 4, name: 'Alizé',    emoji: '🌊', odds: 5.0,  color: '🟡', tier: 'Risqué'   },
+  { id: 5, name: 'Tempête',  emoji: '🌪️', odds: 8.0,  color: '🔴', tier: 'Longshot' },
+  { id: 6, name: 'Ouragan',  emoji: '💨', odds: 15.0, color: '🔴', tier: 'Outsider' },
 ];
 
-const TRACK_LENGTH = 20; // longueur de la piste en caractères
+const TRACK_LEN = 18;
+const STEPS     = 6; // étapes d'animation
 
-// ─── Calcul du gagnant (pondéré par l'inverse des cotes) ──
+// ─── Gagnant pondéré inversement aux cotes ────────────────
 function determineWinner() {
-  // Plus les cotes sont élevées, moins le cheval a de chances de gagner
-  // Poids = 1 / odds
-  const weights = HORSES.map(h => 1 / h.odds);
-  const totalWeight = weights.reduce((a, b) => a + b, 0);
-
-  let random = Math.random() * totalWeight;
+  const weights  = HORSES.map(h => 1 / h.odds);
+  const total    = weights.reduce((a, b) => a + b, 0);
+  let r          = Math.random() * total;
   for (let i = 0; i < HORSES.length; i++) {
-    random -= weights[i];
-    if (random <= 0) return HORSES[i];
+    r -= weights[i];
+    if (r <= 0) return HORSES[i];
   }
-  return HORSES[0]; // fallback
+  return HORSES[0];
 }
 
-// ─── Générer positions aléatoires pour chaque étape ───────
-function generateRacePositions() {
-  const positions = {};
+// ─── Positions simulées sur N étapes ─────────────────────
+function generatePositions(winner) {
+  // Chaque cheval a une progression de base + bruit
+  // Le gagnant est garanti d'être en tête à la fin
+  const base = {};
   HORSES.forEach(h => {
-    positions[h.id] = [];
+    base[h.id] = { speed: 0.8 + Math.random() * 0.4, positions: [] };
   });
 
-  // 5 étapes d'animation (0%, 25%, 50%, 75%, 100%)
-  for (let step = 0; step <= 4; step++) {
-    const progress = (step / 4) * 0.95; // 95% max avant la ligne d'arrivée
+  for (let step = 0; step <= STEPS; step++) {
+    const t = step / STEPS;
     HORSES.forEach(h => {
-      // Ajouter du bruit pour que ça paraisse moins linéaire
-      const noise = (Math.random() - 0.5) * 0.1;
-      positions[h.id].push(Math.floor((progress + noise) * TRACK_LENGTH));
+      const progress = t * base[h.id].speed + (Math.random() - 0.5) * 0.08;
+      base[h.id].positions.push(Math.min(Math.max(progress, 0), 0.95 + t * 0.05));
     });
   }
 
-  return positions;
-}
-
-// ─── Render la piste de course ───────────────────────────
-function renderTrack(horseId, position) {
-  const pos = Math.min(Math.max(position, 0), TRACK_LENGTH);
-  const filled = Math.floor(pos);
-  const progressPercent = Math.floor((pos / TRACK_LENGTH) * 100);
-
-  let track = '';
-  for (let i = 0; i < TRACK_LENGTH; i++) {
-    if (i < filled) track += '█';
-    else if (i === filled) track += '▓';
-    else track += '░';
+  // Garantir que le gagnant est en premier à la fin
+  const lastStep  = STEPS;
+  const maxOthers = Math.max(...HORSES.filter(h => h.id !== winner.id).map(h => base[h.id].positions[lastStep]));
+  if (base[winner.id].positions[lastStep] <= maxOthers) {
+    base[winner.id].positions[lastStep] = Math.min(maxOthers + 0.05 + Math.random() * 0.1, 1.0);
   }
 
-  return { track, progressPercent };
+  return base;
 }
 
-// ─── Générer le podium (top 3 chevaux) ───────────────────
-function generatePodium(positions, winner) {
-  const finalPositions = Object.entries(positions).map(([horseId, posArr]) => ({
-    id: parseInt(horseId),
-    finalPos: posArr[4] || 0,
-  })).sort((a, b) => b.finalPos - a.finalPos);
-
-  const podium = finalPositions.slice(0, 3);
-  let podiumStr = '';
-  podium.forEach((p, idx) => {
-    const h = HORSES.find(x => x.id === p.id);
-    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
-    podiumStr += `${medal} #${h.id} ${h.name}\n`;
-  });
-  return podiumStr;
+// ─── Rendu visuel d'une piste ─────────────────────────────
+function renderTrack(progress) {
+  const filled = Math.min(Math.floor(progress * TRACK_LEN), TRACK_LEN - 1);
+  let track = '';
+  for (let i = 0; i < TRACK_LEN; i++) {
+    if (i < filled)      track += '▬';
+    else if (i === filled) track += '🐴';
+    else                 track += '░';
+  }
+  track += '🏁';
+  return track;
 }
 
-// ─── Générer l'embed de la course ────────────────────────
-function buildRaceEmbed(positions, step, selectedHorse, mise, coin, isFinished = false) {
-  const horse = HORSES.find(h => h.id === selectedHorse);
+// ─── Tri des positions à une étape donnée ─────────────────
+function getRanking(positions, step) {
+  return HORSES
+    .map(h => ({ horse: h, pos: positions[h.id].positions[step] }))
+    .sort((a, b) => b.pos - a.pos);
+}
+
+// ─── Embed d'animation ───────────────────────────────────
+function buildRaceEmbed(positions, step, selected, mise, coin, state = 'racing') {
+  const ranking = getRanking(positions, step);
+  const colors  = { racing: C.NEUTRAL, win: C.WIN, loss: C.LOSS };
+
+  const desc = ranking.map((r, idx) => {
+    const { horse, pos } = r;
+    const track   = renderTrack(pos);
+    const marker  = horse.id === selected ? '👤' : `${idx + 1}.`;
+    const pct     = Math.floor(pos * 100);
+    return `${marker} ${horse.emoji}**${horse.name.padEnd(8)}** ${track} ${pct}%`;
+  }).join('\n');
+
+  const selectedHorse = HORSES.find(h => h.id === selected);
   const embed = new EmbedBuilder()
-    .setColor(isFinished ? '#27AE60' : C.NEUTRAL)
-    .setTitle(isFinished ? '🏇 Hippodrome — Résultats!' : '🏇 Hippodrome — La course en cours...')
-    .setDescription('');
-
-  let description = '';
-  HORSES.forEach(h => {
-    const pos = positions[h.id][step] || 0;
-    const { track, progressPercent } = renderTrack(h.id, pos);
-    const marker = h.id === selectedHorse ? '🎯 ' : '   ';
-    description += `${marker}🐴${h.id} ${h.name.padEnd(10)} [${track}] ${progressPercent}%\n`;
-  });
-
-  embed.setDescription(description);
-  embed.addFields(
-    { name: '💰 Ta mise', value: chipStr(mise, coin), inline: true },
-    { name: '🐴 Ton cheval', value: `#${selectedHorse} ${horse.name}`, inline: true },
-  );
+    .setColor(colors[state] || C.NEUTRAL)
+    .setTitle(state === 'racing'
+      ? `🏇 Hippodrome — Étape ${step}/${STEPS}`
+      : state === 'win' ? '🏆 Hippodrome — VICTOIRE !' : '❌ Hippodrome — Défaite')
+    .setDescription(`\`\`\`\n${desc}\n\`\`\``)
+    .addFields(
+      { name: '💰 Mise', value: chipStr(mise, coin), inline: true },
+      { name: `${selectedHorse.emoji} Ton cheval`, value: `**#${selected} ${selectedHorse.name}**`, inline: true },
+      { name: '📊 Cote', value: `**×${selectedHorse.odds}**`, inline: true },
+    )
+    .setFooter({ text: casinoFooter('Hippodrome') });
 
   return embed;
 }
 
-// ─── Jeu principal ───────────────────────────────────────
-async function playHippodrome(source, userId, guildId, mise, selectedHorse) {
-  const isInteraction = !!source.editReply;
-  const u = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+// ─── Podium final ─────────────────────────────────────────
+function buildPodium(positions, winner) {
+  const ranking = getRanking(positions, STEPS);
+  const medals  = ['🥇', '🥈', '🥉'];
+  return ranking.slice(0, 3)
+    .map((r, i) => `${medals[i]} **${r.horse.emoji} ${r.horse.name}** (×${r.horse.odds})`)
+    .join('\n');
+}
 
-  // Validation
-  if (!u) {
-    const err = '❌ Utilisateur non trouvé dans la base de données.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
-    return source.reply(err);
-  }
-
-  if (u.balance < mise) {
-    const err = `❌ Solde insuffisant. Tu as **${u.balance} ${coin}**.`;
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
-    return source.reply(err);
-  }
-
-  if (mise < 5) {
-    const err = '❌ Mise minimale : **5 coins**.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
-    return source.reply(err);
-  }
-
-  if (selectedHorse < 1 || selectedHorse > 6) {
-    const err = '❌ Cheval invalide. Choisir un numéro entre 1 et 6.';
-    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
-    return source.reply(err);
-  }
-
-  // Déduire la mise
-  db.addCoins(userId, guildId, -mise);
-
-  // Sauvegarder la session pour le bouton "Rejouer"
-  hippoSessions.set(userId, { mise, selectedHorse });
-
-  // Déterminer le gagnant et générer les positions
-  const winner = determineWinner();
-  const positions = generateRacePositions();
-
-  // Message initial
-  const startEmbed = new EmbedBuilder()
-    .setColor(C.NEUTRAL)
-    .setTitle('🏇 Hippodrome — Les chevaux se préparent...')
-    .setDescription('Les chevaux arrivent sur la piste...\n🐴 Les paris sont fermés!\n⏳ La course commence...')
-    .addFields(
-      { name: '💰 Ta mise', value: chipStr(mise, coin), inline: true },
-      { name: '🐴 Ton cheval', value: `#${selectedHorse} ${HORSES.find(h => h.id === selectedHorse).name}`, inline: true },
-    )
-    .setFooter({ text: casinoFooter('Hippodrome') });
-
-  let msg;
-  if (isInteraction) {
-    if (!source.deferred && !source.replied) await source.deferReply();
-    msg = await source.editReply({ embeds: [startEmbed] });
-  } else {
-    msg = await source.channel.send({ embeds: [startEmbed] });
-  }
-
-  // Animation de la course (4 étapes)
-  for (let step = 0; step < 4; step++) {
-    await sleep(1500); // délai entre chaque étape
-
-    const raceEmbed = buildRaceEmbed(positions, step, selectedHorse, mise, coin, false);
-    raceEmbed.setFooter({ text: casinoFooter('Hippodrome') });
-
-    if (isInteraction) {
-      await source.editReply({ embeds: [raceEmbed] });
-    } else {
-      await msg.edit({ embeds: [raceEmbed] });
-    }
-  }
-
-  // Étape finale : afficher le gagnant et le podium
-  await sleep(1000);
-
-  const isWin = winner.id === selectedHorse;
-  const finalEmbed = buildRaceEmbed(positions, 4, selectedHorse, mise, coin, true);
-  const podiumStr = generatePodium(positions, winner);
-
-  let result = '';
-  let newBalance = u.balance;
-
-  if (isWin) {
-    const winnings = Math.floor(mise * winner.odds);
-    const gain = winnings - mise;
-    newBalance = u.balance + winnings;
-    db.addCoins(userId, guildId, winnings);
-
-    finalEmbed.setColor(C.WIN);
-    result = `🎉 **VICTOIRE!** Le cheval #${winner.id} ${winner.name} a gagné!\n`;
-    result += `💰 Tu remportes **${winnings} ${coin}** (mise × ${winner.odds})!\n`;
-    result += `${balanceLine(newBalance, gain, coin)}`;
-  } else {
-    const loss = mise;
-    finalEmbed.setColor(C.LOSS);
-    result = `❌ **DÉFAITE!** Le cheval #${winner.id} ${winner.name} a gagné...\n`;
-    result += `Tu perds ta mise de **${mise} ${coin}**.\n`;
-    result += `${balanceLine(newBalance, -loss, coin)}`;
-  }
-
-  finalEmbed.addFields(
-    { name: '🏇 Podium', value: podiumStr, inline: true },
-    { name: '🏁 Résultat', value: result }
-  );
-  finalEmbed.setFooter({ text: casinoFooter('Hippodrome') });
-
-  // Boutons
-  const row = new ActionRowBuilder().addComponents(
+// ─── Boutons post-course ──────────────────────────────────
+function buildGameRow(userId) {
+  return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`hippo_replay_${userId}`)
-      .setLabel('🔄 Rejouer (même cheval)')
+      .setLabel('🔄 Rejouer')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId(`hippo_changemise_${userId}`)
       .setLabel('💰 Changer la mise')
       .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`hippo_stats_${userId}`)
+      .setLabel('📊 Mes stats')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`hippo_cotes_${userId}`)
+      .setLabel('📋 Cotes')
+      .setStyle(ButtonStyle.Secondary),
+  );
+}
+
+// ─── Jeu principal ───────────────────────────────────────
+async function playRace(source, userId, guildId, mise, selectedHorse) {
+  const cfg  = db.getConfig ? db.getConfig(guildId) : {};
+  const coin = cfg?.currency_emoji || '🪙';
+  const u    = db.getUser(userId, guildId);
+
+  // Validations
+  if (!u) return source.editReply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {});
+  if (mise < 5)     return source.editReply({ content: '❌ Mise minimale : **5 coins**.', ephemeral: true }).catch(() => {});
+  if (mise > u.balance) return source.editReply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, ephemeral: true }).catch(() => {});
+  if (selectedHorse < 1 || selectedHorse > 6) return source.editReply({ content: '❌ Cheval invalide (1–6).', ephemeral: true }).catch(() => {});
+
+  // Déduire la mise
+  db.addCoins(userId, guildId, -mise);
+  const balBeforeMise = u.balance;
+
+  // Sauvegarder session
+  hippoSessions.set(userId, { mise, selectedHorse });
+
+  // Déterminer résultat et positions
+  const winner    = determineWinner();
+  const positions = generatePositions(winner);
+  const horse     = HORSES.find(h => h.id === selectedHorse);
+
+  // ─── Phase 1 : Préparation ────────────────────────────
+  const prepEmbed = new EmbedBuilder()
+    .setColor(C.NEUTRAL)
+    .setTitle('🏇 Hippodrome — Les chevaux se préparent...')
+    .setDescription(
+      '```\n' +
+      HORSES.map(h => `  ${h.emoji} ${h.name.padEnd(9)} — ×${h.odds} (${h.tier})`).join('\n') +
+      '\n```'
+    )
+    .addFields(
+      { name: '💰 Mise', value: chipStr(mise, coin), inline: true },
+      { name: `${horse.emoji} Cheval choisi`, value: `**#${selectedHorse} ${horse.name}** (×${horse.odds})`, inline: true },
+    )
+    .setFooter({ text: casinoFooter('Hippodrome') });
+
+  await source.editReply({ embeds: [prepEmbed], components: [] }).catch(() => {});
+  await sleep(1200);
+
+  // ─── Phase 2 : Compte à rebours ───────────────────────
+  for (const txt of ['3…', '2…', '1…', '🚀 PARTIS !']) {
+    const countEmbed = new EmbedBuilder()
+      .setColor('#F1C40F')
+      .setTitle('🏇 Hippodrome — Départ imminent !')
+      .setDescription(`\n# ${txt}\n`)
+      .setFooter({ text: casinoFooter('Hippodrome') });
+    await source.editReply({ embeds: [countEmbed] }).catch(() => {});
+    await sleep(txt === '🚀 PARTIS !' ? 800 : 700);
+  }
+
+  // ─── Phase 3 : Animation de la course ─────────────────
+  for (let step = 1; step <= STEPS; step++) {
+    const raceEmbed = buildRaceEmbed(positions, step, selectedHorse, mise, coin, 'racing');
+    await source.editReply({ embeds: [raceEmbed] }).catch(() => {});
+    await sleep(step === STEPS ? 500 : 1100);
+  }
+
+  // ─── Phase 4 : Photo-finish ───────────────────────────
+  const photoEmbed = new EmbedBuilder()
+    .setColor('#8E44AD')
+    .setTitle('📸 Hippodrome — PHOTO-FINISH !')
+    .setDescription('```\n⚡ Analyse de l\'arrivée en cours...\n```')
+    .setFooter({ text: casinoFooter('Hippodrome') });
+  await source.editReply({ embeds: [photoEmbed] }).catch(() => {});
+  await sleep(900);
+
+  // ─── Phase 5 : Résultat ───────────────────────────────
+  const isWin = winner.id === selectedHorse;
+  const stat  = getStat(userId);
+
+  stat.gamesPlayed++;
+  stat.totalWagered += mise;
+
+  let gain, newBalance, resultText;
+
+  if (isWin) {
+    const winnings = Math.floor(mise * winner.odds);
+    gain       = winnings - mise;
+    newBalance = balBeforeMise - mise + winnings;
+    db.addCoins(userId, guildId, winnings);
+    stat.wins++;
+    stat.totalWon += winnings;
+    if (gain > stat.biggestWin) stat.biggestWin = gain;
+    resultText = `🎉 **${winner.emoji} ${winner.name} gagne la course !**\nTu remportes **${winnings.toLocaleString('fr-FR')} ${coin}** × ${winner.odds} !`;
+  } else {
+    gain       = -mise;
+    newBalance = balBeforeMise - mise;
+    stat.losses++;
+    resultText = `💨 **${winner.emoji} ${winner.name} remporte la victoire...**\nTon cheval **${horse.emoji} ${horse.name}** n'a pas suffi.`;
+  }
+
+  const podium   = buildPodium(positions, winner);
+  const finalEmbed = buildRaceEmbed(positions, STEPS, selectedHorse, mise, coin, isWin ? 'win' : 'loss');
+  finalEmbed.setDescription(null);
+  finalEmbed.addFields(
+    { name: isWin ? '🏆 Résultat' : '❌ Résultat', value: resultText, inline: false },
+    { name: '🏇 Podium', value: podium, inline: true },
+    { name: '💰 Bilan', value: balanceLine(newBalance, gain, coin), inline: true },
+    {
+      name: '📊 Session',
+      value: `✅ ${stat.wins}V  ❌ ${stat.losses}D  🎮 ${stat.gamesPlayed} parties`,
+      inline: false,
+    },
   );
 
-  if (isInteraction) {
-    await source.editReply({ embeds: [finalEmbed], components: [row] });
+  await source.editReply({ embeds: [finalEmbed], components: [buildGameRow(userId)] }).catch(() => {});
+}
+
+// ─── Sélection du cheval (embed + boutons) ────────────────
+async function showHorseSelection(source, userId, guildId, mise, isReply = false) {
+  const cfg  = db.getConfig ? db.getConfig(guildId) : {};
+  const coin = cfg?.currency_emoji || '🪙';
+
+  const embed = new EmbedBuilder()
+    .setColor(C.NEUTRAL)
+    .setTitle('🏇 Hippodrome — Choisis ton cheval')
+    .setDescription(
+      HORSES.map(h =>
+        `${h.color} **#${h.id} ${h.emoji} ${h.name}** — Cote ×${h.odds} *(${h.tier})*`
+      ).join('\n')
+    )
+    .addFields({ name: '💰 Mise', value: chipStr(mise, coin) })
+    .setFooter({ text: 'Plus la cote est élevée, plus le gain est grand — mais la victoire est rare !' });
+
+  const row1 = new ActionRowBuilder().addComponents(
+    ...HORSES.slice(0, 3).map(h =>
+      new ButtonBuilder()
+        .setCustomId(`hippo_pick_${userId}_${h.id}_${mise}`)
+        .setLabel(`${h.name} ×${h.odds}`)
+        .setEmoji(h.id === 1 ? '⚡' : h.id === 2 ? '🌩️' : '🌬️')
+        .setStyle(h.odds <= 2.5 ? ButtonStyle.Success : ButtonStyle.Primary)
+    )
+  );
+  const row2 = new ActionRowBuilder().addComponents(
+    ...HORSES.slice(3, 6).map(h =>
+      new ButtonBuilder()
+        .setCustomId(`hippo_pick_${userId}_${h.id}_${mise}`)
+        .setLabel(`${h.name} ×${h.odds}`)
+        .setEmoji(h.id === 4 ? '🌊' : h.id === 5 ? '🌪️' : '💨')
+        .setStyle(ButtonStyle.Danger)
+    )
+  );
+
+  const opts = { embeds: [embed], components: [row1, row2] };
+  if (isReply) {
+    await source.reply({ ...opts, ephemeral: true }).catch(() => {});
   } else {
-    await msg.edit({ embeds: [finalEmbed], components: [row] });
+    await source.editReply(opts).catch(() => {});
   }
 }
 
-// ─── Gestionnaire des composants (boutons, modal) ────────
-async function handleComponent(interaction, customId, userId) {
-  const coin = (db.getConfig ? db.getConfig(interaction.guildId) : null)?.currency_emoji || '🪙';
+// ─── handleComponent ─────────────────────────────────────
+module.exports.handleComponent = async function(interaction, customId) {
+  if (!customId.startsWith('hippo_')) return false;
 
-  // Rejouer avec le même cheval
+  const userId = interaction.user.id;
+
+  // ── Sélection de cheval ──
+  if (customId.startsWith(`hippo_pick_`)) {
+    const parts = customId.split('_');
+    // hippo_pick_{userId}_{horseId}_{mise}
+    const targetUser  = parts[2];
+    if (targetUser !== userId) {
+      await interaction.reply({ content: '❌ Ce n\'est pas ton jeu.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+    const selectedHorse = parseInt(parts[3]);
+    const mise          = parseInt(parts[4]);
+    await interaction.deferUpdate().catch(() => {});
+    await playRace(interaction, userId, interaction.guildId, mise, selectedHorse);
+    return true;
+  }
+
+  // ── Rejouer ──
   if (customId.startsWith(`hippo_replay_${userId}`)) {
     const session = hippoSessions.get(userId);
     if (!session) {
-      return interaction.reply({ content: '⚠️ Session expirée, relance /hippodrome', ephemeral: true });
+      await interaction.reply({ content: '⚠️ Session expirée. Relance `/hippodrome`.', ephemeral: true }).catch(() => {});
+      return true;
     }
-    const { mise, selectedHorse } = session;
-    await interaction.deferReply();
-    await playHippodrome(interaction, userId, interaction.guildId, mise, selectedHorse);
+    await interaction.deferUpdate().catch(() => {});
+    await playRace(interaction, userId, interaction.guildId, session.mise, session.selectedHorse);
     return true;
   }
 
-  // Changer la mise
+  // ── Changer la mise ──
   if (customId.startsWith(`hippo_changemise_${userId}`)) {
-    const modal = changeMiseModal('hippo', userId);
-    await interaction.showModal(modal);
+    await interaction.showModal(changeMiseModal('hippo', userId)).catch(() => {});
     return true;
   }
 
-  // Traiter la soumission du modal
+  // ── Modal mise ──
   if (customId.startsWith(`hippo_modal_${userId}`)) {
-    const u = db.getUser(userId, interaction.guildId);
+    const u        = db.getUser(userId, interaction.guildId);
+    const cfg      = db.getConfig ? db.getConfig(interaction.guildId) : {};
+    const coin     = cfg?.currency_emoji || '🪙';
+    const rawMise  = interaction.fields.getTextInputValue('newmise');
+    const newMise  = parseMise(rawMise, u?.balance || 0);
+
     if (!u) {
-      await interaction.reply({ content: '❌ Utilisateur non trouvé.', ephemeral: true });
+      await interaction.reply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {});
       return true;
     }
-
-    const newMiseRaw = interaction.fields.getTextInputValue('newmise');
-    const newMise = parseMise(newMiseRaw, u.balance);
-
-    if (newMise === null) {
-      await interaction.reply({ content: '❌ Mise invalide.', ephemeral: true });
+    if (newMise === null || isNaN(newMise)) {
+      await interaction.reply({ content: '❌ Mise invalide.', ephemeral: true }).catch(() => {});
       return true;
     }
-
     if (newMise < 5) {
-      await interaction.reply({ content: `❌ Mise minimale : 5 ${coin}`, ephemeral: true });
+      await interaction.reply({ content: `❌ Mise minimale : 5 ${coin}`, ephemeral: true }).catch(() => {});
       return true;
     }
-
     if (newMise > u.balance) {
-      await interaction.reply({ content: `❌ Tu n'as que **${u.balance} ${coin}**`, ephemeral: true });
+      await interaction.reply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**`, ephemeral: true }).catch(() => {});
       return true;
     }
 
-    // Redemander le numéro du cheval
-    const embed = new EmbedBuilder()
-      .setColor(C.NEUTRAL)
-      .setTitle('🏇 Hippodrome — Nouvelle mise')
-      .setDescription('Quel cheval veux-tu parier?\n\n' +
-        HORSES.map(h => `**#${h.id}** — ${h.name} (×${h.odds})`).join('\n'))
-      .addFields({ name: '💰 Mise', value: chipStr(newMise, coin) })
-      .setFooter({ text: casinoFooter('Hippodrome') });
-
-    // Créer les boutons pour sélectionner le cheval
-    const horseButtons = new ActionRowBuilder().addComponents(
-      ...HORSES.slice(0, 3).map(h =>
-        new ButtonBuilder()
-          .setCustomId(`hippo_selecthorse_${userId}_${h.id}_${newMise}`)
-          .setLabel(`#${h.id} ${h.name}`)
-          .setStyle(h.odds >= 6 ? ButtonStyle.Danger : h.odds >= 4 ? ButtonStyle.Primary : ButtonStyle.Success)
-      )
-    );
-
-    const horseButtons2 = new ActionRowBuilder().addComponents(
-      ...HORSES.slice(3, 6).map(h =>
-        new ButtonBuilder()
-          .setCustomId(`hippo_selecthorse_${userId}_${h.id}_${newMise}`)
-          .setLabel(`#${h.id} ${h.name}`)
-          .setStyle(h.odds >= 6 ? ButtonStyle.Danger : h.odds >= 4 ? ButtonStyle.Primary : ButtonStyle.Success)
-      )
-    );
-
-    await interaction.reply({ embeds: [embed], components: [horseButtons, horseButtons2], ephemeral: true });
+    await showHorseSelection(interaction, userId, interaction.guildId, newMise, true);
     return true;
   }
 
-  // Sélection du cheval
-  if (customId.startsWith(`hippo_selecthorse_${userId}`)) {
-    const parts = customId.split('_');
-    const selectedHorse = parseInt(parts[3]);
-    const mise = parseInt(parts[4]);
+  // ── Stats session ──
+  if (customId.startsWith(`hippo_stats_${userId}`)) {
+    const stat = getStat(userId);
+    const netGain = stat.totalWon - stat.totalWagered;
+    const winRate = stat.gamesPlayed > 0 ? Math.round((stat.wins / stat.gamesPlayed) * 100) : 0;
+    const cfg  = db.getConfig ? db.getConfig(interaction.guildId) : {};
+    const coin = cfg?.currency_emoji || '🪙';
 
-    await interaction.deferReply();
-    await playHippodrome(interaction, userId, interaction.guildId, mise, selectedHorse);
+    const embed = new EmbedBuilder()
+      .setColor('#5865F2')
+      .setTitle('📊 Tes stats Hippodrome (session)')
+      .addFields(
+        { name: '🎮 Parties', value: `**${stat.gamesPlayed}**`, inline: true },
+        { name: '✅ Victoires', value: `**${stat.wins}**`, inline: true },
+        { name: '❌ Défaites', value: `**${stat.losses}**`, inline: true },
+        { name: '📈 Win rate', value: `**${winRate}%**`, inline: true },
+        { name: '💰 Total misé', value: `**${stat.totalWagered.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+        { name: `${netGain >= 0 ? '📈' : '📉'} Bilan net`, value: `**${netGain >= 0 ? '+' : ''}${netGain.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+        { name: '🏆 Plus gros gain', value: `**${stat.biggestWin.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+      )
+      .setFooter({ text: 'Stats réinitialisées à chaque redémarrage du bot' });
+
+    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
+    return true;
+  }
+
+  // ── Cotes ──
+  if (customId.startsWith(`hippo_cotes_${userId}`)) {
+    const embed = new EmbedBuilder()
+      .setColor('#F1C40F')
+      .setTitle('📋 Tableau des cotes — Hippodrome')
+      .setDescription(
+        HORSES.map(h => {
+          const chance = Math.round((1 / h.odds) * 100 * 10) / 10; // Probabilité approximative
+          return `${h.color} **${h.emoji} #${h.id} ${h.name}** — ×${h.odds} *(${h.tier})* — ~${chance}% de victoire`;
+        }).join('\n')
+      )
+      .setFooter({ text: 'Les cotes sont pondérées — le favori ne gagne pas toujours !' });
+
+    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
     return true;
   }
 
   return false;
-}
+};
 
-// ─── Commande slash ───────────────────────────────────────
+// ─── Données slash ────────────────────────────────────────
 const data = new SlashCommandBuilder()
   .setName('hippodrome')
-  .setDescription('🏇 Hippodrome — Mise sur le bon cheval et regarde la course!')
+  .setDescription('🏇 Hippodrome — Mise sur un cheval et regarde la course en direct !')
   .addIntegerOption(o =>
     o.setName('mise')
-      .setDescription('Montant à miser')
+      .setDescription('Montant à miser (min 5)')
       .setRequired(true)
       .setMinValue(1)
   )
   .addIntegerOption(o =>
     o.setName('cheval')
-      .setDescription('Numéro du cheval (1-6)')
-      .setRequired(true)
+      .setDescription('Numéro du cheval (1=Favori ×1.8 → 6=Outsider ×15)')
+      .setRequired(false)
       .setMinValue(1)
       .setMaxValue(6)
   );
 
+// ─── execute ──────────────────────────────────────────────
 async function execute(interaction) {
-  const userId = interaction.user.id;
-  const guildId = interaction.guildId;
-  const mise = interaction.options.getInteger('mise');
+  const userId        = interaction.user.id;
+  const guildId       = interaction.guildId;
+  const mise          = interaction.options.getInteger('mise');
   const selectedHorse = interaction.options.getInteger('cheval');
 
-  await interaction.deferReply();
-  await playHippodrome(interaction, userId, guildId, mise, selectedHorse);
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply().catch(() => {});
+  }
+
+  if (selectedHorse) {
+    await playRace(interaction, userId, guildId, mise, selectedHorse);
+  } else {
+    await showHorseSelection(interaction, userId, guildId, mise);
+  }
+}
+
+// ─── run (préfixe &) ─────────────────────────────────────
+async function run(message, args) {
+  const mise   = parseInt(args[0]);
+  const cheval = parseInt(args[1]) || null;
+
+  if (!mise || mise < 5) {
+    return message.reply('❌ Usage : `&hippodrome <mise> [1-6]` — Mise minimale : 5 coins.');
+  }
+  if (cheval !== null && (cheval < 1 || cheval > 6)) {
+    return message.reply('❌ Cheval invalide. Choisis entre 1 et 6.');
+  }
+
+  let sentMsg = null;
+  const fake = {
+    user:    message.author,
+    member:  message.member,
+    guild:   message.guild,
+    guildId: message.guildId,
+    channel: message.channel,
+    client:  message.client,
+    deferred: false,
+    replied:  false,
+    options: {
+      getInteger: (k) => k === 'mise' ? mise : k === 'cheval' ? cheval : null,
+      getString:  () => null,
+      getUser:    () => null,
+      getBoolean: () => null,
+    },
+    deferReply: async () => {},
+    editReply:  async (d) => {
+      if (sentMsg) { await sentMsg.edit(d).catch(() => {}); }
+      else { sentMsg = await message.channel.send(d).catch(() => {}); }
+      return sentMsg;
+    },
+    reply:   async (d) => message.reply(d).catch(() => message.channel.send(d).catch(() => {})),
+    followUp: async (d) => message.channel.send(d).catch(() => {}),
+  };
+
+  await execute(fake);
 }
 
 module.exports = {
   name: 'hippodrome',
   aliases: ['hippo', 'horse', 'course'],
   data,
-  async execute(interaction) {
-    return execute(interaction);
-  },
-  async handleComponent(interaction, customId) {
-    const userId = interaction.user.id;
-    if (!customId.startsWith('hippo_')) return false;
-    return await handleComponent(interaction, customId, userId);
-  },
-  async run(message, args) {
-    const mise   = parseInt(args[0]) || 50;
-    const cheval = parseInt(args[1]) || 1;
-    if (mise < 5) return message.reply('❌ Mise minimale : 5 coins. Usage : `&hippodrome <mise> [1-6]`');
-    if (cheval < 1 || cheval > 6) return message.reply('❌ Choisir un cheval entre 1 et 6. Usage : `&hippodrome <mise> <cheval>`');
-    const fake = {
-      user: message.author, member: message.member,
-      guild: message.guild, guildId: message.guildId,
-      channel: message.channel, client: message.client,
-      deferred: false, replied: false,
-      options: {
-        getInteger: (k) => k === 'mise' ? mise : k === 'cheval' ? cheval : null,
-        getString: () => null, getUser: () => null, getBoolean: () => null,
-      },
-      deferReply: async () => {},
-      editReply:  async (d) => message.channel.send(d).catch(() => {}),
-      reply:      async (d) => message.reply(d).catch(() => message.channel.send(d).catch(() => {})),
-      followUp:   async (d) => message.channel.send(d).catch(() => {}),
-    };
-    await execute(fake);
-  },
+  execute,
+  run,
+  handleComponent: module.exports.handleComponent,
 };
