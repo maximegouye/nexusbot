@@ -17,8 +17,10 @@ const RAID_THRESHOLD = 5;
 // Durée du mode raid (5 minutes)
 const RAID_DURATION = 5 * 60 * 1000;
 
-// Âge maximum en jours pour considérer un compte comme suspect
-const SUSPECT_ACCOUNT_AGE = 3;
+// ⚠️ AUTO-KICK DÉSACTIVÉ — mode alerte uniquement
+// (peut être réactivé manuellement si besoin)
+const AUTO_KICK_ENABLED = false;
+const AUTO_VERIF_LEVEL_ENABLED = false;
 
 /**
  * Démarre le worker de nettoyage périodique
@@ -85,32 +87,7 @@ function onMemberJoin(member) {
     handleRaid(member, guild);
   }
 
-  // Même en raid, on peut kick les comptes suspects
-  if (raidMode.has(guildId)) {
-    const accountAgeMs = now - user.createdTimestamp;
-    const accountAgeDays = accountAgeMs / (1000 * 60 * 60 * 24);
-
-    if (accountAgeDays < SUSPECT_ACCOUNT_AGE) {
-      // Compte suspect : kick + DM avertissement
-      try {
-        user.send({
-          embeds: [new EmbedBuilder()
-            .setColor('#FF0000')
-            .setTitle('⚠️ Accès refusé')
-            .setDescription(
-              `Ton compte est trop récent pour accéder à **${guild.name}**.\n\n` +
-              `Cela peut être un problème de sécurité (raid détecté).\n` +
-              `Réessaie dans quelques minutes.`
-            )
-            .setFooter({ text: 'NexusBot Anti-Raid' })
-            .setTimestamp()
-          ]
-        }).catch(() => {});
-      } catch {}
-
-      member.kick('Anti-raid: compte trop récent').catch(() => {});
-    }
-  }
+  // AUTO-KICK désactivé — on ne kick personne automatiquement
 }
 
 /**
@@ -181,24 +158,8 @@ async function handleRaid(member, guild) {
       } catch {}
     }
 
-    // Augmente le niveau de vérification
-    await guild.setVerificationLevel('VERY_HIGH').catch(() => {});
-
-    // Kick les comptes < 7 jours
-    try {
-      const members = await guild.members.fetch().catch(() => null);
-      if (members) {
-        for (const m of members.values()) {
-          const accountAgeMs = now - m.user.createdTimestamp;
-          const accountAgeDays = accountAgeMs / (1000 * 60 * 60 * 24);
-          if (accountAgeDays < 7 && !m.user.bot) {
-            await m.kick('Anti-raid: compte trop récent').catch(() => {});
-          }
-        }
-      }
-    } catch (err) {
-      console.error(`[AntiRaid] Erreur en kickant les comptes suspects:`, err);
-    }
+    // AUTO-KICK et AUTO-VERIF désactivés — alerte uniquement
+    // (pour réactiver : passer AUTO_KICK_ENABLED et AUTO_VERIF_LEVEL_ENABLED à true)
   } catch (err) {
     console.error(`[AntiRaid] Erreur en gérant le raid:`, err);
   }
