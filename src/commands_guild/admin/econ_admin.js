@@ -63,9 +63,10 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub    = interaction.options.getSubcommand();
-    const cfg    = db.getConfig(interaction.guildId);
+    const cfg    = db.getConfig(interaction.guildId) || {};
     const symbol = cfg.currency_emoji || '€';
     const name   = cfg.currency_name  || 'Euros';
 
@@ -87,7 +88,7 @@ module.exports = {
             { name: '💎 Nouveau solde', value: `**${newUser.balance.toLocaleString('fr-FR')}${symbol}**`, inline: true },
             { name: '📝 Raison',        value: raison,                                        inline: false },
           )
-          .setFooter({ text: `Effectué par ${interaction.user.tag}` })
+          .setFooter({ text: `Effectué par ${interaction.user.username}` })
           .setTimestamp()
         ], ephemeral: true
       });
@@ -113,7 +114,7 @@ module.exports = {
             { name: '💎 Nouveau solde', value: `**${newUser.balance.toLocaleString('fr-FR')}${symbol}**`, inline: true },
             { name: '📝 Raison',        value: raison,                                           inline: false },
           )
-          .setFooter({ text: `Effectué par ${interaction.user.tag}` })
+          .setFooter({ text: `Effectué par ${interaction.user.username}` })
           .setTimestamp()
         ], ephemeral: true
       });
@@ -128,7 +129,7 @@ module.exports = {
           .setColor('#E74C3C')
           .setTitle('🔄 Compte remis à zéro')
           .setDescription(`Le compte de <@${target.id}> a été remis à **0${symbol}**.`)
-          .setFooter({ text: `Effectué par ${interaction.user.tag}` })
+          .setFooter({ text: `Effectué par ${interaction.user.username}` })
         ], ephemeral: true
       });
     }
@@ -140,7 +141,7 @@ module.exports = {
           .setColor('#E74C3C')
           .setTitle('⚠️ Économie complète remise à zéro')
           .setDescription('Tous les comptes du serveur ont été remis à **0€**.')
-          .setFooter({ text: `Effectué par ${interaction.user.tag}` })
+          .setFooter({ text: `Effectué par ${interaction.user.username}` })
         ], ephemeral: true
       });
     }
@@ -171,7 +172,7 @@ module.exports = {
           .setColor('#3498DB')
           .setTitle('✏️ Solde défini')
           .setDescription(`Le solde de <@${target.id}> est maintenant **${amount.toLocaleString('fr-FR')}${symbol}**.`)
-          .setFooter({ text: `Effectué par ${interaction.user.tag}` })
+          .setFooter({ text: `Effectué par ${interaction.user.username}` })
         ], ephemeral: true
       });
     }
@@ -198,7 +199,7 @@ module.exports = {
             ...(perMsg !== null ? [{ name: '💬 Par message', value: `${perMsg}`, inline: true }] : []),
           )
           .setDescription('Configuration mise à jour avec succès !')
-          .setFooter({ text: `Par ${interaction.user.tag}` })
+          .setFooter({ text: `Par ${interaction.user.username}` })
         ], ephemeral: true
       });
     }
@@ -225,7 +226,7 @@ module.exports = {
             { name: '💰 Par membre',    value: `**+${amount.toLocaleString('fr-FR')}${symbol}**`, inline: true },
             { name: '💸 Total distribué', value: `**${(count * amount).toLocaleString('fr-FR')}${symbol}**`, inline: true },
           )
-          .setFooter({ text: `Effectué par ${interaction.user.tag}` })
+          .setFooter({ text: `Effectué par ${interaction.user.username}` })
           .setTimestamp()
         ], ephemeral: true
       });
@@ -253,5 +254,14 @@ module.exports = {
         ], ephemeral: true
       });
     }
+  } catch (err) {
+    console.error('[econ-admin] Erreur:', err?.message || err);
+    const errMsg = { content: `❌ Erreur : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(errMsg).catch(() => {});
+    } else {
+      await interaction.reply(errMsg).catch(() => {});
+    }
   }
+  },
 };
