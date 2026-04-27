@@ -32,7 +32,11 @@ module.exports = {
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
     const coin = cfg.currency_emoji || '€';
-    const week = new Date().toISOString().slice(0, 7);
+    // Format YYYY-WW (identique au DEFAULT SQLite strftime('%Y-%W','now'))
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((now - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+    const week = `${now.getFullYear()}-${String(weekNum).padStart(2, '0')}`;
 
     let lotoCfg = db.db.prepare('SELECT * FROM loto_config WHERE guild_id=?').get(guildId);
     if (!lotoCfg) {
@@ -41,7 +45,7 @@ module.exports = {
     }
 
     if (sub === 'acheter') {
-      const qte = interaction.options.getInteger('quantite');
+      const qte = interaction.options.getInteger('quantite') || 1;
       const prix = (lotoCfg.ticket_price || 100) * qte;
       const u = db.getUser(userId, guildId);
 

@@ -17,9 +17,16 @@ try {
     UNIQUE(guild_id, role_id)
   )`).run();
   db.db.prepare(`CREATE TABLE IF NOT EXISTS salary_claims (
-    guild_id TEXT, user_id TEXT, last_claim INTEGER DEFAULT 0,
-    PRIMARY KEY(guild_id, user_id)
+    guild_id TEXT, user_id TEXT, role_id TEXT, last_claim INTEGER DEFAULT 0,
+    PRIMARY KEY(guild_id, user_id, role_id)
   )`).run();
+  // Migration : ajouter role_id si la colonne manque (anciens déploiements)
+  try {
+    const cols = db.db.prepare('PRAGMA table_info(salary_claims)').all().map(c => c.name);
+    if (!cols.includes('role_id')) {
+      db.db.prepare('ALTER TABLE salary_claims ADD COLUMN role_id TEXT DEFAULT ""').run();
+    }
+  } catch {}
 } catch {}
 
 module.exports = {
@@ -107,14 +114,15 @@ module.exports = {
 
       // Récupère les rôles du membre
       const member = interaction.member;
-      const claim = db.db.prepare('SELECT * FROM salary_claims WHERE guild_id=? AND user_id=?').get(guildId, userId)
-        || { last_claim: 0 };
 
       let totalGain = 0;
       const gains = [];
 
       for (const sal of allSalaires) {
         if (!member.roles.cache.has(sal.role_id)) continue;
+        // Cooldown INDIVIDUEL par rôle (pas partagé)
+        const claim = db.db.prepare('SELECT last_claim FROM salary_claims WHERE guild_id=? AND user_id=? AND role_id=?').get(guildId, userId, sal.role_id)
+          || { last_claim: 0 };
         const cooldown = intervalSeconds[sal.intervalle] || 86400;
         if (now - claim.last_claim < cooldown) {
           const reste = cooldown - (now - claim.last_claim);
@@ -125,12 +133,13 @@ module.exports = {
         }
         totalGain += sal.montant;
         gains.push(`✅ <@&${sal.role_id}> → +**${sal.montant} ${coin}**`);
+        // Met à jour le cooldown pour CE rôle uniquement
+        db.db.prepare(`INSERT INTO salary_claims (guild_id,user_id,role_id,last_claim) VALUES(?,?,?,?)
+          ON CONFLICT(guild_id,user_id,role_id) DO UPDATE SET last_claim=?`).run(guildId, userId, sal.role_id, now, now);
       }
 
       if (totalGain > 0) {
         db.addCoins(userId, guildId, totalGain);
-        db.db.prepare(`INSERT INTO salary_claims (guild_id,user_id,last_claim) VALUES(?,?,?)
-          ON CONFLICT(guild_id,user_id) DO UPDATE SET last_claim=?`).run(guildId, userId, now, now);
       }
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(totalGain > 0 ? '#2ECC71' : '#F59E0B')

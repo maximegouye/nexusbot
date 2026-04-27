@@ -49,8 +49,17 @@ module.exports = {
     const name   = cfg.currency_name  || 'Euros';
     const target = interaction.options.getInteger('cible');
     const joinCost = Math.floor(target * 0.1); // 10% de la cible pour rejoindre
+
+    // ── L'organisateur paie lui aussi la mise d'entrée ──────
+    const orgUser = db.getUser(interaction.user.id, interaction.guildId);
+    if (orgUser.balance < joinCost) {
+      return (interaction.deferred || interaction.replied ? interaction.editReply : interaction.reply)
+        .bind(interaction)({ content: `❌ Tu as besoin de **${joinCost.toLocaleString('fr-FR')} ${name}** pour organiser ce braquage.`, ephemeral: true });
+    }
+    db.removeCoins(interaction.user.id, interaction.guildId, joinCost);
+
     const participants = new Map();
-    participants.set(interaction.user.id, { user: interaction.user, paid: false });
+    participants.set(interaction.user.id, { user: interaction.user, paid: true });
 
     const endsAt = Math.floor(Date.now() / 1000) + 120; // 2 min pour recruter
 

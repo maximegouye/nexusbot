@@ -38,6 +38,7 @@ const COMPONENT_ROUTES = {
   'hilo_':        'hilo',
   'hippo_':       'hippodrome',
   'slots_':       'slots',
+  'cslot_':       'slots',   // Casino machine (casinoMachine.js buttons)
   'bj_':          'blackjack',
   'cs_':          'casino-stats',
   'keno_':        'keno',
@@ -203,11 +204,14 @@ module.exports = {
 
       if (handler) {
         try {
-          // Essayer handleComponent en premier (boutons/selects)
+          // ── handleComponent en premier (boutons / menus / modals) ──────────
           if (typeof handler.handleComponent === 'function') {
             try {
-              const handled = await handler.handleComponent(interaction, cid);
-              if (handled) return;
+              await handler.handleComponent(interaction, cid);
+              // Toujours retourner après handleComponent — ne jamais appeler
+              // execute() ensuite, sinon execute() s'exécute sur un bouton avec
+              // des options null → double-traitement et affichage écrasé.
+              return;
             } catch (hcErr) {
               console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
               if (!interaction.replied && !interaction.deferred) {

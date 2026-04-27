@@ -100,11 +100,12 @@ module.exports = {
 
       db.addCoins(userId, guildId, -toRepay);
       db.db.prepare('UPDATE prets SET repaid=1 WHERE id=?').run(pret.id);
+      const newBalance = db.getUser(userId, guildId).balance;
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Prêt remboursé !')
           .setDescription(`Vous avez remboursé **${toRepay} ${coin}**${penaltyMsg}.`)
-          .addFields({ name: '👛 Nouveau solde', value: `${u.balance - toRepay} ${coin}`, inline: true })
+          .addFields({ name: '👛 Nouveau solde', value: `${newBalance.toLocaleString('fr-FR')} ${coin}`, inline: true })
       ]});
     }
 

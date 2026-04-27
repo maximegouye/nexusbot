@@ -496,73 +496,116 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
 }
 
 // ─── Handle Component ──────────────────────────────────────
+// NOTE : toutes les branches doivent retourner true pour signaler que le
+//        composant a été traité — interactionCreate ne rappellera pas execute().
 async function handleComponent(interaction) {
+  const cid     = interaction.customId;
   const userId  = interaction.user.id;
   const guildId = interaction.guildId;
 
+  // ── Boutons casino machine (&slots / cslot_) — délègue à playSlots ──
+  if (cid.startsWith('cslot_')) {
+    const parts = cid.split(':');
+    const action = parts[0]; // ex: 'cslot_spin'
+    const ownerId = parts[1]; // userId encodé après ':'
+    if (ownerId && ownerId !== userId) {
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+    // Pour les boutons de la casinoMachine, on relance une partie standard
+    // en récupérant la mise depuis la session kvGet si disponible
+    let mise = 100;
+    try {
+      const sess = db.kvGet && db.kvGet(guildId, `cslot:${userId}`);
+      if (sess?.mise) mise = sess.mise;
+    } catch {}
+
+    if (action === 'cslot_quit') {
+      await interaction.deferUpdate().catch(() => {});
+      await interaction.editReply({ content: '👋 Tu as quitté la machine.', embeds: [], components: [] }).catch(() => {});
+      return true;
+    }
+    // Pour tout autre bouton cslot_ (spin, bet, auto, etc.) — relancer une partie
+    await interaction.deferUpdate().catch(() => {});
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playSlots(source, userId, guildId, mise, 1);
+    return true;
+  }
+
   // ── Mise Max ──────────────────────────────────────────────
-  if (interaction.customId.startsWith('slots_maxmise_')) {
-    const parts        = interaction.customId.split('_');
+  if (cid.startsWith('slots_maxmise_')) {
+    const parts        = cid.split('_');
     const customUserId = parts[2];
     const maxMise      = parseInt(parts[3]);
     const lines        = parseInt(parts[4]) || 1;
     if (customUserId !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
     }
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playSlots(source, userId, guildId, maxMise, lines);
+    return true;
 
   // ── Rejouer ──────────────────────────────────────────────
-  } else if (interaction.customId.startsWith('slots_replay_')) {
-    const parts        = interaction.customId.split('_');
+  } else if (cid.startsWith('slots_replay_')) {
+    const parts        = cid.split('_');
     const customUserId = parts[2];
     if (customUserId !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
     }
     const newMise  = parseInt(parts[3]);
     const newLines = parseInt(parts[4]) || 1;
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playSlots(source, userId, guildId, newMise, newLines);
+    return true;
 
   // ── Changer la mise ──────────────────────────────────────
-  } else if (interaction.customId.startsWith('slots_changemise_')) {
-    const parts        = interaction.customId.split('_');
+  } else if (cid.startsWith('slots_changemise_')) {
+    const parts        = cid.split('_');
     const customUserId = parts[2];
     const lines        = parseInt(parts[3]) || 1;
     if (customUserId !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
     }
     await interaction.showModal(changeMiseModal('slots', userId, `${lines}`));
+    return true;
 
   // ── Modal mise ───────────────────────────────────────────
-  } else if (interaction.customId.startsWith('slots_modal_') && interaction.isModalSubmit()) {
-    const parts        = interaction.customId.split('_');
+  } else if (cid.startsWith('slots_modal_') && interaction.isModalSubmit()) {
+    const parts        = cid.split('_');
     const customUserId = parts[2];
     const lines        = parseInt(parts[3]) || 1;
     if (customUserId !== userId) {
-      return interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true });
+      await interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u       = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 5) {
-      return interaction.reply({ content: '❌ Mise invalide (min 5 coins par ligne).', ephemeral: true });
+      await interaction.reply({ content: '❌ Mise invalide (min 5 coins par ligne).', ephemeral: true });
+      return true;
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await playSlots(interaction, userId, guildId, newMise, lines);
+    return true;
 
   // ── Gamble (double ou rien) ──────────────────────────────
-  } else if (interaction.customId.startsWith('slots_gamble_')) {
-    const parts        = interaction.customId.split('_');
+  } else if (cid.startsWith('slots_gamble_')) {
+    const parts        = cid.split('_');
     const customUserId = parts[2];
     const amount       = parseInt(parts[3]) || 0;
     if (customUserId !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
     }
     if (!amount || amount <= 0) {
-      return interaction.reply({ content: '❌ Montant invalide.', ephemeral: true });
+      await interaction.reply({ content: '❌ Montant invalide.', ephemeral: true });
+      return true;
     }
 
     await interaction.deferUpdate();
@@ -570,43 +613,38 @@ async function handleComponent(interaction) {
     const won  = Math.random() < 0.5;
 
     if (won) {
-      db.addCoins(userId, guildId, amount); // double le gain (déjà crédité, on ajoute pareil)
+      db.addCoins(userId, guildId, amount);
       trackSessionGain(userId, amount);
       const nb = db.getUser(userId, guildId)?.balance || 0;
-      const winEmbed = new EmbedBuilder()
+      await interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle('🎲 GAMBLE → 🎊 DOUBLÉ !')
-        .setDescription(
-          `🍀 **Incroyable ! Tu as doublé ton gain !**\n\n` +
-          `**+${amount.toLocaleString()} ${coin}** supplémentaires !`
-        )
+        .setDescription(`🍀 **Incroyable ! Tu as doublé ton gain !**\n\n**+${amount.toLocaleString()} ${coin}** supplémentaires !`)
         .addFields(
           { name: '💰 Gain total', value: `**+${(amount * 2).toLocaleString()} ${coin}**`, inline: true },
           { name: '🏦 Nouveau solde', value: `**${nb.toLocaleString()} ${coin}**`, inline: true },
         )
-        .setFooter({ text: '🎲 Le risque a payé !' })
-        .setTimestamp();
-      await interaction.editReply({ embeds: [winEmbed], components: [] }).catch(() => {});
+        .setFooter({ text: '🎲 Le risque a payé !' }).setTimestamp()
+      ], components: [] }).catch(() => {});
     } else {
-      db.addCoins(userId, guildId, -amount); // retire le gain
+      db.addCoins(userId, guildId, -amount);
       trackSessionGain(userId, -amount);
       const nb = db.getUser(userId, guildId)?.balance || 0;
-      const loseEmbed = new EmbedBuilder()
+      await interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#E74C3C')
         .setTitle('🎲 GAMBLE → 💸 PERDU !')
-        .setDescription(
-          `😔 **Malchance ! Tu perds ton gain...**\n\n` +
-          `**-${amount.toLocaleString()} ${coin}** retirés.`
-        )
+        .setDescription(`😔 **Malchance ! Tu perds ton gain...**\n\n**-${amount.toLocaleString()} ${coin}** retirés.`)
         .addFields(
           { name: '📉 Perte', value: `**-${amount.toLocaleString()} ${coin}**`, inline: true },
           { name: '🏦 Nouveau solde', value: `**${nb.toLocaleString()} ${coin}**`, inline: true },
         )
-        .setFooter({ text: '🎲 La prochaine fois, garde tes gains !' })
-        .setTimestamp();
-      await interaction.editReply({ embeds: [loseEmbed], components: [] }).catch(() => {});
+        .setFooter({ text: '🎲 La prochaine fois, garde tes gains !' }).setTimestamp()
+      ], components: [] }).catch(() => {});
     }
+    return true;
   }
+
+  return false; // non géré par ce handler
 }
 
 // ─── Exports ──────────────────────────────────────────────

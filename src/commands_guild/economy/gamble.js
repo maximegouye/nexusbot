@@ -96,7 +96,26 @@ module.exports = {
     .setDescription('🎰 Joue à des jeux d\'argent')
     .addSubcommand(s => s.setName('slots').setDescription('🎰 Machine à sous').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%/nombre) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
     .addSubcommand(s => s.setName('coinflip').setDescription('🪙 Pile ou face').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)).addStringOption(o => o.setName('choix').setDescription('pile ou face').setRequired(true).addChoices({ name: '🪙 Pile', value: 'pile' }, { name: '🎖️ Face', value: 'face' })))
-    .addSubcommand(s => s.setName('blackjack').setDescription('🃏 Joue au Blackjack').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30))),
+    .addSubcommand(s => s.setName('blackjack').setDescription('🃏 Joue au Blackjack').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
+    .addSubcommand(s => s.setName('des').setDescription('🎲 Jeu de dés — choisir pair/impair/bas/haut/sept/numéro')
+      .addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%/nombre) — ILLIMITÉ').setRequired(true).setMaxLength(30))
+      .addStringOption(o => o.setName('pari').setDescription('Votre pari').setRequired(true).addChoices(
+        { name: '🔢 Pair (×2)', value: 'pair' },
+        { name: '🔢 Impair (×2)', value: 'impair' },
+        { name: '⬇️ Bas 2–6 (×2)', value: 'bas' },
+        { name: '⬆️ Haut 8–12 (×2)', value: 'haut' },
+        { name: '🎯 Sept exactement (×5)', value: 'sept' },
+      )))
+    .addSubcommand(s => s.setName('roulette').setDescription('🎡 Roulette rapide — rouge/noir/pair/impair')
+      .addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%/nombre) — ILLIMITÉ').setRequired(true).setMaxLength(30))
+      .addStringOption(o => o.setName('pari').setDescription('Votre pari').setRequired(true).addChoices(
+        { name: '🔴 Rouge (×2)', value: 'rouge' },
+        { name: '⚫ Noir (×2)', value: 'noir' },
+        { name: '🔢 Pair (×2)', value: 'pair' },
+        { name: '🔢 Impair (×2)', value: 'impair' },
+        { name: '⬇️ Manque 1–18 (×2)', value: 'manque' },
+        { name: '⬆️ Passe 19–36 (×2)', value: 'passe' },
+      ))),
   cooldown: 5,
 
   async execute(interaction) {
@@ -127,6 +146,8 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Mise insuffisante ! Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
     }
 
+    const reply = (data) => (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(data);
+
     // ── SLOTS ──
     if (sub === 'slots') {
       const reels = spinSlots();
@@ -137,26 +158,32 @@ module.exports = {
       if (net >= 0) db.addCoins(interaction.user.id, interaction.guildId, net);
       else db.removeCoins(interaction.user.id, interaction.guildId, mise - gain);
 
-      const won    = net >= 0;
+      const won       = net >= 0;
+      const isJackpot = multi >= 50;
+      const isTriple7 = reels[0] === '7️⃣' && reels[1] === '7️⃣' && reels[2] === '7️⃣';
       const result = multi === 0 ? '😭 Perdu !'
-                   : multi >= 50 ? '🎊 JACKPOT LÉGENDAIRE !!'
+                   : multi >= 50 ? '🏆 JACKPOT LÉGENDAIRE !! 🏆'
                    : multi >= 20 ? '💎 JACKPOT !!'
                    : multi >= 10 ? '🌟 Gros gain !'
                    : multi >= 5  ? '🎉 Super gain !'
-                   : multi >= 3  ? '✅ Gagne !'
+                   : multi >= 3  ? '✅ Gagné !'
                    : '🟡 Récupéré une partie !';
 
+      const userAfter = db.getUser(interaction.user.id, interaction.guildId);
       const embed = new EmbedBuilder()
-        .setColor(won ? '#2ECC71' : '#FF6B6B')
+        .setColor(isJackpot ? '#FFD700' : won ? '#2ECC71' : '#FF6B6B')
         .setTitle(`🎰 Machine à sous — ${result}`)
-        .setDescription(`# ${reels.join(' | ')}`)
+        .setDescription(isTriple7
+          ? `# 7️⃣ | 7️⃣ | 7️⃣\n\n🎊 **TRIPLE SEPT — JACKPOT LÉGENDAIRE !**`
+          : `# ${reels.join(' | ')}`)
         .addFields(
-          { name: '💵 Mise',     value: `**${mise.toLocaleString('fr-FR')}** ${name}`,                      inline: true },
-          { name: '✖️ Multiplicateur', value: `**×${multi}**`,                                           inline: true },
-          { name: won ? '🤑 Gain net' : '💸 Perte', value: `**${Math.abs(net).toLocaleString('fr-FR')}** ${name}`, inline: true },
+          { name: '💵 Mise',           value: `**${mise.toLocaleString('fr-FR')}** ${name}`,                         inline: true },
+          { name: '✖️ Multiplicateur', value: `**×${multi}**`,                                                        inline: true },
+          { name: won ? '🤑 Gain net' : '💸 Perte', value: `**${Math.abs(net).toLocaleString('fr-FR')}** ${name}`,  inline: true },
+          { name: '👛 Solde',          value: `**${userAfter.balance.toLocaleString('fr-FR')}** ${name}`,            inline: true },
         );
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+      return reply({ embeds: [embed] });
     }
 
     // ── COINFLIP ──
@@ -168,16 +195,18 @@ module.exports = {
       if (won) db.addCoins(interaction.user.id, interaction.guildId, mise);
       else db.removeCoins(interaction.user.id, interaction.guildId, mise);
 
+      const userAfter = db.getUser(interaction.user.id, interaction.guildId);
       const embed = new EmbedBuilder()
         .setColor(won ? '#2ECC71' : '#FF6B6B')
         .setTitle(`🪙 Pile ou Face — ${won ? 'Gagné !' : 'Perdu !'}`)
         .addFields(
-          { name: 'Résultat', value: result === 'pile' ? '🪙 Pile' : '🎖️ Face', inline: true },
-          { name: 'Ton choix', value: choix === 'pile' ? '🪙 Pile' : '🎖️ Face', inline: true },
-          { name: won ? '🤑 Gain' : '💸 Perte', value: `**${mise.toLocaleString('fr-FR')}** ${name}`, inline: true },
+          { name: 'Résultat',   value: result === 'pile' ? '🪙 Pile' : '🎖️ Face',                              inline: true },
+          { name: 'Ton choix',  value: choix === 'pile' ? '🪙 Pile' : '🎖️ Face',                              inline: true },
+          { name: won ? '🤑 Gain' : '💸 Perte', value: `**${mise.toLocaleString('fr-FR')}** ${name}`,        inline: true },
+          { name: '👛 Solde',   value: `**${userAfter.balance.toLocaleString('fr-FR')}** ${name}`,            inline: true },
         );
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+      return reply({ embeds: [embed] });
     }
 
     // ── BLACKJACK ──
@@ -296,17 +325,98 @@ module.exports = {
         }
       });
     }
+
+    // ── DÉS ──
+    if (sub === 'des') {
+      const pari = interaction.options.getString('pari');
+      db.removeCoins(interaction.user.id, interaction.guildId, mise);
+
+      const d1 = 1 + Math.floor(Math.random() * 6);
+      const d2 = 1 + Math.floor(Math.random() * 6);
+      const total = d1 + d2;
+      const DICE_EMOJI = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+
+      let won = false, mult = 2, label = '';
+      switch (pari) {
+        case 'pair':   won = total % 2 === 0; label = '🔢 Pair';        break;
+        case 'impair': won = total % 2 !== 0; label = '🔢 Impair';      break;
+        case 'bas':    won = total <= 6;       label = '⬇️ Bas (2–6)';   break;
+        case 'haut':   won = total >= 8;       label = '⬆️ Haut (8–12)'; break;
+        case 'sept':   won = total === 7; mult = 5; label = '🎯 Sept';   break;
+      }
+
+      const gain = won ? mise * mult : 0;
+      if (gain > 0) db.addCoins(interaction.user.id, interaction.guildId, gain);
+      const userAfter = db.getUser(interaction.user.id, interaction.guildId);
+
+      return reply({ embeds: [new EmbedBuilder()
+        .setColor(won ? '#2ECC71' : '#E74C3C')
+        .setTitle(won ? `🎲 GAGNÉ — Total : ${total}` : `🎲 Perdu — Total : ${total}`)
+        .setDescription(`${DICE_EMOJI[d1]} ${DICE_EMOJI[d2]}  →  **${total}**`)
+        .addFields(
+          { name: '🎯 Pari',           value: label,                                                           inline: true },
+          { name: '✖️ Multiplicateur', value: `×${mult}`,                                                      inline: true },
+          { name: won ? '🤑 Gain net' : '💸 Perte', value: `**${won ? gain - mise : mise}** ${name}`,        inline: true },
+          { name: '👛 Solde',          value: `**${userAfter.balance.toLocaleString('fr-FR')}** ${name}`,     inline: true },
+        )
+        .setTimestamp()
+      ]});
+    }
+
+    // ── ROULETTE ──
+    if (sub === 'roulette') {
+      const pari = interaction.options.getString('pari');
+      db.removeCoins(interaction.user.id, interaction.guildId, mise);
+
+      const RED_NUMS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+      const num = Math.floor(Math.random() * 37); // 0–36
+      const isRed = RED_NUMS.has(num);
+      const isEven = num !== 0 && num % 2 === 0;
+
+      let won = false;
+      switch (pari) {
+        case 'rouge':  won = num !== 0 && isRed;  break;
+        case 'noir':   won = num !== 0 && !isRed; break;
+        case 'pair':   won = isEven;               break;
+        case 'impair': won = num !== 0 && !isEven; break;
+        case 'manque': won = num >= 1 && num <= 18; break;
+        case 'passe':  won = num >= 19;             break;
+      }
+
+      const numEmoji = num === 0 ? '🟢 0' : isRed ? `🔴 ${num}` : `⚫ ${num}`;
+      if (won) db.addCoins(interaction.user.id, interaction.guildId, mise * 2);
+      const userAfter = db.getUser(interaction.user.id, interaction.guildId);
+
+      return reply({ embeds: [new EmbedBuilder()
+        .setColor(won ? '#2ECC71' : '#E74C3C')
+        .setTitle(`🎡 Roulette — ${won ? 'Gagné !' : 'Perdu !'}`)
+        .setDescription(`La bille s'arrête sur : **${numEmoji}**`)
+        .addFields(
+          { name: '🎯 Pari',   value: pari,                                                               inline: true },
+          { name: '🎰 Numéro', value: `${numEmoji}`,                                                      inline: true },
+          { name: won ? '🤑 Gain net' : '💸 Perte', value: `**${mise.toLocaleString('fr-FR')}** ${name}`, inline: true },
+          { name: '👛 Solde',  value: `**${userAfter.balance.toLocaleString('fr-FR')}** ${name}`,         inline: true },
+        )
+        .setTimestamp()
+      ]});
+    }
   },
 
   name: 'gamble',
   aliases: ['jeu', 'casino2'],
   async run(message, args) {
-    const sub  = args[0] || 'slots';
-    const mise = args[1] || '100';
+    const sub   = args[0] || 'slots';
+    const mise  = args[1] || '100';
     const choix = args[2] || 'pile';
+    const pari  = args[2] || 'pair';
     const fake = mkFake(message, {
       getSubcommand: () => sub,
-      getString: (k) => k === 'mise' ? mise : k === 'choix' ? choix : null,
+      getString: (k) => {
+        if (k === 'mise')  return mise;
+        if (k === 'choix') return choix;
+        if (k === 'pari')  return pari;
+        return null;
+      },
     });
     await this.execute(fake);
   },
