@@ -94,6 +94,9 @@ module.exports = {
 
   getEditCache: () => editSnipeCache,
 
+  // Accès direct au cache (utilisé par le handler prefix &snipe)
+  get: (channelId) => snipeCache.get(channelId),
+
   name: 'snipe',
   aliases: ['snipe2'],
   async run(message, args) {

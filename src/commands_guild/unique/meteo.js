@@ -49,7 +49,7 @@ module.exports = {
 
     let data;
     try { data = await fetchWeather(ville); }
-    catch (e) { return interaction.editReply(`❌ Ville introuvable : **${ville}**. Vérifie l'orthographe.`); }
+    catch (e) { return await interaction.editReply(`❌ Ville introuvable : **${ville}**. Vérifie l'orthographe.`); }
 
     const current = data.current_condition?.[0];
     const area = data.nearest_area?.[0];
@@ -69,7 +69,7 @@ module.exports = {
       const tempNum = parseInt(temp);
       const color = tempNum < 10 ? '#4FC3F7' : tempNum < 25 ? '#66BB6A' : '#FF7043';
 
-      return interaction.editReply({ embeds: [
+      return await interaction.editReply({ embeds: [
         new EmbedBuilder()
           .setColor(color)
           .setTitle(`${condition} — ${cityName}`)
@@ -98,7 +98,7 @@ module.exports = {
         };
       });
 
-      return interaction.editReply({ embeds: [
+      return await interaction.editReply({ embeds: [
         new EmbedBuilder()
           .setColor('#64B5F6')
           .setTitle(`📅 Prévisions 3 jours — ${cityName}`)

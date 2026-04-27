@@ -199,10 +199,10 @@ const commands = [
     cooldown: 5,
     async run(message) {
       try {
-        const snipeModule = require('../commands/utility/snipe');
+        const snipeModule = require('../../commands/utility/snipe');
         const s = snipeModule.get(message.channel.id);
         if (!s) return message.reply('❌ Aucun message récent supprimé dans ce salon.');
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🔍 Snipe').setDescription(s.content?.slice(0, 2000) || '*[Pas de texte]*').setAuthor({ name: s.author?.tag || '?', iconURL: s.author?.displayAvatarURL?.() }).setTimestamp(s.createdTimestamp)] });
+        message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🔍 Snipe').setDescription(s.content?.slice(0, 2000) || '*[Pas de texte]*').setAuthor({ name: s.authorTag || '?', iconURL: s.avatarURL }).setTimestamp(s.timestamp)] });
       } catch { message.reply('❌ Module snipe indisponible.'); }
     }
   },

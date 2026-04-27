@@ -61,9 +61,9 @@ module.exports = {
           .setURL(data.content_urls?.desktop?.page || `https://fr.wikipedia.org/wiki/${encodeURIComponent(data.title)}`);
         if (data.thumbnail?.source) embed.setThumbnail(data.thumbnail.source);
         embed.setFooter({ text: 'Source : Wikipédia Français' });
-        return interaction.editReply({ embeds: [embed] });
+        return await interaction.editReply({ embeds: [embed] });
       } catch {
-        return interaction.editReply({ content: '❌ Impossible de récupérer un article aléatoire.' });
+        return await interaction.editReply({ content: '❌ Impossible de récupérer un article aléatoire.' });
       }
     }
 
@@ -84,7 +84,7 @@ module.exports = {
             .setTitle(`🔍 Plusieurs résultats pour "${query}"`)
             .setDescription(titles.slice(0,5).map((t,i) => `**${i+1}.** [${t}](${urls[i]})`).join('\n'))
             .setFooter({ text: 'Précisez votre recherche pour un résultat plus précis.' });
-          return interaction.editReply({ embeds: [embed] });
+          return await interaction.editReply({ embeds: [embed] });
         }
 
         if (!data.title || data.type === 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
@@ -101,7 +101,7 @@ module.exports = {
         if (data.thumbnail?.source) embed.setThumbnail(data.thumbnail.source);
         if (data.description) embed.addFields({ name: '📝 Description', value: data.description, inline: false });
         embed.setFooter({ text: 'Source : Wikipédia Français | Cliquez sur le titre pour en savoir plus' });
-        return interaction.editReply({ embeds: [embed] });
+        return await interaction.editReply({ embeds: [embed] });
 
       } catch {
         // Recherche alternative
@@ -111,16 +111,16 @@ module.exports = {
           const descs   = results[2] || [];
           const urls    = results[3] || [];
 
-          if (!titles.length) return interaction.editReply({ content: `❌ Aucun résultat trouvé pour **"${query}"** sur Wikipédia.` });
+          if (!titles.length) return await interaction.editReply({ content: `❌ Aucun résultat trouvé pour **"${query}"** sur Wikipédia.` });
 
           const embed = new EmbedBuilder()
             .setColor('#f39c12')
             .setTitle(`🔍 Résultats de recherche : "${query}"`)
             .setDescription(titles.slice(0,5).map((t,i) => `**${i+1}.** [${t}](${urls[i]})${descs[i] ? `\n> ${descs[i].slice(0,80)}` : ''}`).join('\n\n'))
             .setFooter({ text: 'Source : Wikipédia Français' });
-          return interaction.editReply({ embeds: [embed] });
+          return await interaction.editReply({ embeds: [embed] });
         } catch {
-          return interaction.editReply({ content: `❌ Aucun résultat pour **"${query}"**. Essayez avec d'autres termes.` });
+          return await interaction.editReply({ content: `❌ Aucun résultat pour **"${query}"**. Essayez avec d'autres termes.` });
         }
       }
     }

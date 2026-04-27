@@ -57,7 +57,7 @@ module.exports = {
         const langSource = LANGUES.find(l => l.value === result.detected)?.name || result.detected;
         const langTarget = LANGUES.find(l => l.value === vers)?.name || vers;
 
-        return interaction.editReply({ embeds: [
+        return await interaction.editReply({ embeds: [
           new EmbedBuilder()
             .setColor('#4285F4')
             .setTitle('🌍 Traduction')
@@ -68,7 +68,7 @@ module.exports = {
             .setFooter({ text: 'Traduction via Google Translate' })
         ]});
       } catch (e) {
-        return interaction.editReply(`❌ Erreur de traduction : ${e.message}`);
+        return await interaction.editReply(`❌ Erreur de traduction : ${e.message}`);
       }
     }
 
@@ -79,12 +79,12 @@ module.exports = {
       try {
         const result = await translate(texte.slice(0, 100), 'fr', 'auto');
         const langName = LANGUES.find(l => l.value === result.detected)?.name || `Code: ${result.detected}`;
-        return interaction.editReply({ embeds: [
+        return await interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('#4285F4')
             .setDescription(`🔍 Langue détectée : **${langName}**`)
         ]});
       } catch {
-        return interaction.editReply('❌ Impossible de détecter la langue.');
+        return await interaction.editReply('❌ Impossible de détecter la langue.');
       }
     }
 

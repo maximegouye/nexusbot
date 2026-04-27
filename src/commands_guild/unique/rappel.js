@@ -66,8 +66,8 @@ module.exports = {
     const userId = interaction.user.id;
     const now = Math.floor(Date.now() / 1000);
 
-    // Vérifier les rappels dus
-    await checkReminders(interaction.client);
+    // Vérifier les rappels dus (fire-and-forget — ne pas bloquer la réponse Discord)
+    checkReminders(interaction.client).catch(() => {});
 
     if (sub === 'creer') {
       const dureeStr = interaction.options.getString('duree');
