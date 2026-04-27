@@ -9,10 +9,14 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const bio = interaction.options.getString('texte');
     db.db.prepare('UPDATE users SET bio = ? WHERE user_id = ? AND guild_id = ?')
       .run(bio, interaction.user.id, interaction.guildId);
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Bio mise à jour : *"${bio}"*\n\nElle apparaît sur ton \`/profil\`.`)],
       ephemeral: true
     });

@@ -13,9 +13,13 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
-      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
@@ -23,7 +27,7 @@ module.exports = {
     if (sub === 'set') {
       const multi = interaction.options.getNumber('multiplicateur');
       db.setConfig(interaction.guildId, 'xp_multiplier', multi);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#F39C12')
           .setTitle('⚡ XP Boost Activé !')
@@ -35,14 +39,14 @@ module.exports = {
 
     if (sub === 'reset') {
       db.setConfig(interaction.guildId, 'xp_multiplier', 1);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription('🔄 Multiplicateur d\'XP remis à **×1** (normal).')]
       });
     }
 
     if (sub === 'info') {
       const multi = cfg.xp_multiplier || 1;
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(multi > 1 ? '#F39C12' : '#3498DB')
           .setTitle('⚡ XP Boost — Statut')
@@ -61,7 +65,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

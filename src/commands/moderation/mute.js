@@ -21,6 +21,10 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const target = interaction.options.getMember('membre');
     const durStr = interaction.options.getString('duree');
@@ -57,7 +61,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

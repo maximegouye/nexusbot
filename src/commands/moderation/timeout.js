@@ -24,6 +24,10 @@ module.exports = {
       .addStringOption(o => o.setName('raison').setDescription('Raison').setRequired(false))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const sub    = interaction.options.getSubcommand();
     const target = interaction.options.getMember('membre');
@@ -88,7 +92,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

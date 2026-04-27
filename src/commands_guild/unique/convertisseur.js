@@ -118,13 +118,17 @@ module.exports = {
         ))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'unites') {
       const cat = CONVERSIONS[interaction.options.getString('categorie')];
       const lines = Object.entries(cat.units).map(([k, v]) => `\`${k}\` — ${v.name}`).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle(`${cat.label} — Unités disponibles`).setDescription(lines)
       ], ephemeral: true });
     }
@@ -136,8 +140,8 @@ module.exports = {
       const vers = interaction.options.getString('vers').toLowerCase();
       const conv = CONVERSIONS[cat];
 
-      if (!conv.units[de]) return interaction.reply({ content: `❌ Unité **${de}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
-      if (!conv.units[vers]) return interaction.reply({ content: `❌ Unité **${vers}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
+      if (!conv.units[de]) return interaction.editReply({ content: `❌ Unité **${de}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
+      if (!conv.units[vers]) return interaction.editReply({ content: `❌ Unité **${vers}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
 
       let result;
       if (cat === 'temperature') {
@@ -149,7 +153,7 @@ module.exports = {
 
       const rounded = Math.round(result * 10000) / 10000;
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle(`${conv.label} — Conversion`)
           .setDescription(`**${valeur} ${conv.units[de].name}** = **${rounded} ${conv.units[vers].name}**`)
           .addFields(
@@ -165,7 +169,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

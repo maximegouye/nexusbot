@@ -19,6 +19,10 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const cfg  = db.getConfig(interaction.guildId);
     const emoji = cfg.currency_emoji || '🪙';
     const name  = cfg.currency_name  || 'Coins';

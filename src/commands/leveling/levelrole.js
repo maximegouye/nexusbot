@@ -14,6 +14,10 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageRoles))
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
@@ -74,7 +78,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

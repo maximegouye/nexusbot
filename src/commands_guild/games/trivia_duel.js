@@ -52,6 +52,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const sub     = interaction.options.getSubcommand();
     const userId  = interaction.user.id;
@@ -62,12 +66,12 @@ module.exports = {
       const opponent = interaction.options.getUser('adversaire');
       const mise     = interaction.options.getInteger('mise') || 0;
 
-      if (opponent.id === userId) return interaction.reply({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });
-      if (opponent.bot) return interaction.reply({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
+      if (opponent.id === userId) return interaction.editReply({ content: '❌ Tu ne peux pas te défier toi-même !', ephemeral: true });
+      if (opponent.bot) return interaction.editReply({ content: '❌ Tu ne peux pas défier un bot !', ephemeral: true });
 
       if (mise > 0) {
         const user = db.getUser(userId, guildId);
-        if (user.coins < mise) return interaction.reply({ content: `❌ Pas assez de coins ! Tu as **${user.coins}** 🪙`, ephemeral: true });
+        if (user.coins < mise) return interaction.editReply({ content: `❌ Pas assez de coins ! Tu as **${user.coins}** 🪙`, ephemeral: true });
       }
 
       const accept = new ButtonBuilder().setCustomId(`trivia_accept_${userId}_${opponent.id}`).setLabel('✅ Accepter').setStyle(ButtonStyle.Success);
@@ -80,7 +84,7 @@ module.exports = {
         .setDescription(`<@${opponent.id}>, **${interaction.user.username}** vous défie en Trivia !\n\n⏱️ 5 questions, 15 secondes chacune${mise > 0 ? `\n💰 Mise : **${mise}** coins` : ''}`)
         .setFooter({ text: 'Vous avez 30 secondes pour accepter !' });
 
-      await interaction.reply({ embeds: [embed], components: [row] });
+      await interaction.editReply({ embeds: [embed], components: [row] });
 
       const collector = interaction.channel.createMessageComponentCollector({
         filter: i => i.customId.endsWith(`_${userId}_${opponent.id}`) && i.user.id === opponent.id,
@@ -194,7 +198,7 @@ module.exports = {
       const qs     = pickQuestions(nbQ);
       let score    = 0;
 
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor('#3498db').setTitle('🧠 Trivia Solo !').setDescription(`**${nbQ} questions** — 15 secondes chacune.\nRépondez avec la lettre (A, B, C, D) !`)] });
+      await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#3498db').setTitle('🧠 Trivia Solo !').setDescription(`**${nbQ} questions** — 15 secondes chacune.\nRépondez avec la lettre (A, B, C, D) !`)] });
 
       for (let qi = 0; qi < qs.length; qi++) {
         const q = qs[qi];
@@ -255,7 +259,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.reply(_em).catch(() => {});
+      else await interaction.editReply(_em).catch(() => {});
     } catch {}
   }}
 };

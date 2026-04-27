@@ -13,6 +13,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
 
@@ -24,7 +28,7 @@ module.exports = {
 
       // Vérifier la date
       const testDate = new Date(annee || 2000, mois - 1, jour);
-      if (testDate.getMonth() !== mois - 1) return interaction.reply({ content: '❌ Date invalide.', ephemeral: true });
+      if (testDate.getMonth() !== mois - 1) return interaction.editReply({ content: '❌ Date invalide.', ephemeral: true });
 
       const bday = `${String(mois).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
 
@@ -32,7 +36,7 @@ module.exports = {
         ON CONFLICT(user_id, guild_id) DO UPDATE SET birthday = ?, birth_year = ?`)
         .run(interaction.user.id, interaction.guildId, bday, annee, bday, annee);
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#FF73FA')
           .setTitle('🎂 Anniversaire enregistré !')
@@ -54,7 +58,7 @@ module.exports = {
       `).all(interaction.guildId);
 
       if (!birthdays.length) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setDescription('🎂 Aucun anniversaire enregistré. Utilise `/birthday set` !')],
           ephemeral: true
         });
@@ -85,20 +89,20 @@ module.exports = {
       }
       embed.setDescription(desc);
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     // ── SETUP ──
     if (sub === 'setup') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-        return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
       }
       const canal = interaction.options.getChannel('canal');
       const role  = interaction.options.getRole('role');
       db.setConfig(interaction.guildId, 'birthday_channel', canal.id);
       if (role) db.setConfig(interaction.guildId, 'birthday_role', role.id);
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setDescription(`✅ Anniversaires configurés → Canal ${canal}${role ? ` | Rôle <@&${role.id}>` : ''}.`)

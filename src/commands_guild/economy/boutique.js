@@ -68,6 +68,10 @@ module.exports = {
       .addIntegerOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub     = interaction.options.getSubcommand();
     const userId  = interaction.user.id;
     const guildId = interaction.guildId;
@@ -80,7 +84,7 @@ module.exports = {
       const items = db.db.prepare('SELECT * FROM boutique_items WHERE guild_id=? AND actif=1 ORDER BY prix ASC').all(guildId);
 
       if (!items.length) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '🏪 La boutique est vide pour le moment. Un admin peut ajouter des articles avec `/boutique admin-ajouter`.',
           ephemeral: true,
         });
@@ -107,7 +111,7 @@ module.exports = {
         });
       });
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     // ── ACHETER ─────────────────────────────────────────────
@@ -115,17 +119,17 @@ module.exports = {
       const itemId = interaction.options.getInteger('id');
       const item   = db.db.prepare('SELECT * FROM boutique_items WHERE id=? AND guild_id=? AND actif=1').get(itemId, guildId);
 
-      if (!item) return interaction.reply({ content: `❌ Article #${itemId} introuvable.`, ephemeral: true });
+      if (!item) return interaction.editReply({ content: `❌ Article #${itemId} introuvable.`, ephemeral: true });
 
       const dejAch = db.db.prepare('SELECT 1 FROM boutique_achats WHERE user_id=? AND guild_id=? AND item_id=?').get(userId, guildId, itemId);
-      if (dejAch) return interaction.reply({ content: `❌ Tu possèdes déjà **${item.nom}**.`, ephemeral: true });
+      if (dejAch) return interaction.editReply({ content: `❌ Tu possèdes déjà **${item.nom}**.`, ephemeral: true });
 
-      if (item.stock === 0) return interaction.reply({ content: '❌ Stock épuisé !', ephemeral: true });
+      if (item.stock === 0) return interaction.editReply({ content: '❌ Stock épuisé !', ephemeral: true });
 
       const u     = db.getUser(userId, guildId);
       const coins = u?.balance || 0;
       if (coins < item.prix) {
-        return interaction.reply({
+        return interaction.editReply({
           content: `❌ Pas assez de coins. Tu as **${fmt(coins)} ${coin}** mais l'article coûte **${fmt(item.prix)} ${coin}**.`,
           ephemeral: true,
         });
@@ -157,7 +161,7 @@ module.exports = {
         .setDescription(`${effectMsg}\n\n**Coût :** -${fmt(item.prix)} ${coin}\n**Solde restant :** ${fmt(coins - item.prix)} ${coin}`)
         .setTimestamp();
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     // ── INVENTAIRE ──────────────────────────────────────────
@@ -170,7 +174,7 @@ module.exports = {
       `).all(userId, guildId);
 
       if (!achats.length) {
-        return interaction.reply({ content: '🎒 Votre inventaire est vide. Visitez `/boutique voir` !', ephemeral: true });
+        return interaction.editReply({ content: '🎒 Votre inventaire est vide. Visitez `/boutique voir` !', ephemeral: true });
       }
 
       const embed = new EmbedBuilder()
@@ -187,12 +191,12 @@ module.exports = {
         });
       });
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     // ── ADMIN-AJOUTER ───────────────────────────────────────
     if (sub === 'admin-ajouter') {
-      if (!isAdmin(member)) return interaction.reply({ content: '❌ Réservé aux admins.', ephemeral: true });
+      if (!isAdmin(member)) return interaction.editReply({ content: '❌ Réservé aux admins.', ephemeral: true });
 
       const nom   = interaction.options.getString('nom');
       const prix  = interaction.options.getInteger('prix');
@@ -205,7 +209,7 @@ module.exports = {
         'INSERT INTO boutique_items (guild_id, nom, emoji, type, valeur, prix, stock) VALUES (?,?,?,?,?,?,?)'
       ).run(guildId, nom, emoji, type, val, prix, stock);
 
-      return interaction.reply({
+      return interaction.editReply({
         content: `✅ Article **${emoji} ${nom}** ajouté (ID: #${result.lastInsertRowid}) au prix de **${fmt(prix)} ${coin}**.`,
         ephemeral: true,
       });
@@ -213,10 +217,10 @@ module.exports = {
 
     // ── ADMIN-RETIRER ───────────────────────────────────────
     if (sub === 'admin-retirer') {
-      if (!isAdmin(member)) return interaction.reply({ content: '❌ Réservé aux admins.', ephemeral: true });
+      if (!isAdmin(member)) return interaction.editReply({ content: '❌ Réservé aux admins.', ephemeral: true });
       const itemId = interaction.options.getInteger('id');
       db.db.prepare('UPDATE boutique_items SET actif=0 WHERE id=? AND guild_id=?').run(itemId, guildId);
-      return interaction.reply({ content: `✅ Article #${itemId} retiré de la boutique.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Article #${itemId} retiré de la boutique.`, ephemeral: true });
     }
   },
 };

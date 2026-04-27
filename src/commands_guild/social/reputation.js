@@ -28,6 +28,10 @@ module.exports = {
     .addSubcommand(s => s.setName('historique').setDescription('📜 Historique des reps reçus')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
@@ -40,15 +44,15 @@ module.exports = {
       const target = interaction.options.getUser('membre');
       const raison = interaction.options.getString('raison') || null;
 
-      if (target.id === userId) return interaction.reply({ content: '❌ Vous ne pouvez pas vous donner de la réputation.', ephemeral: true });
-      if (target.bot) return interaction.reply({ content: '❌ Les bots ne peuvent pas recevoir de réputation.', ephemeral: true });
+      if (target.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous donner de la réputation.', ephemeral: true });
+      if (target.bot) return interaction.editReply({ content: '❌ Les bots ne peuvent pas recevoir de réputation.', ephemeral: true });
 
       const sender = db.getUser(userId, guildId);
       const cooldownLeft = COOLDOWN - (now - (sender.last_rep || 0));
       if (cooldownLeft > 0) {
         const hours = Math.floor(cooldownLeft / 3600);
         const mins = Math.floor((cooldownLeft % 3600) / 60);
-        return interaction.reply({ content: `⏳ Vous pourrez donner de la réputation dans **${hours}h ${mins}m**.`, ephemeral: true });
+        return interaction.editReply({ content: `⏳ Vous pourrez donner de la réputation dans **${hours}h ${mins}m**.`, ephemeral: true });
       }
 
       db.getUser(target.id, guildId); // S'assurer que l'utilisateur existe
@@ -60,7 +64,7 @@ module.exports = {
       db.addCoins(target.id, guildId, 50);
 
       const targetData = db.getUser(target.id, guildId);
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('⭐ Réputation donnée !')
           .setDescription(`<@${userId}> a donné ⭐ **+1 réputation** à <@${target.id}>${raison ? `\n*"${raison}"*` : ''}`)
           .addFields(
@@ -72,13 +76,13 @@ module.exports = {
     }
 
     if (sub === 'retirer') {
-      if (!interaction.member.permissions.has(0x4000n)) return interaction.reply({ content: '❌ Modérateur uniquement.', ephemeral: true });
+      if (!interaction.member.permissions.has(0x4000n)) return interaction.editReply({ content: '❌ Modérateur uniquement.', ephemeral: true });
       const target = interaction.options.getUser('membre');
       const montant = interaction.options.getInteger('montant');
       db.getUser(target.id, guildId);
       db.db.prepare('UPDATE users SET reputation = MAX(0, reputation - ?) WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
       db.db.prepare('INSERT INTO rep_log (guild_id, from_id, to_id, amount, reason) VALUES (?,?,?,?,?)').run(guildId, userId, target.id, -montant, 'Retrait staff');
-      return interaction.reply({ content: `✅ **-${montant} réputation** retirée à <@${target.id}>.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ **-${montant} réputation** retirée à <@${target.id}>.`, ephemeral: true });
     }
 
     if (sub === 'voir') {
@@ -91,7 +95,7 @@ module.exports = {
 
       const stars = '⭐'.repeat(Math.min(rep, 5)) + (rep > 5 ? ` +${rep - 5}` : '');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle(`⭐ Réputation de ${target.username}`)
           .setThumbnail(target.displayAvatarURL({ size: 256 }))
           .addFields(
@@ -104,21 +108,21 @@ module.exports = {
 
     if (sub === 'top') {
       const top = db.db.prepare('SELECT user_id, reputation FROM users WHERE guild_id=? AND reputation > 0 ORDER BY reputation DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '❌ Aucun membre avec de la réputation.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '❌ Aucun membre avec de la réputation.', ephemeral: true });
 
       const desc = top.map((u, i) => {
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i+1}.**`;
         return `${medal} <@${u.user_id}> — **${u.reputation}** ⭐`;
       }).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('🏆 Top Réputation').setDescription(desc)
       ]});
     }
 
     if (sub === 'historique') {
       const history = db.db.prepare('SELECT * FROM rep_log WHERE guild_id=? AND to_id=? ORDER BY given_at DESC LIMIT 10').all(guildId, userId);
-      if (!history.length) return interaction.reply({ content: '❌ Aucun historique de réputation.', ephemeral: true });
+      if (!history.length) return interaction.editReply({ content: '❌ Aucun historique de réputation.', ephemeral: true });
 
       const desc = history.map(r => {
         const emoji = r.amount > 0 ? '⭐' : '📉';
@@ -126,7 +130,7 @@ module.exports = {
         return `${emoji} ${r.amount > 0 ? '+' : ''}${r.amount} de <@${r.from_id}>${r.reason ? ` — *${r.reason}*` : ''} • ${date}`;
       }).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('📜 Historique Réputation').setDescription(desc)
       ], ephemeral: true });
     }

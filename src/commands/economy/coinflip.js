@@ -13,6 +13,10 @@ module.exports = {
     .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier (laisse vide pour un défi ouvert)').setRequired(false)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const miseRaw = interaction.options.get('mise')?.value;
     const challenger0 = db.getUser(interaction.user.id, interaction.guildId);
@@ -123,7 +127,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }},

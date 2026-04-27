@@ -16,8 +16,12 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator))
-      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
@@ -25,7 +29,7 @@ module.exports = {
     if (sub === 'activer') {
       db.setConfig(interaction.guildId, 'automod_enabled', 1);
       db.db.prepare("UPDATE guild_config SET automod_enabled = 1 WHERE guild_id = ?").run(interaction.guildId);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('🛡️ Anti-Nuke Activé !')
@@ -43,7 +47,7 @@ module.exports = {
     }
 
     if (sub === 'desactiver') {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setDescription('❌ Protection anti-nuke désactivée.\n\n⚠️ Votre serveur n\'est plus protégé contre les nukes !')
@@ -52,7 +56,7 @@ module.exports = {
     }
 
     if (sub === 'statut') {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(cfg.automod_enabled ? '#2ECC71' : '#E74C3C')
           .setTitle('🛡️ Statut Anti-Nuke')

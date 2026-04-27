@@ -14,6 +14,10 @@ module.exports = {
   cooldown: 30,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const question = interaction.options.getString('question');
     const duration = (interaction.options.getInteger('duree_heures') || 24) * 3600;
     const cfg      = db.getConfig(interaction.guildId);
@@ -100,7 +104,7 @@ module.exports = {
     try {
       const poll = db.db.prepare('SELECT * FROM polls WHERE id = ?').get(pollId);
       if (!poll) {
-        await interaction.reply({ content: '❌ Sondage non trouvé.', ephemeral: true }).catch(() => {});
+        await interaction.editReply({ content: '❌ Sondage non trouvé.', ephemeral: true }).catch(() => {});
         return true;
       }
 

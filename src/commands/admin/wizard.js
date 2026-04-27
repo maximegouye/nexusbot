@@ -9,9 +9,13 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator))
-      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const cfg = db.getConfig(interaction.guildId);
     const guild = interaction.guild;
@@ -61,7 +65,7 @@ module.exports = {
       new ButtonBuilder().setCustomId('wizard_done').setLabel('✅ Fermer').setStyle(ButtonStyle.Secondary),
     );
 
-    const msg = await interaction.reply({ embeds: [statusEmbed], components: [row1], fetchReply: true, ephemeral: true });
+    const msg = await interaction.editReply({ embeds: [statusEmbed], components: [row1], fetchReply: true, ephemeral: true });
 
     const filter = i => i.user.id === interaction.user.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 120000 });
@@ -125,7 +129,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

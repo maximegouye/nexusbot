@@ -32,10 +32,14 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const key = `${interaction.user.id}:${interaction.guildId}`;
     if (activeGames.has(key))
-      return interaction.reply({ content: '⏳ Tu as déjà une partie en cours !', ephemeral: true });
+      return interaction.editReply({ content: '⏳ Tu as déjà une partie en cours !', ephemeral: true });
 
     const mot    = mots[Math.floor(Math.random() * mots.length)];
     const lettre = mot.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split('');
@@ -67,7 +71,7 @@ module.exports = {
         .setFooter({ text: 'Réponds avec une lettre ou un mot complet !' });
     }
 
-    const sentMsg = await interaction.reply({ embeds: [buildEmbed(jeu)], fetchReply: true });
+    const sentMsg = await interaction.editReply({ embeds: [buildEmbed(jeu)], fetchReply: true });
 
     const filter    = m => m.author.id === interaction.user.id;
     const collector = interaction.channel.createMessageCollector({ filter, time: 180000 });
@@ -135,7 +139,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

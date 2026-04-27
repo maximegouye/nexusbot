@@ -48,6 +48,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'definir') {
@@ -64,10 +68,10 @@ module.exports = {
           .setTitle('⭐ Multiplicateur Défini')
           .setDescription(`<@&${role.id}> : **×${mult}** XP`);
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       } catch (err) {
         console.error('Erreur xpmult definir:', err);
-        return interaction.reply({ content: '❌ Erreur lors de la configuration.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Erreur lors de la configuration.', ephemeral: true });
       }
     }
 
@@ -79,7 +83,7 @@ module.exports = {
       ).run(interaction.guildId, role.id);
 
       if (result.changes === 0) {
-        return interaction.reply({ content: '❌ Ce rôle n\'a pas de multiplicateur configuré.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce rôle n\'a pas de multiplicateur configuré.', ephemeral: true });
       }
 
       const embed = new EmbedBuilder()
@@ -87,7 +91,7 @@ module.exports = {
         .setTitle('⭐ Multiplicateur Retiré')
         .setDescription(`<@&${role.id}> n'a plus de bonus XP`);
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'liste') {
@@ -110,7 +114,7 @@ module.exports = {
         embed.setDescription('Aucun multiplicateur configuré.');
       }
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
   }
 };

@@ -33,16 +33,20 @@ module.exports = {
       .addChannelOption(o => o.setName('salon').setDescription('Salon de logs'))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 
-    if (!interaction.member.permissions.has(0x20n)) return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+    if (!interaction.member.permissions.has(0x20n)) return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
 
     const cfg = db.getConfig(guildId);
 
     if (sub === 'voir') {
       const words = cfg.automod_words ? JSON.parse(cfg.automod_words) : [];
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#E74C3C').setTitle('🤖 Configuration AutoMod')
           .addFields(
             { name: '🚫 Anti-Spam', value: cfg.automod_spam ? `✅ Actif (seuil: ${cfg.automod_spam_threshold})` : '❌ Inactif', inline: true },
@@ -60,25 +64,25 @@ module.exports = {
       const seuil = interaction.options.getInteger('seuil') || cfg.automod_spam_threshold || 5;
       db.setConfig(guildId, 'automod_spam', actif ? 1 : 0);
       db.setConfig(guildId, 'automod_spam_threshold', seuil);
-      return interaction.reply({ content: `✅ Anti-spam **${actif ? 'activé' : 'désactivé'}** (seuil: ${seuil} msg/5s).`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Anti-spam **${actif ? 'activé' : 'désactivé'}** (seuil: ${seuil} msg/5s).`, ephemeral: true });
     }
 
     if (sub === 'caps') {
       const actif = interaction.options.getBoolean('actif');
       db.setConfig(guildId, 'automod_caps', actif ? 1 : 0);
-      return interaction.reply({ content: `✅ Anti-CAPS **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Anti-CAPS **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
     }
 
     if (sub === 'invites') {
       const actif = interaction.options.getBoolean('actif');
       db.setConfig(guildId, 'automod_invites', actif ? 1 : 0);
-      return interaction.reply({ content: `✅ Anti-invitations **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Anti-invitations **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
     }
 
     if (sub === 'liens') {
       const actif = interaction.options.getBoolean('actif');
       db.setConfig(guildId, 'automod_links', actif ? 1 : 0);
-      return interaction.reply({ content: `✅ Blocage des liens **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Blocage des liens **${actif ? 'activé' : 'désactivé'}**.`, ephemeral: true });
     }
 
     if (sub === 'mots') {
@@ -86,7 +90,7 @@ module.exports = {
       let words = cfg.automod_words ? JSON.parse(cfg.automod_words) : [];
 
       if (action === 'voir') {
-        return interaction.reply({ embeds: [
+        return interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('#E74C3C').setTitle('🤬 Mots Interdits')
             .setDescription(words.length ? words.map(w => `\`${w}\``).join(', ') : 'Aucun mot interdit configuré.')
         ], ephemeral: true });
@@ -94,23 +98,23 @@ module.exports = {
 
       if (action === 'ajouter') {
         const mot = interaction.options.getString('mot');
-        if (!mot) return interaction.reply({ content: '❌ Précisez un mot à ajouter.', ephemeral: true });
-        if (words.includes(mot.toLowerCase())) return interaction.reply({ content: '❌ Ce mot est déjà dans la liste.', ephemeral: true });
+        if (!mot) return interaction.editReply({ content: '❌ Précisez un mot à ajouter.', ephemeral: true });
+        if (words.includes(mot.toLowerCase())) return interaction.editReply({ content: '❌ Ce mot est déjà dans la liste.', ephemeral: true });
         words.push(mot.toLowerCase());
         db.setConfig(guildId, 'automod_words', JSON.stringify(words));
-        return interaction.reply({ content: `✅ Mot \`${mot}\` ajouté à la liste noire. (${words.length} mots)`, ephemeral: true });
+        return interaction.editReply({ content: `✅ Mot \`${mot}\` ajouté à la liste noire. (${words.length} mots)`, ephemeral: true });
       }
 
       if (action === 'effacer') {
         db.setConfig(guildId, 'automod_words', JSON.stringify([]));
-        return interaction.reply({ content: '✅ Liste des mots interdits effacée.', ephemeral: true });
+        return interaction.editReply({ content: '✅ Liste des mots interdits effacée.', ephemeral: true });
       }
     }
 
     if (sub === 'logs') {
       const channel = interaction.options.getChannel('salon');
       db.setConfig(guildId, 'automod_log', channel?.id || null);
-      return interaction.reply({ content: channel ? `✅ Logs AutoMod → ${channel}` : '✅ Logs AutoMod désactivés.', ephemeral: true });
+      return interaction.editReply({ content: channel ? `✅ Logs AutoMod → ${channel}` : '✅ Logs AutoMod désactivés.', ephemeral: true });
     }
   }
 };

@@ -44,6 +44,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const cible = interaction.options.getUser('cible') || interaction.user;
 
@@ -59,7 +63,7 @@ module.exports = {
       .setDescription(`<@${cible.id}> doit choisir : **Vérité** ou **Défi** ?`)
       .setFooter({ text: 'Clique sur un bouton ci-dessous !' });
 
-    const msg = await interaction.reply({ embeds: [introEmbed], components: [row], fetchReply: true });
+    const msg = await interaction.editReply({ embeds: [introEmbed], components: [row], fetchReply: true });
 
     const filter  = i => i.user.id === cible.id || i.user.id === interaction.user.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 30000, max: 1 });
@@ -106,7 +110,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

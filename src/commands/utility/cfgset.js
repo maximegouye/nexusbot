@@ -32,6 +32,10 @@ module.exports = {
       .addStringOption(o => o.setName('table').setDescription('Nom de la table').setRequired(true).setMaxLength(80))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [ef.error('Permission manquante', 'Tu dois avoir **Gérer le serveur**.')], ephemeral: true });
     }

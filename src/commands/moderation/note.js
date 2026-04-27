@@ -16,9 +16,13 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers))
-      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const sub = interaction.options.getSubcommand();
 
@@ -27,7 +31,7 @@ module.exports = {
       const texte  = interaction.options.getString('texte');
       db.db.prepare('INSERT INTO mod_notes (guild_id, user_id, mod_id, note) VALUES (?, ?, ?, ?)')
         .run(interaction.guildId, target.id, interaction.user.id, texte);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#F39C12')
           .setDescription(`📝 Note ajoutée pour **${target.username}** : *"${texte}"*`)
@@ -39,14 +43,14 @@ module.exports = {
       const target = interaction.options.getUser('membre');
       const notes  = db.db.prepare('SELECT * FROM mod_notes WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC').all(interaction.guildId, target.id);
       if (!notes.length)
-        return interaction.reply({ content: `ℹ️ Aucune note pour **${target.username}**.`, ephemeral: true });
+        return interaction.editReply({ content: `ℹ️ Aucune note pour **${target.username}**.`, ephemeral: true });
 
       const list = notes.map(n => {
         const date = new Date(n.created_at * 1000).toLocaleDateString('fr-FR');
         return `\`#${n.id}\` [${date}] <@${n.mod_id}> : ${n.note}`;
       }).join('\n');
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle(`📝 Notes de modération — ${target.username}`)
@@ -59,9 +63,9 @@ module.exports = {
     if (sub === 'supprimer') {
       const id   = interaction.options.getInteger('id');
       const note = db.db.prepare('SELECT * FROM mod_notes WHERE id = ? AND guild_id = ?').get(id, interaction.guildId);
-      if (!note) return interaction.reply({ content: `❌ Note \`#${id}\` introuvable.`, ephemeral: true });
+      if (!note) return interaction.editReply({ content: `❌ Note \`#${id}\` introuvable.`, ephemeral: true });
       db.db.prepare('DELETE FROM mod_notes WHERE id = ?').run(id);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`🗑️ Note \`#${id}\` supprimée.`)], ephemeral: true
       });
     }
@@ -72,7 +76,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

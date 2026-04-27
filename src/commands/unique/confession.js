@@ -132,6 +132,10 @@ module.exports = {
   cooldown: 2,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     initDB();
 
     const subcommand = interaction.options.getSubcommand();

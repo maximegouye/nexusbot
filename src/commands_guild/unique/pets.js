@@ -78,6 +78,10 @@ module.exports = {
     .addSubcommand(s => s.setName('abandonner').setDescription('💔 Abandonner votre animal (irréversible)')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
@@ -309,7 +313,7 @@ async function handleComponent(interaction, customId) {
   if (customId.includes('abandon_confirm')) {
     const userId = customId.split('_')[3] || customId.split('_')[2];
     if (interaction.user.id !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     db.db.prepare('DELETE FROM pets WHERE guild_id=? AND user_id=?').run(interaction.guildId, interaction.user.id);
@@ -317,7 +321,7 @@ async function handleComponent(interaction, customId) {
   } else if (customId.includes('abandon_cancel')) {
     const userId = customId.split('_')[3] || customId.split('_')[2];
     if (interaction.user.id !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.update({ content: '✅ Abandon annulé.', components: [] }).catch(() => {});

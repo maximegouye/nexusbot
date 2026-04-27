@@ -28,6 +28,10 @@ module.exports = {
   cooldown: 30,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const cfg    = db.getConfig(interaction.guildId);
     const emoji  = cfg.currency_emoji || '🪙';
@@ -62,7 +66,7 @@ module.exports = {
       .addFields({ name: '🏆 Récompense', value: `**${reward} ${name}** ${emoji}`, inline: true })
       .setFooter({ text: `Difficulté : ${diff}` });
 
-    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const msg = await interaction.editReply({ embeds: [embed], components: [row], fetchReply: true });
     const answered = new Set();
 
     const collector = msg.createMessageComponentCollector({ time: timeLimit * 1000 });
@@ -105,7 +109,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

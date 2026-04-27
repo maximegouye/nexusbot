@@ -34,6 +34,10 @@ module.exports = {
       .addChannelOption(o => o.setName('canal').setDescription('Canal (vide = canal actuel)').setRequired(false))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
@@ -124,7 +128,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

@@ -13,12 +13,16 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const sub  = interaction.options.getSubcommand();
     const key  = `${interaction.guildId}:${interaction.channelId}`;
 
     if (sub === 'info') {
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#9B59B6')
           .setTitle('🔤 Règles - Chaîne de Mots')
@@ -36,19 +40,19 @@ module.exports = {
 
     if (sub === 'stop') {
       if (!activeGames.has(key))
-        return interaction.reply({ content: '❌ Aucune partie en cours dans ce salon.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Aucune partie en cours dans ce salon.', ephemeral: true });
 
       const game = activeGames.get(key);
       game.collector?.stop('manual');
       activeGames.delete(key);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription('⏹️ Partie de chaîne de mots arrêtée.')]
       });
     }
 
     // START
     if (activeGames.has(key))
-      return interaction.reply({ content: '⏳ Une partie est déjà en cours dans ce salon !', ephemeral: true });
+      return interaction.editReply({ content: '⏳ Une partie est déjà en cours dans ce salon !', ephemeral: true });
 
     const timeLimit = (interaction.options.getInteger('temps') || 30) * 1000;
     const starterWords = ['chat', 'arbre', 'soleil', 'montagne', 'fleuve', 'oiseau', 'nuage', 'fleur', 'étoile', 'rivière'];
@@ -71,7 +75,7 @@ module.exports = {
       .setDescription(`Le premier mot est : **${firstWord}**\n\nProchain mot à commencer par : **${firstWord.slice(-1).toUpperCase()}**\n\nVous avez **${timeLimit / 1000}s** par mot.`)
       .setFooter({ text: 'Écrivez votre mot dans ce salon !' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
 
     // Lancer le timer
     function resetTimer() {
@@ -159,7 +163,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

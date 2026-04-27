@@ -22,6 +22,10 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const target = interaction.options.getUser('cible');
     const mise   = interaction.options.getInteger('mise');
@@ -29,13 +33,13 @@ module.exports = {
     const emoji  = cfg.currency_emoji || '🪙';
     const name   = cfg.currency_name  || 'Coins';
 
-    if (target.bot) return interaction.reply({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas te défier toi-même.', ephemeral: true });
+    if (target.bot) return interaction.editReply({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
+    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas te défier toi-même.', ephemeral: true });
 
     // Vérifier la mise si spécifiée
     if (mise) {
       const challenger = db.getUser(interaction.user.id, interaction.guildId);
-      if (challenger.balance < mise) return interaction.reply({ content: `❌ Tu n'as pas assez de ${name} pour cette mise.`, ephemeral: true });
+      if (challenger.balance < mise) return interaction.editReply({ content: `❌ Tu n'as pas assez de ${name} pour cette mise.`, ephemeral: true });
     }
 
     const defi = DEFIS[Math.floor(Math.random() * DEFIS.length)];
@@ -58,7 +62,7 @@ module.exports = {
       )
       .setFooter({ text: `Défi de ${interaction.user.username}` });
 
-    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const msg = await interaction.editReply({ embeds: [embed], components: [row], fetchReply: true });
 
     const collector = msg.createMessageComponentCollector({
       filter: i => i.user.id === target.id,
@@ -145,7 +149,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

@@ -37,6 +37,10 @@ module.exports = {
       .addUserOption(o => o.setName('membre').setDescription('Nouveau propriétaire').setRequired(true))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const guild = interaction.guild;
@@ -44,7 +48,7 @@ module.exports = {
 
     if (sub === 'setup') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
       }
       const hub = interaction.options.getChannel('hub');
       const cat = interaction.options.getChannel('categorie');
@@ -52,13 +56,13 @@ module.exports = {
       const limite = interaction.options.getInteger('limite') ?? 0;
 
       if (hub.type !== ChannelType.GuildVoice) {
-        return interaction.reply({ content: '❌ Le hub doit être un salon vocal.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Le hub doit être un salon vocal.', ephemeral: true });
       }
 
       db.db.prepare('INSERT OR REPLACE INTO tempvoice_config (guild_id, hub_channel_id, category_id, default_limit, default_name) VALUES (?,?,?,?,?)')
         .run(guildId, hub.id, cat?.id || null, limite, nom);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle('🔊 TempVoice configuré !')
           .addFields(
             { name: '🔗 Hub', value: `${hub}`, inline: true },
@@ -72,11 +76,11 @@ module.exports = {
 
     if (sub === 'voir') {
       const cfg = db.db.prepare('SELECT * FROM tempvoice_config WHERE guild_id=?').get(guildId);
-      if (!cfg) return interaction.reply({ content: '❌ TempVoice non configuré. Utilisez `/tempvoice setup`.', ephemeral: true });
+      if (!cfg) return interaction.editReply({ content: '❌ TempVoice non configuré. Utilisez `/tempvoice setup`.', ephemeral: true });
 
       const actives = db.db.prepare('SELECT COUNT(*) as c FROM tempvoice_channels WHERE guild_id=?').get(guildId);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle('🔊 Configuration TempVoice')
           .addFields(
             { name: '🔗 Hub', value: cfg.hub_channel_id ? `<#${cfg.hub_channel_id}>` : 'Non défini', inline: true },
@@ -90,62 +94,62 @@ module.exports = {
 
     if (sub === 'disable') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
       }
       db.db.prepare('DELETE FROM tempvoice_config WHERE guild_id=?').run(guildId);
-      return interaction.reply({ content: '✅ TempVoice désactivé.', ephemeral: true });
+      return interaction.editReply({ content: '✅ TempVoice désactivé.', ephemeral: true });
     }
 
     // Commandes pour gérer son propre salon
     const ownedChannel = db.db.prepare('SELECT * FROM tempvoice_channels WHERE guild_id=? AND owner_id=?').get(guildId, userId);
     if (!ownedChannel) {
-      return interaction.reply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Vous n\'avez pas de salon vocal temporaire actif.', ephemeral: true });
     }
     const voiceChannel = guild.channels.cache.get(ownedChannel.channel_id);
     if (!voiceChannel) {
       db.db.prepare('DELETE FROM tempvoice_channels WHERE channel_id=?').run(ownedChannel.channel_id);
-      return interaction.reply({ content: '❌ Votre salon vocal n\'existe plus.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Votre salon vocal n\'existe plus.', ephemeral: true });
     }
 
     if (sub === 'rename') {
       const nom = interaction.options.getString('nom');
       await voiceChannel.setName(nom).catch(() => {});
-      return interaction.reply({ content: `✅ Salon renommé en **${nom}**.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Salon renommé en **${nom}**.`, ephemeral: true });
     }
 
     if (sub === 'limite') {
       const nb = interaction.options.getInteger('nombre');
       await voiceChannel.setUserLimit(nb).catch(() => {});
-      return interaction.reply({ content: `✅ Limite mise à **${nb === 0 ? 'illimité' : nb}**.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Limite mise à **${nb === 0 ? 'illimité' : nb}**.`, ephemeral: true });
     }
 
     if (sub === 'lock') {
       const isLocked = !voiceChannel.permissionOverwrites.cache.get(guild.id)?.deny?.has('Connect');
       if (isLocked) {
         await voiceChannel.permissionOverwrites.edit(guild.id, { Connect: false });
-        return interaction.reply({ content: '🔒 Salon verrouillé — plus personne ne peut rejoindre.', ephemeral: true });
+        return interaction.editReply({ content: '🔒 Salon verrouillé — plus personne ne peut rejoindre.', ephemeral: true });
       } else {
         await voiceChannel.permissionOverwrites.edit(guild.id, { Connect: null });
-        return interaction.reply({ content: '🔓 Salon déverrouillé — tout le monde peut rejoindre.', ephemeral: true });
+        return interaction.editReply({ content: '🔓 Salon déverrouillé — tout le monde peut rejoindre.', ephemeral: true });
       }
     }
 
     if (sub === 'kick') {
       const target = interaction.options.getMember('membre');
       if (!target?.voice?.channelId || target.voice.channelId !== ownedChannel.channel_id) {
-        return interaction.reply({ content: '❌ Ce membre n\'est pas dans votre salon.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce membre n\'est pas dans votre salon.', ephemeral: true });
       }
       await target.voice.disconnect('TempVoice kick').catch(() => {});
-      return interaction.reply({ content: `✅ **${target.user.username}** a été expulsé de votre salon.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ **${target.user.username}** a été expulsé de votre salon.`, ephemeral: true });
     }
 
     if (sub === 'transfer') {
       const newOwner = interaction.options.getMember('membre');
       if (!newOwner?.voice?.channelId || newOwner.voice.channelId !== ownedChannel.channel_id) {
-        return interaction.reply({ content: '❌ Ce membre n\'est pas dans votre salon.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce membre n\'est pas dans votre salon.', ephemeral: true });
       }
       db.db.prepare('UPDATE tempvoice_channels SET owner_id=? WHERE channel_id=?').run(newOwner.id, ownedChannel.channel_id);
-      return interaction.reply({ content: `✅ Propriété transférée à **${newOwner.user.username}**.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Propriété transférée à **${newOwner.user.username}**.`, ephemeral: true });
     }
   }
 };

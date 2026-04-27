@@ -41,11 +41,15 @@ module.exports = {
         .addChoices(...Object.entries(LOG_TYPES).map(([k, v]) => ({ name: v.label, value: k }))))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 
     if (!interaction.member.permissions.has(0x20n)) // ManageGuild
-      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     if (sub === 'setup') {
       const type = interaction.options.getString('type');
@@ -53,7 +57,7 @@ module.exports = {
 
       db.setConfig(guildId, `log_${type}`, channel?.id || null);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#2ECC71')
           .setDescription(channel
             ? `✅ Logs **${LOG_TYPES[type].label}** → ${channel}`
@@ -68,7 +72,7 @@ module.exports = {
         return `${v.label} — ${chId ? `<#${chId}>` : '❌ Désactivé'}`;
       }).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle('📋 Configuration des Logs')
           .setDescription(lines)
       ], ephemeral: true });
@@ -79,7 +83,7 @@ module.exports = {
       const cfg = db.getConfig(guildId);
       const chId = cfg[`log_${type}`];
 
-      if (!chId) return interaction.reply({ content: `❌ Aucun canal configuré pour les logs **${LOG_TYPES[type].label}**.`, ephemeral: true });
+      if (!chId) return interaction.editReply({ content: `❌ Aucun canal configuré pour les logs **${LOG_TYPES[type].label}**.`, ephemeral: true });
 
       try {
         const ch = await interaction.client.channels.fetch(chId);
@@ -88,9 +92,9 @@ module.exports = {
             .setDescription('Ceci est un message de test. Les logs s\'afficheront ici.')
             .setTimestamp()
         ]});
-        return interaction.reply({ content: `✅ Message de test envoyé dans <#${chId}> !`, ephemeral: true });
+        return interaction.editReply({ content: `✅ Message de test envoyé dans <#${chId}> !`, ephemeral: true });
       } catch (e) {
-        return interaction.reply({ content: `❌ Impossible d'envoyer dans <#${chId}> : ${e.message}`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Impossible d'envoyer dans <#${chId}> : ${e.message}`, ephemeral: true });
       }
     }
   }

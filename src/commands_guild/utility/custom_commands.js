@@ -42,12 +42,16 @@ module.exports = {
       .addStringOption(o => o.setName('nouvelle_reponse').setDescription('Nouvelle réponse').setRequired(true))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const isAdmin = interaction.member.permissions.has(0x20n) || interaction.member.permissions.has(0x4000n);
 
-    if (!isAdmin) return interaction.reply({ content: '❌ Staff uniquement.', ephemeral: true });
+    if (!isAdmin) return interaction.editReply({ content: '❌ Staff uniquement.', ephemeral: true });
 
     if (sub === 'creer') {
       const trigger = interaction.options.getString('trigger').toLowerCase().trim();
@@ -61,12 +65,12 @@ module.exports = {
         db.db.prepare('INSERT INTO custom_commands (guild_id, trigger, response, created_by, embed, embed_color, restricted_role, cooldown) VALUES(?,?,?,?,?,?,?,?)')
           .run(guildId, trigger, reponse, userId, isEmbed ? 1 : 0, couleur, roleReq?.id || null, cooldown);
       } catch {
-        return interaction.reply({ content: `❌ La commande \`${trigger}\` existe déjà. Utilisez \`/customcmd modifier\`.`, ephemeral: true });
+        return interaction.editReply({ content: `❌ La commande \`${trigger}\` existe déjà. Utilisez \`/customcmd modifier\`.`, ephemeral: true });
       }
 
       const count = db.db.prepare('SELECT COUNT(*) as c FROM custom_commands WHERE guild_id=?').get(guildId);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Commande créée !')
           .addFields(
             { name: '⚡ Trigger', value: `\`${trigger}\``, inline: true },
@@ -81,19 +85,19 @@ module.exports = {
     if (sub === 'supprimer') {
       const trigger = interaction.options.getString('trigger').toLowerCase();
       const result = db.db.prepare('DELETE FROM custom_commands WHERE guild_id=? AND trigger=?').run(guildId, trigger);
-      if (!result.changes) return interaction.reply({ content: `❌ Commande \`${trigger}\` introuvable.`, ephemeral: true });
-      return interaction.reply({ content: `✅ Commande \`${trigger}\` supprimée.`, ephemeral: true });
+      if (!result.changes) return interaction.editReply({ content: `❌ Commande \`${trigger}\` introuvable.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Commande \`${trigger}\` supprimée.`, ephemeral: true });
     }
 
     if (sub === 'liste') {
       const cmds = db.db.prepare('SELECT trigger, uses, embed, created_at FROM custom_commands WHERE guild_id=? ORDER BY uses DESC').all(guildId);
-      if (!cmds.length) return interaction.reply({ content: '❌ Aucune commande personnalisée sur ce serveur.\nCréez-en avec `/customcmd creer` !', ephemeral: true });
+      if (!cmds.length) return interaction.editReply({ content: '❌ Aucune commande personnalisée sur ce serveur.\nCréez-en avec `/customcmd creer` !', ephemeral: true });
 
       // Afficher par pages de 20
       const desc = cmds.slice(0, 50).map((c, i) => `**${i+1}.** \`${c.trigger}\` ${c.embed ? '📋' : '💬'} — ${c.uses} utilisations`).join('\n');
       const more = cmds.length > 50 ? `\n*...et ${cmds.length - 50} autres*` : '';
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle(`⚡ Commandes Custom — ${interaction.guild.name}`)
           .setDescription(desc + more)
           .setFooter({ text: `${cmds.length} commandes • Utilisables avec n! ou !` })
@@ -103,9 +107,9 @@ module.exports = {
     if (sub === 'voir') {
       const trigger = interaction.options.getString('trigger').toLowerCase();
       const cmd = db.db.prepare('SELECT * FROM custom_commands WHERE guild_id=? AND trigger=?').get(guildId, trigger);
-      if (!cmd) return interaction.reply({ content: `❌ Commande \`${trigger}\` introuvable.`, ephemeral: true });
+      if (!cmd) return interaction.editReply({ content: `❌ Commande \`${trigger}\` introuvable.`, ephemeral: true });
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor(cmd.embed_color || '#7B2FBE').setTitle(`⚡ \`${cmd.trigger}\``)
           .addFields(
             { name: '💬 Mode', value: cmd.embed ? 'Embed' : 'Texte', inline: true },
@@ -122,8 +126,8 @@ module.exports = {
       const trigger = interaction.options.getString('trigger').toLowerCase();
       const newReponse = interaction.options.getString('nouvelle_reponse');
       const result = db.db.prepare('UPDATE custom_commands SET response=? WHERE guild_id=? AND trigger=?').run(newReponse, guildId, trigger);
-      if (!result.changes) return interaction.reply({ content: `❌ Commande \`${trigger}\` introuvable.`, ephemeral: true });
-      return interaction.reply({ content: `✅ Commande \`${trigger}\` mise à jour.`, ephemeral: true });
+      if (!result.changes) return interaction.editReply({ content: `❌ Commande \`${trigger}\` introuvable.`, ephemeral: true });
+      return interaction.editReply({ content: `✅ Commande \`${trigger}\` mise à jour.`, ephemeral: true });
     }
   }
 };

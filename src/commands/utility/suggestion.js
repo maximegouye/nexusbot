@@ -18,21 +18,25 @@ module.exports = {
   cooldown: 30,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
 
     if (sub === 'setup') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'suggestion_channel', canal.id);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de suggestions configuré : ${canal}`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de suggestions configuré : ${canal}`)], ephemeral: true });
     }
 
     if (sub === 'proposer') {
-      if (!cfg.suggestion_channel) return interaction.reply({ content: '❌ Le canal de suggestions n\'est pas configuré. Un admin doit utiliser `/suggestion setup`.', ephemeral: true });
+      if (!cfg.suggestion_channel) return interaction.editReply({ content: '❌ Le canal de suggestions n\'est pas configuré. Un admin doit utiliser `/suggestion setup`.', ephemeral: true });
       const idee = interaction.options.getString('idee');
       const channel = interaction.guild.channels.cache.get(cfg.suggestion_channel);
-      if (!channel) return interaction.reply({ content: '❌ Canal de suggestions introuvable.', ephemeral: true });
+      if (!channel) return interaction.editReply({ content: '❌ Canal de suggestions introuvable.', ephemeral: true });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('sugg_up').setLabel('0').setEmoji('👍').setStyle(ButtonStyle.Success),
@@ -53,16 +57,16 @@ module.exports = {
       db.db.prepare('INSERT INTO suggestions (guild_id, channel_id, message_id, user_id, content, status, upvotes, downvotes, created_at) VALUES (?, ?, ?, ?, ?, "pending", 0, 0, ?)')
         .run(interaction.guildId, channel.id, msg.id, interaction.user.id, idee, Math.floor(Date.now() / 1000));
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Ta suggestion a été envoyée dans ${channel} ! Merci pour ta contribution.`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Ta suggestion a été envoyée dans ${channel} ! Merci pour ta contribution.`)], ephemeral: true });
     }
 
     if (sub === 'accepter' || sub === 'refuser') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
       const id      = interaction.options.getInteger('id');
       const message = interaction.options.getString('reponse') || interaction.options.getString('raison') || null;
       const sugg    = db.db.prepare('SELECT * FROM suggestions WHERE id = ? AND guild_id = ?').get(id, interaction.guildId);
 
-      if (!sugg) return interaction.reply({ content: `❌ Suggestion #${id} introuvable.`, ephemeral: true });
+      if (!sugg) return interaction.editReply({ content: `❌ Suggestion #${id} introuvable.`, ephemeral: true });
 
       const accepted = sub === 'accepter';
       db.db.prepare('UPDATE suggestions SET status = ?, mod_id = ?, mod_response = ? WHERE id = ?')
@@ -88,7 +92,7 @@ module.exports = {
         } catch {}
       }
 
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(accepted ? '#2ECC71' : '#FF6B6B').setDescription(`${accepted ? '✅ Suggestion #' + id + ' acceptée.' : '❌ Suggestion #' + id + ' refusée.'}`)], ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(accepted ? '#2ECC71' : '#FF6B6B').setDescription(`${accepted ? '✅ Suggestion #' + id + ' acceptée.' : '❌ Suggestion #' + id + ' refusée.'}`)], ephemeral: true });
     }
   }
 };

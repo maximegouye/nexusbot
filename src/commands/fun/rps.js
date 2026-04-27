@@ -15,6 +15,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const opponent = interaction.options.getUser('adversaire');
     const cfg      = db.getConfig(interaction.guildId);
@@ -27,7 +31,7 @@ module.exports = {
 
     // ── vs Bot ──
     if (!opponent || opponent.bot) {
-      const msg = await interaction.reply({
+      const msg = await interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor(cfg.color || '#7B2FBE')
           .setTitle('🪨 Pierre-Feuille-Ciseaux')
@@ -74,11 +78,11 @@ module.exports = {
       return;
     }
 
-    if (opponent.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
+    if (opponent.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
 
     // ── vs Joueur ──
     const choices = {};
-    const msg = await interaction.reply({
+    const msg = await interaction.editReply({
       content: `${opponent}, **${interaction.user.username}** te défie à Pierre-Feuille-Ciseaux ! Choisis ton arme !`,
       embeds: [new EmbedBuilder()
         .setColor(cfg.color || '#7B2FBE')
@@ -142,7 +146,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

@@ -21,6 +21,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const m1 = interaction.options.getUser('membre1');
     const m2 = interaction.options.getUser('membre2') || interaction.user;
 
@@ -47,7 +51,7 @@ module.exports = {
       .setDescription(`**${m1.username}** 💕 **${m2.username}**\n\n🚢 Nom de couple : **${shipName}**\n\n${bar}\n\n💯 Compatibilité : **${score}%**\n\n${phrase?.[2] || ''}`)
       .setFooter({ text: 'Résultat garanti scientifiquement ! 😄' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

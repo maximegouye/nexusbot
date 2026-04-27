@@ -12,29 +12,33 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
 
     if (sub === 'demander') {
       const target = interaction.options.getUser('membre');
-      if (target.bot) return interaction.reply({ content: '❌ Tu ne peux pas épouser un bot.', ephemeral: true });
-      if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas t\'épouser toi-même.', ephemeral: true });
+      if (target.bot) return interaction.editReply({ content: '❌ Tu ne peux pas épouser un bot.', ephemeral: true });
+      if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas t\'épouser toi-même.', ephemeral: true });
 
       // Vérifier si déjà marié
       const myMarriage = db.db.prepare('SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND guild_id = ?')
         .get(interaction.user.id, interaction.user.id, interaction.guildId);
-      if (myMarriage) return interaction.reply({ content: '❌ Tu es déjà marié(e) ! Divorce d\'abord avec `/mariage divorcer`.', ephemeral: true });
+      if (myMarriage) return interaction.editReply({ content: '❌ Tu es déjà marié(e) ! Divorce d\'abord avec `/mariage divorcer`.', ephemeral: true });
 
       const theirMarriage = db.db.prepare('SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND guild_id = ?')
         .get(target.id, target.id, interaction.guildId);
-      if (theirMarriage) return interaction.reply({ content: `❌ **${target.username}** est déjà marié(e) !`, ephemeral: true });
+      if (theirMarriage) return interaction.editReply({ content: `❌ **${target.username}** est déjà marié(e) !`, ephemeral: true });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('marry_accept').setLabel('💍 Accepter !').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId('marry_refuse').setLabel('💔 Refuser').setStyle(ButtonStyle.Danger),
       );
 
-      const msg = await interaction.reply({
+      const msg = await interaction.editReply({
         content: `${target}, tu as une demande en mariage ! 💍`,
         embeds: [new EmbedBuilder()
           .setColor('#FF73FA')
@@ -78,7 +82,7 @@ module.exports = {
     if (sub === 'divorcer') {
       const marriage = db.db.prepare('SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND guild_id = ?')
         .get(interaction.user.id, interaction.user.id, interaction.guildId);
-      if (!marriage) return interaction.reply({ content: '❌ Tu n\'es pas marié(e) sur ce serveur.', ephemeral: true });
+      if (!marriage) return interaction.editReply({ content: '❌ Tu n\'es pas marié(e) sur ce serveur.', ephemeral: true });
 
       const partnerId = marriage.user1_id === interaction.user.id ? marriage.user2_id : marriage.user1_id;
       db.db.prepare('DELETE FROM marriages WHERE id = ?').run(marriage.id);
@@ -87,7 +91,7 @@ module.exports = {
       const fee = 500;
       db.removeCoins(interaction.user.id, interaction.guildId, fee);
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#888888')
           .setTitle('💔 Divorce prononcé')
@@ -100,7 +104,7 @@ module.exports = {
       const marriages = db.db.prepare('SELECT * FROM marriages WHERE guild_id = ? ORDER BY married_at DESC LIMIT 20').all(interaction.guildId);
 
       if (!marriages.length) {
-        return interaction.reply({
+        return interaction.editReply({
           embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setDescription('💍 Aucun mariage sur ce serveur. Fais ta demande avec `/mariage demander` !')],
           ephemeral: true
         });
@@ -111,7 +115,7 @@ module.exports = {
         .setTitle('💍 Mariages du serveur')
         .setDescription(marriages.map(m => `<@${m.user1_id}> 💍 <@${m.user2_id}> — depuis <t:${m.married_at}:D>`).join('\n'));
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
   }
 };

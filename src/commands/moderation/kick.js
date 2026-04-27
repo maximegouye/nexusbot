@@ -11,12 +11,16 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const target = interaction.options.getMember('membre');
     const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
 
-    if (!target) return interaction.reply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.kickable) return interaction.reply({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
-    if (target.id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas t\'expulser toi-même.', ephemeral: true });
+    if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
+    if (!target.kickable) return interaction.editReply({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
+    if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas t\'expulser toi-même.', ephemeral: true });
 
     // ── Confirmation ──────────────────────────────────────
     const confirmEmbed = new EmbedBuilder()
@@ -35,7 +39,7 @@ module.exports = {
       new ButtonBuilder().setCustomId('kick_cancel').setLabel('❌ Annuler').setStyle(ButtonStyle.Secondary),
     );
 
-    await interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+    await interaction.editReply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
 
     let btnInteraction;
     try {

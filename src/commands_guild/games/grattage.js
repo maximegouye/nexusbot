@@ -165,6 +165,10 @@ module.exports = {
   cooldown: 8,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const mise = interaction.options.getInteger('mise');
     return runGame(interaction, mise);
   },
@@ -235,14 +239,14 @@ async function handleComponent(interaction, customId) {
 
   const session = sessions.get(sessionId);
   if (!session) {
-    await interaction.reply({ content: '❌ Session expirée (3 min). Relance une nouvelle carte !', ephemeral: true });
+    await interaction.editReply({ content: '❌ Session expirée (3 min). Relance une nouvelle carte !', ephemeral: true });
     return true;
   }
 
   // Vérif ownership
   const userId = interaction.user.id;
   if (session.userId !== userId) {
-    await interaction.reply({ content: '❌ Ce n\'est pas ta carte à gratter !', ephemeral: true });
+    await interaction.editReply({ content: '❌ Ce n\'est pas ta carte à gratter !', ephemeral: true });
     return true;
   }
 

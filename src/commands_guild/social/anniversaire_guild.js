@@ -30,6 +30,10 @@ module.exports = {
     .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer votre anniversaire')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
@@ -41,10 +45,10 @@ module.exports = {
       const month = interaction.options.getInteger('mois');
       // Validation basique
       const daysInMonth = [31,29,31,30,31,30,31,31,30,31,30,31];
-      if (day > daysInMonth[month-1]) return interaction.reply({ content: `❌ Le mois ${month} n'a pas ${day} jours.`, ephemeral: true });
+      if (day > daysInMonth[month-1]) return interaction.editReply({ content: `❌ Le mois ${month} n'a pas ${day} jours.`, ephemeral: true });
 
       db.db.prepare('INSERT OR REPLACE INTO anniversaires (guild_id, user_id, day, month) VALUES (?,?,?,?)').run(guildId, userId, day, month);
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#FF69B4').setTitle('🎂 Anniversaire enregistré !')
           .setDescription(`Votre anniversaire : **${day} ${MONTHS[month-1]}** 🎉`)
           .setFooter({ text: 'Vous recevrez des félicitations ce jour-là !' })
@@ -54,14 +58,14 @@ module.exports = {
     if (sub === 'voir') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const anniv = db.db.prepare('SELECT * FROM anniversaires WHERE guild_id=? AND user_id=?').get(guildId, target.id);
-      if (!anniv) return interaction.reply({ content: `❌ ${target.id === userId ? 'Vous n\'avez' : `<@${target.id}> n'a`} pas enregistré d'anniversaire.`, ephemeral: true });
+      if (!anniv) return interaction.editReply({ content: `❌ ${target.id === userId ? 'Vous n\'avez' : `<@${target.id}> n'a`} pas enregistré d'anniversaire.`, ephemeral: true });
 
       // Calculer prochain anniversaire
       const thisYear = new Date(now.getFullYear(), anniv.month - 1, anniv.day);
       const nextBirthday = thisYear < now ? new Date(now.getFullYear() + 1, anniv.month - 1, anniv.day) : thisYear;
       const daysUntil = Math.ceil((nextBirthday - now) / 86400000);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#FF69B4').setTitle(`🎂 Anniversaire de ${target.username}`)
           .setThumbnail(target.displayAvatarURL())
           .addFields(
@@ -73,7 +77,7 @@ module.exports = {
 
     if (sub === 'prochain') {
       const all = db.db.prepare('SELECT * FROM anniversaires WHERE guild_id=? ORDER BY month, day').all(guildId);
-      if (!all.length) return interaction.reply({ content: '❌ Aucun anniversaire enregistré.', ephemeral: true });
+      if (!all.length) return interaction.editReply({ content: '❌ Aucun anniversaire enregistré.', ephemeral: true });
 
       const today = { month: now.getMonth() + 1, day: now.getDate() };
       // Trier par prochain anniversaire
@@ -86,7 +90,7 @@ module.exports = {
       }).sort((a, b) => a.days - b.days).slice(0, 10);
 
       const lines = sorted.map(a => `<@${a.user_id}> — **${a.day} ${MONTHS[a.month-1]}** (dans ${a.days} jour(s))`).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#FF69B4').setTitle('📅 Prochains Anniversaires').setDescription(lines)
       ]});
     }
@@ -96,23 +100,23 @@ module.exports = {
       const day = now.getDate();
       const today = db.db.prepare('SELECT * FROM anniversaires WHERE guild_id=? AND day=? AND month=?').all(guildId, day, month);
 
-      if (!today.length) return interaction.reply({ content: '😢 Aucun anniversaire aujourd\'hui.', ephemeral: false });
+      if (!today.length) return interaction.editReply({ content: '😢 Aucun anniversaire aujourd\'hui.', ephemeral: false });
 
       const mentions = today.map(a => `🎉 <@${a.user_id}>`).join('\n');
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#FF69B4').setTitle('🎂 Anniversaires Aujourd\'hui !')
           .setDescription(mentions + `\n\nSouhaitez-leur un joyeux anniversaire ! 🥳`)
       ]});
     }
 
     if (sub === 'setup') {
-      if (!interaction.member.permissions.has(0x20n)) return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+      if (!interaction.member.permissions.has(0x20n)) return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
       const channel = interaction.options.getChannel('salon');
       const role = interaction.options.getRole('role');
       if (channel) db.setConfig(guildId, 'birthday_channel', channel.id);
       if (role) db.setConfig(guildId, 'birthday_role', role.id);
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Configuration anniversaires')
           .addFields(
             { name: '📍 Canal', value: channel ? `${channel}` : 'Non modifié', inline: true },
@@ -123,8 +127,8 @@ module.exports = {
 
     if (sub === 'supprimer') {
       const r = db.db.prepare('DELETE FROM anniversaires WHERE guild_id=? AND user_id=?').run(guildId, userId);
-      if (!r.changes) return interaction.reply({ content: '❌ Aucun anniversaire enregistré.', ephemeral: true });
-      return interaction.reply({ content: '✅ Votre anniversaire a été supprimé.', ephemeral: true });
+      if (!r.changes) return interaction.editReply({ content: '❌ Aucun anniversaire enregistré.', ephemeral: true });
+      return interaction.editReply({ content: '✅ Votre anniversaire a été supprimé.', ephemeral: true });
     }
   }
 };

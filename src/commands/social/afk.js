@@ -9,6 +9,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const raison = interaction.options.getString('raison') || 'AFK';
     const now    = Math.floor(Date.now() / 1000);
 

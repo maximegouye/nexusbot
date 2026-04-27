@@ -8,6 +8,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const cfg    = db.getConfig(interaction.guildId);
     const emoji  = cfg.currency_emoji || '🪙';
@@ -34,10 +38,10 @@ module.exports = {
           { name: '🎫 Tes tickets',       value: `**${myTickets}**`, inline: true },
         )
         .setFooter({ text: `Ticket = ${price} ${name} • Tirage lundi 00:00` });
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
-    if (user.balance < total) return interaction.reply({ content: `❌ Tu as besoin de **${total.toLocaleString('fr')} ${name}** pour ${qty} ticket(s).`, ephemeral: true });
+    if (user.balance < total) return interaction.editReply({ content: `❌ Tu as besoin de **${total.toLocaleString('fr')} ${name}** pour ${qty} ticket(s).`, ephemeral: true });
 
     db.removeCoins(interaction.user.id, interaction.guildId, total);
 
@@ -60,7 +64,7 @@ module.exports = {
       )
       .setFooter({ text: 'Plus tu as de tickets, plus tu as de chances de gagner !' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
     } catch (err) {
     console.error('[CMD] Erreur execute:', err?.message || err);
     const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
@@ -68,7 +72,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

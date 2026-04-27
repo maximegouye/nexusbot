@@ -10,6 +10,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const nb     = interaction.options.getInteger('nombre');
     const filter = interaction.options.getUser('membre');
 
@@ -30,7 +34,7 @@ module.exports = {
       new ButtonBuilder().setCustomId('clear_cancel').setLabel('❌ Annuler').setStyle(ButtonStyle.Secondary),
     );
 
-    await interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+    await interaction.editReply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
 
     let btnInteraction;
     try {

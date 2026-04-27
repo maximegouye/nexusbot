@@ -31,6 +31,10 @@ module.exports = {
     .addSubcommand(s => s.setName('top').setDescription('🏆 Top des messages les plus étoilés')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const cfg = db.getConfig(guildId);
@@ -41,7 +45,7 @@ module.exports = {
       const emoji  = interaction.options.getString('emoji') || '⭐';
       db.setConfig(guildId, 'starboard_channel', salon.id);
       db.setConfig(guildId, 'starboard_threshold', seuil);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('⭐ Starboard configuré')
         .addFields(
           { name: '📢 Salon',    value: `${salon}`,   inline: true },
@@ -51,15 +55,15 @@ module.exports = {
         .setDescription(`Les messages avec **${seuil} ${emoji}** ou plus seront épinglés dans ${salon}.`)] });
     }
     if (sub === 'activer') {
-      if (!cfg.starboard_channel) return interaction.reply({ content: '❌ Configurez d\'abord le starboard avec `/starboard configurer`.', ephemeral: true });
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B').setDescription(`⭐ Starboard activé dans <#${cfg.starboard_channel}> (seuil: ${cfg.starboard_threshold || 3}).`)] });
+      if (!cfg.starboard_channel) return interaction.editReply({ content: '❌ Configurez d\'abord le starboard avec `/starboard configurer`.', ephemeral: true });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B').setDescription(`⭐ Starboard activé dans <#${cfg.starboard_channel}> (seuil: ${cfg.starboard_threshold || 3}).`)] });
     }
     if (sub === 'desactiver') {
       db.setConfig(guildId, 'starboard_channel', null);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setDescription('❌ Starboard désactivé.')] });
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setDescription('❌ Starboard désactivé.')] });
     }
     if (sub === 'voir') {
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('⭐ Configuration du Starboard')
         .addFields(
           { name: '📢 Salon',  value: cfg.starboard_channel ? `<#${cfg.starboard_channel}>` : '`Non configuré`', inline: true },
@@ -69,10 +73,10 @@ module.exports = {
     }
     if (sub === 'top') {
       const top = db.db.prepare('SELECT * FROM starboard_entries WHERE guild_id=? ORDER BY star_count DESC LIMIT 10').all(guildId);
-      if (!top.length) return interaction.reply({ content: '⭐ Aucune entrée dans le starboard.', ephemeral: true });
+      if (!top.length) return interaction.editReply({ content: '⭐ Aucune entrée dans le starboard.', ephemeral: true });
       const medals = ['🥇','🥈','🥉'];
       const lines = top.map((e,i) => `${medals[i]||`**${i+1}.**`} ⭐ **${e.star_count}** — <@${e.author_id}> dans <#${e.channel_id}>`);
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('🏆 Top Starboard')
         .setDescription(lines.join('\n'))] });
     }

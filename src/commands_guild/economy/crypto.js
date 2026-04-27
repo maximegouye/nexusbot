@@ -45,6 +45,10 @@ module.exports = {
     .addSubcommand(s => s.setName('classement').setDescription('🏆 Top investisseurs')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
@@ -59,7 +63,7 @@ module.exports = {
         return `**${s}** — \`${price < 1 ? price.toFixed(6) : price.toFixed(2)} ${coin}\` ${arrow} \`${sign}${change24h}%\``;
       }).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F7931A')
           .setTitle('📈 Marché Crypto NexusBot')
           .setDescription(lines)
@@ -71,7 +75,7 @@ module.exports = {
     if (sub === 'portefeuille') {
       const target = interaction.options.getUser('membre') || interaction.user;
       const portfolio = db.db.prepare('SELECT * FROM crypto_portfolio WHERE guild_id=? AND user_id=? AND quantite > 0').all(guildId, target.id);
-      if (!portfolio.length) return interaction.reply({ content: `❌ <@${target.id}> n'a aucun investissement.`, ephemeral: true });
+      if (!portfolio.length) return interaction.editReply({ content: `❌ <@${target.id}> n'a aucun investissement.`, ephemeral: true });
 
       let totalValue = 0;
       const lines = portfolio.map(p => {
@@ -83,7 +87,7 @@ module.exports = {
         return `**${p.symbol}** — ${p.quantite.toFixed(6)} unités — \`${value.toFixed(2)} ${coin}\` (${gain >= 0 ? '📈 +' : '📉 '}${gainPct}%)`;
       }).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F7931A')
           .setTitle(`💼 Portefeuille Crypto — ${target.username}`)
           .setDescription(lines)
@@ -97,7 +101,7 @@ module.exports = {
       const montant = interaction.options.getInteger('montant');
       const user = db.getUser(userId, guildId);
 
-      if (user.balance < montant) return interaction.reply({ content: `❌ Tu n'as pas assez de ${coin}. Tu as **${user.balance}**.`, ephemeral: true });
+      if (user.balance < montant) return interaction.editReply({ content: `❌ Tu n'as pas assez de ${coin}. Tu as **${user.balance}**.`, ephemeral: true });
 
       const { price } = getCryptoPrice(symbol);
       const qte = montant / price;
@@ -113,7 +117,7 @@ module.exports = {
         db.db.prepare('INSERT INTO crypto_portfolio (guild_id, user_id, symbol, quantite, cout_moyen) VALUES (?,?,?,?,?)').run(guildId, userId, symbol, qte, price);
       }
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('Green')
           .setTitle(`✅ Achat de ${symbol}`)
           .addFields(
@@ -130,7 +134,7 @@ module.exports = {
       const qteVente = interaction.options.getNumber('quantite');
       const existing = db.db.prepare('SELECT * FROM crypto_portfolio WHERE guild_id=? AND user_id=? AND symbol=?').get(guildId, userId, symbol);
 
-      if (!existing || existing.quantite < qteVente) return interaction.reply({ content: `❌ Tu n'as pas assez de **${symbol}**.`, ephemeral: true });
+      if (!existing || existing.quantite < qteVente) return interaction.editReply({ content: `❌ Tu n'as pas assez de **${symbol}**.`, ephemeral: true });
 
       const { price } = getCryptoPrice(symbol);
       const gain = qteVente * price;
@@ -145,7 +149,7 @@ module.exports = {
         db.db.prepare('UPDATE crypto_portfolio SET quantite=? WHERE id=?').run(newQte, existing.id);
       }
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor(gainNet >= 0 ? 'Green' : 'Red')
           .setTitle(`${gainNet >= 0 ? '📈 Vente profitable !' : '📉 Vente à perte'} — ${symbol}`)
           .addFields(
@@ -159,12 +163,12 @@ module.exports = {
 
     if (sub === 'classement') {
       const portfolios = db.db.prepare('SELECT user_id, SUM(quantite * ?) as val FROM crypto_portfolio WHERE guild_id=? GROUP BY user_id ORDER BY val DESC LIMIT 10').all(1, guildId);
-      if (!portfolios.length) return interaction.reply({ content: '❌ Aucun investissement sur ce serveur.', ephemeral: true });
+      if (!portfolios.length) return interaction.editReply({ content: '❌ Aucun investissement sur ce serveur.', ephemeral: true });
 
       const medals = ['🥇', '🥈', '🥉'];
       const lines = portfolios.map((p, i) => `${medals[i] || `**${i+1}.**`} <@${p.user_id}>`).join('\n');
 
-      return interaction.reply({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F7931A').setTitle('🏆 Top Investisseurs Crypto').setDescription(lines).setTimestamp()
       ], ephemeral: true });
     }

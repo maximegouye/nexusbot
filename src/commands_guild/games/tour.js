@@ -174,6 +174,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const mise = interaction.options.getInteger('mise');
     const diff = interaction.options.getString('difficulte') || 'normal';
@@ -183,7 +187,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.reply(_em).catch(() => {});
+      else await interaction.editReply(_em).catch(() => {});
     } catch {}
   }},
 
@@ -260,11 +264,11 @@ async function handleComponent(interaction, customId) {
   const session = sessions.get(key);
 
   if (!session) {
-    await interaction.reply({ content: '❌ Session expirée (10 min). Lance une nouvelle tour !', ephemeral: true });
+    await interaction.editReply({ content: '❌ Session expirée (10 min). Lance une nouvelle tour !', ephemeral: true });
     return true;
   }
   if (session.userId !== userId) {
-    await interaction.reply({ content: '❌ Ce n\'est pas ta tour !', ephemeral: true });
+    await interaction.editReply({ content: '❌ Ce n\'est pas ta tour !', ephemeral: true });
     return true;
   }
 

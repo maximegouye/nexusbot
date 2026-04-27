@@ -21,10 +21,14 @@ module.exports = {
       .addStringOption(o => o.setName('couleur').setDescription('Couleur HEX'))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
 
     if (!interaction.member.permissions.has(0x4000n)) // ManageMessages
-      return interaction.reply({ content: '❌ Permission insuffisante (Gérer les messages).', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante (Gérer les messages).', ephemeral: true });
 
     if (sub === 'envoyer') {
       const titre = interaction.options.getString('titre');
@@ -37,14 +41,14 @@ module.exports = {
       const auteur = interaction.options.getString('auteur');
       const ts = interaction.options.getBoolean('timestamp');
 
-      if (!titre && !desc) return interaction.reply({ content: '❌ Vous devez fournir au minimum un titre ou une description.', ephemeral: true });
+      if (!titre && !desc) return interaction.editReply({ content: '❌ Vous devez fournir au minimum un titre ou une description.', ephemeral: true });
 
       // Validation couleur
       let colorValid = '#7B2FBE';
       if (couleur) {
         const hex = couleur.replace('#','');
         if (/^[0-9A-Fa-f]{6}$/.test(hex)) colorValid = `#${hex}`;
-        else return interaction.reply({ content: '❌ Couleur HEX invalide (ex: #7B2FBE).', ephemeral: true });
+        else return interaction.editReply({ content: '❌ Couleur HEX invalide (ex: #7B2FBE).', ephemeral: true });
       }
 
       const embed = new EmbedBuilder().setColor(colorValid);
@@ -58,9 +62,9 @@ module.exports = {
 
       try {
         await salon.send({ embeds: [embed] });
-        return interaction.reply({ content: `✅ Embed envoyé dans ${salon} !`, ephemeral: true });
+        return interaction.editReply({ content: `✅ Embed envoyé dans ${salon} !`, ephemeral: true });
       } catch (e) {
-        return interaction.reply({ content: `❌ Impossible d'envoyer : ${e.message}`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Impossible d'envoyer : ${e.message}`, ephemeral: true });
       }
     }
 
@@ -76,9 +80,9 @@ module.exports = {
 
       try {
         await target.send({ embeds: [embed] });
-        return interaction.reply({ content: `✅ Message envoyé à <@${target.id}> en DM !`, ephemeral: true });
+        return interaction.editReply({ content: `✅ Message envoyé à <@${target.id}> en DM !`, ephemeral: true });
       } catch {
-        return interaction.reply({ content: `❌ Impossible d'envoyer un DM à <@${target.id}> (DMs désactivés).`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Impossible d'envoyer un DM à <@${target.id}> (DMs désactivés).`, ephemeral: true });
       }
     }
   }

@@ -90,6 +90,10 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const target = interaction.options.getUser('membre') || interaction.user;
     if (target.id !== interaction.user.id && !interaction.member.permissions.has('ManageGuild')) {
@@ -114,7 +118,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }},
@@ -127,7 +131,7 @@ module.exports = {
     const userId  = parts[1];
     const pageArg = parseInt(parts[2]) || 1;
     if (interaction.user.id !== userId)
-      return interaction.reply({ content: '❌ Cet historique ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Cet historique ne t\'appartient pas.', ephemeral: true });
     const cfg    = db.getConfig(interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
     const color  = cfg.color || '#7C3AED';

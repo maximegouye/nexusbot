@@ -19,6 +19,10 @@ module.exports = {
     .addSubcommand(s => s.setName('vider').setDescription('Supprimer tous tes highlights')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const mot = interaction.options.getString('mot')?.toLowerCase().trim();
 

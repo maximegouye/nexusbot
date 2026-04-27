@@ -68,6 +68,10 @@ module.exports = {
     .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des meilleurs agents')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;

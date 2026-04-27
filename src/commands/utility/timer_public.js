@@ -54,6 +54,10 @@ module.exports = {
       .addIntegerOption(o => o.setName('id').setDescription('ID du timer').setRequired(true))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;

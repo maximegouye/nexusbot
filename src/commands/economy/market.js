@@ -18,6 +18,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
     const sub   = interaction.options.getSubcommand();
     const cfg   = db.getConfig(interaction.guildId);
@@ -49,7 +53,7 @@ module.exports = {
         });
       }
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
     }
 
     // ── VENDRE ──
@@ -64,18 +68,18 @@ module.exports = {
         WHERE i.user_id = ? AND i.guild_id = ? AND i.item_id = ? AND i.quantity >= ?
       `).get(interaction.user.id, interaction.guildId, itemId, qty);
 
-      if (!invItem) return interaction.reply({ content: `❌ Tu n'as pas ${qty}x de l'article #${itemId} dans ton inventaire.`, ephemeral: true });
+      if (!invItem) return interaction.editReply({ content: `❌ Tu n'as pas ${qty}x de l'article #${itemId} dans ton inventaire.`, ephemeral: true });
 
       // Limite: max 5 annonces actives
       const count = db.db.prepare('SELECT COUNT(*) as c FROM market_listings WHERE seller_id = ? AND guild_id = ? AND status = "active"')
         .get(interaction.user.id, interaction.guildId).c;
-      if (count >= 5) return interaction.reply({ content: '❌ Tu as atteint la limite de 5 annonces actives.', ephemeral: true });
+      if (count >= 5) return interaction.editReply({ content: '❌ Tu as atteint la limite de 5 annonces actives.', ephemeral: true });
 
       db.removeItem(interaction.user.id, interaction.guildId, itemId, qty);
       db.db.prepare('INSERT INTO market_listings (guild_id, seller_id, item_id, quantity, price, status, created_at) VALUES (?, ?, ?, ?, ?, "active", ?)')
         .run(interaction.guildId, interaction.user.id, itemId, qty, price, Math.floor(Date.now() / 1000));
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('📤 Annonce publiée !')
@@ -94,12 +98,12 @@ module.exports = {
         WHERE ml.id = ? AND ml.guild_id = ? AND ml.status = "active"
       `).get(listingId, interaction.guildId);
 
-      if (!listing) return interaction.reply({ content: `❌ Annonce **#${listingId}** introuvable.`, ephemeral: true });
-      if (listing.seller_id === interaction.user.id) return interaction.reply({ content: '❌ Tu ne peux pas acheter ta propre annonce.', ephemeral: true });
+      if (!listing) return interaction.editReply({ content: `❌ Annonce **#${listingId}** introuvable.`, ephemeral: true });
+      if (listing.seller_id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas acheter ta propre annonce.', ephemeral: true });
 
       const buyer = db.getUser(interaction.user.id, interaction.guildId);
       if (buyer.balance < listing.price) {
-        return interaction.reply({ content: `❌ Solde insuffisant. Il te faut **${listing.price.toLocaleString('fr')} ${name}**.`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Solde insuffisant. Il te faut **${listing.price.toLocaleString('fr')} ${name}**.`, ephemeral: true });
       }
 
       const fee        = Math.ceil(listing.price * 0.05); // 5% de frais de marché
@@ -116,7 +120,7 @@ module.exports = {
         seller.send(`🏪 Ton annonce **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** a été vendue pour **${sellerGain.toLocaleString('fr')} ${name}** sur le marché de **${interaction.guild.name}** !`).catch(() => {});
       }
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('📥 Achat réussi !')
@@ -135,12 +139,12 @@ module.exports = {
         WHERE ml.id = ? AND ml.guild_id = ? AND ml.seller_id = ? AND ml.status = "active"
       `).get(listingId, interaction.guildId, interaction.user.id);
 
-      if (!listing) return interaction.reply({ content: `❌ Annonce **#${listingId}** introuvable ou ce n'est pas la tienne.`, ephemeral: true });
+      if (!listing) return interaction.editReply({ content: `❌ Annonce **#${listingId}** introuvable ou ce n'est pas la tienne.`, ephemeral: true });
 
       db.addItem(interaction.user.id, interaction.guildId, listing.item_id, listing.quantity, null);
       db.db.prepare('UPDATE market_listings SET status = "cancelled" WHERE id = ?').run(listingId);
 
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#FFA500')
           .setDescription(`✅ Annonce #${listingId} retirée. **${listing.quantity}x ${listing.item_emoji || '📦'} ${listing.item_name}** remis dans ton inventaire.`)
@@ -154,7 +158,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

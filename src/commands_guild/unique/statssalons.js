@@ -72,6 +72,10 @@ module.exports = {
     .addSubcommand(s => s.setName('actualiser').setDescription('🔄 Mettre à jour manuellement tous les salons de stat')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 

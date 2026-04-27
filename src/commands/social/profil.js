@@ -83,6 +83,10 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     const target = interaction.options.getUser('membre') || interaction.user;
     const member = interaction.guild.members.cache.get(target.id) || await interaction.guild.members.fetch(target.id).catch(() => null);
     const cfg = db.getConfig(interaction.guildId);
@@ -122,7 +126,7 @@ module.exports = {
     const targetId = parts[2]; // profil owner
 
     if (interaction.user.id !== userId)
-      return interaction.reply({ content: '❌ Ces boutons ne sont pas pour toi.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ces boutons ne sont pas pour toi.', ephemeral: true });
 
     if (action === 'profil_refresh') {
       // Re-execute le profil
@@ -137,10 +141,10 @@ module.exports = {
       await interaction.editReply({ content: '🔄 Utilise `/profil` pour actualiser.', embeds: [], components: [] });
       return true;
     }
-    if (action === 'profil_stats')   { await interaction.reply({ content: '📊 Utilise `/rank` pour tes stats XP et `/leaderboard` pour le classement.', ephemeral: true }); return true; }
-    if (action === 'profil_crypto')  { await interaction.reply({ content: '💹 Utilise `/crypto` pour voir ton portefeuille.', ephemeral: true }); return true; }
-    if (action === 'profil_history') { await interaction.reply({ content: '📜 Utilise `/historique` pour voir tes transactions.', ephemeral: true }); return true; }
-    if (action === 'profil_badges')  { await interaction.reply({ content: '🏅 Utilise `/badges` pour voir tes badges.', ephemeral: true }); return true; }
+    if (action === 'profil_stats')   { await interaction.editReply({ content: '📊 Utilise `/rank` pour tes stats XP et `/leaderboard` pour le classement.', ephemeral: true }); return true; }
+    if (action === 'profil_crypto')  { await interaction.editReply({ content: '💹 Utilise `/crypto` pour voir ton portefeuille.', ephemeral: true }); return true; }
+    if (action === 'profil_history') { await interaction.editReply({ content: '📜 Utilise `/historique` pour voir tes transactions.', ephemeral: true }); return true; }
+    if (action === 'profil_badges')  { await interaction.editReply({ content: '🏅 Utilise `/badges` pour voir tes badges.', ephemeral: true }); return true; }
 
     return false;
   },

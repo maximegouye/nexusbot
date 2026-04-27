@@ -52,6 +52,10 @@ module.exports = {
       .addStringOption(o => o.setName('mot_de_passe').setDescription('Mot de passe à analyser').setRequired(true))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
     try {
       const sub = interaction.options.getSubcommand();
 
@@ -69,7 +73,7 @@ module.exports = {
         const { label, color } = strength(passwords[0]);
         const desc = passwords.map((p, i) => `**${i + 1}.** \`${p}\``).join('\n');
 
-        return interaction.reply({ embeds: [
+        return interaction.editReply({ embeds: [
           new EmbedBuilder()
             .setColor(color)
             .setTitle('🔐 Mot(s) de passe généré(s)')
@@ -84,7 +88,7 @@ module.exports = {
 
       if (sub === 'analyser') {
         const pwd = interaction.options.getString('mot_de_passe');
-        if (!pwd) return interaction.reply({ content: '❌ Mot de passe manquant.', ephemeral: true });
+        if (!pwd) return interaction.editReply({ content: '❌ Mot de passe manquant.', ephemeral: true });
 
         const { label, color } = strength(pwd);
         const hasLower   = /[a-z]/.test(pwd);
@@ -102,7 +106,7 @@ module.exports = {
           (longEnough ? '✅' : '❌') + ' 12+ caractères',
         ];
 
-        return interaction.reply({ embeds: [
+        return interaction.editReply({ embeds: [
           new EmbedBuilder()
             .setColor(color)
             .setTitle('🔍 Analyse du mot de passe')
@@ -117,7 +121,7 @@ module.exports = {
       const errMsg = { content: `❌ Erreur : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
       try {
         if (interaction.deferred || interaction.replied) await interaction.editReply(errMsg).catch(() => {});
-        else await interaction.reply(errMsg).catch(() => {});
+        else await interaction.editReply(errMsg).catch(() => {});
       } catch {}
     }
   },
