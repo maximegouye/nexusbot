@@ -6,7 +6,7 @@ const { REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle
 
 // ── Statuts rotatifs du bot ────────────────────────────────
 const ACTIVITIES = [
-  { name: '🎰 /casino — 20 jeux exclusifs ✅',        type: ActivityType.Playing   },
+  { name: '🎰 /casino — /setup global=100 guild=99 ✅',  type: ActivityType.Playing   },
   { name: '🏇 /hippodrome — Course de chevaux',     type: ActivityType.Competing },
   { name: '💰 /daily — Récompense quotidienne',     type: ActivityType.Watching  },
   { name: '🎯 /aide — Toutes les commandes',        type: ActivityType.Listening },
