@@ -23,7 +23,13 @@ module.exports = {
       .addRoleOption(o => o.setName('role').setDescription('Rôle à donner (aucun = désactiver)').setRequired(false)))
     .addSubcommand(s => s.setName('xp').setDescription('⭐ Paramètres XP')
       .addBooleanOption(o => o.setName('actif').setDescription('Activer/désactiver le gain d\'XP').setRequired(true))
-      .addIntegerOption(o => o.setName('multiplicateur').setDescription('Multiplicateur XP').setMinValue(1).setMaxValue(10).setRequired(false))),
+      .addIntegerOption(o => o.setName('multiplicateur').setDescription('Multiplicateur XP').setMinValue(1).setMaxValue(10).setRequired(false)))
+    .addSubcommand(s => s.setName('mod-log').setDescription('🛡️ Canal des logs de modération')
+      .addChannelOption(o => o.setName('canal').setDescription('Canal de mod-log (vide = désactiver)').setRequired(false).addChannelTypes(ChannelType.GuildText)))
+    .addSubcommand(s => s.setName('leaderboard').setDescription('🏆 Canal du classement hebdomadaire')
+      .addChannelOption(o => o.setName('canal').setDescription('Canal pour le top hebdo (vide = désactiver)').setRequired(false).addChannelTypes(ChannelType.GuildText)))
+    .addSubcommand(s => s.setName('events').setDescription('🎯 Canal des événements automatiques')
+      .addChannelOption(o => o.setName('canal').setDescription('Canal pour les quiz et défis (vide = désactiver)').setRequired(false).addChannelTypes(ChannelType.GuildText))),
   cooldown: 5,
 
   async execute(interaction) {
@@ -99,6 +105,27 @@ module.exports = {
       db.setConfig(interaction.guildId, 'xp_enabled', actif ? 1 : 0);
       if (multi) db.setConfig(interaction.guildId, 'xp_multiplier', multi);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ XP ${actif ? 'activé' : 'désactivé'}${multi ? ` — Multiplicateur ×${multi}` : ''}.`)], ephemeral: true });
+    }
+
+    if (sub === 'mod-log') {
+      const canal = interaction.options.getChannel('canal');
+      db.setConfig(interaction.guildId, 'mod_log_channel', canal?.id || null);
+      const msg = canal ? `✅ Canal mod-log : ${canal}.` : '✅ Canal mod-log **désactivé**.';
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
+    }
+
+    if (sub === 'leaderboard') {
+      const canal = interaction.options.getChannel('canal');
+      db.setConfig(interaction.guildId, 'leaderboard_channel', canal?.id || null);
+      const msg = canal ? `✅ Canal classement hebdo : ${canal}.` : '✅ Classement hebdomadaire **désactivé**.';
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
+    }
+
+    if (sub === 'events') {
+      const canal = interaction.options.getChannel('canal');
+      db.setConfig(interaction.guildId, 'events_channel', canal?.id || null);
+      const msg = canal ? `✅ Canal événements : ${canal}.` : '✅ Événements automatiques **désactivés**.';
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
     }
   }
 };

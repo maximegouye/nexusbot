@@ -980,6 +980,12 @@ const migrations = [
   { table: 'autoresponder', column: 'allowed_channels', sql: "ALTER TABLE autoresponder ADD COLUMN allowed_channels TEXT DEFAULT '[]'" },
   { table: 'autoresponder', column: 'response_type',    sql: "ALTER TABLE autoresponder ADD COLUMN response_type TEXT DEFAULT 'text'" },
   { table: 'autoresponder', column: 'embed_json',       sql: "ALTER TABLE autoresponder ADD COLUMN embed_json TEXT" },
+
+  // guild_config — verification_role pour système anti-bot
+  { table: 'guild_config', column: 'verification_role',  sql: "ALTER TABLE guild_config ADD COLUMN verification_role TEXT" },
+  // guild_config — canaux workers (leaderboard + events)
+  { table: 'guild_config', column: 'leaderboard_channel', sql: "ALTER TABLE guild_config ADD COLUMN leaderboard_channel TEXT" },
+  { table: 'guild_config', column: 'events_channel',      sql: "ALTER TABLE guild_config ADD COLUMN events_channel TEXT" },
 ];
 
 for (const m of migrations) {
