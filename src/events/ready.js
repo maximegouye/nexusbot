@@ -37,6 +37,27 @@ const {
   onShardResume:        casinoMusicOnShardResume,
 } = require('../utils/casinoMusicManager');
 
+// ── Workers automatiques ───────────────────────────────────
+const birthdayCheck        = require('../utils/birthdayCheck');
+const giveawayCheck        = require('../utils/giveawayCheck');
+const questReset           = require('../utils/questReset');
+const reminderCheck        = require('../utils/reminderCheck');
+const tempbanCheck         = require('../utils/tempbanCheck');
+const tempRoleCheck        = require('../utils/tempRoleCheck');
+const ticketAutoClose      = require('../utils/ticketAutoClose');
+const { runTicketFollowUp } = require('../utils/ticketFollowUp');
+const { updateStatsChannels } = require('../utils/statsChannelUpdater');
+const voiceXPTick          = require('../utils/voiceXPTick');
+const lottoCheck           = require('../utils/lottoCheck');
+const { startScheduledWorker } = require('../utils/scheduledWorker');
+const { startCryptoPriceWorker } = require('../utils/cryptoPriceWorker');
+const { checkNotifications } = require('../utils/notificationChecker');
+
+// ── Workers complémentaires (création en cours) ────────────
+const { startWeeklyLeaderboard } = (() => { try { return require('../utils/weeklyLeaderboardWorker'); } catch { return { startWeeklyLeaderboard: async () => {} }; } })();
+const { startAntiRaid } = (() => { try { return require('../utils/antiRaidWorker'); } catch { return { startAntiRaid: async () => {} }; } })();
+const { startAutoEvents } = (() => { try { return require('../utils/autoEventWorker'); } catch { return { startAutoEvents: async () => {} }; } })();
+
 // ── Postes recrutement (miroir de recrutement.js) ──────────
 const POSTES = {
   moderateur:  { label: 'Modérateur',          emoji: '🛡️', desc: 'Assure le respect des règles et la bonne ambiance du serveur.' },
@@ -377,5 +398,111 @@ module.exports = {
     } catch (error) {
       console.error('❌ Global registration:', error.message);
     }
+
+    // ── Workers automatiques ───────────────────────────────
+    // Tous les workers parallèles qui s'exécutent en continu sans bloquer l'événement ready
+    const db = require('../database/db');
+
+    // Birthday Check — anniversaires (toutes les 1h)
+    birthdayCheck(client).catch(() => {});
+    setInterval(() => birthdayCheck(client).catch(() => {}), 3_600_000);
+    console.log('✅ Birthday Check : démarré (1h interval)');
+
+    // Giveaway Check — expiration des giveaways (toutes les 30s)
+    giveawayCheck(client).catch(() => {});
+    setInterval(() => giveawayCheck(client).catch(() => {}), 30_000);
+    console.log('✅ Giveaway Check : démarré (30s interval)');
+
+    // Quest Reset — réinitialisation des quêtes (toutes les 10min)
+    questReset(client).catch(() => {});
+    setInterval(() => questReset(client).catch(() => {}), 600_000);
+    console.log('✅ Quest Reset : démarré (10min interval)');
+
+    // Reminder Check — rappels (toutes les 30s)
+    reminderCheck(client).catch(() => {});
+    setInterval(() => reminderCheck(client).catch(() => {}), 30_000);
+    console.log('✅ Reminder Check : démarré (30s interval)');
+
+    // Tempban Check — levée des tempbans (toutes les 1min)
+    tempbanCheck(client).catch(() => {});
+    setInterval(() => tempbanCheck(client).catch(() => {}), 60_000);
+    console.log('✅ Tempban Check : démarré (1min interval)');
+
+    // TempRole Check — expiration des rôles temporaires (toutes les 1min)
+    tempRoleCheck(client).catch(() => {});
+    setInterval(() => tempRoleCheck(client).catch(() => {}), 60_000);
+    console.log('✅ TempRole Check : démarré (1min interval)');
+
+    // Ticket Auto Close — fermeture automatique des tickets (toutes les 10min)
+    ticketAutoClose(client).catch(() => {});
+    setInterval(() => ticketAutoClose(client).catch(() => {}), 600_000);
+    console.log('✅ Ticket Auto Close : démarré (10min interval)');
+
+    // Ticket Follow Up — relances et alertes (toutes les 10min)
+    runTicketFollowUp(client).catch(() => {});
+    setInterval(() => runTicketFollowUp(client).catch(() => {}), 600_000);
+    console.log('✅ Ticket Follow Up : démarré (10min interval)');
+
+    // Stats Channel Updater — mise à jour des canaux de stats (toutes les 10min)
+    updateStatsChannels(client).catch(() => {});
+    setInterval(() => updateStatsChannels(client).catch(() => {}), 600_000);
+    console.log('✅ Stats Channel Updater : démarré (10min interval)');
+
+    // Voice XP Tick — XP vocal (toutes les 1min)
+    voiceXPTick(client).catch(() => {});
+    setInterval(() => voiceXPTick(client).catch(() => {}), 60_000);
+    console.log('✅ Voice XP Tick : démarré (1min interval)');
+
+    // Lotto Check — loterie (toutes les 1h)
+    lottoCheck(client).catch(() => {});
+    setInterval(() => lottoCheck(client).catch(() => {}), 3_600_000);
+    console.log('✅ Lotto Check : démarré (1h interval)');
+
+    // Notification Checker — notifications (toutes les 5min)
+    checkNotifications(client).catch(() => {});
+    setInterval(() => checkNotifications(client).catch(() => {}), 300_000);
+    console.log('✅ Notification Checker : démarré (5min interval)');
+
+    // Scheduled Worker — messages programmés (cron-based, une seule initialisation)
+    try {
+      startScheduledWorker(client).catch(() => {});
+      console.log('✅ Scheduled Worker : démarré (cron-based)');
+    } catch (e) {
+      console.error('⚠️  Scheduled Worker error:', e.message);
+    }
+
+    // Crypto Price Worker — prix cryptos (une seule initialisation)
+    try {
+      startCryptoPriceWorker(db).catch(() => {});
+      console.log('✅ Crypto Price Worker : démarré');
+    } catch (e) {
+      console.error('⚠️  Crypto Price Worker error:', e.message);
+    }
+
+    // Weekly Leaderboard Worker — classement hebdo (une seule initialisation)
+    try {
+      startWeeklyLeaderboard(client).catch(() => {});
+      console.log('✅ Weekly Leaderboard Worker : démarré');
+    } catch (e) {
+      console.error('⚠️  Weekly Leaderboard Worker error:', e.message);
+    }
+
+    // Anti-Raid Worker — protection contre les raids (une seule initialisation)
+    try {
+      startAntiRaid(client).catch(() => {});
+      console.log('✅ Anti-Raid Worker : démarré');
+    } catch (e) {
+      console.error('⚠️  Anti-Raid Worker error:', e.message);
+    }
+
+    // Auto Events Worker — événements automatiques (une seule initialisation)
+    try {
+      startAutoEvents(client).catch(() => {});
+      console.log('✅ Auto Events Worker : démarré');
+    } catch (e) {
+      console.error('⚠️  Auto Events Worker error:', e.message);
+    }
+
+    console.log('✅ Tous les workers automatiques ont été démarrés');
   },
 };

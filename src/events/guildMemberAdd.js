@@ -1,5 +1,6 @@
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../database/db');
+const { onMemberJoin } = require('../utils/antiRaidWorker');
 
 // Canvas optionnel pour image de bienvenue
 let createCanvas, loadImage;
@@ -66,6 +67,9 @@ async function buildWelcomeCard(member, guild) {
 module.exports = {
   name: 'guildMemberAdd',
   async execute(member, client) {
+    // Anti-raid check (au tout début)
+    try { onMemberJoin(member); } catch {}
+
     const { guild, user } = member;
     const cfg = db.getConfig(guild.id);
 
@@ -146,6 +150,60 @@ module.exports = {
     if (cfg.autorole) {
       const role = guild.roles.cache.get(cfg.autorole);
       if (role) member.roles.add(role).catch(() => {});
+    }
+
+    // ── Vérification anti-bot (si configurée) ─────────────────
+    if (cfg.verification_role) {
+      const unverifiedRole = guild.roles.cache.get(cfg.verification_role);
+      if (unverifiedRole) {
+        try { await member.roles.add(unverifiedRole); } catch {}
+        // Envoyer DM avec bouton de vérification
+        const verifyEmbed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`🔒 Vérification requise — ${guild.name}`)
+          .setDescription(
+            `Salut **${user.username}** ! Pour accéder au serveur **${guild.name}**, clique sur le bouton ci-dessous.\n\n` +
+            `⏱️ Cette vérification expire dans **10 minutes**.`
+          )
+          .setThumbnail(guild.iconURL())
+          .setFooter({ text: 'Ce message est automatique — NexusBot' });
+
+        const verifyRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`verify_human_${guild.id}_${user.id}`)
+            .setLabel('✅ Je suis humain')
+            .setStyle(ButtonStyle.Success)
+        );
+
+        try {
+          await user.send({ embeds: [verifyEmbed], components: [verifyRow] });
+        } catch {
+          // DM bloqués → envoyer dans le canal de bienvenue à la place
+          const wCh = guild.channels.cache.get(cfg.welcome_channel);
+          if (wCh) {
+            const pubEmbed = new EmbedBuilder()
+              .setColor(0x5865F2)
+              .setDescription(`<@${user.id}> → Clique ici pour te vérifier et accéder au serveur !`);
+            const pubRow = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`verify_human_${guild.id}_${user.id}`)
+                .setLabel('✅ Je suis humain')
+                .setStyle(ButtonStyle.Success)
+            );
+            await wCh.send({ embeds: [pubEmbed], components: [pubRow] }).catch(() => {});
+          }
+        }
+
+        // Auto-kick si pas vérifié après 10 minutes
+        setTimeout(async () => {
+          try {
+            const refreshed = await guild.members.fetch(user.id).catch(() => null);
+            if (refreshed && refreshed.roles.cache.has(cfg.verification_role)) {
+              await refreshed.kick('Vérification non complétée dans les 10 minutes').catch(() => {});
+            }
+          } catch {}
+        }, 10 * 60 * 1000);
+      }
     }
 
     // ── Message de bienvenue ──────────────────────────

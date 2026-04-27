@@ -1,5 +1,7 @@
 'use strict';
 
+const db = require('../database/db');
+
 // Routes des composants (boutons, menus, modals) vers la commande handler
 const COMPONENT_ROUTES = {
   // ── Commandes avec handleComponent ───────────────────────
@@ -109,6 +111,39 @@ module.exports = {
     // — Boutons / Menus / Modals (tous types)
     if (isAnyComponent(interaction)) {
       const cid = interaction.customId || '';
+
+      // ── Quiz événements automatiques ──────────────────────
+      if (cid.startsWith('quiz_event_')) {
+        try {
+          const { handleQuizButton } = require('../utils/autoEventWorker');
+          await handleQuizButton(interaction);
+        } catch (e) { console.error('[quiz_event]', e.message); }
+        return;
+      }
+
+      // ── Vérification anti-bot ──────────────────────────────
+      if (cid.startsWith('verify_human_')) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+        const parts = cid.split('_');
+        const guildId = parts[2];
+        const targetUserId = parts[3];
+
+        if (interaction.user.id !== targetUserId) {
+          return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.' }).catch(() => {});
+        }
+
+        const cfg = db.getConfig(guildId);
+        if (cfg.verification_role) {
+          try {
+            const member = await interaction.guild.members.fetch(targetUserId).catch(() => null);
+            if (member) {
+              await member.roles.remove(cfg.verification_role).catch(() => {});
+              return interaction.editReply({ content: '✅ Vérification réussie ! Tu as maintenant accès au serveur. Bienvenue !' }).catch(() => {});
+            }
+          } catch {}
+        }
+        return interaction.editReply({ content: '✅ Vérifié !' }).catch(() => {});
+      }
 
       // ── Panneau /config ────────────────────────────────────
       if (isCfgInteraction(cid)) {
