@@ -313,24 +313,99 @@ module.exports = {
       console.log('⚠️  Migration 5000€ skip:', e?.message);
     }
 
-    // ── Auto-remboursement : traiter les compensations en attente au démarrage ──
+    // ── Auto-remboursement : traiter les compensations + bug fixes spécifiques ──
     setTimeout(async () => {
       try {
         const db = require('../database/db');
         const { sendRemboursement } = require('../commands_guild/admin/remboursement');
+        const guildIdHome = process.env.HOME_GUILD_ID || '1492886135159128227';
+
+        // Récupère le guild et le canal casino
+        const guild = client.guilds.cache.get(guildIdHome);
+        if (!guild) { console.log('⚠️  [AUTO-REMB] Guild introuvable'); return; }
+
+        // Canal casino pour les annonces publiques
+        const casinoChannel = guild.channels.cache.find(
+          c => c.name === 'casino' && c.isTextBased && c.isTextBased()
+        );
+        const casinoChannelId = casinoChannel?.id || null;
+        if (casinoChannelId) console.log(`💸 [AUTO-REMB] Canal casino trouvé : #${casinoChannel.name} (${casinoChannelId})`);
+        else console.log('⚠️  [AUTO-REMB] Canal #casino introuvable — annonces publiques désactivées');
+
+        // KOBALT = propriétaire du serveur (ID dynamique)
+        const KOBALT_ID = guild.ownerId;
+        console.log(`💸 [AUTO-REMB] KOBALT ID = ${KOBALT_ID} (ownerId)`);
+
+        // Zzzz021424 = développeur — recherche par username dans les membres
+        let ZZZZ_ID = null;
+        try {
+          const members = await guild.members.fetch({ limit: 1000 }).catch(() => guild.members.cache);
+          const zzzzMember = members.find(m =>
+            m.user.username.toLowerCase().includes('zzzz') ||
+            m.user.globalName?.toLowerCase().includes('zzzz') ||
+            m.displayName?.toLowerCase().includes('zzzz')
+          );
+          ZZZZ_ID = zzzzMember?.id || null;
+          if (ZZZZ_ID) console.log(`💸 [AUTO-REMB] Zzzz021424 ID = ${ZZZZ_ID} (${zzzzMember?.user?.username})`);
+          else console.log('⚠️  [AUTO-REMB] Zzzz021424 introuvable dans les membres');
+        } catch (e) {
+          console.log('⚠️  [AUTO-REMB] Impossible de fetch les membres:', e?.message);
+        }
+
+        // ÉTAPE 1 : Insérer les compensations pour KOBALT et Zzzz021424 SI absent
+        if (KOBALT_ID) {
+          const kobaltExists = db.db.prepare(
+            'SELECT id FROM remboursements WHERE guild_id=? AND user_id=? AND raison LIKE ?'
+          ).get(guildIdHome, KOBALT_ID, '%gain potentiel%');
+
+          if (!kobaltExists) {
+            console.log('💸 [AUTO-REMB] Insertion compensation KOBALT...');
+            db.db.prepare(
+              'INSERT INTO remboursements (guild_id, user_id, amount, raison, sent) VALUES (?,?,?,?,0)'
+            ).run(
+              guildIdHome,
+              KOBALT_ID,
+              15_000_000,
+              'Remboursement gain potentiel non versé suite aux bugs techniques du casino (période du 26-27 avril 2026)'
+            );
+          }
+        }
+
+        if (ZZZZ_ID) {
+          const zzzzExists = db.db.prepare(
+            'SELECT id FROM remboursements WHERE guild_id=? AND user_id=? AND raison LIKE ?'
+          ).get(guildIdHome, ZZZZ_ID, '%gain potentiel%');
+
+          if (!zzzzExists) {
+            console.log('💸 [AUTO-REMB] Insertion compensation Zzzz021424...');
+            db.db.prepare(
+              'INSERT INTO remboursements (guild_id, user_id, amount, raison, sent) VALUES (?,?,?,?,0)'
+            ).run(
+              guildIdHome,
+              ZZZZ_ID,
+              5_000_000,
+              'Remboursement gain potentiel non versé suite aux bugs techniques du casino (période du 26-27 avril 2026)'
+            );
+          }
+        }
+
+        // ÉTAPE 2 : Traiter tous les remboursements en attente
         const pending = db.db.prepare(
           'SELECT * FROM remboursements WHERE sent=0 ORDER BY id ASC'
         ).all();
+
         if (pending.length > 0) {
-          console.log(`💸 Auto-remboursement : ${pending.length} remboursement(s) en attente...`);
+          console.log(`💸 [AUTO-REMB] ${pending.length} remboursement(s) en attente...`);
           for (const r of pending) {
-            const ok = await sendRemboursement(client, r.guild_id, r.user_id, r.amount, r.raison);
+            const ok = await sendRemboursement(client, r.guild_id, r.user_id, r.amount, r.raison, casinoChannelId);
             if (ok) {
               db.db.prepare('UPDATE remboursements SET sent=1, sent_at=? WHERE id=?')
                 .run(Math.floor(Date.now() / 1000), r.id);
               console.log(`  ✅ Remboursé <@${r.user_id}> +${r.amount}`);
             }
           }
+        } else {
+          console.log('💸 [AUTO-REMB] Aucun remboursement en attente.');
         }
       } catch (e) {
         console.log('⚠️  Auto-remboursement skip:', e?.message);

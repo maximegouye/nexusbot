@@ -498,6 +498,8 @@ async function playSlots(source, userId, guildId, mise, lines = 1) {
 // ─── Handle Component ──────────────────────────────────────
 // NOTE : toutes les branches doivent retourner true pour signaler que le
 //        composant a été traité — interactionCreate ne rappellera pas execute().
+// NOTE : ce handler intercepte directement les boutons slots en durée QUASI INFINIE
+//        (30 min = 1800 s). Les boutons persistent tant que le message existe.
 async function handleComponent(interaction) {
   const cid     = interaction.customId;
   const userId  = interaction.user.id;
@@ -542,8 +544,10 @@ async function handleComponent(interaction) {
       await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
-    await interaction.deferUpdate();
-    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await interaction.deferUpdate().catch(() => {});
+    // Utilise message.edit() pour éviter l'expiration du token d'interaction (15 min)
+    const msgRef1 = interaction.message;
+    const source = { editReply: (d) => msgRef1.edit(d), deferred: true };
     await playSlots(source, userId, guildId, maxMise, lines);
     return true;
 
@@ -557,8 +561,10 @@ async function handleComponent(interaction) {
     }
     const newMise  = parseInt(parts[3]);
     const newLines = parseInt(parts[4]) || 1;
-    await interaction.deferUpdate();
-    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await interaction.deferUpdate().catch(() => {});
+    // Utilise message.edit() pour éviter l'expiration du token d'interaction (15 min)
+    const msgRef2 = interaction.message;
+    const source = { editReply: (d) => msgRef2.edit(d), deferred: true };
     await playSlots(source, userId, guildId, newMise, newLines);
     return true;
 
@@ -608,7 +614,9 @@ async function handleComponent(interaction) {
       return true;
     }
 
-    await interaction.deferUpdate();
+    await interaction.deferUpdate().catch(() => {});
+    // Utilise message.edit() pour éviter l'expiration du token d'interaction (15 min)
+    const msgRefGamble = interaction.message;
     const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
     const won  = Math.random() < 0.5;
 
@@ -616,7 +624,7 @@ async function handleComponent(interaction) {
       db.addCoins(userId, guildId, amount);
       trackSessionGain(userId, amount);
       const nb = db.getUser(userId, guildId)?.balance || 0;
-      await interaction.editReply({ embeds: [new EmbedBuilder()
+      await msgRefGamble.edit({ embeds: [new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle('🎲 GAMBLE → 🎊 DOUBLÉ !')
         .setDescription(`🍀 **Incroyable ! Tu as doublé ton gain !**\n\n**+${amount.toLocaleString()} ${coin}** supplémentaires !`)
@@ -630,7 +638,7 @@ async function handleComponent(interaction) {
       db.addCoins(userId, guildId, -amount);
       trackSessionGain(userId, -amount);
       const nb = db.getUser(userId, guildId)?.balance || 0;
-      await interaction.editReply({ embeds: [new EmbedBuilder()
+      await msgRefGamble.edit({ embeds: [new EmbedBuilder()
         .setColor('#E74C3C')
         .setTitle('🎲 GAMBLE → 💸 PERDU !')
         .setDescription(`😔 **Malchance ! Tu perds ton gain...**\n\n**-${amount.toLocaleString()} ${coin}** retirés.`)
