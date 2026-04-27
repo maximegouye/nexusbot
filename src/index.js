@@ -164,3 +164,14 @@ try {
 } catch (e) {
   console.warn('[Dashboard] Non disponible:', e.message);
 }
+
+// ── Gestionnaires de crash globaux — évite les redémarrages intempestifs ──
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRASH] Promise non gérée:', reason?.message || reason, '| Promise:', promise);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH] Exception non capturée:', err?.message || err);
+  console.error(err?.stack || '');
+  // Ne pas appeler process.exit() — Railway redémarre de toute façon si nécessaire
+});

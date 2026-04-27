@@ -206,13 +206,13 @@ module.exports = {
       'admin-demandes','admin-valider','admin-refuser','admin-ajouter','admin-retirer','admin-liste',
     ];
     if (ADMIN_SUBS.includes(sub) && !isAdmin(interaction.member)) {
-      return interaction.reply({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
+      return await interaction.reply({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
     }
 
     // ── /partenariat liste ────────────────────────────────────
     if (sub === 'liste') {
       if (!g.partners.length) {
-        return interaction.reply({
+        return await interaction.reply({
           embeds: [new EmbedBuilder()
             .setColor(C_GOLD)
             .setTitle('🤝 Partenaires')
@@ -224,7 +224,7 @@ module.exports = {
       const lines = g.partners.map((p, i) =>
         `\`${String(i + 1).padStart(2, '0')}\` **${p.nom}** — ${p.membres || '?'} membres\n> 🔗 ${p.invite}\n> *${(p.description || '').slice(0, 80)}*`
       ).join('\n\n');
-      return interaction.reply({
+      return await interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor(C_MAIN)
           .setTitle(`🤝 Serveurs Partenaires (${g.partners.length})`)
@@ -239,11 +239,11 @@ module.exports = {
     if (sub === 'demander') {
       const existing = getPartnerByUser(interaction.user.id, interaction.guildId);
       if (existing) {
-        return interaction.reply({ content: `✅ Tu es déjà partenaire via **${existing.nom}** ! Utilise \`/partenariat pub\` pour une pub.`, ephemeral: true });
+        return await interaction.reply({ content: `✅ Tu es déjà partenaire via **${existing.nom}** ! Utilise \`/partenariat pub\` pour une pub.`, ephemeral: true });
       }
       const pending = g.requests.find(r => r.submittedBy === interaction.user.id && r.status === 'pending');
       if (pending) {
-        return interaction.reply({ content: `⏳ Tu as déjà une demande en cours (\`${pending.id}\`). Vérifie avec \`/partenariat statut\`.`, ephemeral: true });
+        return await interaction.reply({ content: `⏳ Tu as déjà une demande en cours (\`${pending.id}\`). Vérifie avec \`/partenariat statut\`.`, ephemeral: true });
       }
 
       const modal = new ModalBuilder()
@@ -301,7 +301,7 @@ module.exports = {
     if (sub === 'statut') {
       const partner = getPartnerByUser(interaction.user.id, interaction.guildId);
       if (partner) {
-        return interaction.reply({
+        return await interaction.reply({
           embeds: [new EmbedBuilder()
             .setColor(C_GREEN)
             .setTitle('✅ Tu es partenaire !')
@@ -314,7 +314,7 @@ module.exports = {
         .filter(r => r.submittedBy === interaction.user.id)
         .sort((a, b) => b.submittedAt - a.submittedAt)[0];
       if (!req) {
-        return interaction.reply({ content: '📋 Aucune demande trouvée. Fais une demande avec `/partenariat demander` !', ephemeral: true });
+        return await interaction.reply({ content: '📋 Aucune demande trouvée. Fais une demande avec `/partenariat demander` !', ephemeral: true });
       }
       const statMap = {
         pending:  { emoji: '⏳', label: 'En attente de traitement', color: C_GOLD },
@@ -322,7 +322,7 @@ module.exports = {
         refused:  { emoji: '❌', label: 'Refusée', color: C_RED },
       };
       const s = statMap[req.status] || statMap.pending;
-      return interaction.reply({
+      return await interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor(s.color)
           .setTitle('🔍 État de ma demande')
@@ -342,16 +342,16 @@ module.exports = {
     if (sub === 'pub') {
       const partner = getPartnerByUser(interaction.user.id, interaction.guildId);
       if (!partner) {
-        return interaction.reply({ content: '❌ Tu dois être un représentant partenaire pour utiliser cette commande.', ephemeral: true });
+        return await interaction.reply({ content: '❌ Tu dois être un représentant partenaire pour utiliser cette commande.', ephemeral: true });
       }
       if (!g.pubChannelId) {
-        return interaction.reply({ content: '❌ Aucun salon de pub configuré. Contacte un administrateur.', ephemeral: true });
+        return await interaction.reply({ content: '❌ Aucun salon de pub configuré. Contacte un administrateur.', ephemeral: true });
       }
       const lastPub = g.pubCooldowns?.[interaction.user.id] || 0;
       const diff    = Date.now() - lastPub;
       if (diff < 86400000) {
         const heures = Math.ceil((86400000 - diff) / 3600000);
-        return interaction.reply({ content: `⏳ Prochain envoi disponible dans **${heures}h**.`, ephemeral: true });
+        return await interaction.reply({ content: `⏳ Prochain envoi disponible dans **${heures}h**.`, ephemeral: true });
       }
       const modal = new ModalBuilder()
         .setCustomId('part_modal_pub')
@@ -374,22 +374,22 @@ module.exports = {
     if (sub === 'config-salon-demandes') {
       const ch = interaction.options.getChannel('salon');
       updateGuild(interaction.guildId, { requestChannelId: ch.id });
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`📨 Les demandes arriveront dans <#${ch.id}>.`).setTimestamp()], ephemeral: true });
+      return await interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`📨 Les demandes arriveront dans <#${ch.id}>.`).setTimestamp()], ephemeral: true });
     }
     if (sub === 'config-salon-partenaires') {
       const ch = interaction.options.getChannel('salon');
       updateGuild(interaction.guildId, { partnerChannelId: ch.id });
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`🤝 Les pubs des partenaires seront postées dans <#${ch.id}> à chaque validation.`).setTimestamp()], ephemeral: true });
+      return await interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`🤝 Les pubs des partenaires seront postées dans <#${ch.id}> à chaque validation.`).setTimestamp()], ephemeral: true });
     }
     if (sub === 'config-salon-pub') {
       const ch = interaction.options.getChannel('salon');
       updateGuild(interaction.guildId, { pubChannelId: ch.id });
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`📢 Les pubs ponctuelles (\`/partenariat pub\`) iront dans <#${ch.id}>.`).setTimestamp()], ephemeral: true });
+      return await interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`📢 Les pubs ponctuelles (\`/partenariat pub\`) iront dans <#${ch.id}>.`).setTimestamp()], ephemeral: true });
     }
     if (sub === 'config-role') {
       const role = interaction.options.getRole('role');
       updateGuild(interaction.guildId, { partnerRoleId: role.id });
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`🎭 Le rôle <@&${role.id}> sera attribué aux nouveaux partenaires.`).setTimestamp()], ephemeral: true });
+      return await interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('✅ Configuré').setDescription(`🎭 Le rôle <@&${role.id}> sera attribué aux nouveaux partenaires.`).setTimestamp()], ephemeral: true });
     }
 
     if (sub === 'config-notre-pub') {
@@ -413,7 +413,7 @@ module.exports = {
 
     if (sub === 'config-voir') {
       const pendingCount = g.requests.filter(r => r.status === 'pending').length;
-      return interaction.reply({
+      return await interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor(C_ADMIN)
           .setTitle('⚙️ Configuration — Partenariats')
@@ -434,7 +434,7 @@ module.exports = {
     if (sub === 'admin-demandes') {
       const pending = g.requests.filter(r => r.status === 'pending');
       if (!pending.length) {
-        return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('📨 Demandes').setDescription('✅ Aucune demande en attente !').setTimestamp()], ephemeral: true });
+        return await interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('📨 Demandes').setDescription('✅ Aucune demande en attente !').setTimestamp()], ephemeral: true });
       }
       await interaction.deferReply({ ephemeral: true });
       for (const req of pending.slice(0, 5)) {
@@ -488,18 +488,18 @@ module.exports = {
         const m = await interaction.guild.members.fetch(removed.repUserId).catch(() => null);
         if (m) await m.roles.remove(fresh.partnerRoleId).catch(() => {});
       }
-      return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_RED).setTitle('➖ Partenaire retiré').setDescription(`**${removed.nom}** a été retiré des partenaires.`).setTimestamp()], ephemeral: true });
+      return await interaction.reply({ embeds: [new EmbedBuilder().setColor(C_RED).setTitle('➖ Partenaire retiré').setDescription(`**${removed.nom}** a été retiré des partenaires.`).setTimestamp()], ephemeral: true });
     }
 
     if (sub === 'admin-liste') {
       const fresh = getGuild(interaction.guildId);
       if (!fresh.partners.length) {
-        return interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GOLD).setTitle('📋 Partenaires').setDescription('Aucun partenaire.').setTimestamp()], ephemeral: true });
+        return await interaction.reply({ embeds: [new EmbedBuilder().setColor(C_GOLD).setTitle('📋 Partenaires').setDescription('Aucun partenaire.').setTimestamp()], ephemeral: true });
       }
       const lines = fresh.partners.map((p, i) =>
         `\`${String(i + 1).padStart(2, '0')}\` **${p.nom}** | ID: \`${p.id}\` | Rep: ${p.repUserId ? `<@${p.repUserId}>` : '*aucun*'}\n> 🔗 ${p.invite}`
       ).join('\n');
-      return interaction.reply({
+      return await interaction.reply({
         embeds: [new EmbedBuilder().setColor(C_ADMIN).setTitle(`📋 Partenaires Admin (${fresh.partners.length})`).setDescription(lines.slice(0, 4000)).setFooter({ text: 'Retirer : /partenariat admin-retirer id:<ID>' }).setTimestamp()],
         ephemeral: true,
       });
@@ -515,7 +515,7 @@ module.exports = {
     // Bouton valider/refuser
     if (interaction.isButton()) {
       if (!isAdmin(interaction.member)) {
-        return interaction.reply({ content: '🔒 Admins uniquement.', ephemeral: true });
+        return await interaction.reply({ content: '🔒 Admins uniquement.', ephemeral: true });
       }
       if (id.startsWith('part_valider_')) {
         return validerDemande(interaction, id.replace('part_valider_', ''));

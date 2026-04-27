@@ -249,14 +249,14 @@ async function handleQuizButton(interaction) {
   const quiz = activeQuizzes.get(msgId);
 
   if (!quiz) {
-    return interaction.reply({
+    return await interaction.reply({
       content: 'Ce quiz a expiré ou n\'existe plus.',
       ephemeral: true
     }).catch(() => {});
   }
 
   if (quiz.guildId !== guildId) {
-    return interaction.reply({
+    return await interaction.reply({
       content: 'Ce quiz n\'appartient pas à votre serveur.',
       ephemeral: true
     }).catch(() => {});
@@ -283,18 +283,18 @@ async function handleQuizButton(interaction) {
       ephemeral: false
     }).catch(() => {});
   } else if (isCorrect && quiz.winner && quiz.winner === interaction.user.id) {
-    return interaction.reply({
+    return await interaction.reply({
       content: 'Vous avez déjà répondu correctement !',
       ephemeral: true
     }).catch(() => {});
   } else if (isCorrect && quiz.winner) {
-    return interaction.reply({
+    return await interaction.reply({
       content: 'Quelqu\'un d\'autre a déjà trouvé la bonne réponse !',
       ephemeral: true
     }).catch(() => {});
   } else {
     // Mauvaise réponse
-    return interaction.reply({
+    return await interaction.reply({
       content: '❌ Mauvaise réponse, réessaye !',
       ephemeral: true
     }).catch(() => {});
