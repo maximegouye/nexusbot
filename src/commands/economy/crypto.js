@@ -151,7 +151,11 @@ module.exports = {
       .addStringOption(o => o.setName('montant').setDescription('Montant en coins (ex: 500, all, 25%)').setRequired(true).setMaxLength(20)))
     .addSubcommand(s => s.setName('vendre').setDescription('Vendre une crypto')
       .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).setMaxLength(10))
-      .addStringOption(o => o.setName('quantite').setDescription('Quantité (ex: 0.05, all)').setRequired(true).setMaxLength(20))),
+      .addStringOption(o => o.setName('quantite').setDescription('Quantité (ex: 0.05, all)').setRequired(true).setMaxLength(20)))
+    .addSubcommand(s => s.setName('donner').setDescription('Envoyer de la crypto à un autre membre')
+      .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true))
+      .addStringOption(o => o.setName('crypto').setDescription('Symbole (BTC, ETH, SOL…)').setRequired(true).setMaxLength(10))
+      .addStringOption(o => o.setName('quantite').setDescription('Quantité à envoyer (ex: 0.05, all, 50%)').setRequired(true).setMaxLength(20))),
   cooldown: 3,
 
   async execute(interaction) {
@@ -197,6 +201,71 @@ module.exports = {
       } catch (e) {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}`, ephemeral: true });
       }
+    }
+    if (sub === 'donner') {
+      const target = interaction.options.getUser('membre');
+      const sym    = interaction.options.getString('crypto').toUpperCase();
+      const raw    = interaction.options.getString('quantite');
+
+      if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'envoyer de la crypto à toi-même.', ephemeral: true });
+      if (target.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer de la crypto à un bot.', ephemeral: true });
+
+      // Vérifier que la crypto existe dans le marché
+      const marketItem = db.getCryptoBySymbol ? db.getCryptoBySymbol(sym) : db.db.prepare('SELECT * FROM crypto_market WHERE symbol = ?').get(sym);
+      if (!marketItem) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Crypto **${sym}** inconnue. Utilise un symbole valide : BTC, ETH, SOL, BNB, XRP, DOGE, ADA, LINK, AVAX, DOT, MATIC, SHIB.`, ephemeral: true });
+
+      // Vérifier le solde de l'expéditeur
+      const senderItem = db.getWalletItem(interaction.user.id, interaction.guildId, sym);
+      if (!senderItem || senderItem.amount <= 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu ne possèdes pas de **${sym}**.`, ephemeral: true });
+
+      const qty = parseQty(raw, senderItem.amount);
+      if (qty == null || qty <= 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Quantité invalide.', ephemeral: true });
+      if (qty > senderItem.amount) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${senderItem.amount.toFixed(6)} ${sym}**.`, ephemeral: true });
+
+      const sym2    = cfg.currency_emoji || '€';
+      const valeur  = qty * marketItem.price;
+      const newSenderAmt = senderItem.amount - qty;
+
+      // Retirer de l'expéditeur
+      if (newSenderAmt < 0.000000001) {
+        db.db.prepare('DELETE FROM crypto_wallet WHERE user_id = ? AND guild_id = ? AND crypto = ?').run(interaction.user.id, interaction.guildId, sym);
+      } else {
+        db.db.prepare('UPDATE crypto_wallet SET amount = ?, updated_at = strftime(\'%s\',\'now\') WHERE user_id = ? AND guild_id = ? AND crypto = ?')
+          .run(newSenderAmt, interaction.user.id, interaction.guildId, sym);
+      }
+
+      // Ajouter au destinataire (avg_buy = prix actuel du marché pour refléter la valeur reçue)
+      const targetItem = db.getWalletItem(target.id, interaction.guildId, sym);
+      const targetAmt  = targetItem ? targetItem.amount : 0;
+      const targetAvg  = targetItem ? targetItem.avg_buy : marketItem.price;
+      const newTargetAmt = targetAmt + qty;
+      const newTargetAvg = newTargetAmt > 0 ? (targetAmt * targetAvg + qty * marketItem.price) / newTargetAmt : marketItem.price;
+
+      db.db.prepare(`
+        INSERT INTO crypto_wallet (user_id, guild_id, crypto, amount, avg_buy, updated_at)
+        VALUES (?, ?, ?, ?, ?, strftime('%s','now'))
+        ON CONFLICT(user_id, guild_id, crypto) DO UPDATE SET
+          amount = amount + ?, avg_buy = ?, updated_at = strftime('%s','now')
+      `).run(target.id, interaction.guildId, sym, qty, newTargetAvg, qty, newTargetAvg);
+
+      const emoji = marketItem.emoji || '🪙';
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        embeds: [new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle(`${emoji} Transfert crypto réussi`)
+          .setDescription(
+            `Tu as envoyé **${qty.toFixed(6)} ${sym}** à ${target} !\n` +
+            `Valeur : ≈ **${Math.floor(valeur).toLocaleString('fr-FR')}${sym2}** au prix actuel (**${fmtPrice(marketItem.price)}${sym2}/${sym}**)`
+          )
+          .addFields(
+            { name: '📤 Envoyé',    value: `**-${qty.toFixed(6)} ${sym}**`, inline: true },
+            { name: '💼 Restant',   value: `**${newSenderAmt.toFixed(6)} ${sym}**`, inline: true },
+          )
+          .setFooter({ text: '/crypto portefeuille pour voir ton solde' })
+          .setTimestamp()
+        ],
+        components: buildButtons(interaction.user.id),
+      });
     }
   },
 
