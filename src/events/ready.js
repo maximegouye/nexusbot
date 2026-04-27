@@ -321,6 +321,32 @@ module.exports = {
     // ── Topics des canaux (30s pour laisser le cache se remplir)
     setTimeout(() => setupChannelTopics(client, guildId).catch(() => {}), 30_000);
 
+    // ── Auto-config canaux essentiels (45s après démarrage) ─────────────
+    setTimeout(async () => {
+      try {
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) return;
+        const dbCfg = db.getConfig(guildId);
+        // Mapping nom de canal → clé db
+        const channelMap = [
+          { names: ['staff-général', 'staff-general', 'staff-logs', 'logs-staff'], key: 'mod_log_channel'     },
+          { names: ['classement', 'leaderboard', 'top-semaine'],                   key: 'leaderboard_channel' },
+          { names: ['événements', 'evenements', 'events', 'events-auto'],          key: 'events_channel'      },
+        ];
+        for (const { names, key } of channelMap) {
+          if (dbCfg[key]) continue; // déjà configuré
+          const ch = guild.channels.cache.find(c =>
+            c.isTextBased() && names.some(n => c.name.toLowerCase().includes(n.toLowerCase()))
+          );
+          if (ch) {
+            db.setConfig(guildId, key, ch.id);
+            console.log(`[AutoConfig] ${key} → #${ch.name} (${ch.id})`);
+          }
+        }
+      } catch (e) { console.error('[AutoConfig] erreur:', e.message); }
+    }, 45_000);
+
+
     // ── Musique casino — auto-démarrage (20s pour que le cache vocal soit prêt)
     casinoMusicAutoInit(client, guildId).catch(() => {});
 
