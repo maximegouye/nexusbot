@@ -2,7 +2,34 @@
 // ============================================================
 // ready.js — Initialisation du bot
 // ============================================================
-const { REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const { REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, ActivityType } = require('discord.js');
+
+// ── Statuts rotatifs du bot ────────────────────────────────
+const ACTIVITIES = [
+  { name: '🎰 /casino — 15+ jeux exclusifs',        type: ActivityType.Playing   },
+  { name: '🏇 /hippodrome — Course de chevaux',     type: ActivityType.Competing },
+  { name: '💰 /daily — Récompense quotidienne',     type: ActivityType.Watching  },
+  { name: '🎯 /aide — Toutes les commandes',        type: ActivityType.Listening },
+  { name: '⚔️ /duel — Défie tes amis',             type: ActivityType.Playing   },
+  { name: '🏆 /classement — Top joueurs',           type: ActivityType.Watching  },
+  { name: '🎁 /giveaway — Crée un giveaway',        type: ActivityType.Playing   },
+  { name: '🎫 /ticket — Support & aide',            type: ActivityType.Watching  },
+  { name: '📈 /bourse — Trading virtuel',           type: ActivityType.Playing   },
+  { name: '🌀 /crash — Multiplie tes gains',        type: ActivityType.Competing },
+  { name: '🤖 NexusBot — Le bot tout-en-un',        type: ActivityType.Competing },
+  { name: '🛡️ /ban /kick /clear — Staff tools',    type: ActivityType.Watching  },
+];
+
+let activityIndex = 0;
+
+function rotateActivity(client) {
+  const act = ACTIVITIES[activityIndex % ACTIVITIES.length];
+  client.user.setPresence({
+    status: 'online',
+    activities: [{ name: act.name, type: act.type }],
+  });
+  activityIndex++;
+}
 const { checkBumpReminders } = require('../utils/bumpReminderCheck');
 const {
   autoInit:             casinoMusicAutoInit,
@@ -141,11 +168,67 @@ async function autoSetupRecrutement(client, guildId) {
   }
 }
 
+// ── Topics des canaux ──────────────────────────────────────
+const CHANNEL_TOPICS = {
+  'changelog':      '📋 Dernières mises à jour du serveur et de NexusBot — lis avant de poser des questions !',
+  'info-serveur':   'ℹ️ Règles, informations importantes et présentation du serveur — lecture obligatoire',
+  'roadmap':        '🗺️ Ce qui arrive bientôt — Fonctionnalités à venir pour le serveur et NexusBot',
+  'partenariats':   '🌐 Nos partenaires officiels — Pour proposer un partenariat : /partenariat',
+  'giveaways':      '🎁 Giveaways actifs — Réagis pour participer ! Crée le tien avec /giveaway',
+  'événements':     '🎉 Événements, concours et animations — reste actif pour ne rien rater !',
+  'ticket':         '🎫 Besoin d\'aide ? Ouvre un ticket avec /ticket — réponse sous 24h',
+  'bump':           '🔔 Aide-nous à grandir ! Bumpez avec /bump — récompenses automatiques à la clé',
+  'général':        '💬 Discussion générale — Bienvenue ! Présente-toi et discute avec la communauté',
+  'commandes':      '🤖 Espace dédié aux commandes — NexusBot, Carl-bot, DISBOARD et plus',
+  'mèmes':          '😂 Partage tes meilleurs mèmes — humour bienvenu, contenu choquant interdit',
+  'médias':         '📸 Photos, vidéos, clips et créations — montre-nous ce que tu as !',
+  'off-topic':      '🌐 Discussion hors-sujet — tout est permis dans le respect des règles',
+  'idées':          '💡 Suggère des améliorations pour le serveur — les meilleures idées sont appliquées !',
+  'candidatures':   '📋 Postule pour rejoindre l\'équipe staff — remplis le formulaire avec soin',
+  'économie':       '💰 Gère ton argent, travaille et fais-toi une fortune — /daily /work /aide',
+  'classement':     '🏆 Top joueurs — meilleur XP, meilleur solde, meilleures stats — /classement',
+  'récompenses':    '🎁 Tes missions, récompenses quotidiennes et cadeaux — /missions /daily',
+  'boutique':       '🛍️ Dépense tes coins — items exclusifs, rôles premium et avantages — /shop',
+  'casino':         '🎰 Zone casino — 15+ jeux : /slots /blackjack /crash /hippodrome et bien plus !',
+};
+
+async function setupChannelTopics(client, guildId) {
+  try {
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) return;
+    const channels = guild.channels.cache.filter(c => c.type === 0); // TextChannel
+    let updated = 0;
+    for (const [, channel] of channels) {
+      const cleanName = channel.name.replace(/[^a-z0-9\-éèêëàâùûüîïôç]/gi, '').toLowerCase();
+      // Cherche une correspondance par nom exact ou partiel
+      const topic = CHANNEL_TOPICS[channel.name] ||
+        Object.entries(CHANNEL_TOPICS).find(([k]) => channel.name.includes(k))?.[1];
+      if (topic && channel.topic !== topic) {
+        await channel.setTopic(topic, 'NexusBot — mise à jour automatique des descriptions').catch(() => {});
+        updated++;
+        await new Promise(r => setTimeout(r, 600)); // Rate limit safety
+      }
+    }
+    if (updated > 0) console.log(`✅ Topics canaux : ${updated} canal(aux) mis à jour`);
+  } catch (e) {
+    console.error('[Topics] Erreur:', e.message);
+  }
+}
+
 module.exports = {
   name: 'clientReady',
   once: true,
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.tag} (${client.user.id})`);
+
+    // ── Présence initiale + rotation toutes les 30s ────────
+    rotateActivity(client);
+    setInterval(() => rotateActivity(client), 30_000);
+    console.log('✅ Présence : statuts rotatifs activés (30s interval)');
+
+    // ── Nom du bot & avatar via API ───────────────────────
+    // (décommente pour forcer la mise à jour du username)
+    // client.user.setUsername('NexusBot').catch(() => {});
 
     // ── Bump Reminder — vérification toutes les 60 secondes ─
     checkBumpReminders(client).catch(() => {});
@@ -163,6 +246,9 @@ module.exports = {
 
     // ── Auto-setup recrutement (15s après démarrage pour laisser le cache se remplir)
     setTimeout(() => autoSetupRecrutement(client, guildId).catch(() => {}), 15_000);
+
+    // ── Topics des canaux (30s pour laisser le cache se remplir)
+    setTimeout(() => setupChannelTopics(client, guildId).catch(() => {}), 30_000);
 
     // ── Musique casino — auto-démarrage (20s pour que le cache vocal soit prêt)
     casinoMusicAutoInit(client, guildId).catch(() => {});
