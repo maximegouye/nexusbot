@@ -204,65 +204,9 @@ module.exports = {
   },
 
   handleComponent: async function(interaction) {
-    // Defer immédiatement
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: true }).catch(() => {});
-    }
-
-    const dbm = require('../../database/db');
-    const customId = interaction.customId;
-    const guildId = interaction.guild.id;
-    const userId = interaction.user.id;
-
-    if (customId.startsWith('giveaway_join_') || customId === 'giveaway_enter' || customId.startsWith('giveaway_particip')) {
-      try {
-        // Extraire l'ID depuis le customId
-        const parts = customId.split('_');
-        const rawId = parts[parts.length - 1];
-
-        // Chercher le giveaway par son id numérique d'abord, sinon par message_id
-        let gw = isNaN(rawId) ? null : dbm.db.prepare('SELECT * FROM giveaways WHERE id = ? AND guild_id = ?').get(parseInt(rawId), guildId);
-        if (!gw) gw = dbm.db.prepare('SELECT * FROM giveaways WHERE message_id = ? AND guild_id = ?').get(interaction.message?.id, guildId);
-        if (!gw) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Giveaway introuvable.', ephemeral: true });
-        if (gw.status !== 'active') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
-        if (gw.ends_at < Math.floor(Date.now() / 1000)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce giveaway est expiré.', ephemeral: true });
-
-        // Vérifier conditions minimum
-        if (gw.min_level > 0 || gw.min_balance > 0) {
-          const user = dbm.db.prepare('SELECT * FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
-          if (gw.min_level > 0 && (!user || user.level < gw.min_level))
-            return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Niveau minimum : **' + gw.min_level + '**.', ephemeral: true });
-          if (gw.min_balance > 0 && (!user || (user.balance || 0) < gw.min_balance))
-            return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Balance minimum : **' + gw.min_balance + '** coins.', ephemeral: true });
-        }
-
-        const entries = JSON.parse(gw.entries || '[]');
-        if (entries.includes(userId)) {
-          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⚠️ Tu participes déjà à ce giveaway !', ephemeral: true });
-        }
-
-        // Ajouter entrée (bonus si rôle bonus)
-        const newEntries = [...entries, userId];
-        if (gw.bonus_role_id && interaction.member?.roles?.cache?.has(gw.bonus_role_id)) newEntries.push(userId);
-        dbm.db.prepare('UPDATE giveaways SET entries = ? WHERE id = ?').run(JSON.stringify(newEntries), gw.id);
-
-        // Mettre à jour embed
-        try {
-          const embed = interaction.message.embeds[0]?.toJSON();
-          if (embed) {
-            const unique = new Set(newEntries).size;
-            embed.description = (embed.description || '').replace(/🎟️ \*\*Participants :\*\* \d+/, '🎟️ **Participants :** ' + unique);
-            await interaction.message.edit({ embeds: [embed] }).catch(() => {});
-          }
-        } catch {}
-
-        const uniqueCount = new Set(newEntries).size;
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🎉 Tu participes au giveaway **' + gw.prize + '** ! (' + uniqueCount + ' participant(s))', ephemeral: true });
-      } catch(e) {
-        console.error('[GIVEAWAY handleComponent]', e);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur technique. Réessaie.' }).catch(() => {});
-      }
-    }
+    // Délègue directement à handleGiveawayButton qui contient la logique complète :
+    // toggle inscription/désinscription + mise à jour correcte de l'embed via buildEmbed()
+    return handleGiveawayButton(interaction);
   },
 
 };
