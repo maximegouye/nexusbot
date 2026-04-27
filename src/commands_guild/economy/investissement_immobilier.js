@@ -34,11 +34,13 @@ module.exports = {
     .setDescription('🏠 Marché Immobilier Virtuel')
     .addSubcommand(s => s.setName('marche').setDescription('🏪 Voir les propriétés disponibles'))
     .addSubcommand(s => s.setName('acheter')
-      .setDescription('💰 Acheter une propriété'))
+      .setDescription('💰 Acheter une propriété')
+      .addIntegerOption(o => o.setName('id').setDescription('ID de la propriété (1-6, voir /immo marche)').setRequired(true).setMinValue(1).setMaxValue(6)))
     .addSubcommand(s => s.setName('portfolio').setDescription('📋 Voir ton portfolio immobilier'))
     .addSubcommand(s => s.setName('loyer').setDescription('💸 Collecter les loyers de tes propriétés'))
     .addSubcommand(s => s.setName('vendre')
-      .setDescription('📉 Vendre une propriété')),
+      .setDescription('📉 Vendre une propriété')
+      .addIntegerOption(o => o.setName('id').setDescription('ID de la propriété à vendre (voir /immo portfolio)').setRequired(true).setMinValue(1).setMaxValue(6))),
 
   cooldown: 5,
 
@@ -71,7 +73,7 @@ module.exports = {
       if (already) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu possèdes déjà cette propriété !' });
 
       const user = db.getUser(userId, guildId);
-      if (user.coins < prop.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${user.coins.toLocaleString()}** 🪙. Il te faut **${prop.price.toLocaleString()}** 🪙.` });
+      if ((user.balance || 0) < prop.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${(user.balance||0).toLocaleString()}** 🪙. Il te faut **${prop.price.toLocaleString()}** 🪙.` });
 
       db.removeCoins(userId, guildId, prop.price);
       db.db.prepare('INSERT INTO immo_portfolio (user_id, guild_id, property_id, bought_at, buy_price) VALUES (?,?,?,?,?)').run(userId, guildId, propId, now, prop.price);

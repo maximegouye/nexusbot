@@ -63,7 +63,8 @@ module.exports = {
     .setName('marchenoir')
     .setDescription('🕵️ Marché noir — Offres secrètes et risquées, rotation toutes les 2h')
     .addSubcommand(s => s.setName('voir').setDescription('🕵️ Voir les offres actuelles'))
-    .addSubcommand(s => s.setName('acheter').setDescription('💸 Acheter une offre'))
+    .addSubcommand(s => s.setName('acheter').setDescription('💸 Acheter une offre')
+      .addIntegerOption(o => o.setName('numero').setDescription('Numéro de l\'offre (voir /marchenoir voir)').setRequired(true).setMinValue(1).setMaxValue(10)))
     .addSubcommand(s => s.setName('inventaire').setDescription('🎒 Voir vos objets spéciaux')),
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

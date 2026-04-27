@@ -15,6 +15,9 @@ module.exports = {
     .addStringOption(o => o.setName('raison').setDescription('Raison (optionnel)').setRequired(false)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     const target  = interaction.options.getUser('membre');
     const montant = interaction.options.getInteger('montant');
     const raison  = interaction.options.getString('raison') || null;
@@ -24,15 +27,15 @@ module.exports = {
     const coin    = cfg?.currency_emoji || '🪙';
 
     if (target.id === userId) {
-      return interaction.reply({ content: '❌ Tu ne peux pas t\'envoyer des coins à toi-même.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'envoyer des coins à toi-même.', ephemeral: true });
     }
     if (target.bot) {
-      return interaction.reply({ content: '❌ Impossible d\'envoyer des coins à un bot.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer des coins à un bot.', ephemeral: true });
     }
 
     const sender = db.getUser(userId, guildId);
     if (!sender || sender.balance < montant) {
-      return interaction.reply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         content: `❌ Solde insuffisant. Tu as **${(sender?.balance || 0).toLocaleString('fr-FR')} ${coin}**.`,
         ephemeral: true,
       });
@@ -66,7 +69,7 @@ module.exports = {
 
     embed.setTimestamp();
 
-    return interaction.reply({ embeds: [embed] });
+    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   },
 
   name: 'transfert',

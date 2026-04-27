@@ -77,6 +77,9 @@ module.exports = {
       .setDescription('🏆 Voir tous les tiers VIP et leurs avantages')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+    }
     const sub     = interaction.options.getSubcommand(false) || 'solde';
     const guildId = interaction.guildId;
     const userId  = interaction.user.id;
@@ -114,18 +117,18 @@ module.exports = {
       }
 
       embed.setFooter({ text: '/banque interets — intérêts composés disponibles 1x/jour' });
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     // ── DÉPOSER ───────────────────────────────────────────
     if (sub === 'deposer') {
       let montant = interaction.options.getInteger('montant');
       if (montant === 0) montant = u.balance;
-      if (montant > u.balance) return interaction.reply({ content: `❌ Solde insuffisant (**${formatNum(u.balance)} ${coin}**).`, ephemeral: true });
+      if (montant > u.balance) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant (**${formatNum(u.balance)} ${coin}**).`, ephemeral: true });
 
       const maxCap = u.balance * tier.maxMultiplier;
       if (bank >= maxCap) {
-        return interaction.reply({ content: `❌ Banque pleine ! Plafond tier ${tier.name} : **${formatNum(maxCap)} ${coin}**.`, ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Banque pleine ! Plafond tier ${tier.name} : **${formatNum(maxCap)} ${coin}**.`, ephemeral: true });
       }
 
       const allowed = Math.min(montant, maxCap - bank);
@@ -143,20 +146,20 @@ module.exports = {
 
       if (allowed < montant) embed.addFields({ name: '⚠️ Plafond atteint', value: `Seuls **${formatNum(allowed)} ${coin}** ont été déposés (plafond tier ${tier.name}).` });
 
-      return interaction.reply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     // ── RETIRER ───────────────────────────────────────────
     if (sub === 'retirer') {
       let montant = interaction.options.getInteger('montant');
       if (montant === 0) montant = bank;
-      if (montant > bank) return interaction.reply({ content: `❌ Vous n'avez que **${formatNum(bank)} ${coin}** en banque.`, ephemeral: true });
+      if (montant > bank) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous n'avez que **${formatNum(bank)} ${coin}** en banque.`, ephemeral: true });
 
       db.addCoins(userId, guildId, montant);
       db.db.prepare('UPDATE users SET bank=bank-? WHERE user_id=? AND guild_id=?').run(montant, userId, guildId);
       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, userId, 'retrait', montant);
 
-      return interaction.reply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setTitle('📤 Retrait effectué')
@@ -172,11 +175,11 @@ module.exports = {
     if (sub === 'interets') {
       const cd = checkCooldown(userId, 'banque_interets', 22 * 3600);
       if (cd.onCooldown) {
-        return interaction.reply({ content: cooldownMessage(cd.remaining), ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: cooldownMessage(cd.remaining), ephemeral: true });
       }
 
       if (bank === 0) {
-        return interaction.reply({ content: '❌ Vous n\'avez pas d\'argent à la banque.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez pas d\'argent à la banque.', ephemeral: true });
       }
 
       // Intérêts composés selon le tier
@@ -195,7 +198,7 @@ module.exports = {
         )
         .setFooter({ text: 'Prochain intérêt disponible dans ~22h' });
 
-      return interaction.reply({ embeds: [embed] });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
     // ── HISTORIQUE ────────────────────────────────────────
@@ -205,7 +208,7 @@ module.exports = {
       ).all(userId, guildId);
 
       if (!txs.length) {
-        return interaction.reply({ content: '📋 Aucune transaction trouvée.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📋 Aucune transaction trouvée.', ephemeral: true });
       }
 
       const typeEmoji = { depot: '📥', retrait: '📤', interets: '📈', virement_in: '💸', virement_out: '💸' };
@@ -220,7 +223,7 @@ module.exports = {
         .setTitle('📋 10 dernières transactions')
         .setDescription(lines);
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     // ── VIRER ─────────────────────────────────────────────
@@ -228,15 +231,15 @@ module.exports = {
       const target  = interaction.options.getUser('membre');
       const montant = interaction.options.getInteger('montant');
 
-      if (target.id === userId) return interaction.reply({ content: '❌ Vous ne pouvez pas vous virer de l\'argent.', ephemeral: true });
-      if (montant > bank) return interaction.reply({ content: `❌ Solde bancaire insuffisant.`, ephemeral: true });
+      if (target.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous virer de l\'argent.', ephemeral: true });
+      if (montant > bank) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde bancaire insuffisant.`, ephemeral: true });
 
       db.db.prepare('UPDATE users SET bank=bank-? WHERE user_id=? AND guild_id=?').run(montant, userId, guildId);
       db.db.prepare('UPDATE users SET bank=COALESCE(bank,0)+? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, userId, 'virement_out', montant);
       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, target.id, 'virement_in', montant);
 
-      return interaction.reply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('💸 Virement effectué')
@@ -262,7 +265,7 @@ module.exports = {
         .addFields(tierFields)
         .setFooter({ text: 'Plus votre dépôt est élevé, plus vos intérêts composés sont puissants !' });
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
   }
 };

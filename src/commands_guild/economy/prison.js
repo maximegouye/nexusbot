@@ -17,7 +17,9 @@ module.exports = {
     .setDescription('⛓️ Système de prison virtuelle')
     .addSubcommand(s => s.setName('emprisonner').setDescription('⛓️ Emprisonner un membre')
       .addUserOption(o => o.setName('membre').setDescription('Membre à emprisonner').setRequired(true))
-      .addStringOption(o => o.setName('motif').setDescription('Motif').setRequired(true)))
+      .addStringOption(o => o.setName('motif').setDescription('Motif').setRequired(true))
+      .addIntegerOption(o => o.setName('duree').setDescription('Durée en minutes (défaut: 60)').setRequired(false).setMinValue(1).setMaxValue(1440))
+      .addStringOption(o => o.setName('caution').setDescription('Montant de la caution pour se libérer').setRequired(false)))
     .addSubcommand(s => s.setName('liberer').setDescription('🔓 Libérer un prisonnier (admin)')
       .addUserOption(o => o.setName('membre').setDescription('Membre à libérer').setRequired(true)))
     .addSubcommand(s => s.setName('evasion').setDescription('🏃 Tenter une évasion (50% de chance)'))
@@ -37,7 +39,7 @@ module.exports = {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission refusée.', ephemeral: true });
 
       const target = interaction.options.getUser('membre');
-      const duree = interaction.options.getInteger('duree');
+      const duree = interaction.options.getInteger('duree') ?? 60;
       const motif = interaction.options.getString('motif');
       const caution = parseInt(interaction.options.getString('caution')) || 0;
 

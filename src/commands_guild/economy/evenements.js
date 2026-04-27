@@ -37,6 +37,7 @@ module.exports = {
           { name: '🛒 Réduction boutique 50%', value: 'shop_discount' },
           { name: '🎲 Lootbox gratuite', value: 'free_lootbox' },
         ))
+      .addIntegerOption(o => o.setName('duree_heures').setDescription('Durée en heures').setRequired(true).setMinValue(1).setMaxValue(168))
       .addChannelOption(o => o.setName('annoncer_dans').setDescription('Salon pour l\'annonce publique')))
 
     .addSubcommand(s => s.setName('terminer').setDescription('🛑 Terminer un événement')
