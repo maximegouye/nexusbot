@@ -390,11 +390,19 @@ module.exports = {
     .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 10)').setRequired(true).setMinValue(10)),
 
   async execute(interaction) {
+    try {
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply({ ephemeral: false }).catch(() => {});
     }
     await playVideoPoker(interaction, interaction.user.id, interaction.guildId, interaction.options.getInteger('mise'));
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }},
 
   async handleComponent(interaction) {
     return handleComponent(interaction);

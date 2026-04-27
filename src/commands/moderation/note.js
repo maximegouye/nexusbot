@@ -16,6 +16,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers))
       return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
@@ -29,7 +30,7 @@ module.exports = {
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#F39C12')
-          .setDescription(`📝 Note ajoutée pour **${target.tag}** : *"${texte}"*`)
+          .setDescription(`📝 Note ajoutée pour **${target.username}** : *"${texte}"*`)
         ], ephemeral: true
       });
     }
@@ -38,7 +39,7 @@ module.exports = {
       const target = interaction.options.getUser('membre');
       const notes  = db.db.prepare('SELECT * FROM mod_notes WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC').all(interaction.guildId, target.id);
       if (!notes.length)
-        return interaction.reply({ content: `ℹ️ Aucune note pour **${target.tag}**.`, ephemeral: true });
+        return interaction.reply({ content: `ℹ️ Aucune note pour **${target.username}**.`, ephemeral: true });
 
       const list = notes.map(n => {
         const date = new Date(n.created_at * 1000).toLocaleDateString('fr-FR');
@@ -48,7 +49,7 @@ module.exports = {
       return interaction.reply({
         embeds: [new EmbedBuilder()
           .setColor('#3498DB')
-          .setTitle(`📝 Notes de modération — ${target.tag}`)
+          .setTitle(`📝 Notes de modération — ${target.username}`)
           .setDescription(list.slice(0, 4096))
           .setThumbnail(target.displayAvatarURL())
         ], ephemeral: true
@@ -64,6 +65,16 @@ module.exports = {
         embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`🗑️ Note \`#${id}\` supprimée.`)], ephemeral: true
       });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

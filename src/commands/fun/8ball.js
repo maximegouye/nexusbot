@@ -33,6 +33,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     const question = interaction.options.getString('question');
     const response = RESPONSES[Math.floor(Math.random() * RESPONSES.length)];
     const cfg      = db.getConfig(interaction.guildId);
@@ -53,6 +54,16 @@ module.exports = {
       .setFooter({ text: `Demandé par ${interaction.user.username}` });
 
     await interaction.reply({ embeds: [embed] });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

@@ -58,7 +58,7 @@ async function applyAction(message, cfg, reason) {
           .setColor('Red')
           .setTitle('🛡️ AutoMod — Violation détectée')
           .addFields(
-            { name: '👤 Membre',  value: `<@${message.author.id}> (${message.author.tag})`, inline: true },
+            { name: '👤 Membre',  value: `<@${message.author.id}> (${message.author.username})`, inline: true },
             { name: '📋 Raison',  value: reason, inline: true },
             { name: '⚡ Action',   value: cfg.action, inline: true },
             { name: '💬 Salon',   value: `<#${message.channelId}>`, inline: true },

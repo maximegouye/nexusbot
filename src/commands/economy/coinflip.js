@@ -13,6 +13,7 @@ module.exports = {
     .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier (laisse vide pour un défi ouvert)').setRequired(false)),
 
   async execute(interaction) {
+    try {
     const miseRaw = interaction.options.get('mise')?.value;
     const challenger0 = db.getUser(interaction.user.id, interaction.guildId);
     const parseBet = (raw, base) => {
@@ -115,7 +116,17 @@ module.exports = {
         msg.edit({ embeds: [new EmbedBuilder().setColor('Red').setDescription('⏰ Défi expiré. Mise remboursée.')], components: [] }).catch(() => {});
       }
     });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
 
   async run(message, args) {
     const [miseRaw] = args;

@@ -44,6 +44,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const cible = interaction.options.getUser('cible') || interaction.user;
 
     const row = new ActionRowBuilder().addComponents(
@@ -98,6 +99,16 @@ module.exports = {
         msg.edit({ components: [] }).catch(() => {});
       }
     });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

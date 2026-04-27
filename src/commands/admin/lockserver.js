@@ -60,7 +60,7 @@ module.exports = {
             await channel.permissionOverwrites.edit(
               interaction.guild.roles.everyone,
               { SendMessages: false },
-              'Lockserver par ' + interaction.user.tag
+              'Lockserver par ' + interaction.user.username
             );
 
             // Envoyer un message d'urgence
@@ -130,7 +130,7 @@ module.exports = {
             if (prevState && prevState.canSend) {
               await channel.permissionOverwrites.delete(
                 interaction.guild.roles.everyone,
-                'Unlock serveur par ' + interaction.user.tag
+                'Unlock serveur par ' + interaction.user.username
               );
             } else {
               // Sinon, garder bloqué

@@ -27,7 +27,7 @@ module.exports = {
     for (const id of ids) {
       if (id === interaction.user.id || id === interaction.client.user.id) { skipped++; continue; }
       try {
-        await interaction.guild.bans.create(id, { reason: `[MassBan] ${raison} — par ${interaction.user.tag}`, deleteMessageSeconds: delDays * 86400 });
+        await interaction.guild.bans.create(id, { reason: `[MassBan] ${raison} — par ${interaction.user.username}`, deleteMessageSeconds: delDays * 86400 });
         db.db.prepare('INSERT INTO warnings (guild_id,user_id,mod_id,reason) VALUES (?,?,?,?)').run(interaction.guildId, id, interaction.user.id, `[BAN] ${raison}`);
         results.push(`✅ \`${id}\``);
         banned++;

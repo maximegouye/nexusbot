@@ -9,6 +9,7 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    try {
     const cfg   = db.getConfig(interaction.guildId);
     const uptime = process.uptime();
     const d = Math.floor(uptime / 86400);
@@ -54,5 +55,15 @@ module.exports = {
       .setTimestamp();
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

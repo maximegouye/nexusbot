@@ -11,6 +11,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     const target = interaction.options.getUser('membre');
     const level  = interaction.options.getInteger('niveau');
     const xp     = Math.floor(100 * Math.pow(1.35, level - 1));
@@ -24,5 +25,15 @@ module.exports = {
         .setDescription(`✅ **${target.username}** est maintenant niveau **${level}** (${xp.toLocaleString('fr-FR')} XP).`)
       ]
     });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

@@ -85,6 +85,7 @@ module.exports = {
       .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier').setRequired(true))),
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
@@ -126,7 +127,14 @@ module.exports = {
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `<@${opponent.id}>`, embeds: [embed], components: [row] });
     }
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }},
 
   async handleComponent(interaction) {
     const db = require('../../database/db');

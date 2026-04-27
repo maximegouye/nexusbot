@@ -40,6 +40,7 @@ module.exports = {
     .addRoleOption(o => o.setName('role').setDescription('Le rôle').setRequired(true)),
 
   async execute(interaction) {
+    try {
     const role = interaction.options.getRole('role');
     const memberCount = interaction.guild.members.cache.filter(m => m.roles.cache.has(role.id)).size;
 
@@ -75,7 +76,17 @@ module.exports = {
     }
 
     return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
   name: 'roleinfo',
   aliases: ["inforole"],
     async run(message, args) {

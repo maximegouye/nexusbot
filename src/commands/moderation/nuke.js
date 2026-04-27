@@ -48,7 +48,7 @@ module.exports = {
         try {
           const channel  = interaction.channel;
           const position = channel.position;
-          const newCh    = await channel.clone({ reason: `Nuke par ${interaction.user.tag}` });
+          const newCh    = await channel.clone({ reason: `Nuke par ${interaction.user.username}` });
           await newCh.setPosition(position);
           await newCh.send({
             embeds: [new EmbedBuilder()
@@ -58,7 +58,7 @@ module.exports = {
               .setTimestamp()
             ]
           });
-          await channel.delete(`Nuke par ${interaction.user.tag}`);
+          await channel.delete(`Nuke par ${interaction.user.username}`);
         } catch (e) {
           interaction.followUp({ content: `❌ Erreur : ${e.message}`, ephemeral: true }).catch(() => {});
         }

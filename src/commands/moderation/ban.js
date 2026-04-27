@@ -24,9 +24,9 @@ module.exports = {
     const confirmEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setTitle('🔨 Confirmation de bannissement')
-      .setDescription(`Tu es sur le point de bannir **${target.user.tag}** de ce serveur.`)
+      .setDescription(`Tu es sur le point de bannir **${target.user.username}** de ce serveur.`)
       .addFields(
-        { name: '👤 Membre',     value: `${target.user.tag} \`(${target.id})\``, inline: false },
+        { name: '👤 Membre',     value: `${target.user.username} \`(${target.id})\``, inline: false },
         { name: '📝 Raison',     value: raison, inline: false },
         { name: '🗑️ Messages',   value: days > 0 ? `Suppression des ${days} derniers jours` : 'Aucune suppression', inline: true },
       )
@@ -62,15 +62,15 @@ module.exports = {
       ]
     }).catch(() => {});
 
-    await target.ban({ reason: `${interaction.user.tag}: ${raison}`, deleteMessageSeconds: days * 86400 });
+    await target.ban({ reason: `${interaction.user.username}: ${raison}`, deleteMessageSeconds: days * 86400 });
     try { db.incrementStat(interaction.guildId, 'bans'); } catch {}
 
     const resultEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setTitle('🔨 Membre banni')
       .addFields(
-        { name: '👤 Membre',     value: `${target.user.tag}`,      inline: true },
-        { name: '👮 Modérateur', value: `${interaction.user.tag}`, inline: true },
+        { name: '👤 Membre',     value: `${target.user.username}`,      inline: true },
+        { name: '👮 Modérateur', value: `${interaction.user.username}`, inline: true },
         { name: '📝 Raison',     value: raison,                    inline: false },
       )
       .setThumbnail(target.user.displayAvatarURL())

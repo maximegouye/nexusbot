@@ -33,6 +33,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const sub     = interaction.options.getSubcommand();
     const channel = interaction.channel;
     const guildId = interaction.guildId;
@@ -177,7 +178,14 @@ module.exports = {
         );
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }}
 };
 
 function getRandomWord(theme) {

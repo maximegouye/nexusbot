@@ -107,6 +107,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub     = interaction.options.getSubcommand();
     const userId  = interaction.user.id;
@@ -332,7 +333,14 @@ module.exports = {
       });
       return;
     }
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }},
 
   name: 'minijeu',
   aliases: ['minigame', 'jeurapide'],

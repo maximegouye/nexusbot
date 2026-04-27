@@ -100,6 +100,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const cfg    = db.getConfig(interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
@@ -264,7 +265,14 @@ module.exports = {
         }).catch(() => {});
       }
     });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }},
   name: 'poker2',
   aliases: ["poker-prefix"],
   async run(message, args) {

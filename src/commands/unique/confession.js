@@ -289,7 +289,7 @@ module.exports = {
         );
 
         (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
-          content: `✅ ${user.tag} a été banni des confessions. Raison: ${reason}`,
+          content: `✅ ${user.username} a été banni des confessions. Raison: ${reason}`,
           ephemeral: true,
         });
       } catch (error) {
@@ -316,7 +316,7 @@ module.exports = {
         db.db.prepare('DELETE FROM confession_bans WHERE guild_id = ? AND user_id = ?').run(guildId, user.id);
 
         (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
-          content: `✅ ${user.tag} a été débanni des confessions.`,
+          content: `✅ ${user.username} a été débanni des confessions.`,
           ephemeral: true,
         });
       } catch (error) {

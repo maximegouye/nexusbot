@@ -24,7 +24,7 @@ module.exports = {
           .setTitle('✏️ Message modifié')
           .setURL(newMessage.url)
           .addFields(
-            { name: '✍️ Auteur', value: `${oldMessage.author.tag} (<@${oldMessage.author.id}>)`, inline: true },
+            { name: '✍️ Auteur', value: `${oldMessage.author.username} (<@${oldMessage.author.id}>)`, inline: true },
             { name: '📌 Salon', value: `<#${oldMessage.channel.id}>`, inline: true },
             { name: '📝 Avant', value: oldMessage.content?.slice(0, 512) || '*vide*', inline: false },
             { name: '✅ Après',  value: newMessage.content?.slice(0, 512) || '*vide*', inline: false },

@@ -35,7 +35,7 @@ async function handleStarReaction(reaction, user, added) {
 
     const embed = new EmbedBuilder()
       .setColor('#FFD700')
-      .setAuthor({ name: msg.author.tag, iconURL: msg.author.displayAvatarURL() })
+      .setAuthor({ name: msg.author.username, iconURL: msg.author.displayAvatarURL() })
       .setDescription(msg.content || '*[Pas de texte]*')
       .addFields(
         { name: '📌 Source', value: `[Aller au message](${msg.url})`, inline: true },

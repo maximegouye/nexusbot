@@ -15,7 +15,7 @@ module.exports = {
 
     try {
       const duration = 10 * 60 * 1000; // 10 minutes
-      await target.timeout(duration, `Timeout rapide par ${interaction.user.tag}`);
+      await target.timeout(duration, `Timeout rapide par ${interaction.user.username}`);
 
       // Log dans la DB
       try {

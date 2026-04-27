@@ -15,6 +15,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const opponent = interaction.options.getUser('adversaire');
     const cfg      = db.getConfig(interaction.guildId);
 
@@ -134,6 +135,16 @@ module.exports = {
         components: []
       });
     });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

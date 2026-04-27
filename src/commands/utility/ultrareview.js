@@ -180,7 +180,7 @@ module.exports = {
           inline: true,
         },
       )
-      .setFooter({ text: `NexusBot Ultra Review • Demandé par ${interaction.user.tag}` })
+      .setFooter({ text: `NexusBot Ultra Review • Demandé par ${interaction.user.username}` })
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });

@@ -14,6 +14,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
       return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
@@ -45,7 +46,7 @@ module.exports = {
       const cfg = db.getConfig(interaction.guildId);
       if (cfg.mod_log_channel) {
         const logCh = interaction.guild.channels.cache.get(cfg.mod_log_channel);
-        if (logCh) logCh.send({ embeds: [embed.addFields({ name: '📌 Salon', value: `<#${interaction.channelId}>`, inline: true }, { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true })] }).catch(() => {});
+        if (logCh) logCh.send({ embeds: [embed.addFields({ name: '📌 Salon', value: `<#${interaction.channelId}>`, inline: true }, { name: '🛡️ Modérateur', value: interaction.user.username, inline: true })] }).catch(() => {});
       }
     }
 
@@ -66,6 +67,16 @@ module.exports = {
         ]
       });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

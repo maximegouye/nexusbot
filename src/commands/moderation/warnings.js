@@ -10,6 +10,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const target = interaction.options.getUser('membre');
     const warns  = db.db.prepare('SELECT * FROM warnings WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 20')
       .all(interaction.guildId, target.id);
@@ -25,11 +26,21 @@ module.exports = {
       let desc = `**${warns.length} avertissement${warns.length > 1 ? 's' : ''}** au total\n\n`;
       for (const w of warns) {
         const mod = await interaction.client.users.fetch(w.mod_id).catch(() => ({ tag: 'Inconnu' }));
-        desc += `**#${w.id}** — <t:${w.created_at}:D>\n👮 ${mod.tag}\n📝 ${w.reason}\n\n`;
+        desc += `**#${w.id}** — <t:${w.created_at}:D>\n👮 ${mod.username}\n📝 ${w.reason}\n\n`;
       }
       embed.setDescription(desc);
     }
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

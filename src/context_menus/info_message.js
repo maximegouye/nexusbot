@@ -13,7 +13,7 @@ module.exports = {
       .setTitle('📋 Informations du message')
       .addFields(
         { name: '🆔 ID message', value: msg.id, inline: true },
-        { name: '👤 Auteur', value: `<@${msg.author.id}> (\`${msg.author.tag}\`)`, inline: true },
+        { name: '👤 Auteur', value: `<@${msg.author.id}> (\`${msg.author.username}\`)`, inline: true },
         { name: '📅 Envoyé', value: `<t:${Math.floor(msg.createdTimestamp / 1000)}:F>`, inline: true },
         { name: '💬 Salon', value: `<#${msg.channelId}> (\`${msg.channelId}\`)`, inline: true },
         { name: '📝 Longueur', value: `${msg.content?.length ?? 0} caractères`, inline: true },

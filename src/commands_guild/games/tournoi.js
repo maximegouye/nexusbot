@@ -10,6 +10,7 @@ module.exports = {
     .addSubcommand(s=>s.setName('statut').setDescription('📊 Statut du tournoi'))
     .addSubcommand(s=>s.setName('annuler').setDescription('❌ Annuler (hôte)')),
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub=interaction.options.getSubcommand(); const {guildId}=interaction; const userId=interaction.user.id;
     const cfg=db.getConfig(guildId); const coin=cfg.currency_emoji||'€';
@@ -67,7 +68,14 @@ module.exports = {
       db.db.prepare('UPDATE tournaments SET status="cancelled" WHERE id=?').run(t.id);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Tournoi annulé').setDescription(`Tournoi **${t.name}** annulé.${t.entry_fee>0?` Joueurs remboursés (${t.entry_fee} ${coin}).`:''}`)]}); 
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }}
 };
 
 // Réactivé comme prefix-only (limite slash Discord)

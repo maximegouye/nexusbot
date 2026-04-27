@@ -25,6 +25,7 @@ module.exports = {
     .addSubcommand(s => s.setName('test').setDescription('Tester un déclencheur')
       .addStringOption(o => o.setName('message').setDescription('Message à tester').setRequired(true))),
   async execute(interaction) {
+    try {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'ajouter') {
@@ -78,5 +79,15 @@ module.exports = {
           { name: '📤 Réponse', value: match.response.slice(0, 200), inline: false },
         )], ephemeral: true });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

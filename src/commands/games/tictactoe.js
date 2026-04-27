@@ -34,6 +34,7 @@ module.exports = {
     .addUserOption(o => o.setName('adversaire').setDescription('Membre à défier (laisser vide = bot)').setRequired(false)),
 
   async execute(interaction) {
+    try {
     const opponent = interaction.options.getUser('adversaire');
     if (opponent?.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
     if (opponent?.bot && opponent.id !== interaction.client.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
@@ -122,5 +123,15 @@ module.exports = {
       const g = games.get(interaction.channelId);
       if (g?.active) { g.active = false; games.delete(interaction.channelId); }
     });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

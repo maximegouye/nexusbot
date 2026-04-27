@@ -45,6 +45,7 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true))),
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
@@ -219,5 +220,12 @@ module.exports = {
         .setDescription(`${item.emoji} **${item.name}**\n~~${item.price}~~ → **${newPrice} ${coin}**`)
         .setFooter({ text: `Article #${id} mis en promo` })] });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }}
 };

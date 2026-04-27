@@ -42,7 +42,7 @@ module.exports = {
         ]
       }).catch(() => {});
 
-      await interaction.guild.bans.create(target, { reason: `[TempBan ${duree}h] ${raison} — par ${interaction.user.tag}` });
+      await interaction.guild.bans.create(target, { reason: `[TempBan ${duree}h] ${raison} — par ${interaction.user.username}` });
 
       // Sauvegarder en DB
       db.db.prepare('INSERT INTO tempbans (guild_id, user_id, mod_id, reason, expires_at) VALUES (?, ?, ?, ?, ?)')
@@ -58,7 +58,7 @@ module.exports = {
             .setTitle('⛔ Bannissement Temporaire')
             .addFields(
               { name: '👤 Membre', value: `${target.tag} (<@${target.id}>)`, inline: true },
-              { name: '🛡️ Modérateur', value: `${interaction.user.tag}`, inline: true },
+              { name: '🛡️ Modérateur', value: `${interaction.user.username}`, inline: true },
               { name: '⏱️ Durée', value: `${duree}h`, inline: true },
               { name: '📅 Fin', value: `<t:${expiresAt}:F>`, inline: true },
               { name: '📋 Raison', value: raison, inline: false },

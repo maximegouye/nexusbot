@@ -10,6 +10,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     const action = interaction.options.getString('action') || 'lock';
     const everyone = interaction.guild.roles.everyone;
     const currentPerms = interaction.channel.permissionsFor(everyone);
@@ -34,5 +35,15 @@ module.exports = {
         ]
       });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

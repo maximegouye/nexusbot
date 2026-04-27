@@ -22,7 +22,7 @@ module.exports = {
     if (!ban) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ L'utilisateur \`${userId}\` n'est pas banni sur ce serveur.`, ephemeral: true });
 
     try {
-      await interaction.guild.bans.remove(userId, `${raison} — par ${interaction.user.tag}`);
+      await interaction.guild.bans.remove(userId, `${raison} — par ${interaction.user.username}`);
 
       // Marquer le tempban comme terminé
       db.db.prepare('UPDATE tempbans SET unbanned = 1 WHERE guild_id = ? AND user_id = ? AND unbanned = 0')
@@ -36,8 +36,8 @@ module.exports = {
             .setColor('#2ECC71')
             .setTitle('🔓 Débannissement')
             .addFields(
-              { name: '👤 Utilisateur', value: `${ban.user.tag} (\`${userId}\`)`, inline: true },
-              { name: '🛡️ Modérateur', value: interaction.user.tag, inline: true },
+              { name: '👤 Utilisateur', value: `${ban.user.username} (\`${userId}\`)`, inline: true },
+              { name: '🛡️ Modérateur', value: interaction.user.username, inline: true },
               { name: '📋 Raison', value: raison, inline: false },
             )
             .setTimestamp()
@@ -48,7 +48,7 @@ module.exports = {
       await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#2ECC71')
-          .setDescription(`✅ **${ban.user.tag}** a été débanni avec succès.\n📋 Raison : ${raison}`)
+          .setDescription(`✅ **${ban.user.username}** a été débanni avec succès.\n📋 Raison : ${raison}`)
         ]
       });
     } catch (e) {

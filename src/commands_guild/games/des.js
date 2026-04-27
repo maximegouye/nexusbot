@@ -192,6 +192,7 @@ module.exports = {
     .addIntegerOption(o => o.setName('des').setDescription('Nombre de dés (1 ou 2)').setMinValue(1).setMaxValue(2)),
 
   async execute(interaction) {
+    try {
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply({ ephemeral: false }).catch(() => {});
     }
@@ -203,7 +204,14 @@ module.exports = {
       interaction.options.getString('pari'),
       interaction.options.getInteger('des') || 1,
     );
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }},
 
   name: 'des',
   aliases: ['dice', 'dé', 'roll'],

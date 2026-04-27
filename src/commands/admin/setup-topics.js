@@ -37,6 +37,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: true });
 
     const guild    = interaction.guild;
@@ -91,6 +92,16 @@ module.exports = {
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

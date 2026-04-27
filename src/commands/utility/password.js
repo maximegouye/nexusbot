@@ -88,6 +88,7 @@ module.exports = {
       .addStringOption(o => o.setName('mot_de_passe').setDescription('Mot de passe à analyser').setRequired(true))),
 
   async execute(interaction) {
+    try {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'generer') {
@@ -135,7 +136,17 @@ module.exports = {
           )
       ], ephemeral: true });
     }
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
 
   name: 'password',
   aliases: ['mdp', 'motdepasse', 'passgen'],

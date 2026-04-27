@@ -66,7 +66,7 @@ module.exports = {
       embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setDescription(`✅ **${count} message${count > 1 ? 's' : ''}** supprimé${count > 1 ? 's' : ''}${filter ? ` de **${filter.username}**` : ''}.`)
-        .setFooter({ text: `Action par ${interaction.user.tag}` })
+        .setFooter({ text: `Action par ${interaction.user.username}` })
         .setTimestamp()
       ],
       components: []

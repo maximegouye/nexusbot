@@ -42,6 +42,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const target = interaction.options.getMember('membre') || interaction.member;
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(target.id, interaction.guildId);
@@ -65,7 +66,7 @@ module.exports = {
       .setTitle(`👤 ${target.displayName}`)
       .setThumbnail(target.user.displayAvatarURL({ size: 256 }))
       .addFields(
-        { name: '🏷️ Tag',           value: `${target.user.tag}`,                       inline: true },
+        { name: '🏷️ Tag',           value: `${target.user.username}`,                       inline: true },
         { name: '🆔 ID',            value: `\`${target.id}\``,                          inline: true },
         { name: '📅 Inscrit le',    value: `<t:${Math.floor(target.user.createdTimestamp / 1000)}:D>`, inline: true },
         { name: '📥 A rejoint le',  value: `<t:${Math.floor(target.joinedTimestamp / 1000)}:D>`,        inline: true },
@@ -82,7 +83,17 @@ module.exports = {
       .setTimestamp();
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
   name: 'userinfo',
   aliases: ["infouser", "profil2"],
     async run(message, args) {

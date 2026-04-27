@@ -11,6 +11,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     const target = interaction.options.getUser('membre');
     const raison = interaction.options.getString('raison');
 
@@ -52,7 +53,7 @@ module.exports = {
       .setTitle('⚠️ Avertissement émis')
       .setDescription(`**${target.username}** a reçu un avertissement.${autoAction}`)
       .addFields(
-        { name: '👮 Modérateur',         value: interaction.user.tag, inline: true },
+        { name: '👮 Modérateur',         value: interaction.user.username, inline: true },
         { name: '📊 Total avertissements', value: `**${count}**`,     inline: true },
         { name: '📝 Raison',             value: raison,               inline: false },
       )
@@ -60,5 +61,15 @@ module.exports = {
       .setTimestamp();
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

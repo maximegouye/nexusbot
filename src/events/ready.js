@@ -240,7 +240,7 @@ module.exports = {
   name: 'clientReady',
   once: true,
   async execute(client) {
-    console.log(`✅ Bot connecté: ${client.user.tag} (${client.user.id})`);
+    console.log(`✅ Bot connecté: ${client.user.username} (${client.user.id})`);
 
     // ── Avatar auto (si le bot a encore l'avatar par défaut) ──
     if (!client.user.avatar) {

@@ -33,6 +33,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
 
@@ -127,5 +128,15 @@ module.exports = {
       const msg = canal ? `✅ Canal événements : ${canal}.` : '✅ Événements automatiques **désactivés**.';
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

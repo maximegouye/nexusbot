@@ -40,6 +40,7 @@ module.exports = {
     .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(false)),
 
   async execute(interaction) {
+    try {
     const target = interaction.options.getMember('membre') || interaction.member;
     const user   = target.user || target;
 
@@ -81,7 +82,17 @@ module.exports = {
     }
 
     return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row] });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
   name: 'avatar',
   aliases: ["pfp", "pp"],
     async run(message, args) {

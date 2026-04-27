@@ -21,6 +21,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     const target = interaction.options.getMember('membre');
     const durStr = interaction.options.getString('duree');
     const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
@@ -32,15 +33,15 @@ module.exports = {
     if (!ms) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format de durée invalide. Exemples : `10m`, `1h`, `2d`', ephemeral: true });
     if (ms > 28 * 24 * 3600 * 1000) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ La durée maximale est de 28 jours.', ephemeral: true });
 
-    await target.timeout(ms, `${interaction.user.tag}: ${raison}`);
+    await target.timeout(ms, `${interaction.user.username}: ${raison}`);
 
     const expiresAt = Date.now() + ms;
     const embed = new EmbedBuilder()
       .setColor('#FFA500')
       .setTitle('🔇 Membre muet')
       .addFields(
-        { name: '👤 Membre',     value: target.user.tag,        inline: true },
-        { name: '👮 Modérateur', value: interaction.user.tag,   inline: true },
+        { name: '👤 Membre',     value: target.user.username,        inline: true },
+        { name: '👮 Modérateur', value: interaction.user.username,   inline: true },
         { name: '⏱️ Durée',      value: durStr,                 inline: true },
         { name: '⏰ Fin',        value: `<t:${Math.floor(expiresAt / 1000)}:R>`, inline: true },
         { name: '📝 Raison',     value: raison,                 inline: false },
@@ -49,5 +50,15 @@ module.exports = {
       .setTimestamp();
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

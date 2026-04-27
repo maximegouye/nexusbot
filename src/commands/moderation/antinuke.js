@@ -112,7 +112,7 @@ module.exports = {
               .setColor('#E74C3C')
               .setTitle('🚨 ANTI-NUKE — ACTION AUTOMATIQUE')
               .setDescription(
-                `**${member.user.tag}** a été **banni automatiquement** pour avoir effectué des actions massives !\n\n` +
+                `**${member.user.username}** a été **banni automatiquement** pour avoir effectué des actions massives !\n\n` +
                 `⚠️ Action : **${action}** (${userData.counts[action] + threshold} fois)\n` +
                 `🛡️ Serveur protégé !`
               )

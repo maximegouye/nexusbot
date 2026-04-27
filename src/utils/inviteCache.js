@@ -112,14 +112,14 @@ async function handleInviteJoin(member) {
           VALUES (?, ?, ?, ?, ?)
         `).run(guild.id, inviterId, member.user.id, inviteCode, new Date().toISOString());
 
-        console.log(`[InviteCache] ${member.user.tag} invité par <@${inviterId}> avec le code ${inviteCode}`);
+        console.log(`[InviteCache] ${member.user.username} invité par <@${inviterId}> avec le code ${inviteCode}`);
         return { inviterId, inviteCode };
       } catch (error) {
         console.error('Erreur lors de l\'enregistrement de l\'invitation:', error);
       }
     } else {
       // Impossible de déterminer qui a invité (might be join screen invites)
-      console.log(`[InviteCache] Impossible de déterminer qui a invité ${member.user.tag}`);
+      console.log(`[InviteCache] Impossible de déterminer qui a invité ${member.user.username}`);
     }
 
     return null;

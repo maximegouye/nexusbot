@@ -13,6 +13,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const cfg    = db.getConfig(interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
     const target = interaction.options.getUser('cible');
@@ -104,7 +105,17 @@ module.exports = {
         .setFooter({ text: 'Prochain vol dans 12h' })
       ]}).catch(() => {});
     }
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
 
   async run(message, args) {
     const targetMention = message.mentions.users.first();

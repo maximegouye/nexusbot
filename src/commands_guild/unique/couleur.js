@@ -79,6 +79,7 @@ module.exports = {
       .addStringOption(o => o.setName('hex').setDescription('Couleur de base (HEX)').setRequired(true))),
 
   async execute(interaction) {
+    try {
     const sub = interaction.options.getSubcommand();
 
     async function sendColor(hex) {
@@ -150,7 +151,17 @@ module.exports = {
           .setFooter({ text: 'Couleurs générées selon la théorie des couleurs' })
       ]});
     }
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
   name: 'couleur2',
   aliases: ["coulhex"],
     async run(message, args) {

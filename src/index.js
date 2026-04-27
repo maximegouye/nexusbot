@@ -130,7 +130,7 @@ async function connectWithRetry(maxRetries = 10) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       await client.login(token);
-      console.log(`✅ NexusBot connecté en tant que ${client.user?.tag}`);
+      console.log(`✅ NexusBot connecté en tant que ${client.user?.username}`);
       return;
     } catch (err) {
       console.error(`❌ Erreur connexion Discord (tentative ${attempt}/${maxRetries}): ${err.message}`);

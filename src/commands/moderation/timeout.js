@@ -24,6 +24,7 @@ module.exports = {
       .addStringOption(o => o.setName('raison').setDescription('Raison').setRequired(false))),
 
   async execute(interaction) {
+    try {
     const sub    = interaction.options.getSubcommand();
     const target = interaction.options.getMember('membre');
     const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
@@ -80,5 +81,15 @@ module.exports = {
         .setDescription(`✅ Timeout retiré pour <@${target.id}>.\nRaison: ${raison}`)
       ], ephemeral: true });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

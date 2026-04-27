@@ -174,10 +174,18 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     const mise = interaction.options.getInteger('mise');
     const diff = interaction.options.getString('difficulte') || 'normal';
     return runGame(interaction, mise, diff, false);
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }},
 
   // Préfixe & (ex: &tour 500 normal)
   run(message, args) {

@@ -34,6 +34,7 @@ module.exports = {
       .addChannelOption(o => o.setName('canal').setDescription('Canal (vide = canal actuel)').setRequired(false))),
 
   async execute(interaction) {
+    try {
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
 
@@ -116,5 +117,15 @@ module.exports = {
       db.db.prepare('UPDATE guild_config SET level_channel=? WHERE guild_id=?').run(canal?.id || null, interaction.guildId);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(canal ? `✅ Level-up → <#${canal.id}>` : '✅ Level-up dans le canal actuel.')], ephemeral: true });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

@@ -13,6 +13,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
       return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
@@ -53,6 +54,16 @@ module.exports = {
         ]
       });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };
 if (module.exports && module.exports.data) module.exports._prefixOnly = true;

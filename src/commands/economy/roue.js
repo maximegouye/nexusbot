@@ -72,6 +72,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     const cfg    = db.getConfig(interaction.guildId);
     const user   = db.getUser(interaction.user.id, interaction.guildId);
     const symbol = cfg.currency_emoji || '€';
@@ -140,7 +141,17 @@ module.exports = {
     );
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [row] }).catch(() => {});
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
 
   name: 'roue',
   aliases: ['wheel', 'spinner'],

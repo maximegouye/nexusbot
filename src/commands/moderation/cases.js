@@ -35,6 +35,7 @@ module.exports = {
     .addSubcommand(s => s.setName('stats').setDescription('Statistiques de modération du serveur')),
 
   async execute(interaction) {
+    try {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'voir') {
@@ -113,5 +114,15 @@ module.exports = {
         )
       ], ephemeral: true });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

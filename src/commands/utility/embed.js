@@ -33,6 +33,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    try {
     const sub = interaction.options.getSubcommand();
     const target = interaction.options.getChannel('salon') || interaction.channel;
 
@@ -90,7 +91,17 @@ module.exports = {
       await target.send({ embeds: [embed] });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Règles envoyées dans <#${target.id}>`, ephemeral: true });
     }
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
   name: 'embed2',
   aliases: ["makeembed"],
     async run(message, args) {

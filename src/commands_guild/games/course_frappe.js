@@ -102,6 +102,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub     = interaction.options.getSubcommand();
     const channel = interaction.channel;
@@ -200,7 +201,14 @@ module.exports = {
         .setFooter({ text: 'Récompense: WPM × 2 coins !' });
       await channel.send({ embeds: [embed] }).catch(() => {});
     });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur:', err?.message || err);
+    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
+    } catch {}
+  }},
   name: 'course-frappe2',
   aliases: ["typing", "course2"],
     async run(message, args) {

@@ -175,7 +175,6 @@ module.exports = {
             ephemeral: true,
           }).catch(() => {});
         }
-        await buttonInteraction.deferUpdate().catch(() => {});
       });
 
       collector.on('end', () => {

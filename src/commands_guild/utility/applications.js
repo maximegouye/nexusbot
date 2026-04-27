@@ -230,7 +230,7 @@ async function handleApplication(interaction, guildId, userId, nom) {
         const embed = new EmbedBuilder()
           .setColor('#F1C40F')
           .setTitle(`📋 Nouvelle candidature — ${nom}`)
-          .setDescription(`De : <@${userId}> (${interaction.user.tag})`)
+          .setDescription(`De : <@${userId}> (${interaction.user.username})`)
           .setThumbnail(interaction.user.displayAvatarURL())
           .setTimestamp()
           .setFooter({ text: `ID candidature: ${submission?.id || '?'}` });

@@ -64,7 +64,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor('#FFD700')
-      .setAuthor({ name: message.author.tag, iconURL: message.author.displayAvatarURL() })
+      .setAuthor({ name: message.author.username, iconURL: message.author.displayAvatarURL() })
       .setDescription(message.content || '*[Pas de texte]*')
       .addFields({ name: '🔗 Source', value: `[Voir le message](${message.url})` })
       .setFooter({ text: `#${message.channel.name}` })

@@ -44,6 +44,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    try {
     await interaction.deferReply({ ephemeral: true });
     const sub = interaction.options.getSubcommand();
 
@@ -111,5 +112,15 @@ module.exports = {
         ]
       });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

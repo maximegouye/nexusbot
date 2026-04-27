@@ -22,9 +22,9 @@ module.exports = {
     const confirmEmbed = new EmbedBuilder()
       .setColor('#FF6B6B')
       .setTitle('👢 Confirmation d\'expulsion')
-      .setDescription(`Tu es sur le point d'expulser **${target.user.tag}** du serveur.`)
+      .setDescription(`Tu es sur le point d'expulser **${target.user.username}** du serveur.`)
       .addFields(
-        { name: '👤 Membre', value: `${target.user.tag} \`(${target.id})\``, inline: false },
+        { name: '👤 Membre', value: `${target.user.username} \`(${target.id})\``, inline: false },
         { name: '📝 Raison', value: raison, inline: false },
       )
       .setThumbnail(target.user.displayAvatarURL())
@@ -59,14 +59,14 @@ module.exports = {
       ]
     }).catch(() => {});
 
-    await target.kick(`${interaction.user.tag}: ${raison}`);
+    await target.kick(`${interaction.user.username}: ${raison}`);
 
     const resultEmbed = new EmbedBuilder()
       .setColor('#FF6B6B')
       .setTitle('👢 Membre expulsé')
       .addFields(
-        { name: '👤 Membre',     value: target.user.tag,           inline: true },
-        { name: '👮 Modérateur', value: interaction.user.tag,      inline: true },
+        { name: '👤 Membre',     value: target.user.username,           inline: true },
+        { name: '👮 Modérateur', value: interaction.user.username,      inline: true },
         { name: '📝 Raison',     value: raison,                    inline: false },
       )
       .setThumbnail(target.user.displayAvatarURL())

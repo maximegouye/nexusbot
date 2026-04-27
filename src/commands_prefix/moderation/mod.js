@@ -21,7 +21,7 @@ const commands = [
       try {
         await target.ban({ reason, deleteMessageSeconds: 86400 });
         try { db.db.prepare('INSERT INTO warnings (guild_id,user_id,mod_id,reason,created_at) VALUES(?,?,?,?,?)').run(message.guild.id, target.id, message.author.id, `[BAN] ${reason}`, Math.floor(Date.now()/1000)); } catch {}
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🔨 Membre banni').addFields({ name: '👤 Membre', value: `${target.user.tag}`, inline: true }, { name: '📋 Raison', value: reason, inline: true }).setTimestamp()] });
+        message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🔨 Membre banni').addFields({ name: '👤 Membre', value: `${target.user.username}`, inline: true }, { name: '📋 Raison', value: reason, inline: true }).setTimestamp()] });
       } catch (e) { message.reply(`❌ ${e.message}`); }
     }
   },
@@ -39,7 +39,7 @@ const commands = [
       const reason = args.slice(1).join(' ') || 'Aucune raison';
       try {
         await target.kick(reason);
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('👢 Membre expulsé').addFields({ name: '👤', value: target.user.tag, inline: true }, { name: '📋', value: reason, inline: true }).setTimestamp()] });
+        message.channel.send({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('👢 Membre expulsé').addFields({ name: '👤', value: target.user.username, inline: true }, { name: '📋', value: reason, inline: true }).setTimestamp()] });
       } catch (e) { message.reply(`❌ ${e.message}`); }
     }
   },
@@ -58,7 +58,7 @@ const commands = [
       const reason = args.slice(2).join(' ') || 'Aucune raison';
       try {
         await target.timeout(mins * 60000, reason);
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🔇 Membre muté').addFields({ name: '👤', value: target.user.tag, inline: true }, { name: '⏱️', value: `${mins} min`, inline: true }, { name: '📋', value: reason, inline: true }).setTimestamp()] });
+        message.channel.send({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🔇 Membre muté').addFields({ name: '👤', value: target.user.username, inline: true }, { name: '⏱️', value: `${mins} min`, inline: true }, { name: '📋', value: reason, inline: true }).setTimestamp()] });
       } catch (e) { message.reply(`❌ ${e.message}`); }
     }
   },
@@ -256,7 +256,7 @@ const commands = [
       const unbanAt = Math.floor(Date.now() / 1000) + hours * 3600;
       await target.ban({ reason });
       try { db.db.prepare('INSERT OR REPLACE INTO tempbans (guild_id,user_id,mod_id,reason,expires_at) VALUES(?,?,?,?,?)').run(message.guild.id, target.id, message.author.id, reason, unbanAt); } catch {}
-      message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('⏱️ Tempban').addFields({ name: '👤', value: target.user.tag, inline: true }, { name: '⏱️', value: `${hours}h`, inline: true }, { name: '🏁', value: `<t:${unbanAt}:R>`, inline: true }).setTimestamp()] });
+      message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('⏱️ Tempban').addFields({ name: '👤', value: target.user.username, inline: true }, { name: '⏱️', value: `${hours}h`, inline: true }, { name: '🏁', value: `<t:${unbanAt}:R>`, inline: true }).setTimestamp()] });
     }
   },
 ];

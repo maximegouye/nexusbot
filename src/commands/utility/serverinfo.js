@@ -41,6 +41,7 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    try {
     const guild = interaction.guild;
     await guild.fetch();
     const cfg   = db.getConfig(guild.id);
@@ -83,7 +84,17 @@ module.exports = {
       .setTimestamp();
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
   name: 'serverinfo',
   aliases: ["servinfo", "infoserveur"],
     async run(message, args) {

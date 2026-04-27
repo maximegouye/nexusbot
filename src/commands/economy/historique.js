@@ -90,6 +90,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     const target = interaction.options.getUser('membre') || interaction.user;
     if (target.id !== interaction.user.id && !interaction.member.permissions.has('ManageGuild')) {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu dois être admin pour consulter l\'historique d\'un autre membre.', ephemeral: true });
@@ -106,7 +107,17 @@ module.exports = {
       embeds: [buildEmbed({ user: target, guild: interaction.guild, page: 1, total, rows, symbol, color })],
       components: [buildButtons(target.id, 1, pages)],
     });
-  },
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }},
 
 
   async handleComponent(interaction, cid) {

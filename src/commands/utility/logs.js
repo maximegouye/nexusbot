@@ -32,6 +32,7 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
@@ -87,5 +88,15 @@ module.exports = {
         ], ephemeral: true
       });
     }
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.reply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };

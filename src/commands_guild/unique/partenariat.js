@@ -745,7 +745,7 @@ async function submitPub(interaction) {
     .setTitle(`📢 ${partner.nom}`)
     .setDescription(message)
     .addFields({ name: '🔗 Rejoindre', value: partner.invite, inline: true })
-    .setFooter({ text: `Pub partenaire · ${interaction.user.tag}` })
+    .setFooter({ text: `Pub partenaire · ${interaction.user.username}` })
     .setTimestamp()] }).catch(() => {});
 
   g.pubCooldowns = g.pubCooldowns || {};
