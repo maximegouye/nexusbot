@@ -9,18 +9,18 @@ const { db } = require('../database/db');
 
 // Migrations safe
 try {
-  const cols = db.prepare('PRAGMA table_info(tickets)').all().map(c => c.name);
-  if (!cols.includes('warn_sent'))         db.prepare('ALTER TABLE tickets ADD COLUMN warn_sent INTEGER DEFAULT 0').run();
-  if (!cols.includes('summary'))           db.prepare('ALTER TABLE tickets ADD COLUMN summary TEXT').run();
-  if (!cols.includes('follow_up_sent'))    db.prepare('ALTER TABLE tickets ADD COLUMN follow_up_sent INTEGER DEFAULT 0').run();
-  if (!cols.includes('staff_alerted'))     db.prepare('ALTER TABLE tickets ADD COLUMN staff_alerted INTEGER DEFAULT 0').run();
+  const cols = db.db.prepare('PRAGMA table_info(tickets)').all().map(c => c.name);
+  if (!cols.includes('warn_sent'))         db.db.prepare('ALTER TABLE tickets ADD COLUMN warn_sent INTEGER DEFAULT 0').run();
+  if (!cols.includes('summary'))           db.db.prepare('ALTER TABLE tickets ADD COLUMN summary TEXT').run();
+  if (!cols.includes('follow_up_sent'))    db.db.prepare('ALTER TABLE tickets ADD COLUMN follow_up_sent INTEGER DEFAULT 0').run();
+  if (!cols.includes('staff_alerted'))     db.db.prepare('ALTER TABLE tickets ADD COLUMN staff_alerted INTEGER DEFAULT 0').run();
 } catch {}
 
 const WARN_HOURS       = 24; // heures avant l'avertissement
 const AUTO_CLOSE_HOURS = 48; // heures avant fermeture auto
 
 async function autoCloseInactiveTickets(client) {
-  const openTickets = db.prepare("SELECT * FROM tickets WHERE status='open'").all();
+  const openTickets = db.db.prepare("SELECT * FROM tickets WHERE status='open'").all();
   if (!openTickets.length) return;
 
   for (const ticket of openTickets) {
@@ -31,7 +31,7 @@ async function autoCloseInactiveTickets(client) {
       const channel = guild.channels.cache.get(ticket.channel_id);
       if (!channel) {
         // Salon supprimé manuellement — nettoyer la DB
-        db.prepare("UPDATE tickets SET status='closed', closed_at=? WHERE id=?")
+        db.db.prepare("UPDATE tickets SET status='closed', closed_at=? WHERE id=?")
           .run(Math.floor(Date.now() / 1000), ticket.id);
         continue;
       }
@@ -74,14 +74,14 @@ async function autoCloseInactiveTickets(client) {
           components: [keepRow],
         }).catch(() => {});
 
-        db.prepare('UPDATE tickets SET warn_sent=1 WHERE id=?').run(ticket.id);
+        db.db.prepare('UPDATE tickets SET warn_sent=1 WHERE id=?').run(ticket.id);
         continue;
       }
 
       // ── 2) FERMETURE AUTO à 48h ──────────────────────────────────────────
       if (inactiveHours < AUTO_CLOSE_HOURS) continue;
 
-      const cfg = db.prepare('SELECT * FROM guild_config WHERE guild_id=?').get(ticket.guild_id);
+      const cfg = db.db.prepare('SELECT * FROM guild_config WHERE guild_id=?').get(ticket.guild_id);
 
       // Générer transcript + résumé
       let transcriptBuffer;
@@ -108,7 +108,7 @@ async function autoCloseInactiveTickets(client) {
         const pri = getPriInfo(ticket.priority);
 
         // Sauvegarder le résumé en DB
-        db.prepare('UPDATE tickets SET summary=? WHERE id=?').run(summaryText, ticket.id);
+        db.db.prepare('UPDATE tickets SET summary=? WHERE id=?').run(summaryText, ticket.id);
 
         // ── Log dans le salon des tickets ──
         if (cfg?.ticket_log_channel) {
@@ -166,7 +166,7 @@ async function autoCloseInactiveTickets(client) {
       }
 
       // Marquer fermé en DB
-      db.prepare("UPDATE tickets SET status='closed', closed_at=?, close_reason=?, follow_up_sent=0, staff_alerted=0 WHERE id=?")
+      db.db.prepare("UPDATE tickets SET status='closed', closed_at=?, close_reason=?, follow_up_sent=0, staff_alerted=0 WHERE id=?")
         .run(Math.floor(Date.now() / 1000), `Auto-fermé (inactif ${Math.floor(inactiveHours)}h)`, ticket.id);
 
       // Supprimer le salon vocal lié s'il existe

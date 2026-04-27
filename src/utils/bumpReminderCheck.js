@@ -8,12 +8,12 @@ const BUMP_COOLDOWN_SECS = 7200; // 2 heures
 async function checkBumpReminders(client) {
   const now = Math.floor(Date.now() / 1000);
 
-  const due = db.prepare(
+  const due = db.db.prepare(
     'SELECT * FROM bump_reminders WHERE reminded=0 AND (bumped_at + ?) <= ?'
   ).all(BUMP_COOLDOWN_SECS, now);
 
   for (const reminder of due) {
-    db.prepare('UPDATE bump_reminders SET reminded=1 WHERE id=?').run(reminder.id);
+    db.db.prepare('UPDATE bump_reminders SET reminded=1 WHERE id=?').run(reminder.id);
 
     try {
       const guild = client.guilds.cache.get(reminder.guild_id);
@@ -23,7 +23,7 @@ async function checkBumpReminders(client) {
       if (!channel) continue;
 
       // Seul le rôle bump configuré est pingé — rien d'autre (pas owner, pas @everyone)
-      const cfg      = db.prepare('SELECT bump_role FROM guild_config WHERE guild_id=?').get(reminder.guild_id);
+      const cfg      = db.db.prepare('SELECT bump_role FROM guild_config WHERE guild_id=?').get(reminder.guild_id);
       const bumpRole = cfg?.bump_role ? guild.roles.cache.get(cfg.bump_role) : null;
       const userId   = reminder.user_id !== '0' ? reminder.user_id : null;
 

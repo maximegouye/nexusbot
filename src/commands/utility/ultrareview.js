@@ -32,11 +32,11 @@ module.exports = {
     // ─── Économie ────────────────────────────────────────────
     let econStats = { total: 0, users: 0, top: null };
     try {
-      const row = db.prepare(`SELECT SUM(balance + bank) as total, COUNT(*) as users FROM users WHERE guild_id = ?`).get(gid);
+      const row = db.db.prepare(`SELECT SUM(balance + bank) as total, COUNT(*) as users FROM users WHERE guild_id = ?`).get(gid);
       if (row && (row.total || 0) > 0) {
         econStats.total = row.total || 0;
         econStats.users = row.users || 0;
-        const top = db.prepare(`SELECT user_id, (balance + bank) as coins FROM users WHERE guild_id = ? ORDER BY (balance + bank) DESC LIMIT 1`).get(gid);
+        const top = db.db.prepare(`SELECT user_id, (balance + bank) as coins FROM users WHERE guild_id = ? ORDER BY (balance + bank) DESC LIMIT 1`).get(gid);
         if (top) econStats.top = top;
       }
     } catch (e) { /* table users n'existe pas ou colonne manquante */ }
@@ -44,9 +44,9 @@ module.exports = {
     // ─── Tickets ─────────────────────────────────────────────
     let ticketStats = { open: 0, closed: 0, total: 0 };
     try {
-      const all   = db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ?").get(gid);
-      const open  = db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND status = 'open'").get(gid);
-      const close = db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND status = 'closed'").get(gid);
+      const all   = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ?").get(gid);
+      const open  = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND status = 'open'").get(gid);
+      const close = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id = ? AND status = 'closed'").get(gid);
       ticketStats.total  = all?.c  ?? 0;
       ticketStats.open   = open?.c ?? 0;
       ticketStats.closed = close?.c ?? 0;
@@ -57,11 +57,11 @@ module.exports = {
     const casinoTables = ['casino_history', 'casino_stats', 'game_history'];
     for (const tbl of casinoTables) {
       try {
-        const row = db.prepare(`SELECT COUNT(*) as games FROM ${tbl} WHERE guild_id = ?`).get(gid);
+        const row = db.db.prepare(`SELECT COUNT(*) as games FROM ${tbl} WHERE guild_id = ?`).get(gid);
         if (row) {
           casinoStats.games = row.games || 0;
           try {
-            const bw = db.prepare(`SELECT MAX(profit) as max FROM ${tbl} WHERE guild_id = ?`).get(gid);
+            const bw = db.db.prepare(`SELECT MAX(profit) as max FROM ${tbl} WHERE guild_id = ?`).get(gid);
             if (bw) casinoStats.bigWin = bw.max || 0;
           } catch(e) {}
           break;
@@ -74,12 +74,12 @@ module.exports = {
     const partnerTables = ['partnerships', 'partenariats', 'partner_requests'];
     for (const tbl of partnerTables) {
       try {
-        const all = db.prepare(`SELECT COUNT(*) as c FROM ${tbl} WHERE guild_id = ?`).get(gid);
+        const all = db.db.prepare(`SELECT COUNT(*) as c FROM ${tbl} WHERE guild_id = ?`).get(gid);
         if (all) {
           partnerStats.total = all.c || 0;
           try {
-            const active  = db.prepare(`SELECT COUNT(*) as c FROM ${tbl} WHERE guild_id = ? AND status = 'active'`).get(gid);
-            const pending = db.prepare(`SELECT COUNT(*) as c FROM ${tbl} WHERE guild_id = ? AND status = 'pending'`).get(gid);
+            const active  = db.db.prepare(`SELECT COUNT(*) as c FROM ${tbl} WHERE guild_id = ? AND status = 'active'`).get(gid);
+            const pending = db.db.prepare(`SELECT COUNT(*) as c FROM ${tbl} WHERE guild_id = ? AND status = 'pending'`).get(gid);
             partnerStats.active  = active?.c  ?? 0;
             partnerStats.pending = pending?.c ?? 0;
           } catch(e) {}
@@ -91,12 +91,12 @@ module.exports = {
     // ─── XP / Leveling ────────────────────────────────────────
     let xpStats = { users: 0, topLevel: 0 };
     try {
-      const row = db.prepare("SELECT COUNT(*) as users, MAX(level) as top FROM levels WHERE guild_id = ?").get(gid);
+      const row = db.db.prepare("SELECT COUNT(*) as users, MAX(level) as top FROM levels WHERE guild_id = ?").get(gid);
       if (row) { xpStats.users = row.users || 0; xpStats.topLevel = row.top || 0; }
     } catch(e) {}
     if (xpStats.users === 0) {
       try {
-        const row = db.prepare("SELECT COUNT(*) as users, MAX(level) as top FROM leveling WHERE guild_id = ?").get(gid);
+        const row = db.db.prepare("SELECT COUNT(*) as users, MAX(level) as top FROM leveling WHERE guild_id = ?").get(gid);
         if (row) { xpStats.users = row.users || 0; xpStats.topLevel = row.top || 0; }
       } catch(e) {}
     }

@@ -107,7 +107,7 @@ async function handleInviteJoin(member) {
     // Enregistrer dans la base de données
     if (inviterId) {
       try {
-        db.prepare(`
+        db.db.prepare(`
           INSERT INTO invites (guild_id, inviter_id, invitee_id, invite_code, created_at)
           VALUES (?, ?, ?, ?, ?)
         `).run(guild.id, inviterId, member.user.id, inviteCode, new Date().toISOString());

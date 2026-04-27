@@ -90,7 +90,7 @@ function handleAdd(interaction) {
 
     // Stocker dans la base de données
     try {
-      db.prepare(`
+      db.db.prepare(`
         INSERT INTO youtube_subscriptions (guild_id, channel_id, discord_channel_id, message, created_at)
         VALUES (?, ?, ?, ?, ?)
       `).run(interaction.guildId, channelId, channel.id, customMessage, new Date().toISOString());
@@ -148,7 +148,7 @@ function handleRemove(interaction) {
     }
 
     // Supprimer de la base de données
-    const result = db.prepare(`
+    const result = db.db.prepare(`
       DELETE FROM youtube_subscriptions
       WHERE guild_id = ? AND channel_id = ?
     `).run(interaction.guildId, channelId);
@@ -179,7 +179,7 @@ function handleRemove(interaction) {
 
 function handleList(interaction) {
   try {
-    const subscriptions = db.prepare(`
+    const subscriptions = db.db.prepare(`
       SELECT channel_id, discord_channel_id, message
       FROM youtube_subscriptions
       WHERE guild_id = ?

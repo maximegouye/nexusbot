@@ -13,7 +13,7 @@ const DISBOARD_ID = '302050872383242240';
 
 // ── Migration table bump_reminders ────────────────────────
 try {
-  db.prepare(`
+  db.db.prepare(`
     CREATE TABLE IF NOT EXISTS bump_reminders (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id    TEXT NOT NULL,
@@ -24,9 +24,9 @@ try {
     )
   `).run();
   // Ajouter colonne bump_role si absente
-  const cols = db.prepare("PRAGMA table_info(guild_config)").all().map(c => c.name);
+  const cols = db.db.prepare("PRAGMA table_info(guild_config)").all().map(c => c.name);
   if (!cols.includes('bump_role'))
-    db.prepare("ALTER TABLE guild_config ADD COLUMN bump_role TEXT").run();
+    db.db.prepare("ALTER TABLE guild_config ADD COLUMN bump_role TEXT").run();
 } catch {}
 
 // ── Détection du message de confirmation DISBOARD ─────────
@@ -82,9 +82,9 @@ module.exports = {
     } catch (_) {}
 
     // Sauvegarder en DB (marquer les anciens comme "reminded" pour éviter les doublons)
-    db.prepare("UPDATE bump_reminders SET reminded=1 WHERE guild_id=? AND reminded=0")
+    db.db.prepare("UPDATE bump_reminders SET reminded=1 WHERE guild_id=? AND reminded=0")
       .run(guildId);
-    db.prepare(
+    db.db.prepare(
       "INSERT INTO bump_reminders (guild_id, channel_id, user_id, bumped_at, reminded) VALUES (?,?,?,?,0)"
     ).run(guildId, channelId, bumperId || '0', now);
 

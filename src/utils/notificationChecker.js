@@ -22,7 +22,7 @@ async function checkYouTubeNotifications(client) {
 
   let subs;
   try {
-    subs = db.prepare('SELECT * FROM youtube_subs').all();
+    subs = db.db.prepare('SELECT * FROM youtube_subs').all();
   } catch { return; }
   if (!subs || subs.length === 0) return;
 
@@ -46,7 +46,7 @@ async function checkYouTubeNotifications(client) {
       if (sub.last_video_id === videoId) continue; // déjà notifié
 
       // Mettre à jour last_video_id
-      db.prepare('UPDATE youtube_subs SET last_video_id = ? WHERE guild_id = ? AND yt_channel_id = ?')
+      db.db.prepare('UPDATE youtube_subs SET last_video_id = ? WHERE guild_id = ? AND yt_channel_id = ?')
         .run(videoId, sub.guild_id, sub.yt_channel_id);
 
       // Envoyer la notification
@@ -76,7 +76,7 @@ async function checkTwitchNotifications(client) {
 
   let subs;
   try {
-    subs = db.prepare('SELECT * FROM twitch_subs').all();
+    subs = db.db.prepare('SELECT * FROM twitch_subs').all();
   } catch { return; }
   if (!subs || subs.length === 0) return;
 
@@ -108,7 +108,7 @@ async function checkTwitchNotifications(client) {
 
         if (isLive && !wasLive) {
           // Vient de commencer
-          db.prepare('UPDATE twitch_subs SET was_live = 1 WHERE guild_id = ? AND twitch_login = ?')
+          db.db.prepare('UPDATE twitch_subs SET was_live = 1 WHERE guild_id = ? AND twitch_login = ?')
             .run(sub.guild_id, login);
 
           const ch = await client.channels.fetch(sub.channel_id).catch(() => null);
@@ -126,7 +126,7 @@ async function checkTwitchNotifications(client) {
 
         } else if (!isLive && wasLive) {
           // Vient de finir
-          db.prepare('UPDATE twitch_subs SET was_live = 0 WHERE guild_id = ? AND twitch_login = ?')
+          db.db.prepare('UPDATE twitch_subs SET was_live = 0 WHERE guild_id = ? AND twitch_login = ?')
             .run(sub.guild_id, login);
         }
       }

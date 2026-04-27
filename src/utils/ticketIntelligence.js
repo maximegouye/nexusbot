@@ -114,37 +114,37 @@ function calcTrustScore(db, guildId, userId) {
 
   try {
     // Avertissements : -12 par warn
-    const warns = db.prepare(
+    const warns = db.db.prepare(
       'SELECT COUNT(*) as c FROM warnings WHERE guild_id=? AND user_id=?'
     ).get(guildId, userId)?.c || 0;
     score -= warns * 12;
 
     // Tickets fermés normalement : +3 par ticket (max +30)
-    const closed = db.prepare(
+    const closed = db.db.prepare(
       "SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND user_id=? AND status='closed'"
     ).get(guildId, userId)?.c || 0;
     score += Math.min(closed * 3, 30);
 
     // Notes de modération : -5 par note
-    const notes = db.prepare(
+    const notes = db.db.prepare(
       'SELECT COUNT(*) as c FROM mod_notes WHERE guild_id=? AND user_id=?'
     ).get(guildId, userId)?.c || 0;
     score -= notes * 5;
 
     // Blackliste : score à 0
-    const blacklisted = db.prepare(
+    const blacklisted = db.db.prepare(
       'SELECT COUNT(*) as c FROM ticket_blacklist WHERE guild_id=? AND user_id=?'
     ).get(guildId, userId)?.c || 0;
     if (blacklisted) return 0;
 
     // Notes ≥ 4 données : +2 par note positive
-    const goodRatings = db.prepare(
+    const goodRatings = db.db.prepare(
       "SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND user_id=? AND rating >= 4"
     ).get(guildId, userId)?.c || 0;
     score += goodRatings * 2;
 
     // Notes < 3 données : -5 par note négative
-    const badRatings = db.prepare(
+    const badRatings = db.db.prepare(
       "SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND user_id=? AND rating <= 2"
     ).get(guildId, userId)?.c || 0;
     score -= badRatings * 5;
@@ -173,7 +173,7 @@ function detectSpam(db, guildId, userId) {
   try {
     // 3+ tickets créés dans la dernière heure
     const oneHourAgo = Math.floor(Date.now() / 1000) - 3600;
-    const recentCount = db.prepare(
+    const recentCount = db.db.prepare(
       'SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND user_id=? AND created_at > ?'
     ).get(guildId, userId, oneHourAgo)?.c || 0;
 
@@ -182,7 +182,7 @@ function detectSpam(db, guildId, userId) {
     }
 
     // 2+ tickets ouverts simultanément
-    const openCount = db.prepare(
+    const openCount = db.db.prepare(
       "SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND user_id=? AND status='open'"
     ).get(guildId, userId)?.c || 0;
 
@@ -213,7 +213,7 @@ async function getAutoAssignStaff(guild, guildId, staffRoleId, db) {
     const candidates = staffRole.members
       .filter(m => !m.user.bot)
       .map(m => {
-        const count = db.prepare(
+        const count = db.db.prepare(
           "SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND claimed_by=? AND status='open'"
         ).get(guildId, m.id)?.c || 0;
         const isOnline = m.presence && m.presence.status !== 'offline';
@@ -239,7 +239,7 @@ async function getAutoAssignStaff(guild, guildId, staffRoleId, db) {
  */
 function estimateResponseTime(db, guildId) {
   try {
-    const rows = db.prepare(
+    const rows = db.db.prepare(
       'SELECT created_at, first_response_at FROM tickets WHERE guild_id=? AND first_response_at IS NOT NULL ORDER BY created_at DESC LIMIT 20'
     ).all(guildId);
 
@@ -248,7 +248,7 @@ function estimateResponseTime(db, guildId) {
     const avgSecs = rows.reduce((s, r) => s + (r.first_response_at - r.created_at), 0) / rows.length;
 
     // Charge actuelle
-    const openCount = db.prepare(
+    const openCount = db.db.prepare(
       "SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='open'"
     ).get(guildId)?.c || 0;
 

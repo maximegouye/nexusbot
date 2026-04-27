@@ -92,7 +92,7 @@ function handleAdd(interaction) {
 
     // Stocker dans la base de données
     try {
-      db.prepare(`
+      db.db.prepare(`
         INSERT INTO twitch_subscriptions (guild_id, streamer_login, discord_channel_id, message, created_at)
         VALUES (?, ?, ?, ?, ?)
       `).run(interaction.guildId, login, channel.id, customMessage, new Date().toISOString());
@@ -152,7 +152,7 @@ function handleRemove(interaction) {
     login = login.toLowerCase();
 
     // Supprimer de la base de données
-    const result = db.prepare(`
+    const result = db.db.prepare(`
       DELETE FROM twitch_subscriptions
       WHERE guild_id = ? AND streamer_login = ?
     `).run(interaction.guildId, login);
@@ -183,7 +183,7 @@ function handleRemove(interaction) {
 
 function handleList(interaction) {
   try {
-    const subscriptions = db.prepare(`
+    const subscriptions = db.db.prepare(`
       SELECT streamer_login, discord_channel_id, message
       FROM twitch_subscriptions
       WHERE guild_id = ?
