@@ -145,7 +145,7 @@ module.exports = {
         const msg = await ch?.messages.fetch(random.original_msg_id);
         if (msg) {
           msgContent = msg.content || '*[Image/Fichier sans texte]*';
-          authorTag  = msg.author.tag;
+          authorTag  = msg.author.username;
           authorIcon = msg.author.displayAvatarURL();
         }
       } catch {}

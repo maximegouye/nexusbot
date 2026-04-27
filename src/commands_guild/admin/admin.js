@@ -47,12 +47,15 @@ module.exports = {
     }
 
     if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
     }
 
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guild.id;
-    const reply   = (data) => interaction.editReply(data).catch(() => {});
+    const reply   = async (data) => {
+      try { return await interaction.editReply(data); }
+      catch (err) { console.error('[admin] editReply failed:', err?.message); }
+    };
 
     // ── Donner des coins ────────────────────────────────────────
     if (sub === 'donner') {
