@@ -439,7 +439,7 @@ module.exports = {
         roles:  cfg.roles,
         status: cfg.status,
       });
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [
           new EmbedBuilder()
             .setColor('#2ECC71')
@@ -458,7 +458,7 @@ module.exports = {
     if (sub === 'panel') {
       const cfg = getConfig(guildId);
       if (!cfg.log_channel) {
-        return interaction.reply({ content: '❌ Configure d\'abord avec `/recrutement setup`.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Configure d\'abord avec `/recrutement setup`.', ephemeral: true });
       }
       await interaction.deferReply({ ephemeral: true });
 
@@ -522,7 +522,7 @@ module.exports = {
       const cfg   = getConfig(guildId);
       cfg.roles[poste] = role.id;
       saveConfig(guildId, { roles: cfg.roles });
-      return interaction.reply({
+      return interaction.editReply({
         content: `✅ Rôle **${role.name}** associé au poste **${POSTES[poste]?.label ?? poste}**.`,
         ephemeral: true,
       });
@@ -536,7 +536,7 @@ module.exports = {
       cfg.status[poste] = !wasOpen;
       saveConfig(guildId, { status: cfg.status });
       const p = POSTES[poste];
-      return interaction.reply({
+      return interaction.editReply({
         content: wasOpen
           ? `🔴 Poste **${p?.label ?? poste}** fermé aux candidatures.`
           : `🟢 Poste **${p?.label ?? poste}** ouvert aux candidatures.`,
@@ -621,18 +621,18 @@ module.exports = {
 
       const cfg = getConfig(guildId);
       if (cfg.status[poste] === false) {
-        await interaction.reply({ content: `❌ Le poste **${p.label}** est actuellement **fermé** aux candidatures.`, ephemeral: true });
+        await interaction.editReply({ content: `❌ Le poste **${p.label}** est actuellement **fermé** aux candidatures.`, ephemeral: true });
         return true;
       }
       if (hasPendingApp(guildId, interaction.user.id, poste)) {
-        await interaction.reply({ content: `⏳ Tu as déjà une candidature **en cours** pour le poste **${p.label}**. Attends la décision de l'équipe.`, ephemeral: true });
+        await interaction.editReply({ content: `⏳ Tu as déjà une candidature **en cours** pour le poste **${p.label}**. Attends la décision de l'équipe.`, ephemeral: true });
         return true;
       }
       const lastRej = getLastRejected(guildId, interaction.user.id, poste);
       if (lastRej) {
         const cooldownEnd = (lastRej.reviewed_at || lastRej.submitted_at) + COOLDOWN_DAYS * 86400;
         if (ts() < cooldownEnd) {
-          await interaction.reply({ content: `⏳ Tu dois attendre <t:${cooldownEnd}:R> avant de repostuler au poste **${p.label}**.`, ephemeral: true });
+          await interaction.editReply({ content: `⏳ Tu dois attendre <t:${cooldownEnd}:R> avant de repostuler au poste **${p.label}**.`, ephemeral: true });
           return true;
         }
       }
@@ -670,7 +670,7 @@ module.exports = {
 
       const cfg = getConfig(guildId);
       if (!cfg.log_channel) {
-        await interaction.reply({ content: '❌ Le système de recrutement n\'est pas configuré. Contacte un admin.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Le système de recrutement n\'est pas configuré. Contacte un admin.', ephemeral: true });
         return true;
       }
 
@@ -704,7 +704,7 @@ module.exports = {
         .join('\n\n')
         .slice(0, 2000);
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           new EmbedBuilder()
             .setColor('#2ECC71')
@@ -728,12 +728,12 @@ module.exports = {
     if (cid.startsWith('rec_acc_')) {
       const appId   = parseInt(cid.slice(8));
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!isStaff) { await interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
+      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
 
       const app = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app)                      { await interaction.reply({ content: '❌ Candidature introuvable.',    ephemeral: true }); return true; }
-      if (app.status === 'accepted') { await interaction.reply({ content: '✅ Déjà acceptée.',              ephemeral: true }); return true; }
-      if (app.status === 'rejected') { await interaction.reply({ content: '❌ Déjà refusée.',              ephemeral: true }); return true; }
+      if (!app)                      { await interaction.editReply({ content: '❌ Candidature introuvable.',    ephemeral: true }); return true; }
+      if (app.status === 'accepted') { await interaction.editReply({ content: '✅ Déjà acceptée.',              ephemeral: true }); return true; }
+      if (app.status === 'rejected') { await interaction.editReply({ content: '❌ Déjà refusée.',              ephemeral: true }); return true; }
 
       const p   = POSTES[app.poste];
       const cfg = getConfig(guildId);
@@ -769,7 +769,7 @@ module.exports = {
 
       const fakeUser = candidate ?? { tag: `User#${app.user_id}`, displayAvatarURL: () => null };
       await interaction.message.edit({ embeds: [buildLogEmbed(appUpdated, fakeUser, p, 'accepted')], components: [] }).catch(() => {});
-      await interaction.reply({ content: `✅ Candidature **#${appId}** acceptée.${roleGiven ? ' Rôle attribué.' : ''} Candidat notifié en DM.`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Candidature **#${appId}** acceptée.${roleGiven ? ' Rôle attribué.' : ''} Candidat notifié en DM.`, ephemeral: true });
       return true;
     }
 
@@ -777,12 +777,12 @@ module.exports = {
     if (cid.startsWith('rec_rej_') && !cid.startsWith('rec_rej_conf_')) {
       const appId   = parseInt(cid.slice(8));
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!isStaff) { await interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
+      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
 
       const app = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app)                      { await interaction.reply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
-      if (app.status === 'rejected') { await interaction.reply({ content: '❌ Déjà refusée.',            ephemeral: true }); return true; }
-      if (app.status === 'accepted') { await interaction.reply({ content: '✅ Déjà acceptée.',           ephemeral: true }); return true; }
+      if (!app)                      { await interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
+      if (app.status === 'rejected') { await interaction.editReply({ content: '❌ Déjà refusée.',            ephemeral: true }); return true; }
+      if (app.status === 'accepted') { await interaction.editReply({ content: '✅ Déjà acceptée.',           ephemeral: true }); return true; }
 
       await interaction.showModal(
         new ModalBuilder()
@@ -809,7 +809,7 @@ module.exports = {
       const appId  = parseInt(cid.slice(13));
       const reason = interaction.fields.getTextInputValue('reason') || 'Aucune raison précisée.';
       const app    = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app) { await interaction.reply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
+      if (!app) { await interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
 
       const p = POSTES[app.poste];
       db.db.prepare('UPDATE rec_apps SET status=?, reviewer_id=?, reject_reason=?, reviewed_at=? WHERE id=?').run('rejected', interaction.user.id, reason, ts(), appId);
@@ -841,7 +841,7 @@ module.exports = {
         if (logCh) logCh.messages.fetch(app.msg_id).then(m => m.edit({ embeds: [buildLogEmbed(appUpdated, fakeUser, p, 'rejected')], components: [] })).catch(() => {});
       }
 
-      await interaction.reply({ content: `❌ Candidature **#${appId}** refusée. Candidat notifié en DM.`, ephemeral: true });
+      await interaction.editReply({ content: `❌ Candidature **#${appId}** refusée. Candidat notifié en DM.`, ephemeral: true });
       return true;
     }
 
@@ -849,11 +849,11 @@ module.exports = {
     if (cid.startsWith('rec_wait_')) {
       const appId   = parseInt(cid.slice(9));
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!isStaff) { await interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
+      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
 
       const app = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app)                                                    { await interaction.reply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
-      if (app.status === 'accepted' || app.status === 'rejected') { await interaction.reply({ content: '❌ Candidature déjà traitée.', ephemeral: true }); return true; }
+      if (!app)                                                    { await interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
+      if (app.status === 'accepted' || app.status === 'rejected') { await interaction.editReply({ content: '❌ Candidature déjà traitée.', ephemeral: true }); return true; }
 
       const p = POSTES[app.poste];
       db.db.prepare('UPDATE rec_apps SET status=?, reviewer_id=? WHERE id=?').run('waiting', interaction.user.id, appId);
@@ -861,7 +861,7 @@ module.exports = {
       const candidate   = await interaction.client.users.fetch(app.user_id).catch(() => null);
       const fakeUser    = candidate ?? { tag: `User#${app.user_id}`, displayAvatarURL: () => null };
       await interaction.message.edit({ embeds: [buildLogEmbed(appUpdated, fakeUser, p, 'waiting')], components: buildLogButtons(appId, 'waiting') }).catch(() => {});
-      await interaction.reply({ content: `🔍 Candidature **#${appId}** marquée **en examen** par <@${interaction.user.id}>.`, ephemeral: true });
+      await interaction.editReply({ content: `🔍 Candidature **#${appId}** marquée **en examen** par <@${interaction.user.id}>.`, ephemeral: true });
       return true;
     }
 

@@ -308,7 +308,7 @@ async function handleComponent(interaction, cid) {
 
   // Seul le joueur peut naviguer
   if (interaction.user.id !== userId) {
-    await interaction.reply({ content: "❌ Ce tableau de bord ne t'appartient pas.", ephemeral: true });
+    await interaction.editReply({ content: "❌ Ce tableau de bord ne t'appartient pas.", ephemeral: true });
     return true;
   }
 

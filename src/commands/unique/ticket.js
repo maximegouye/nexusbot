@@ -219,7 +219,7 @@ async function createTicket(interaction, catValue, formData) {
   // Blacklist
   const bl = db.db.prepare('SELECT * FROM ticket_blacklist WHERE guild_id=? AND user_id=?').get(guildId, member.id);
   if (bl) {
-    return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🚫 Accès refusé')
+    return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🚫 Accès refusé')
       .setDescription(`Tu ne peux pas ouvrir de ticket.\n\n**Raison :** ${bl.reason || 'Non précisée'}`)], ephemeral: true });
   }
 
@@ -237,7 +237,7 @@ async function createTicket(interaction, catValue, formData) {
   if (openCount >= maxOpen) {
     const existing = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='open'").get(guildId, member.id);
     const existCh = existing ? guild.channels.cache.get(existing.channel_id) : null;
-    return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('⚠️ Ticket déjà ouvert !')
+    return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('⚠️ Ticket déjà ouvert !')
       .setDescription(`Tu as déjà ${openCount}/${maxOpen} ticket(s) ouvert(s).${existCh ? `\n\nRends-toi dans ${existCh}` : ''}`)], ephemeral: true });
   }
 
@@ -277,7 +277,7 @@ async function createTicket(interaction, catValue, formData) {
     });
   } catch (err) {
     console.error('[ticket create] channel.create error:', err?.message, err?.code);
-    return interaction.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Erreur de création')
+    return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Erreur de création')
       .setDescription(`Impossible de créer le salon.\n\`\`\`\n${err?.message || 'Erreur inconnue'}\n\`\`\`\nVérifie que j'ai la permission **Gérer les salons**.`)
     ], ephemeral: true }).catch(() => {});
   }
@@ -335,7 +335,7 @@ async function createTicket(interaction, catValue, formData) {
   });
 
   // Confirmer à l'utilisateur
-  await interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Ticket ouvert !')
+  await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Ticket ouvert !')
     .setDescription(`Ton ticket a été créé dans ${ch}.\n\nUn membre du staff va te répondre sous peu ! 🚀`)
     .setFooter({ text: 'Tu recevras une mention dès qu\'un staff répond ✨' })
   ], ephemeral: true }).catch(() => {});
@@ -381,13 +381,13 @@ async function handleComponent(interaction, customId) {
       const ticketId = customId.replace('ticket_close_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
       if (!ticket || ticket.status !== 'open') {
-        return interaction.reply({ content: '❌ Ce ticket est déjà fermé.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce ticket est déjà fermé.', ephemeral: true });
       }
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
       if (!isStaff && interaction.user.id !== ticket.user_id) {
-        return interaction.reply({ content: '❌ Tu ne peux pas fermer ce ticket.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Tu ne peux pas fermer ce ticket.', ephemeral: true });
       }
       await interaction.showModal(new ModalBuilder()
         .setCustomId(`ticket_close_confirm_${ticketId}`)
@@ -399,7 +399,7 @@ async function handleComponent(interaction, customId) {
         )));
     } catch (err) {
       console.error('[ticket_close] error:', err?.message);
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -502,21 +502,21 @@ async function handleComponent(interaction, customId) {
     try {
       const ticketId = customId.replace('ticket_claim_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-      if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true });
+      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
-      if (ticket.claimed_by) return interaction.reply({ content: `⚠️ Déjà pris en charge par <@${ticket.claimed_by}>.`, ephemeral: true });
+      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (ticket.claimed_by) return interaction.editReply({ content: `⚠️ Déjà pris en charge par <@${ticket.claimed_by}>.`, ephemeral: true });
       db.db.prepare('UPDATE tickets SET claimed_by=?, last_activity=? WHERE id=?').run(interaction.user.id, ts(), ticket.id);
       await interaction.channel.setTopic(`ticket:${ticket.user_id} | ✋ ${interaction.user.username}`).catch(() => {});
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`✋ **${interaction.member.displayName}** a pris en charge ce ticket.\n<@${ticket.user_id}>, tu vas être aidé rapidement ! 🎯`)
         .setAuthor({ name: interaction.member.displayName, iconURL: interaction.user.displayAvatarURL() }).setTimestamp()
       ]});
     } catch (err) {
       console.error('[ticket_claim] error:', err?.message);
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -528,8 +528,8 @@ async function handleComponent(interaction, customId) {
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
-      await interaction.reply({
+      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      await interaction.editReply({
         components: [new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder().setCustomId(`ticket_pri_select_${ticketId}`)
             .setPlaceholder('Sélectionner une priorité')
@@ -538,7 +538,7 @@ async function handleComponent(interaction, customId) {
         ephemeral: true,
       });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -555,7 +555,7 @@ async function handleComponent(interaction, customId) {
         .setDescription(`🎯 Priorité changée en **${pri.label}** par <@${interaction.user.id}>`).setTimestamp()
       ]}).catch(() => {});
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -565,21 +565,21 @@ async function handleComponent(interaction, customId) {
     try {
       const ticketId = customId.replace('ticket_lock_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-      if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true });
+      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
       const newLocked = ticket.locked ? 0 : 1;
       db.db.prepare('UPDATE tickets SET locked=? WHERE id=?').run(newLocked, ticketId);
       await interaction.channel.permissionOverwrites.edit(ticket.user_id, { SendMessages: !newLocked }).catch(() => {});
-      await interaction.reply({ embeds: [new EmbedBuilder()
+      await interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor(newLocked ? '#E74C3C' : '#2ECC71')
         .setDescription(`${newLocked ? '🔐 Ticket **verrouillé**' : '🔓 Ticket **déverrouillé**'} par <@${interaction.user.id}>\n${newLocked ? "L'utilisateur ne peut plus envoyer de messages." : "L'utilisateur peut de nouveau écrire."}`)
         .setTimestamp()
       ]});
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -591,7 +591,7 @@ async function handleComponent(interaction, customId) {
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
       const BASE = [
         { label: '👋 Bienvenue / Prise en charge', value: 'qr_welcome', description: 'Accueillir et se présenter' },
         { label: '⏳ Merci de patienter',           value: 'qr_wait',    description: 'Demander de patienter' },
@@ -604,14 +604,14 @@ async function handleComponent(interaction, customId) {
       ];
       const custom = db.db.prepare('SELECT * FROM ticket_quick_replies WHERE guild_id=? ORDER BY title LIMIT 15').all(interaction.guildId);
       const opts = [...BASE, ...custom.map(r => ({ label: `✏️ ${r.title}`.slice(0,100), value: `qr_c_${r.id}`, description: r.content.slice(0,100) }))].slice(0,25);
-      await interaction.reply({
+      await interaction.editReply({
         components: [new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder().setCustomId(`ticket_qr_select_${ticketId}`).setPlaceholder('💬 Réponse rapide...').addOptions(opts)
         )],
         ephemeral: true,
       });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -659,7 +659,7 @@ async function handleComponent(interaction, customId) {
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
       await interaction.showModal(new ModalBuilder()
         .setCustomId(`ticket_transfer_confirm_${ticketId}`)
         .setTitle('🔄 Transférer le ticket')
@@ -668,7 +668,7 @@ async function handleComponent(interaction, customId) {
             .setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(20).setPlaceholder('ID Discord (18-19 chiffres)')
         )));
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -705,7 +705,7 @@ async function handleComponent(interaction, customId) {
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
       await interaction.showModal(new ModalBuilder()
         .setCustomId(`ticket_note_sub_${ticketId}`)
         .setTitle('📝 Ajouter une note privée')
@@ -715,7 +715,7 @@ async function handleComponent(interaction, customId) {
             .setPlaceholder('Informations internes, suivi, contexte...')
         )));
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -726,16 +726,16 @@ async function handleComponent(interaction, customId) {
       const ticketId = customId.replace('ticket_note_sub_', '');
       let note = '';
       try { note = interaction.fields.getTextInputValue('note'); } catch {}
-      if (!note.trim()) return interaction.reply({ content: '❌ Note vide.', ephemeral: true });
+      if (!note.trim()) return interaction.editReply({ content: '❌ Note vide.', ephemeral: true });
       db.db.prepare('INSERT INTO ticket_notes (ticket_id, author_id, content, created_at) VALUES (?,?,?,?)').run(parseInt(ticketId), interaction.user.id, note, ts());
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor('#F39C12')
+      await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F39C12')
         .setTitle('📝 Note privée enregistrée')
         .setDescription(`> *${note.slice(0,500)}*`)
         .setAuthor({ name: interaction.member.displayName, iconURL: interaction.user.displayAvatarURL() })
         .setFooter({ text: '🔒 Visible uniquement par le staff' }).setTimestamp()
       ], ephemeral: true });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -745,7 +745,7 @@ async function handleComponent(interaction, customId) {
     try {
       const ticketId = customId.replace('ticket_info_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-      if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true });
+      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
       const cat = getCat(ticket.category);
       const pri = getPri(ticket.priority);
       const ageS = ts() - ticket.created_at;
@@ -768,12 +768,12 @@ async function handleComponent(interaction, customId) {
         const ns = notes.map(n => `> <@${n.author_id}>: *${n.content.slice(0,80)}*`).join('\n');
         fields.push({ name: `📝 Notes (${notes.length})`, value: ns, inline: false });
       }
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(cat.color)
+      await interaction.editReply({ embeds: [new EmbedBuilder().setColor(cat.color)
         .setTitle(`ℹ️ Ticket #${ticket.id}`)
         .addFields(...fields).setTimestamp()
       ], ephemeral: true });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -967,7 +967,7 @@ module.exports = {
       (cfg.ticket_staff_role && interaction.member.roles.cache.has(String(cfg.ticket_staff_role)));
     const reply = (opts) => {
       if (interaction.deferred || interaction.replied) return interaction.editReply(opts);
-      return interaction.reply(opts);
+      return interaction.editReply(opts);
     };
 
     // ══ SETUP ══════════════════════════════════════════════════════════════════

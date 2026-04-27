@@ -492,7 +492,7 @@ async function handleComponent(interaction, customId) {
   // hippo_bet_{userId}_{betType}_{mise}
   if (customId.startsWith('hippo_bet_')) {
     if (!isOwner(5)) {
-      await interaction.reply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
       return true;
     }
     const parts   = customId.split('_');
@@ -507,7 +507,7 @@ async function handleComponent(interaction, customId) {
   // hippo_h1_{userId}_{betType}_{mise}_{horseId}
   if (customId.startsWith('hippo_h1_')) {
     if (!isOwner(6)) {
-      await interaction.reply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
       return true;
     }
     const parts   = customId.split('_');
@@ -528,7 +528,7 @@ async function handleComponent(interaction, customId) {
   // hippo_h2_{userId}_{betType}_{mise}_{horse1Id}_{horse2Id}
   if (customId.startsWith('hippo_h2_')) {
     if (!isOwner(7)) {
-      await interaction.reply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce n\'est pas ton pari.', ephemeral: true }).catch(() => {});
       return true;
     }
     const parts  = customId.split('_');
@@ -545,7 +545,7 @@ async function handleComponent(interaction, customId) {
   if (customId === `hippo_replay_${userId}`) {
     const session = hippoSessions.get(userId);
     if (!session) {
-      await interaction.reply({ content: '⚠️ Session expirée. Relance `/hippodrome`.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '⚠️ Session expirée. Relance `/hippodrome`.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -572,15 +572,15 @@ async function handleComponent(interaction, customId) {
     const u    = db.getUser(userId, guildId);
     const cfg  = (db.getConfig ? db.getConfig(guildId) : null) || {};
     const coin = cfg.currency_emoji || '🪙';
-    if (!u) { await interaction.reply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {}); return true; }
+    if (!u) { await interaction.editReply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {}); return true; }
     const raw     = interaction.fields.getTextInputValue('newmise');
     const newMise = parseMise(raw, u.balance);
     if (!newMise || isNaN(newMise) || newMise < 5) {
-      await interaction.reply({ content: `❌ Mise invalide (min 5 ${coin}).`, ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: `❌ Mise invalide (min 5 ${coin}).`, ephemeral: true }).catch(() => {});
       return true;
     }
     if (newMise > u.balance) {
-      await interaction.reply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, ephemeral: true }).catch(() => {});
       return true;
     }
     await showPreRace(interaction, userId, guildId, newMise, true);
@@ -594,7 +594,7 @@ async function handleComponent(interaction, customId) {
     const coin    = cfg.currency_emoji || '🪙';
     const net     = stat.won - stat.wagered;
     const winRate = stat.gamesPlayed > 0 ? Math.round(stat.wins / stat.gamesPlayed * 100) : 0;
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#5865F2')
         .setTitle('📊 Tes stats Hippodrome — Session')
@@ -630,7 +630,7 @@ async function handleComponent(interaction, customId) {
         `　└ 🏆 Gagnant: ×**${adj}** | 🎯 Placé: ×**${place}** | ~${chance}% de victoire | Forme: ${h.form}`;
     }).join('\n\n');
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle(`📋 Cotes du jour — ${condition.label}`)

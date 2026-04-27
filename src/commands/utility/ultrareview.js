@@ -12,7 +12,7 @@ module.exports = {
     const isOwner = interaction.user.id === interaction.guild.ownerId;
     const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
     if (!isOwner && !isAdmin) {
-      return interaction.reply({ content: '❌ Commande réservée aux administrateurs.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Commande réservée aux administrateurs.', ephemeral: true });
     }
 
     await interaction.deferReply();

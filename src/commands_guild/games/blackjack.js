@@ -512,7 +512,7 @@ async function handleComponent(interaction) {
     const userId = parts[2];
     const mise   = parseInt(parts[3]);
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
     }
     await interaction.deferUpdate().catch(() => {});
     await startGame(interaction, userId, interaction.guildId, mise);
@@ -524,7 +524,7 @@ async function handleComponent(interaction) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
     }
     await interaction.showModal(changeMiseModal('bj', userId));
     return true;
@@ -535,13 +535,13 @@ async function handleComponent(interaction) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u       = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await startGame(interaction, userId, interaction.guildId, newMise);
@@ -553,16 +553,16 @@ async function handleComponent(interaction) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
     }
     const st = getSession(userId);
     if (!st) {
-      return interaction.reply({ content: '❌ Pas de partie en cours.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Pas de partie en cours.', ephemeral: true });
     }
     const playerTotal = handValue(st.player);
     const dealerCard = st.dealer[0];
     const advice = getBasicAdvice(playerTotal, dealerCard);
-    return interaction.reply({
+    return interaction.editReply({
       content: `**💡 Conseil Stratégie Basique :**\n\nTa main : ${handStr(st.player)} (${playerTotal})\nCarte dealer : ${cardStr(dealerCard)}\n\n${advice}`,
       ephemeral: true
     });
@@ -574,7 +574,7 @@ async function handleComponent(interaction) {
   const userId = parts.length > 2 ? parts[2] : null;
 
   if (!userId || interaction.user.id !== userId) {
-    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    return interaction.editReply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
   }
 
   await interaction.deferUpdate().catch(() => {});

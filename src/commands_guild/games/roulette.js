@@ -453,7 +453,7 @@ module.exports = {
       const mise    = parseInt(parts[3]);
       const betType = parts[4]; // rouge, noir, ou pairimpair
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.deferUpdate();
@@ -473,7 +473,7 @@ module.exports = {
     if (cid.startsWith('rl_table_')) {
       const userId = cid.split('_')[2];
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.deferUpdate();
@@ -493,7 +493,7 @@ module.exports = {
       const mise    = parseInt(parts[3]);
       const betStr  = parts.slice(4).join('_'); // encoded with ~
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.deferUpdate();
@@ -507,7 +507,7 @@ module.exports = {
       const userId  = parts[2];
       const betStr  = parts.slice(3).join('_');
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.showModal(changeMiseModal('rl', userId, betStr));
@@ -520,14 +520,14 @@ module.exports = {
       const userId  = parts[2];
       const betStr  = parts.slice(3).join('_');
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       const rawMise = interaction.fields.getTextInputValue('newmise');
       const u       = db.getUser(userId, interaction.guildId);
       const newMise = parseMise(rawMise, u?.balance || 0);
       if (!newMise || newMise < 5) {
-        return interaction.reply({ content: '❌ Mise invalide (min 5 coins/pari).', ephemeral: true });
+        return interaction.editReply({ content: '❌ Mise invalide (min 5 coins/pari).', ephemeral: true });
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
       await playRoulette(interaction, userId, interaction.guildId, newMise, betStr);

@@ -129,7 +129,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.reply(_em).catch(() => {});
+      else await interaction.editReply(_em).catch(() => {});
     } catch {}
   }},
 
@@ -155,12 +155,12 @@ async function handleComponent(interaction, customId) {
 
   const game = activeGames.get(key);
   if (!game) {
-    await interaction.reply({ content: '❌ Aucune partie en cours. Lancez `/pendu jouer`.', ephemeral: true }).catch(() => {});
+    await interaction.editReply({ content: '❌ Aucune partie en cours. Lancez `/pendu jouer`.', ephemeral: true }).catch(() => {});
     return true;
   }
 
   if (game.guessed.includes(letter)) {
-    await interaction.reply({ content: `❌ Vous avez déjà essayé **${letter.toUpperCase()}**.`, ephemeral: true }).catch(() => {});
+    await interaction.editReply({ content: `❌ Vous avez déjà essayé **${letter.toUpperCase()}**.`, ephemeral: true }).catch(() => {});
     return true;
   }
 

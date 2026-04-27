@@ -16,7 +16,7 @@ module.exports = {
   async execute(interaction) {
     try {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
-      return interaction.reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const sub    = interaction.options.getSubcommand();
     const raison = interaction.options.getString('raison') || 'Raison non précisée';
@@ -74,7 +74,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }}

@@ -348,7 +348,7 @@ async function handleComponent(interaction, cid) {
 
   // ── Bouton désactivé ──────────────────────────────────────
   if (cid.startsWith('rf_cd_disabled_')) {
-    await interaction.reply({ content: '⏳ La roue est en recharge (30 min). Reviens plus tard !', ephemeral: true }).catch(() => {});
+    await interaction.editReply({ content: '⏳ La roue est en recharge (30 min). Reviens plus tard !', ephemeral: true }).catch(() => {});
     return true;
   }
 
@@ -356,7 +356,7 @@ async function handleComponent(interaction, cid) {
   if (cid.startsWith('rf_sectors_')) {
     const targetId = cid.replace('rf_sectors_', '');
     if (userId !== targetId) {
-      await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -393,11 +393,11 @@ async function handleComponent(interaction, cid) {
     const gain     = parseInt(parts[3]) || 0;
 
     if (userId !== targetId) {
-      await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
       return true;
     }
     if (gain <= 0) {
-      await interaction.reply({ content: '❌ Montant invalide.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Montant invalide.', ephemeral: true }).catch(() => {});
       return true;
     }
 
@@ -488,7 +488,7 @@ async function handleComponent(interaction, cid) {
   if (cid.startsWith('rf_reroll_')) {
     const targetId = cid.replace('rf_reroll_', '');
     if (userId !== targetId) {
-      await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});

@@ -101,7 +101,7 @@ async function handleComponent(interaction, customId) {
   const role = interaction.guild.roles.cache.get(roleId);
 
   if (!role) {
-    await interaction.reply({ content: '❌ Rôle introuvable.', ephemeral: true }).catch(() => {});
+    await interaction.editReply({ content: '❌ Rôle introuvable.', ephemeral: true }).catch(() => {});
     return true;
   }
 
@@ -111,7 +111,7 @@ async function handleComponent(interaction, customId) {
     const menuRoles = JSON.parse(menu.roles || '[]');
     const userRoles = menuRoles.filter(id => interaction.member.roles.cache.has(id));
     if (!interaction.member.roles.cache.has(roleId) && userRoles.length >= menu.max_choices) {
-      await interaction.reply({ content: `❌ Maximum ${menu.max_choices} rôle(s) autorisé(s) pour ce menu.`, ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: `❌ Maximum ${menu.max_choices} rôle(s) autorisé(s) pour ce menu.`, ephemeral: true }).catch(() => {});
       return true;
     }
   }
@@ -119,13 +119,13 @@ async function handleComponent(interaction, customId) {
   try {
     if (interaction.member.roles.cache.has(roleId)) {
       await interaction.member.roles.remove(roleId);
-      await interaction.reply({ content: `✅ Rôle **${role.name}** retiré.`, ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: `✅ Rôle **${role.name}** retiré.`, ephemeral: true }).catch(() => {});
     } else {
       await interaction.member.roles.add(roleId);
-      await interaction.reply({ content: `✅ Rôle **${role.name}** ajouté.`, ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: `✅ Rôle **${role.name}** ajouté.`, ephemeral: true }).catch(() => {});
     }
   } catch (e) {
-    await interaction.reply({ content: `❌ Erreur: ${e.message}`, ephemeral: true }).catch(() => {});
+    await interaction.editReply({ content: `❌ Erreur: ${e.message}`, ephemeral: true }).catch(() => {});
   }
 
   return true;

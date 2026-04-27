@@ -41,7 +41,7 @@ module.exports = {
       || interaction.guild?.ownerId === interaction.user.id;
     if (!isAdmin) {
       if (!interaction.deferred && !interaction.replied) {
-        return interaction.reply({ content: '🚫 Réservé aux administrateurs.', ephemeral: true }).catch(() => {});
+        return interaction.editReply({ content: '🚫 Réservé aux administrateurs.', ephemeral: true }).catch(() => {});
       }
       return interaction.editReply({ content: '🚫 Réservé aux administrateurs.' }).catch(() => {});
     }
@@ -261,7 +261,7 @@ module.exports = {
       try {
         const errMsg = { content: `❌ Erreur : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
         if (interaction.deferred || interaction.replied) await interaction.editReply(errMsg).catch(() => {});
-        else await interaction.reply(errMsg).catch(() => {});
+        else await interaction.editReply(errMsg).catch(() => {});
       } catch {}
     }
   },

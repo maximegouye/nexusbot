@@ -711,7 +711,7 @@ async function handleComponent(interaction) {
   if (cid.startsWith('cslot_')) {
     const ownerId = cid.split(':')[1];
     if (ownerId && ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     let mise = 100;
@@ -735,7 +735,7 @@ async function handleComponent(interaction) {
     const maxMise = parseInt(parts[3]);
     const lines   = parseInt(parts[4]) || 1;
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -749,7 +749,7 @@ async function handleComponent(interaction) {
     const parts = cid.split('_');
     const ownerId = parts[2];
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     const newMise  = parseInt(parts[3]);
@@ -766,7 +766,7 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const lines   = parseInt(parts[3]) || 1;
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.showModal(changeMiseModal('slots', userId, `${lines}`));
@@ -779,14 +779,14 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const lines   = parseInt(parts[3]) || 1;
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 5) {
-      await interaction.reply({ content: '❌ Mise invalide (min 5 par ligne).', ephemeral: true });
+      await interaction.editReply({ content: '❌ Mise invalide (min 5 par ligne).', ephemeral: true });
       return true;
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
@@ -800,7 +800,7 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const amount  = parseInt(parts[3]);
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -839,7 +839,7 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const amount  = parseInt(parts[3]);
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -879,13 +879,13 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const pick    = parseInt(parts[3]); // 1, 2, 3
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     const bonusKey = `${userId}_${guildId}`;
     const game = bonusGames.get(bonusKey);
     if (!game || game.claimed) {
-      await interaction.reply({ content: '❌ Ce bonus a déjà été réclamé.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bonus a déjà été réclamé.', ephemeral: true }).catch(() => {});
       return true;
     }
     game.claimed = true;
@@ -926,12 +926,12 @@ async function handleComponent(interaction) {
     const lines   = parseInt(parts[4]) || 1;
     const count   = parseInt(parts[5]) || 5;
     if (ownerId !== userId) {
-      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     const u = db.getUser(userId, guildId);
     if (!u || u.balance < mise * lines) {
-      await interaction.reply({ content: '❌ Solde insuffisant pour l\'auto-spin.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Solde insuffisant pour l\'auto-spin.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});

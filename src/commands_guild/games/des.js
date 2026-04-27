@@ -209,7 +209,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.reply(_em).catch(() => {});
+      else await interaction.editReply(_em).catch(() => {});
     } catch {}
   }},
 
@@ -231,7 +231,7 @@ module.exports = {
       const newBet = parts[4];
       const newNumD = parseInt(parts[5]) || 1;
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.deferUpdate();
@@ -244,7 +244,7 @@ module.exports = {
       const betStr = parts[3];
       const numDice = parseInt(parts[4]) || 1;
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.showModal(changeMiseModal('des', userId, `${betStr}_${numDice}`));
@@ -256,14 +256,14 @@ module.exports = {
       const betStr = parts[3];
       const numDice = parseInt(parts[4]) || 1;
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       const rawMise = interaction.fields.getTextInputValue('newmise');
       const u = db.getUser(userId, interaction.guildId);
       const newMise = parseMise(rawMise, u?.balance || 0);
       if (!newMise || newMise < 5) {
-        return interaction.reply({ content: '❌ Mise invalide (min 5 coins).', ephemeral: true });
+        return interaction.editReply({ content: '❌ Mise invalide (min 5 coins).', ephemeral: true });
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
       await playDice(interaction, userId, interaction.guildId, newMise, betStr, numDice);

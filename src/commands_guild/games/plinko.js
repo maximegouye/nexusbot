@@ -290,7 +290,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.reply(_em).catch(() => {});
+      else await interaction.editReply(_em).catch(() => {});
     } catch {}
   }},
 
@@ -310,7 +310,7 @@ module.exports = {
       const mise = parseInt(parts[3]);
       const newRisk = parts[4] || 'medium';
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.deferUpdate();
@@ -322,7 +322,7 @@ module.exports = {
       const userId = parts[2];
       const riskKey = parts[3] || 'medium';
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       await interaction.showModal(changeMiseModal('plinko', userId, riskKey));
@@ -333,14 +333,14 @@ module.exports = {
       const userId = parts[2];
       const riskKey = parts[3] || 'medium';
       if (interaction.user.id !== userId) {
-        await interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       const rawMise = interaction.fields.getTextInputValue('newmise');
       const u = db.getUser(userId, interaction.guildId);
       const newMise = parseMise(rawMise, u?.balance || 0);
       if (!newMise || newMise < 10) {
-        return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+        return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
       await playPlinko(interaction, userId, interaction.guildId, newMise, riskKey);

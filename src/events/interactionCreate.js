@@ -83,7 +83,7 @@ module.exports = {
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) {
-        return interaction.reply({ content: 'Commande inconnue.', ephemeral: true }).catch(() => {});
+        return interaction.editReply({ content: 'Commande inconnue.', ephemeral: true }).catch(() => {});
       }
 
       try {
@@ -95,7 +95,7 @@ module.exports = {
           if (interaction.deferred || interaction.replied) {
             await interaction.followUp(errMsg);
           } else {
-            await interaction.reply(errMsg);
+            await interaction.editReply(errMsg);
           }
         } catch (_) {}
       }
@@ -158,7 +158,7 @@ module.exports = {
         } catch (e) {
           console.error('[CFG] handleConfigInteraction crash:', e?.message || e);
           if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: '❌ Erreur panneau config.', ephemeral: true }).catch(() => {});
+            await interaction.editReply({ content: '❌ Erreur panneau config.', ephemeral: true }).catch(() => {});
           }
           return;
         }
@@ -174,7 +174,7 @@ module.exports = {
         } catch (e) {
           console.error('[ADV] handleAdvancedInteraction crash:', e?.message || e);
           if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: '❌ Erreur panneau config avancé.', ephemeral: true }).catch(() => {});
+            await interaction.editReply({ content: '❌ Erreur panneau config avancé.', ephemeral: true }).catch(() => {});
           }
           return;
         }
@@ -217,7 +217,7 @@ module.exports = {
             } catch (hcErr) {
               console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
               if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
+                await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
               } else if (interaction.deferred) {
                 await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}` }).catch(() => {});
               }
@@ -225,7 +225,7 @@ module.exports = {
             }
           } else if (!interaction.isModalSubmit()) {
             // Bouton/menu sans handleComponent → collector expiré ou bouton orphelin
-            await interaction.reply({ content: '⏱️ Cette interaction a expiré. Relancez la commande.', ephemeral: true }).catch(() => {});
+            await interaction.editReply({ content: '⏱️ Cette interaction a expiré. Relancez la commande.', ephemeral: true }).catch(() => {});
             return;
           }
           // Modal sans handleComponent → laisser passer vers execute()
@@ -233,7 +233,7 @@ module.exports = {
         } catch (e) {
           console.error(`[COMPONENT ${cid}] Erreur:`, e?.message || e);
           if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
+            await interaction.editReply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
           }
         }
         return;

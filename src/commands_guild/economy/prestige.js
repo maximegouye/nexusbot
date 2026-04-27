@@ -123,7 +123,7 @@ async function handleComponent(interaction, customId) {
   const userId = parts[2];
 
   if (interaction.user.id !== userId) {
-    await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+    await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
     return true;
   }
 

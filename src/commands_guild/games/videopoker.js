@@ -193,7 +193,7 @@ async function handleComponent(interaction) {
   if (customId.startsWith('vp_paytable_')) {
     const userId = customId.split('_')[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
     }
     const paytableEmbed = new EmbedBuilder()
       .setColor('#F39C12')
@@ -211,7 +211,7 @@ async function handleComponent(interaction) {
         { name: 'Jacks or Better', value: '× 1', inline: true },
       )
       .setFooter({ text: 'Video Poker · Jacks or Better' });
-    return interaction.reply({ embeds: [paytableEmbed], ephemeral: true });
+    return interaction.editReply({ embeds: [paytableEmbed], ephemeral: true });
   }
 
   // Play again handler
@@ -221,7 +221,7 @@ async function handleComponent(interaction) {
     const mise = parseInt(parts[3]);
 
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
     }
 
     await interaction.deferUpdate().catch(() => {});
@@ -234,7 +234,7 @@ async function handleComponent(interaction) {
     const parts = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
     }
     await interaction.showModal(changeMiseModal('vp', userId));
     return true;
@@ -245,13 +245,13 @@ async function handleComponent(interaction) {
     const parts = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await playVideoPoker(interaction, userId, interaction.guildId, newMise);
@@ -265,7 +265,7 @@ async function handleComponent(interaction) {
   const userId = parts.length > 2 ? parts[2] : null;
 
   if (!userId || interaction.user.id !== userId) {
-    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    return interaction.editReply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
   }
 
   await interaction.deferUpdate().catch(() => {});
@@ -400,7 +400,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.reply(_em).catch(() => {});
+      else await interaction.editReply(_em).catch(() => {});
     } catch {}
   }},
 

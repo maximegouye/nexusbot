@@ -169,21 +169,21 @@ async function execute(interaction) {
 
     const user = db.getUser(userId, guildId);
     if (!user) {
-      return interaction.reply({
+      return interaction.editReply({
         content: '❌ Profil non trouvé. Utilise `/daily` d\'abord.',
         ephemeral: true,
       });
     }
 
     if (mise < 1 || mise > 1000000) {
-      return interaction.reply({
+      return interaction.editReply({
         content: `❌ Mise invalide. Entre 1 et 1 000 000 ${coin}.`,
         ephemeral: true,
       });
     }
 
     if (user.balance < mise) {
-      return interaction.reply({
+      return interaction.editReply({
         content: `❌ Solde insuffisant.\nTu as **${user.balance} ${coin}** mais tu essaies de miser **${mise} ${coin}**.`,
         ephemeral: true,
       });
@@ -236,7 +236,7 @@ async function execute(interaction) {
     saveSession(userId, gameId, session);
   } catch (err) {
     console.error('[hilo execute]', err);
-    await interaction.reply({
+    await interaction.editReply({
       content: '❌ Une erreur est survenue. Réessaie plus tard.',
       ephemeral: true,
     }).catch(() => {});
@@ -254,7 +254,7 @@ async function handleComponent(interaction, customId) {
 
     // Verify permission
     if (interaction.user.id !== userId) {
-      return interaction.reply({
+      return interaction.editReply({
         content: '❌ Ce n\'est pas ton jeu.',
         ephemeral: true,
       });
@@ -277,7 +277,7 @@ async function handleComponent(interaction, customId) {
           { name: '📊 Probabilités', value: 'Les cartes basses (2-6) ont plus de chances d\'être suivies par une carte plus haute (~67%)', inline: false },
         )
         .setFooter({ text: 'Hi-Lo · Maximum 5 manches par partie' });
-      return interaction.reply({ embeds: [rulesEmbed], ephemeral: true });
+      return interaction.editReply({ embeds: [rulesEmbed], ephemeral: true });
     }
 
     // ───── Modal for changing bet ─────
@@ -286,7 +286,7 @@ async function handleComponent(interaction, customId) {
         const newMiseRaw = interaction.fields.getTextInputValue('newmise');
         const user = db.getUser(userId, interaction.guildId);
         if (!user) {
-          return interaction.reply({
+          return interaction.editReply({
             content: '❌ Profil non trouvé.',
             ephemeral: true,
           });
@@ -294,14 +294,14 @@ async function handleComponent(interaction, customId) {
 
         const newMise = parseMise(newMiseRaw, user.balance);
         if (!newMise || newMise < 1) {
-          return interaction.reply({
+          return interaction.editReply({
             content: `❌ Mise invalide. Entre 1 et ${user.balance} ${coin}.`,
             ephemeral: true,
           });
         }
 
         if (user.balance < newMise) {
-          return interaction.reply({
+          return interaction.editReply({
             content: `❌ Solde insuffisant. Tu as **${user.balance} ${coin}** mais tu essaies de miser **${newMise} ${coin}**.`,
             ephemeral: true,
           });
@@ -360,7 +360,7 @@ async function handleComponent(interaction, customId) {
         saveSession(userId, newGameId, newSession);
       } catch (err) {
         console.error('[hilo modal]', err);
-        await interaction.reply({
+        await interaction.editReply({
           content: '❌ Erreur lors du traitement de la mise.',
           ephemeral: true,
         }).catch(() => {});
@@ -371,7 +371,7 @@ async function handleComponent(interaction, customId) {
     // Get session for other actions
     const session = getSession(userId, gameId);
     if (!session) {
-      return interaction.reply({
+      return interaction.editReply({
         content: '❌ Partie expirée. Recommence avec `/hilo`.',
         ephemeral: true,
       });
@@ -563,7 +563,7 @@ async function handleComponent(interaction, customId) {
     return true;
   } catch (err) {
     console.error('[hilo handleComponent]', err);
-    await interaction.reply({
+    await interaction.editReply({
       content: '❌ Une erreur est survenue.',
       ephemeral: true,
     }).catch(() => {});

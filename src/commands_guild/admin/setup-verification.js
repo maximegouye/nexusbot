@@ -19,7 +19,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-      return interaction.reply({ content: '🚫 Réservé aux modérateurs.', ephemeral: true }).catch(() => {});
+      return interaction.editReply({ content: '🚫 Réservé aux modérateurs.', ephemeral: true }).catch(() => {});
     }
 
     await interaction.deferReply({ ephemeral: true });

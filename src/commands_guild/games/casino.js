@@ -160,7 +160,7 @@ async function handleComponent(interaction, customId) {
   // Boutons de jeu → guide rapide
   const game = CASINO_GAME_MAP[base];
   if (game) {
-    await interaction.reply({
+    await interaction.editReply({
       content: `🎮 **${game.label}** — Lance le jeu avec :\n• Slash : \`${game.slash} <mise>\`\n• Préfixe : \`${game.prefix} <mise>\``,
       ephemeral: true,
     }).catch(() => {});

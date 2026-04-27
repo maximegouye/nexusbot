@@ -131,7 +131,7 @@ module.exports = {
       return true;
     }
     if (cid.startsWith('help_config:')) {
-      await interaction.reply({ content: '⚙️ Tape **`&config`** dans le chat pour ouvrir le panneau de configuration !', ephemeral: true });
+      await interaction.editReply({ content: '⚙️ Tape **`&config`** dans le chat pour ouvrir le panneau de configuration !', ephemeral: true });
       return true;
     }
     if (cid.startsWith('help_cat:') && interaction.isStringSelectMenu()) {

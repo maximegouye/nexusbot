@@ -202,7 +202,7 @@ module.exports = {
         const gains = Object.entries(payMap).map(([m, x]) => `${m} matchs → ×${x}`).join(', ');
         return `**${chosen} numéro${parseInt(chosen) > 1 ? 's' : ''}** : ${gains}`;
       }).join('\n');
-      return interaction.reply({ embeds: [new EmbedBuilder()
+      return interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#5865F2')
         .setTitle('📊 Table des gains — Keno')
         .setDescription(lines)
@@ -216,11 +216,11 @@ module.exports = {
       const mise  = parseInt(parts[parts.length - 1]);
       const sess  = kenoSessions.get(userId);
       if (!sess) {
-        return interaction.reply({ content: '❌ Session expirée. Relance `/keno` pour jouer.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Session expirée. Relance `/keno` pour jouer.', ephemeral: true });
       }
       const u = db.getUser(userId, interaction.guildId);
       if (!u || u.balance < mise) {
-        return interaction.reply({ content: `❌ Solde insuffisant. Tu as **${u?.balance || 0} 💰**.`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Solde insuffisant. Tu as **${u?.balance || 0} 💰**.`, ephemeral: true });
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply().catch(() => {});
       return runGame(interaction, sess.rawNums, mise, false);

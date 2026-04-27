@@ -148,7 +148,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.reply(errMsg).catch(() => {});
+        await interaction.editReply(errMsg).catch(() => {});
       }
     } catch {}
   }},
@@ -175,13 +175,13 @@ async function handleComponent(interaction, customId) {
     const mise    = parseInt(miseStr);
 
     if (!mise || mise < 1) {
-      await interaction.reply({ content: '❌ Mise invalide.', ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: '❌ Mise invalide.', ephemeral: true }).catch(() => {});
       return true;
     }
 
     const user = db.getUser(interaction.user.id, interaction.guildId);
     if (user.balance < mise) {
-      await interaction.reply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true }).catch(() => {});
+      await interaction.editReply({ content: `❌ Solde insuffisant (**${user.balance.toLocaleString('fr-FR')}${symbol}**).`, ephemeral: true }).catch(() => {});
       return true;
     }
 

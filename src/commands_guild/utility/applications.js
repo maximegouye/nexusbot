@@ -265,7 +265,7 @@ async function handleComponent(interaction) {
     if (customId.startsWith('app_')) {
       const isAdmin = interaction.member.permissions.has(0x20n);
       if (!isAdmin) {
-        return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
       }
 
       // app_accept_<submissionId>_<roleId>
@@ -276,7 +276,7 @@ async function handleComponent(interaction) {
 
         const submission = db.db.prepare('SELECT * FROM app_submissions WHERE id=?').get(submissionId);
         if (!submission) {
-          return interaction.reply({ content: '❌ Candidature introuvable.', ephemeral: true });
+          return interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true });
         }
 
         // Mettre à jour le statut
@@ -304,7 +304,7 @@ async function handleComponent(interaction) {
         }
 
         await interaction.message.edit({ embeds: [embed], components: [] }).catch(() => {});
-        return interaction.reply({ content: `✅ Candidature acceptée !${roleId ? ' Rôle attribué.' : ''}`, ephemeral: true });
+        return interaction.editReply({ content: `✅ Candidature acceptée !${roleId ? ' Rôle attribué.' : ''}`, ephemeral: true });
       }
 
       // app_reject_<submissionId>
@@ -313,7 +313,7 @@ async function handleComponent(interaction) {
 
         const submission = db.db.prepare('SELECT * FROM app_submissions WHERE id=?').get(submissionId);
         if (!submission) {
-          return interaction.reply({ content: '❌ Candidature introuvable.', ephemeral: true });
+          return interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true });
         }
 
         // Mettre à jour le statut
@@ -333,7 +333,7 @@ async function handleComponent(interaction) {
         }
 
         await interaction.message.edit({ embeds: [embed], components: [] }).catch(() => {});
-        return interaction.reply({ content: '✅ Candidature refusée.', ephemeral: true });
+        return interaction.editReply({ content: '✅ Candidature refusée.', ephemeral: true });
       }
     }
 
@@ -341,7 +341,7 @@ async function handleComponent(interaction) {
   } catch (error) {
     console.error('Erreur dans handleComponent (applications):', error);
     try {
-      return interaction.reply({ content: '❌ Une erreur s\'est produite.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Une erreur s\'est produite.', ephemeral: true });
     } catch {}
     return false;
   }

@@ -38,7 +38,7 @@ module.exports = {
       try {
         const msg = { content: `❌ Erreur: ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
         if (interaction.deferred || interaction.replied) await interaction.editReply(msg);
-        else await interaction.reply(msg);
+        else await interaction.editReply(msg);
       } catch {}
     }
   }
