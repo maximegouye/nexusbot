@@ -280,6 +280,18 @@ module.exports = {
       console.log('✅ Migration : leave_channel réinitialisé à NULL pour tous les guilds');
     } catch (_) {}
 
+    // ── Migration : donner 5 000€ à tous les membres sans solde ──────────────
+    try {
+      const db = require('../database/db');
+      const result = db.db.prepare(
+        'UPDATE users SET balance = 5000 WHERE balance = 0 AND bank = 0'
+      ).run();
+      if (result.changes > 0)
+        console.log(`✅ Migration 5 000€ : ${result.changes} membre(s) crédité(s)`);
+    } catch (e) {
+      console.log('⚠️  Migration 5000€ skip:', e?.message);
+    }
+
     const guildId = process.env.HOME_GUILD_ID || '1492886135159128227';
 
     // ── Auto-setup recrutement (15s après démarrage pour laisser le cache se remplir)

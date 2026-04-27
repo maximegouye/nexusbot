@@ -192,7 +192,7 @@ async function playRoueFortune(source, userId, guildId) {
   if (sector.type === 'jackpot') {
     const jpFrames = [
       { color: '#FFD700', title: '🌟 🌟 JACKPOT 🌟 🌟',     desc: '```\n' + '═'.repeat(42) + '\n' + '         🌟  J A C K P O T  🌟          \n' + '═'.repeat(42) + '\n```' },
-      { color: '#FFA500', title: '🎆 💥 10 000 coins ! 💥 🎆', desc: '*Le sol tremble ! Les pièces pleuvent !*' },
+      { color: '#FFA500', title: '🎆 💥 10 000€ ! 💥 🎆', desc: '*Le sol tremble ! Les euros pleuvent !*' },
       { color: '#FFD700', title: '🎊 FÉLICITATIONS ! 🎊',    desc: '🎊 🥳 🎆 🎇 💰 🪙 💰 🎇 🎆 🥳 🎊' },
       { color: '#FFC107', title: '✨ Légende du Casino ✨',    desc: '```\n Vous entrez dans la légende du Casino ! \n```' },
     ];

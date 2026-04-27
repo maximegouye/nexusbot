@@ -31,7 +31,7 @@ const ALL_ACHIEVEMENTS = [
   { key: 'lvl_50',   emoji: '✨', name: 'Maître',               desc: 'Atteins le niveau 50',           condition: u => u.level >= 50,  reward: 5000, rarity: 'Épique' },
   { key: 'lvl_100',  emoji: '🌌', name: 'Légende',              desc: 'Atteins le niveau 100',          condition: u => u.level >= 100, reward: 15000,rarity: 'Légendaire' },
   // ─── Économie ────────────────────────────────────────────────────────────
-  { key: 'eco_1k',   emoji: '🪙', name: 'Premiers sous',        desc: 'Accumule 1 000 coins',           condition: u => (u.balance+u.bank) >= 1000,   reward: 100,  rarity: 'Commun' },
+  { key: 'eco_1k',   emoji: '🪙', name: 'Premiers sous',        desc: 'Accumule 1 000€',           condition: u => (u.balance+u.bank) >= 1000,   reward: 100,  rarity: 'Commun' },
   { key: 'eco_10k',  emoji: '💵', name: 'Petit épargnant',      desc: 'Accumule 10 000 coins',          condition: u => (u.balance+u.bank) >= 10000,  reward: 500,  rarity: 'Commun' },
   { key: 'eco_100k', emoji: '💰', name: 'Riche',                desc: 'Accumule 100 000 coins',         condition: u => (u.balance+u.bank) >= 100000, reward: 2000, rarity: 'Rare' },
   { key: 'eco_1m',   emoji: '💎', name: 'Millionnaire',         desc: 'Accumule 1 000 000 coins',       condition: u => (u.balance+u.bank) >= 1000000,reward: 10000,rarity: 'Légendaire' },

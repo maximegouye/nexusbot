@@ -54,7 +54,7 @@ const commands = [
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet = parseInt(args[0]);
-      if (!bet || bet < 50) return message.reply('❌ Mise minimum 50 pièces. Usage: `&roulette 500`');
+      if (!bet || bet < 50) return message.reply('❌ Mise minimum 50€. Usage: `&roulette 500`');
       const u = db.getUser(message.author.id, message.guild.id);
       if ((u.balance||0) < bet) return message.reply('❌ Solde insuffisant.');
 

@@ -217,7 +217,7 @@ async function animateJackpot(msg, amount, coin) {
 // ─── Animation pluie de pièces ─────────────────────────
 async function animateCoinRain(msg, color, title) {
   const rainFrames = ['💰', '💸', '💵', '💴', '💶', '💷', '💳', '🪙'];
-  const rainTexts  = ['*🌧️ Pluie de pièces !*', '*💨 Les pièces pleuvent !!*', '*⛈️ TEMPÊTE DE MONNAIE !!*', '*💰 FORTUNE DÉVERSÉE !!*'];
+  const rainTexts  = ['*🌧️ Pluie d`euros !*', '*💨 Les euros pleuvent !!*', '*⛈️ TEMPÊTE D`EUROS !!*', '*💰 FORTUNE DÉVERSÉE !!*'];
   for (let i = 0; i < 8; i++) {
     const coins = Array.from({length: Math.min(i+1,5)}, () => rainFrames[Math.floor(Math.random()*rainFrames.length)]).join(' ');
     await msg.edit({ embeds: [new EmbedBuilder()

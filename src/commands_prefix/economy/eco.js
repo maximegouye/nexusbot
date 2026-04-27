@@ -690,7 +690,7 @@ const commands = [
         } else if (i.customId === 'bj_double') {
           const updated = db.getUser(message.author.id, message.guild.id);
           if ((updated.balance || 0) < bet) {
-            await i.reply({ content: '❌ Vous n\'avez pas assez de pièces pour doubler !', ephemeral: true });
+            await i.reply({ content: '❌ Vous n\'avez pas assez d`euros pour doubler !', ephemeral: true });
             return;
           }
 

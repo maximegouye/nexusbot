@@ -35,6 +35,7 @@ const COMPONENT_ROUTES = {
   'vp_':          'videopoker',
   'hilo_':        'hilo',
   'hippo_':       'hippodrome',
+  'alm_':         'almosni',
   'slots_':       'slots',
   'bj_':          'blackjack',
   'cs_':          'casino-stats',

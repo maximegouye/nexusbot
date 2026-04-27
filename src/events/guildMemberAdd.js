@@ -71,6 +71,15 @@ module.exports = {
 
     db.incrementStat(guild.id, 'new_members');
 
+    // ── Bonus de bienvenue 5 000€ (si solde = 0) ──────
+    try {
+      const newUser = db.getUser(user.id, guild.id);
+      if ((newUser.balance || 0) === 0 && (newUser.bank || 0) === 0) {
+        db.addCoins(user.id, guild.id, 5000);
+        console.log(`[Welcome] 5 000€ donnés à ${user.username} (${user.id})`);
+      }
+    } catch {}
+
     // ── Suivi des invitations + récompenses ────────────
     try {
       const { handleInviteJoin } = require('../utils/inviteCache');
@@ -121,7 +130,7 @@ module.exports = {
                 .setTitle('🎉 Nouvelle invitation !')
                 .setDescription(
                   `**${user.username}** vient de rejoindre **${guild.name}** grâce à ton invitation !\n\n` +
-                  `💰 Tu reçois **+${coinsReward} coins**\n` +
+                  `💰 Tu reçois **+${coinsReward}€**\n` +
                   `📊 Total : **${inviteCount}** invitation(s) validée(s)`
                 )
                 .setThumbnail(user.displayAvatarURL({ size: 64 }))
