@@ -13,7 +13,7 @@ const commands = [
     usage: '@membre [raison]',
     permissions: '4', // BAN_MEMBERS
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
       if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission de bannir requise.');
@@ -32,7 +32,7 @@ const commands = [
     description: 'Expulser un membre',
     usage: '@membre [raison]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x2n)) return message.reply('❌ Permission d\'expulser requise.');
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
@@ -50,7 +50,7 @@ const commands = [
     description: 'Mettre en timeout un membre',
     usage: '@membre [durée en minutes] [raison]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission de mettre en timeout requise.');
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
@@ -69,7 +69,7 @@ const commands = [
     description: 'Retirer le timeout d\'un membre',
     usage: '@membre',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission de mettre en timeout requise.');
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
       if (!target) return message.reply('❌ Mentionnez un membre.');
@@ -84,7 +84,7 @@ const commands = [
     description: 'Avertir un membre',
     usage: '@membre [raison]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const target = message.mentions.users.first() || await client.users.fetch(args[0]).catch(() => null);
       if (!target) return message.reply('❌ Mentionnez un membre.');
@@ -101,7 +101,7 @@ const commands = [
     description: 'Voir les avertissements d\'un membre',
     usage: '@membre',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       const warns = db.db.prepare('SELECT * FROM warnings WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 10').all(message.guild.id, target.id);
       if (!warns.length) return message.reply(`✅ **${target.username}** n'a aucun avertissement.`);
@@ -116,7 +116,7 @@ const commands = [
     description: 'Effacer les warns d\'un membre',
     usage: '@membre',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const target = message.mentions.users.first();
       if (!target) return message.reply('❌ Mentionnez un membre.');
@@ -131,7 +131,7 @@ const commands = [
     description: 'Supprimer des messages en masse',
     usage: '[nombre 1-100] [@membre]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const amount = Math.min(parseInt(args[0]) || 10, 100);
       if (isNaN(amount) || amount < 1) return message.reply('❌ Nombre entre 1 et 100.');
@@ -152,7 +152,7 @@ const commands = [
     description: 'Verrouiller un salon',
     usage: '[#salon]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const channel = message.mentions.channels.first() || message.channel;
       await channel.permissionOverwrites.edit(message.guild.roles.everyone, { SendMessages: false });
@@ -166,7 +166,7 @@ const commands = [
     description: 'Déverrouiller un salon',
     usage: '[#salon]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const channel = message.mentions.channels.first() || message.channel;
       await channel.permissionOverwrites.edit(message.guild.roles.everyone, { SendMessages: null });
@@ -180,7 +180,7 @@ const commands = [
     description: 'Activer le mode lent',
     usage: '[secondes 0-21600]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const secs = Math.min(parseInt(args[0]) || 0, 21600);
       await message.channel.setRateLimitPerUser(secs);
@@ -194,7 +194,7 @@ const commands = [
     description: 'Changer le pseudo d\'un membre',
     usage: '@membre [nouveau pseudo]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x8000000n)) return message.reply('❌ Permission de gérer les pseudos requise.');
       const target = message.mentions.members.first();
       if (!target) return message.reply('❌ Mentionnez un membre.');
@@ -210,7 +210,7 @@ const commands = [
     description: 'Donner/retirer un rôle',
     usage: '@membre @role',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x10000000n)) return message.reply('❌ Permission de gérer les rôles requise.');
       const target = message.mentions.members.first();
       const role = message.mentions.roles.first();
@@ -231,7 +231,7 @@ const commands = [
     description: 'Débannir un utilisateur par ID',
     usage: '[user_id] [raison]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission de bannir requise.');
       if (!args[0]) return message.reply('❌ Fournissez l\'ID de l\'utilisateur.');
       try {
@@ -247,7 +247,7 @@ const commands = [
     description: 'Bannir temporairement',
     usage: '@membre [durée en heures] [raison]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x4n)) return message.reply('❌ Permission de bannir requise.');
       const target = message.mentions.members.first();
       if (!target) return message.reply('❌ Mentionnez un membre.');

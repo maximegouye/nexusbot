@@ -80,7 +80,7 @@ module.exports = {
     }
 
     if (sub === 'lire') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = parseInt(interaction.options.getInteger('id'));
       const article = db.db.prepare('SELECT * FROM journal_articles WHERE id=? AND guild_id=?').get(id, guildId);
       if (!article) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (!article.published && !interaction.member.permissions.has(0x20n)) {
@@ -122,7 +122,7 @@ module.exports = {
     }
 
     if (sub === 'liker') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = parseInt(interaction.options.getInteger('id'));
       const article = db.db.prepare('SELECT * FROM journal_articles WHERE id=? AND guild_id=?').get(id, guildId);
       if (!article) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (article.author_id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas liker votre propre article.', ephemeral: true });
@@ -141,7 +141,7 @@ module.exports = {
       if (!interaction.member.permissions.has(0x8n) && !interaction.member.permissions.has(0x20n)) {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seuls les modérateurs peuvent publier des articles.', ephemeral: true });
       }
-      const id = parseInt(interaction.options.getString('id'));
+      const id = parseInt(interaction.options.getInteger('id'));
       const article = db.db.prepare('SELECT * FROM journal_articles WHERE id=? AND guild_id=?').get(id, guildId);
       if (!article) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.`, ephemeral: true });
       if (article.published) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cet article est déjà publié.', ephemeral: true });

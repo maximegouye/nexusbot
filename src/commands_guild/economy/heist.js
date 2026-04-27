@@ -140,9 +140,9 @@ module.exports = {
   name: 'braquage',
   aliases: ['heist', 'vol'],
   async run(message, args) {
-    const cible = args[0] || '1000';
+    const cible = parseInt(args[0]) || 1000;
     const fake = mkFake(message, {
-      getString: (k) => k === 'cible' ? cible : null,
+      getInteger: (k) => k === 'cible' ? cible : null,
     });
     await this.execute(fake);
   },

@@ -42,7 +42,7 @@ module.exports = {
   category: 'Économie',
   cooldown: 3,
 
-  async execute(message, args) {
+  async run(message, args) {
     const sub = args[0] || 'solde';
     const montant = parseInt(args[1]) || 0;
     const target = message.mentions.users.first() || null;

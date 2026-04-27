@@ -63,7 +63,7 @@ module.exports = {
     }
 
     if (sub === 'info') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const c  = db.db.prepare('SELECT * FROM warnings WHERE id=? AND guild_id=?').get(id, interaction.guildId);
       if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
       const icon = Object.entries(TYPE_ICONS).find(([k]) => c.reason?.toLowerCase().includes(k))?.[1] || '📋';
@@ -80,7 +80,7 @@ module.exports = {
     }
 
     if (sub === 'modifier') {
-      const id     = parseInt(interaction.options.getString('id'));
+      const id     = interaction.options.getInteger('id');
       const raison = interaction.options.getString('raison');
       const c      = db.db.prepare('SELECT * FROM warnings WHERE id=? AND guild_id=?').get(id, interaction.guildId);
       if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
@@ -90,7 +90,7 @@ module.exports = {
 
     if (sub === 'supprimer') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin requis.', ephemeral: true });
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const r  = db.db.prepare('DELETE FROM warnings WHERE id=? AND guild_id=?').run(id, interaction.guildId);
       if (!r.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Cas **#${id}** supprimé.`)], ephemeral: true });

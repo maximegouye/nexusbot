@@ -42,7 +42,7 @@ const commands = [
     description: 'Sujet de débat avec arguments pour/contre',
     category: 'Débat',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const s = SUJETS_DEBAT[Math.floor(Math.random() * SUJETS_DEBAT.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`⚡ Débat : ${s.sujet}`)
@@ -59,7 +59,7 @@ const commands = [
     description: 'Dilemme philosophique ou moral',
     category: 'Débat',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const d = DILEMMES[Math.floor(Math.random() * DILEMMES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#8E44AD')
         .setTitle(`🤔 Dilemme : ${d.title}`)
@@ -72,7 +72,7 @@ const commands = [
     description: 'Arguments pour/contre sur un sujet donné',
     category: 'Débat',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!pour_contre <sujet>`');
       const sujet = args.join(' ');
       const s = SUJETS_DEBAT[Math.floor(Math.random() * SUJETS_DEBAT.length)];
@@ -91,7 +91,7 @@ const commands = [
     description: 'Diviser aléatoirement en équipes de débat',
     category: 'Débat',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const mentions = message.mentions.users;
       if (mentions.size < 2) return message.reply('❌ Mentionnez au moins 2 personnes : `n!camp @user1 @user2 @user3...`');
       const members = [...mentions.values()];
@@ -115,7 +115,7 @@ const commands = [
     description: 'Question d\'opinion à soumettre au serveur',
     category: 'Débat',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!opinion <question>`');
       const question = args.join(' ');
       const msg = await message.channel.send({ embeds: [new EmbedBuilder().setColor('#9B59B6')
@@ -133,7 +133,7 @@ const commands = [
     description: 'Générer une pseudo citation absurde',
     category: 'Débat',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const PERSOS = ['Napoléon','Albert Einstein','Socrate','Marie Curie','Darwin','Tesla','Nietzsche','Descartes'];
       const TEXTES = [
         "La pizza sans fromage est un rectangle sans angles.",
@@ -157,7 +157,7 @@ const commands = [
     description: 'Sondage rapide oui/non',
     category: 'Débat',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!sondage_rapide <question>`');
       const question = args.join(' ');
       const msg = await message.channel.send({ embeds: [new EmbedBuilder().setColor('#2ECC71')
@@ -178,7 +178,7 @@ const commands = [
     description: 'Classer des options en ordre de préférence',
     category: 'Débat',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       if (args.length < 2) return message.reply('❌ Usage : `n!classement_opinion item1 item2 item3...`');
       const shuffled = [...args].sort(() => Math.random() - 0.5);
       const ranked = shuffled.map((item, i) => `**${i+1}.** ${item}`).join('\n');

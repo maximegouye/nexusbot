@@ -108,7 +108,7 @@ module.exports = {
       const u = db.getUser(userId, guildId);
       if (u.balance < p.caution) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as pas assez de ${coin}. Caution : **${p.caution} ${coin}**.`, ephemeral: true });
 
-      db.addCoins(userId, guildId, -p.caution);
+      db.removeCoins(userId, guildId, p.caution);
       db.db.prepare('DELETE FROM prison WHERE guild_id=? AND user_id=?').run(guildId, userId);
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [

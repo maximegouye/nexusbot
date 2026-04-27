@@ -113,7 +113,7 @@ module.exports = {
     }
 
     if (sub === 'voir') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = parseInt(interaction.options.getInteger('id'));
       const cd = db.db.prepare('SELECT * FROM countdowns WHERE id=? AND guild_id=?').get(id, guildId);
       if (!cd) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Compte à rebours #${id} introuvable.` });
 
@@ -148,7 +148,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = parseInt(interaction.options.getInteger('id'));
       const cd = db.db.prepare('SELECT * FROM countdowns WHERE id=? AND guild_id=?').get(id, guildId);
       if (!cd) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Compte à rebours #${id} introuvable.` });
 

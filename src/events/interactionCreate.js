@@ -45,6 +45,8 @@ const COMPONENT_ROUTES = {
   'rl_':          'roulette',   // replay roulette
   // ── Sondage avancé (handles persistent components) ────────
   'sondagev_':    'sondage-avance',
+  // ── Jeux supplémentaires ──────────────────────────────────
+  'morpion_':     'morpion',
 };
 
 // ── Préfixes du panneau /config ───────────────────────────

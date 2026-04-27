@@ -11,7 +11,7 @@ module.exports = {
   category: 'IA',
   cooldown: 10,
 
-  async execute(message, args, client, db) {
+  async run(message, args, client, db) {
     const n = Math.min(200, Math.max(10, parseInt(args[0], 10) || 50));
     const cfg = ai.getAIConfig(message.guild.id, db);
 

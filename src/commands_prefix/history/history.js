@@ -50,7 +50,7 @@ const commands = [
     description: 'Biographie courte d\'un personnage historique',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const search = args.join(' ').toLowerCase();
       let p;
       if (search) {
@@ -72,7 +72,7 @@ const commands = [
     description: 'Informations sur une guerre historique',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const g = GUERRES[Math.floor(Math.random() * GUERRES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#C0392B')
         .setTitle(`⚔️ ${g.name} (${g.dates})`)
@@ -89,7 +89,7 @@ const commands = [
     description: 'Informations sur une civilisation ancienne',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const c = CIVILISATIONS[Math.floor(Math.random() * CIVILISATIONS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`🏛️ ${c.name}`)
@@ -107,7 +107,7 @@ const commands = [
     description: 'Informations sur une révolution historique',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const r = REVOLUTIONS[Math.floor(Math.random() * REVOLUTIONS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`🔥 ${r.name} (${r.date})`)
@@ -124,7 +124,7 @@ const commands = [
     description: 'Grande chronologie de l\'histoire humaine',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const CHRONO = [
         '🔹 -200 000 ans : Homo sapiens apparaît en Afrique',
         '🔹 -12 000 ans : Révolution néolithique (agriculture)',
@@ -156,7 +156,7 @@ const commands = [
     description: 'Grande invention qui a changé le monde',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const INVS = [
         { inv:'La roue', date:'~3 500 av. J.-C.', impact:'Révolutionna le transport, l\'agriculture, la poterie et la mécanique.' },
         { inv:'L\'écriture', date:'~3 200 av. J.-C.', impact:'Permis la transmission du savoir, le commerce à grande échelle et l\'histoire.' },
@@ -181,7 +181,7 @@ const commands = [
     description: 'Informations sur un monument historique',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const MONUMENTS = [
         { name:'Pyramides de Gizeh', pays:'Égypte', date:'~2 560 av. J.-C.', fait:'Seule merveille du monde antique encore debout. Grande pyramide : 2.3M blocs de pierre.' },
         { name:'Colisée de Rome', pays:'Italie', date:'72-80 ap. J.-C.', fait:'50 000 spectateurs. 80 sorties. Utilisé jusqu\'au VIe siècle.' },
@@ -207,7 +207,7 @@ const commands = [
     description: 'Histoire de l\'Afrique — royaumes et empires',
     category: 'Histoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const ROYAUMES = [
         { name:'Empire du Ghana', dates:'300-1200', fait:'Premier grand empire d\'Afrique de l\'Ouest. Commerce de l\'or et du sel. Capitale Koumbi Saleh.' },
         { name:'Empire du Mali', dates:'1235-1600', fait:'Sous Mansa Musa, le Mali était la source de la moitié de l\'or mondial. Timbuktu = centre de savoir.' },

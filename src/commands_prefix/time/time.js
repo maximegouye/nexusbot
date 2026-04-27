@@ -41,7 +41,7 @@ const commands = [
     description: 'Afficher l\'heure actuelle',
     category: 'Temps',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const tz = args[0] ? (FUSEAUX[args[0].toLowerCase()] || args[0]) : 'Europe/Paris';
       const now = new Date();
       try {
@@ -61,7 +61,7 @@ const commands = [
     description: 'Comparer l\'heure dans plusieurs villes du monde',
     category: 'Temps',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const villes = ['paris', 'london', 'newyork', 'tokyo', 'sydney', 'dubai', 'moscow', 'dakar'];
       const now = new Date();
       const lines = villes.map(v => {
@@ -81,7 +81,7 @@ const commands = [
     description: 'Calculer l\'âge depuis une date de naissance',
     category: 'Temps',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args[0]) return message.reply('❌ Usage : `n!age <DD/MM/AAAA>` ex: `n!age 15/04/1995`');
       const parts = args[0].split('/');
       if (parts.length !== 3) return message.reply('❌ Format : DD/MM/AAAA');
@@ -112,7 +112,7 @@ const commands = [
     description: 'Quel jour de la semaine est une date ?',
     category: 'Temps',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args[0]) return message.reply('❌ Usage : `n!jour_semaine <DD/MM/AAAA>`');
       const parts = args[0].split('/');
       if (parts.length !== 3) return message.reply('❌ Format : DD/MM/AAAA');
@@ -130,7 +130,7 @@ const commands = [
     description: 'Convertir timestamp Unix en date lisible',
     category: 'Temps',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const ts = args[0] ? parseInt(args[0]) : Math.floor(Date.now() / 1000);
       if (isNaN(ts)) return message.reply('❌ Usage : `n!unix [timestamp]`');
       const date = new Date(ts * 1000);
@@ -150,7 +150,7 @@ const commands = [
     description: 'Jours restants avant une date spéciale',
     category: 'Temps',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const now = new Date();
       const year = now.getFullYear();
       const events = [
@@ -176,7 +176,7 @@ const commands = [
     description: 'Durée entre deux dates',
     category: 'Temps',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (args.length < 2) return message.reply('❌ Usage : `n!duree <DD/MM/AAAA> <DD/MM/AAAA>`');
       function parseDate(s) {
         const [d, m, y] = s.split('/').map(Number);
@@ -206,7 +206,7 @@ const commands = [
     description: 'Calendrier du mois en cours en texte',
     category: 'Temps',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const now = new Date();
       const y = now.getFullYear();
       const m = now.getMonth();
@@ -231,7 +231,7 @@ const commands = [
     description: 'Numéro de semaine ISO de la date d\'aujourd\'hui',
     category: 'Temps',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 1);
       const days = Math.floor((now - startOfYear) / 86400000);
@@ -245,7 +245,7 @@ const commands = [
     description: 'Quelle date serons-nous dans N jours ?',
     category: 'Temps',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const n = parseInt(args[0]);
       if (isNaN(n)) return message.reply('❌ Usage : `n!dans_combien <nombre_jours>`');
       const future = new Date(Date.now() + n * 86400000);

@@ -34,9 +34,6 @@ module.exports = {
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: true });
-    }
     const cfg = db.getConfig(interaction.guildId);
 
     if (sub === 'voir') {
@@ -54,20 +51,17 @@ module.exports = {
           { name: '⭐ XP actif',      value: cfg.xp_enabled !== false ? '✅ Oui' : '❌ Non',                       inline: true },
           { name: '✖️ Multiplicateur', value: `×${cfg.xp_multiplier || 1}`,                                       inline: true },
           { name: '🎉 Daily coins',   value: `**${cfg.daily_amount || 200}** coins`,                              inline: true },
-          { name: '🛡️ Mod-log',       value: cfg.mod_log_channel      ? `<#${cfg.mod_log_channel}>` : '*Non configuré*',      inline: true },
-          { name: '🏆 Classement',    value: cfg.leaderboard_channel  ? `<#${cfg.leaderboard_channel}>` : '*Non configuré*',  inline: true },
-          { name: '🎯 Événements',    value: cfg.events_channel       ? `<#${cfg.events_channel}>` : '*Non configuré*',       inline: true },
         )
         .setFooter({ text: 'Utilise /setup <sous-commande> pour modifier' });
 
-      return interaction.editReply({ embeds: [embed], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'couleur') {
       const hex = interaction.options.getString('hex');
-      if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return interaction.editReply({ content: '❌ Format invalide. Exemple : `#7B2FBE`', ephemeral: true });
+      if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format invalide. Exemple : `#7B2FBE`', ephemeral: true });
       db.setConfig(interaction.guildId, 'color', hex);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(hex).setDescription(`✅ Couleur définie sur **${hex}**.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(hex).setDescription(`✅ Couleur définie sur **${hex}**.`)], ephemeral: true });
     }
 
     if (sub === 'monnaie') {
@@ -75,7 +69,7 @@ module.exports = {
       const emoji = interaction.options.getString('emoji');
       if (nom)   db.setConfig(interaction.guildId, 'currency_name', nom);
       if (emoji) db.setConfig(interaction.guildId, 'currency_emoji', emoji);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Monnaie : **${emoji || cfg.currency_emoji || '🪙'} ${nom || cfg.currency_name || 'Coins'}**.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Monnaie : **${emoji || cfg.currency_emoji || '🪙'} ${nom || cfg.currency_name || 'Coins'}**.`)], ephemeral: true });
     }
 
     if (sub === 'welcome') {
@@ -83,26 +77,26 @@ module.exports = {
       const msg   = interaction.options.getString('message');
       db.setConfig(interaction.guildId, 'welcome_channel', canal.id);
       if (msg) db.setConfig(interaction.guildId, 'welcome_msg', msg);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de bienvenue : ${canal}.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal de bienvenue : ${canal}.`)], ephemeral: true });
     }
 
     if (sub === 'leave') {
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'leave_channel', canal?.id || null);
       const msg = canal ? `✅ Canal de départ : ${canal}.` : '✅ Messages de départ **désactivés**.';
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
     }
 
     if (sub === 'levels') {
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'level_channel', canal.id);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal level-up : ${canal}.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Canal level-up : ${canal}.`)], ephemeral: true });
     }
 
     if (sub === 'autorole') {
       const role = interaction.options.getRole('role');
       db.setConfig(interaction.guildId, 'autorole', role?.id || null);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(role ? `✅ Auto-rôle : <@&${role.id}>.` : '✅ Auto-rôle désactivé.')], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(role ? `✅ Auto-rôle : <@&${role.id}>.` : '✅ Auto-rôle désactivé.')], ephemeral: true });
     }
 
     if (sub === 'xp') {
@@ -110,28 +104,28 @@ module.exports = {
       const multi = interaction.options.getInteger('multiplicateur');
       db.setConfig(interaction.guildId, 'xp_enabled', actif ? 1 : 0);
       if (multi) db.setConfig(interaction.guildId, 'xp_multiplier', multi);
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ XP ${actif ? 'activé' : 'désactivé'}${multi ? ` — Multiplicateur ×${multi}` : ''}.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ XP ${actif ? 'activé' : 'désactivé'}${multi ? ` — Multiplicateur ×${multi}` : ''}.`)], ephemeral: true });
     }
 
     if (sub === 'mod-log') {
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'mod_log_channel', canal?.id || null);
       const msg = canal ? `✅ Canal mod-log : ${canal}.` : '✅ Canal mod-log **désactivé**.';
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
     }
 
     if (sub === 'leaderboard') {
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'leaderboard_channel', canal?.id || null);
       const msg = canal ? `✅ Canal classement hebdo : ${canal}.` : '✅ Classement hebdomadaire **désactivé**.';
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
     }
 
     if (sub === 'events') {
       const canal = interaction.options.getChannel('canal');
       db.setConfig(interaction.guildId, 'events_channel', canal?.id || null);
       const msg = canal ? `✅ Canal événements : ${canal}.` : '✅ Événements automatiques **désactivés**.';
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor(canal ? '#2ECC71' : '#E74C3C').setDescription(msg)], ephemeral: true });
     }
   }
 };

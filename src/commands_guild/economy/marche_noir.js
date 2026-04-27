@@ -107,7 +107,7 @@ module.exports = {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pas assez de ${coin}. Il vous faut **${item.price.toLocaleString()}**, vous avez **${u.balance || 0}**.`, ephemeral: true });
       }
 
-      db.addCoins(userId, guildId, -item.price);
+      db.removeCoins(userId, guildId, item.price);
       db.db.prepare('UPDATE black_market SET stock = stock - 1 WHERE id=?').run(item.id);
 
       let result = '✅';
@@ -141,7 +141,7 @@ module.exports = {
         const caught = Math.random() < 0.35; // 35% de risque
         if (caught) {
           const fine = Math.floor(item.price * 3);
-          db.addCoins(userId, guildId, -fine);
+          db.removeCoins(userId, guildId, fine);
           result = '🚨';
           resultDesc = `🚨 Vous avez été **arrêté** avec de faux billets ! Amende de **${fine.toLocaleString()} ${coin}** !`;
         } else {

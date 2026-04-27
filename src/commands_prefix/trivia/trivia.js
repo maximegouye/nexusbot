@@ -82,7 +82,7 @@ const commands = [
     description: 'Capitale et infos d\'un pays',
     category: 'Culture générale',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args.join('_').toLowerCase().replace(/\s+/g, '_');
       const pays = CAPITALES[key] || Object.entries(CAPITALES).find(([k]) => k.includes(key?.split('_')[0]))?.[1];
       const paysNom = Object.keys(CAPITALES).find(k => CAPITALES[k] === pays) || key;
@@ -102,7 +102,7 @@ const commands = [
     description: 'Fait sportif aléatoire',
     category: 'Culture générale',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const s = SPORT_FACTS[Math.floor(Math.random() * SPORT_FACTS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`⚽ ${s.sport}`)
@@ -115,7 +115,7 @@ const commands = [
     description: 'Anecdote cinéma',
     category: 'Culture générale',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const f = CINEMA_FACTS[Math.floor(Math.random() * CINEMA_FACTS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#C0392B')
         .setTitle('🎬 Anecdote Cinéma')
@@ -128,7 +128,7 @@ const commands = [
     description: 'Quiz géographie',
     category: 'Culture générale',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const q = GEOGRAPHIE_QUIZ[Math.floor(Math.random() * GEOGRAPHIE_QUIZ.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle('🌍 Question géographie')
@@ -141,7 +141,7 @@ const commands = [
     description: 'Événement historique aléatoire',
     category: 'Culture générale',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const h = HISTOIRE_DATES[Math.floor(Math.random() * HISTOIRE_DATES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E67E22')
         .setTitle(`📜 En ${h.date}`)
@@ -154,7 +154,7 @@ const commands = [
     description: 'Question culture pop / générale',
     category: 'Culture générale',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const QUESTIONS = [
         { q:"Quel est l'animal représenté sur le drapeau du Mexique ?", r:"Un aigle (mangeant un serpent)" },
         { q:"Dans quelle ville se déroule l'action du jeu Assassin's Creed Origins ?", r:"L'Égypte antique (Alexandrie, Memphis...)" },
@@ -176,7 +176,7 @@ const commands = [
     description: 'Fait sur les langues du monde',
     category: 'Culture générale',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const FAITS = [
         "Il existe environ **7 000 langues** dans le monde. 90% risquent de disparaître d'ici 2100.",
         "Le **Mandarin** est la langue la plus parlée en nombre de locuteurs natifs (~920 millions).",
@@ -198,7 +198,7 @@ const commands = [
     description: 'Plat traditionnel d\'un pays',
     category: 'Culture générale',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const PLATS = [
         { pays:'France', plat:'Bœuf Bourguignon', desc:'Bœuf mijoté au vin rouge de Bourgogne avec carottes et oignons.' },
         { pays:'Japon', plat:'Sushi / Ramen', desc:'Sushi = riz vinaigré + poisson. Ramen = bouillon, nouilles, porc, œuf.' },
@@ -221,7 +221,7 @@ const commands = [
     description: 'Catégories et faits sur le Prix Nobel',
     category: 'Culture générale',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const NOBELS = [
         "Le **Prix Nobel** a été créé par Alfred Nobel, inventeur de la dynamite, en 1895.",
         "Il y a **6 catégories Nobel** : Physique, Chimie, Médecine, Littérature, Paix, Économie.",
@@ -242,7 +242,7 @@ const commands = [
     description: 'Qui a inventé ça ?',
     category: 'Culture générale',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const INVENTIONS = [
         { objet:'Internet', inventeur:'Vint Cerf & Bob Kahn (1973-1983) pour TCP/IP. Tim Berners-Lee pour le World Wide Web (1989).' },
         { objet:'Téléphone', inventeur:'Alexander Graham Bell (1876) — mais Elisha Gray a déposé le même jour !' },

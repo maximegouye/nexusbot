@@ -77,7 +77,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = parseInt(interaction.options.getInteger('id'));
       const entry = db.db.prepare('SELECT * FROM auto_responses WHERE id=? AND guild_id=?').get(id, guildId);
       if (!entry) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Auto-réponse #${id} introuvable.`, ephemeral: true });
       db.db.prepare('DELETE FROM auto_responses WHERE id=?').run(id);
@@ -97,7 +97,7 @@ module.exports = {
     }
 
     if (sub === 'voir') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = parseInt(interaction.options.getInteger('id'));
       const entry = db.db.prepare('SELECT * FROM auto_responses WHERE id=? AND guild_id=?').get(id, guildId);
       if (!entry) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ #${id} introuvable.`, ephemeral: true });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6')
@@ -114,7 +114,7 @@ module.exports = {
     }
 
     if (sub === 'activer') {
-      const id   = parseInt(interaction.options.getString('id'));
+      const id   = parseInt(interaction.options.getInteger('id'));
       const actif = interaction.options.getBoolean('actif');
       const entry = db.db.prepare('SELECT * FROM auto_responses WHERE id=? AND guild_id=?').get(id, guildId);
       if (!entry) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ #${id} introuvable.`, ephemeral: true });

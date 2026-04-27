@@ -335,15 +335,15 @@ module.exports = {
       } catch (e) {
         console.log('⚠️  Auto-remboursement skip:', e?.message);
       }
-    }, 20_000);
+    }, 20_000).unref();
 
     const guildId = process.env.HOME_GUILD_ID || '1492886135159128227';
 
     // ── Auto-setup recrutement (15s après démarrage pour laisser le cache se remplir)
-    setTimeout(() => autoSetupRecrutement(client, guildId).catch(() => {}), 15_000);
+    setTimeout(() => autoSetupRecrutement(client, guildId).catch(() => {}), 15_000).unref();
 
     // ── Topics des canaux (30s pour laisser le cache se remplir)
-    setTimeout(() => setupChannelTopics(client, guildId).catch(() => {}), 30_000);
+    setTimeout(() => setupChannelTopics(client, guildId).catch(() => {}), 30_000).unref();
 
     // ── Musique casino — auto-démarrage (20s pour que le cache vocal soit prêt)
     casinoMusicAutoInit(client, guildId).catch(() => {});

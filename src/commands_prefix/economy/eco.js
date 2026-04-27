@@ -66,7 +66,7 @@ const commands = [
     description: 'Voir son solde',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       const u   = db.getUser(target.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);
@@ -97,7 +97,7 @@ const commands = [
     description: 'Voir le détail de sa banque',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const u = db.getUser(message.author.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
@@ -122,7 +122,7 @@ const commands = [
     usage: '[montant|all|max]',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u = db.getUser(message.author.id, message.guild.id);
@@ -157,7 +157,7 @@ const commands = [
     usage: '[montant|all|max]',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u = db.getUser(message.author.id, message.guild.id);
@@ -194,7 +194,7 @@ const commands = [
     description: 'Réclamer la récompense quotidienne',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const guildId = message.guild.id;
       const userId  = message.author.id;
       const cfg  = db.getConfig(guildId);
@@ -237,7 +237,7 @@ const commands = [
     description: 'Travailler pour gagner des euros (cooldown 1h)',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u = db.getUser(message.author.id, message.guild.id);
@@ -293,7 +293,7 @@ const commands = [
     description: 'Commettre un crime risqué (cooldown 6h)',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u = db.getUser(message.author.id, message.guild.id);
@@ -343,7 +343,7 @@ const commands = [
     usage: '@membre',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const target = message.mentions.members.first();
@@ -402,7 +402,7 @@ const commands = [
     usage: '@membre [montant]',
     category: 'Économie',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first();
       if (!target || target.bot || target.id === message.author.id) return message.reply('❌ Mentionnez un autre membre valide.');
       const amount = parseInt(args[1]);
@@ -436,7 +436,7 @@ const commands = [
     description: 'Classement économique du serveur',
     category: 'Économie',
     cooldown: 10,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const top  = db.db.prepare('SELECT user_id, balance+COALESCE(bank,0) as total FROM users WHERE guild_id=? ORDER BY total DESC LIMIT 10').all(message.guild.id);
@@ -465,7 +465,7 @@ const commands = [
     usage: '[mise]',
     category: 'Casino',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet  = parseInt(args[0]) || 100;
@@ -495,7 +495,7 @@ const commands = [
     usage: '[pile/face] [mise]',
     category: 'Casino',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const choice = args[0]?.toLowerCase();
@@ -527,7 +527,7 @@ const commands = [
     usage: '[mise] [faces]',
     category: 'Casino',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet   = parseInt(args[0]);
@@ -563,7 +563,7 @@ const commands = [
     usage: '[mise]',
     category: 'Casino',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const { EmbedBuilder: EMB, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
@@ -753,7 +753,7 @@ const commands = [
     usage: '[montant|all]',
     category: 'Casino',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u = db.getUser(message.author.id, message.guild.id);
@@ -781,7 +781,7 @@ const commands = [
     usage: '[haute/basse] [mise]',
     category: 'Casino',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const choice = args[0]?.toLowerCase();
@@ -825,7 +825,7 @@ const commands = [
     usage: '[rouge/noir/pair/impair/0-36] [mise]',
     category: 'Casino',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const choice = args[0]?.toLowerCase();
@@ -873,7 +873,7 @@ const commands = [
     description: 'Acheter un ticket à gratter (100€)',
     category: 'Casino',
     cooldown: 10,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const cost = 100;
@@ -907,7 +907,7 @@ const commands = [
     description: 'Aller pêcher (cooldown 30min)',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u   = db.getUser(message.author.id, message.guild.id);
@@ -955,7 +955,7 @@ const commands = [
     description: 'Partir à la chasse (cooldown 45min)',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u   = db.getUser(message.author.id, message.guild.id);
@@ -996,7 +996,7 @@ const commands = [
     description: 'Miner des ressources (cooldown 1h)',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u   = db.getUser(message.author.id, message.guild.id);
@@ -1043,7 +1043,7 @@ const commands = [
     description: 'Mendier des euros (cooldown 5min)',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u   = db.getUser(message.author.id, message.guild.id);
@@ -1080,7 +1080,7 @@ const commands = [
     usage: '[solo]',
     category: 'Économie',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const u   = db.getUser(message.author.id, message.guild.id);
@@ -1121,7 +1121,7 @@ const commands = [
     usage: '[montant]',
     category: 'Économie',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const amount = parseInt(args[0]);
@@ -1157,7 +1157,7 @@ const commands = [
     description: 'Voir la boutique du serveur',
     category: 'Économie',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const items = db.db.prepare('SELECT * FROM shop WHERE guild_id=? AND active=1 ORDER BY price ASC').all(message.guild.id);
@@ -1182,7 +1182,7 @@ const commands = [
     usage: '[numéro]',
     category: 'Économie',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg  = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const num  = parseInt(args[0]);
@@ -1219,7 +1219,7 @@ const commands = [
     description: 'Voir son inventaire',
     category: 'Économie',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       const u   = db.getUser(target.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);
@@ -1254,7 +1254,7 @@ const commands = [
     description: 'Voir son profil complet',
     category: 'Économie',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       const u   = db.getUser(target.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);
@@ -1288,7 +1288,7 @@ const commands = [
     description: 'Voir votre streak de connexions quotidiennes',
     category: 'Économie',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const u   = db.getUser(message.author.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';

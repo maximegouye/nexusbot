@@ -131,7 +131,7 @@ module.exports = {
         });
       }
 
-      db.addCoins(userId, guildId, -item.prix);
+      db.removeCoins(userId, guildId, item.prix);
       db.db.prepare('INSERT OR IGNORE INTO boutique_achats (user_id, guild_id, item_id) VALUES (?,?,?)').run(userId, guildId, itemId);
 
       if (item.stock > 0) db.db.prepare('UPDATE boutique_items SET stock=stock-1 WHERE id=?').run(itemId);

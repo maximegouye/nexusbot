@@ -267,9 +267,9 @@ module.exports = {
   },
   name: 'poker2',
   aliases: ["poker-prefix"],
-    async run(message, args) {
+  async run(message, args) {
     const mise = args[0] || '100';
-    const fake = mkFake(message, { getString: () => mise });
+    const fake = mkFake(message, { getString: (k) => k === 'mise' ? mise : null });
     await this.execute(fake);
   },
 };

@@ -51,7 +51,7 @@ module.exports = {
 
       if (u.balance < prix) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Il te faut **${prix} ${coin}** pour acheter ${qte} ticket(s).`, ephemeral: true });
 
-      db.addCoins(userId, guildId, -prix);
+      db.removeCoins(userId, guildId, prix);
       // Ajouter les tickets
       const existing = db.db.prepare('SELECT * FROM loto WHERE guild_id=? AND user_id=? AND week=?').get(guildId, userId, week);
       if (existing) {
@@ -66,7 +66,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Gold')
           .setTitle('🎟️ Tickets achetés !')
-          .setDescription(`Tu possèdes maintenant **${newTickets} ticket(s)** pour cette semaine !\nJackpot actuel : **${lotoCfg.jackpot + Math.floor(prix * 0.8)} ${coin}**`)
+          .setDescription(`Tu possèdes maintenant **${newTickets} ticket(s)** pour cette semaine !\nJackpot actuel : **${(lotoCfg?.jackpot || 10000) + Math.floor(prix * 0.8)} ${coin}**`)
           .setTimestamp()
       ], ephemeral: true });
     }

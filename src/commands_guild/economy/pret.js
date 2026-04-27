@@ -98,7 +98,7 @@ module.exports = {
 
       if (u.balance < toRepay) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant. Vous devez **${toRepay} ${coin}**${penaltyMsg}.`, ephemeral: true });
 
-      db.addCoins(userId, guildId, -toRepay);
+      db.removeCoins(userId, guildId, toRepay);
       db.db.prepare('UPDATE prets SET repaid=1 WHERE id=?').run(pret.id);
       const newBalance = db.getUser(userId, guildId).balance;
 

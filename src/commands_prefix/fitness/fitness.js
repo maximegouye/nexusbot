@@ -42,7 +42,7 @@ const commands = [
     description: 'Exercice de fitness aléatoire avec instructions',
     category: 'Fitness',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const e = EXERCICES[Math.floor(Math.random() * EXERCICES.length)];
       const colors = { Débutant:'#2ECC71', Intermédiaire:'#F39C12', Avancé:'#E74C3C' };
       return message.reply({ embeds: [new EmbedBuilder().setColor(colors[e.difficulte] || '#3498DB')
@@ -61,7 +61,7 @@ const commands = [
     description: 'Calculer votre Indice de Masse Corporelle (IMC)',
     category: 'Fitness',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const [poids, taille] = args.map(parseFloat);
       if (isNaN(poids) || isNaN(taille) || taille <= 0) {
         return message.reply('❌ Usage : `n!imc <poids_kg> <taille_m>` ex: `n!imc 70 1.75`');
@@ -89,7 +89,7 @@ const commands = [
     description: 'Calculer vos besoins caloriques journaliers',
     category: 'Fitness',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const [poids, taille, age, sexe, activite] = args;
       if (!poids || !taille || !age) {
         return message.reply('❌ Usage : `n!calories <poids_kg> <taille_cm> <age> <h/f> <activite(1-5)>`\nActivité : 1=sédentaire, 2=léger, 3=modéré, 4=actif, 5=très actif');
@@ -121,7 +121,7 @@ const commands = [
     description: 'Programme d\'entraînement sur mesure',
     category: 'Fitness',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const niveau = args[0]?.toLowerCase() || 'debutant';
       const PROGRAMMES = {
         debutant: {
@@ -166,7 +166,7 @@ const commands = [
     description: 'Exercice d\'étirement guidé',
     category: 'Fitness',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const e = ETIREMENTS[Math.floor(Math.random() * ETIREMENTS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#1ABC9C')
         .setTitle(`🧘 ${e.name}`)
@@ -179,7 +179,7 @@ const commands = [
     description: 'Technique de méditation guidée',
     category: 'Fitness',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const m = MEDITATION_TECHNIQUES[Math.floor(Math.random() * MEDITATION_TECHNIQUES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`🧘 ${m.name}`)
@@ -192,7 +192,7 @@ const commands = [
     description: 'Calculer vos besoins en eau quotidiens',
     category: 'Fitness',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const poids = parseFloat(args[0]);
       if (isNaN(poids) || poids <= 0) return message.reply('❌ Usage : `n!hydratation <poids_kg>` ex: `n!hydratation 70`');
       const litres = (poids * 35 / 1000).toFixed(2);
@@ -214,7 +214,7 @@ const commands = [
     description: 'Conseils et calcul des cycles de sommeil',
     category: 'Fitness',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const heure = args[0]; // HH:MM
       if (heure) {
         const [h, m] = heure.split(':').map(Number);

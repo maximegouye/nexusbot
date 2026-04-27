@@ -36,6 +36,7 @@ module.exports = {
     .setDescription('😊 Suivi d\'humeur quotidien')
     .addSubcommand(s => s.setName('noter')
       .setDescription('📝 Enregistrer ton humeur du jour')
+      .addIntegerOption(o => o.setName('humeur').setDescription('Ton humeur (1-6)').setRequired(true).setMinValue(1).setMaxValue(6))
       .addStringOption(o => o.setName('note').setDescription('Note optionnelle sur ton humeur').setMaxLength(200)))
     .addSubcommand(s => s.setName('voir').setDescription('📊 Voir ton historique d\'humeur'))
     .addSubcommand(s => s.setName('stats').setDescription('📈 Voir tes statistiques d\'humeur'))
@@ -50,7 +51,7 @@ module.exports = {
     const userId  = interaction.user.id;
 
     if (sub === 'noter') {
-      const moodVal = parseInt(interaction.options.getString('humeur'));
+      const moodVal = interaction.options.getInteger('humeur');
       const note    = interaction.options.getString('note');
       const mood    = getMoodInfo(moodVal);
 

@@ -42,7 +42,7 @@ module.exports = {
   category: 'Jeux',
   cooldown: 3,
 
-  async execute(message, args) {
+  async run(message, args) {
     const sub = args[0] || 'menu';
     const fake = mkFake(message, {
       getSubcommand: () => sub,

@@ -7,7 +7,7 @@ const commands = [
     description: 'Liste toutes les commandes disponibles',
     category: 'Utilitaire',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const prefix = cfg.prefix || 'n!';
       const { prefixCommands } = require('../../utils/prefixHandler');
@@ -61,7 +61,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '[nouveau préfixe]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x20n)) return message.reply('❌ Administrateur requis.');
       const newPrefix = args[0];
       if (!newPrefix || newPrefix.length > 5) return message.reply('❌ Préfixe valide de 1-5 caractères requis.');
@@ -76,7 +76,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '[titre] | [description] | [couleur]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       const parts = args.join(' ').split('|').map(s => s.trim());
       const title = parts[0] || 'Message';
@@ -93,7 +93,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '[question] | [option1] | [option2] ...',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const parts = args.join(' ').split('|').map(s => s.trim());
       const question = parts[0];
       const options = parts.slice(1, 11);
@@ -117,7 +117,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '[durée] [message]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const timeStr = args[0];
       const msg = args.slice(1).join(' ');
       if (!timeStr || !msg) return message.reply('❌ Usage : `&remind 1h30m [message]`');
@@ -144,7 +144,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '[expression]',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const expr = args.join(' ').replace(/[^0-9+\-*/.() %^]/g, '');
       if (!expr) return message.reply('❌ Donnez une expression. Ex: `n!calc 25 * 4 + 10`');
       try {
@@ -162,7 +162,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '[mot]',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Donnez un mot.');
       const term = args.join(' ');
       try {
@@ -181,7 +181,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '#RRGGBB ou R G B',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       let hex;
       if (args[0]?.startsWith('#')) hex = args[0].replace('#', '');
       else if (args.length >= 3) hex = [parseInt(args[0]), parseInt(args[1]), parseInt(args[2])].map(n => n.toString(16).padStart(2, '0')).join('');
@@ -197,7 +197,7 @@ const commands = [
     description: 'Voir le dernier message supprimé',
     category: 'Utilitaire',
     cooldown: 5,
-    async execute(message) {
+    async run(message) {
       try {
         const snipeModule = require('../commands/utility/snipe');
         const s = snipeModule.get(message.channel.id);
@@ -213,7 +213,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '@role',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const role = message.mentions.roles.first() || message.guild.roles.cache.get(args[0]);
       if (!role) return message.reply('❌ Mentionnez un rôle valide.');
       const members = role.members.map(m => `<@${m.id}>`).join(', ') || 'Aucun membre.';
@@ -227,7 +227,7 @@ const commands = [
     category: 'Utilitaire',
     usage: '[durée] [prix]',
     cooldown: 10,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       if (!message.member.permissions.has(0x4000n)) return message.reply('❌ Permission de gérer les messages requise.');
       if (args.length < 2) return message.reply('❌ Usage : `&giveaway 1h PlayStation 5`');
       const timeStr = args[0];

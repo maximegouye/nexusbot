@@ -76,7 +76,7 @@ const commands = [
     description: 'Citation inspirante aléatoire',
     category: 'Citations',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const c = CITATIONS[Math.floor(Math.random() * CITATIONS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('💬 Citation du moment')
@@ -90,7 +90,7 @@ const commands = [
     description: 'Proverbe aléatoire',
     category: 'Citations',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const p = PROVERBES[Math.floor(Math.random() * PROVERBES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E67E22')
         .setTitle('📜 Proverbe')
@@ -104,7 +104,7 @@ const commands = [
     description: 'Message de motivation aléatoire',
     category: 'Citations',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const name = message.member?.displayName || message.author.username;
       const m = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
@@ -118,7 +118,7 @@ const commands = [
     description: 'Citation d\'un philosophe célèbre',
     category: 'Citations',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const p = PHILOSOPHES[Math.floor(Math.random() * PHILOSOPHES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`🎓 ${p.name} — ${p.ecole}`)
@@ -131,7 +131,7 @@ const commands = [
     description: 'Complimenter un membre',
     category: 'Citations',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const COMP = [
         "est une personne brillante et créative !",
         "a une énergie communicative incroyable !",
@@ -153,7 +153,7 @@ const commands = [
     description: 'Petite vanne humoristique (fun)',
     category: 'Citations',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const VANNES = [
         "est si lent(e) que même les escargots te doublent !",
         "confond Google Maps et Google Earth depuis 2015.",
@@ -173,7 +173,7 @@ const commands = [
     description: 'Défi du jour aléatoire',
     category: 'Citations',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const DEFIS = [
         "Aujourd'hui, dis bonjour à 3 inconnus.",
         "Écris 3 choses pour lesquelles tu es reconnaissant(e).",
@@ -199,7 +199,7 @@ const commands = [
     description: 'Affirmation positive pour bien commencer',
     category: 'Citations',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const name = message.member?.displayName || message.author.username;
       const MANTRAS = [
         "Je suis capable d'accomplir de grandes choses.",
@@ -223,7 +223,7 @@ const commands = [
     description: 'Petit roast gentil (humoristique)',
     category: 'Citations',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const ROASTS = [
         "essaie de paraître intelligent(e) en ligne, mais on voit tout.",
         "a la personnalité d'un formulaire de déclaration de revenus.",
@@ -242,7 +242,7 @@ const commands = [
     description: 'Anecdote/fait insolite du jour',
     category: 'Citations',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const FAITS = [
         "Les pieuvres ont trois cœurs et du sang bleu.",
         "Le miel ne se périme jamais — on en a trouvé dans des tombeaux égyptiens, encore comestible.",

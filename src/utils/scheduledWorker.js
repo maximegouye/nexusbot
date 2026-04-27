@@ -25,7 +25,7 @@ function startScheduledWorker(client) {
   }
   refreshAll(client);
   // Rafraîchit la liste toutes les 60 s
-  setInterval(() => refreshAll(client), 60_000);
+  setInterval(() => refreshAll(client), 60_000).unref();
   console.log('[ScheduledWorker] démarré (rafraîchissement toutes les 60 s).');
 }
 

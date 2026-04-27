@@ -14,12 +14,14 @@ module.exports = {
       .setName('donner')
       .setDescription('💸 Donner des euros à un membre')
       .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(1))
       .addStringOption(o => o.setName('raison').setDescription('Raison (optionnel)').setRequired(false))
     )
     .addSubcommand(s => s
       .setName('retirer')
       .setDescription('💰 Retirer des euros à un membre')
       .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(1))
       .addStringOption(o => o.setName('raison').setDescription('Raison (optionnel)').setRequired(false))
     )
     .addSubcommand(s => s
@@ -40,6 +42,7 @@ module.exports = {
       .setName('definir')
       .setDescription('✏️ Définir exactement le solde d\'un membre')
       .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(0))
     )
     .addSubcommand(s => s
       .setName('config')
@@ -51,6 +54,7 @@ module.exports = {
       .setName('donner-role')
       .setDescription('👥 Donner des euros à tous les membres d\'un rôle')
       .addRoleOption(o => o.setName('role').setDescription('Rôle cible').setRequired(true))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant par membre').setRequired(true).setMinValue(1))
     )
     .addSubcommand(s => s
       .setName('stats')

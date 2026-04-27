@@ -12,7 +12,7 @@ module.exports = {
   category: 'Utilitaire',
   cooldown: 3,
 
-  async execute(message, args, client, db) {
+  async run(message, args, client, db) {
     const first = (args[0] || '').toLowerCase();
 
     if (!first || first === 'liste' || first === 'list' || first === 'help' || first === 'aide') {

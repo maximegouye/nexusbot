@@ -65,7 +65,7 @@ module.exports = {
     }
 
     if (sub === 'lire') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const note = db.db.prepare('SELECT * FROM notes WHERE id=? AND guild_id=? AND user_id=?').get(id, guildId, userId);
       if (!note) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
 

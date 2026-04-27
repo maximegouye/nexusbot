@@ -42,7 +42,7 @@ module.exports = {
     }
 
     // Transaction sécurisée
-    db.addCoins(userId, guildId, -montant);
+    db.removeCoins(userId, guildId, montant);
     db.addCoins(target.id, guildId, montant);
 
     // Log dans transactions si la table existe
@@ -94,7 +94,7 @@ module.exports = {
       return message.reply(`❌ Solde insuffisant. Tu as **${(sender?.balance || 0).toLocaleString('fr-FR')} ${coin}**.`);
     }
 
-    db.addCoins(userId, guildId, -montant);
+    db.removeCoins(userId, guildId, montant);
     db.addCoins(mention.id, guildId, montant);
     try {
       db.db.prepare('INSERT INTO transactions (guild_id,from_id,to_id,amount,reason,type) VALUES (?,?,?,?,?,?)').run(guildId, userId, mention.id, montant, raison, 'transfer');

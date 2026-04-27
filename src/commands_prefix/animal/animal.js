@@ -82,7 +82,7 @@ const commands = [
     description: 'Fait aléatoire sur un animal',
     category: 'Animaux',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args[0]?.toLowerCase();
       const animals = Object.keys(ANIMAL_FACTS);
       const chosen = animals.includes(key) ? key : animals[Math.floor(Math.random() * animals.length)];
@@ -101,7 +101,7 @@ const commands = [
     description: 'Fait aléatoire sur un oiseau',
     category: 'Animaux',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const b = OISEAUX[Math.floor(Math.random() * OISEAUX.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle(`${b.emoji} ${b.name}`)
@@ -114,7 +114,7 @@ const commands = [
     description: 'Fait aléatoire sur un insecte',
     category: 'Animaux',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const ins = INSECTES[Math.floor(Math.random() * INSECTES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle(`${ins.emoji} ${ins.name}`)
@@ -127,7 +127,7 @@ const commands = [
     description: 'Fait aléatoire sur un animal marin',
     category: 'Animaux',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const o = OCEAN[Math.floor(Math.random() * OCEAN.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2980B9')
         .setTitle(`${o.emoji} ${o.name}`)
@@ -140,7 +140,7 @@ const commands = [
     description: 'Classement des animaux les plus rapides',
     category: 'Animaux',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const VITESSES = [
         { rank:1, name:'Faucon pèlerin (piqué)', speed:'389 km/h' },
         { rank:2, name:'Espadon', speed:'110 km/h' },
@@ -163,7 +163,7 @@ const commands = [
     description: 'Longévité des animaux',
     category: 'Animaux',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const AGES = [
         { name:'Quahog (palourde)', age:'500+ ans' },
         { name:'Groenlandais (requin)', age:'400+ ans' },
@@ -188,7 +188,7 @@ const commands = [
     description: 'Les animaux les plus dangereux du monde',
     category: 'Animaux',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const DANG = [
         { rank:1, name:'Moustique', deaths:'750 000/an (paludisme)', emoji:'🦟' },
         { rank:2, name:'Humain', deaths:'475 000/an', emoji:'👤' },
@@ -211,7 +211,7 @@ const commands = [
     description: 'Quel cri fait cet animal ?',
     category: 'Animaux',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const BRUITS = [
         { animal:'Lion', cri:'rugit', son:'ROOOAARRR' },
         { animal:'Chien', cri:'aboie', son:'WAF WAF' },

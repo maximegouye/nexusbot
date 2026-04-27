@@ -1,5 +1,5 @@
 // setup_serveur.js — Esthétique serveur avec ・
-const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 
 const TEMPLATE = [
   { category: '┈ ・ INFORMATIONS ・ ┈', channels: [
@@ -50,7 +50,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('setup-serveur')
     .setDescription("✨ Configure l'apparence du serveur avec ・")
-    .setDefaultMemberPermissions(0x8)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand(s => s.setName('apercu').setDescription("👁️ Aperçu du modèle"))
     .addSubcommand(s => s.setName('renommer').setDescription("🏷️ Renomme les salons avec le style ・"))
     .addSubcommand(s => s.setName('creer').setDescription("✨ Crée les catégories et salons manquants"))
@@ -58,7 +58,7 @@ module.exports = {
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
   async execute(interaction) {
-    if (!interaction.member.permissions.has('Administrator'))
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator))
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🔒 Réservé aux administrateurs.', ephemeral: true });
     const sub = interaction.options.getSubcommand(), guild = interaction.guild;
 

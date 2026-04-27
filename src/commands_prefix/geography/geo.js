@@ -65,7 +65,7 @@ const commands = [
     description: 'Informations complètes sur un pays',
     category: 'Géographie',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply(`❌ Usage : \`n!pays_info <pays>\` — Ex: france, japon, maroc, senegal...`);
       const search = args.join(' ').toLowerCase();
       const pays = PAYS_DATA.find(p => p.nom.toLowerCase().includes(search) || p.capitale.toLowerCase().includes(search));
@@ -88,7 +88,7 @@ const commands = [
     description: 'Informations sur les océans du monde',
     category: 'Géographie',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const o = OCEANS[Math.floor(Math.random() * OCEANS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2980B9')
         .setTitle(`🌊 Océan ${o.name}`)
@@ -106,7 +106,7 @@ const commands = [
     description: 'Informations sur les grandes montagnes',
     category: 'Géographie',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const m = MONTAGNES[Math.floor(Math.random() * MONTAGNES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#8B4513')
         .setTitle(`⛰️ ${m.name}`)
@@ -124,7 +124,7 @@ const commands = [
     description: 'Informations sur les grands fleuves du monde',
     category: 'Géographie',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const f = FLEUVES[Math.floor(Math.random() * FLEUVES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#27AE60')
         .setTitle(`🌊 Fleuve : ${f.name}`)
@@ -142,7 +142,7 @@ const commands = [
     description: 'Infos sur les continents du monde',
     category: 'Géographie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const CONTS = [
         { name:'Asie', superficie:'44.6M km²', pop:'4.7 milliards', pays:48, fait:'Plus grand et plus peuplé. Everest, Sibérie, désert d\'Arabie.' },
         { name:'Afrique', superficie:'30.4M km²', pop:'1.4 milliard', pays:54, fait:'Berceau de l\'humanité. Sahara, Nil, Congo, Kilimandjaro.' },
@@ -169,7 +169,7 @@ const commands = [
     description: 'Pays voisins d\'un pays',
     category: 'Géographie',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const VOISINS = {
         france: 'Espagne, Andorre, Monaco, Italie, Suisse, Allemagne, Luxembourg, Belgique',
         maroc: 'Algérie, Mauritanie (+ Sahara occidental)',
@@ -194,7 +194,7 @@ const commands = [
     description: 'Informations sur les grands déserts',
     category: 'Géographie',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const DESERTS = [
         { name:'Sahara', superficie:'9.2M km²', pays:'11 pays d\'Afrique du Nord', type:'Chaud', fait:'Plus grand désert chaud. Températures : -10°C la nuit à 50°C le jour.' },
         { name:'Antarctique', superficie:'14.2M km²', pays:'Antarctique', type:'Froid (polaire)', fait:'Le plus grand désert du monde ! Moins de 200mm de précipitations/an.' },
@@ -220,7 +220,7 @@ const commands = [
     description: 'Fuseau horaire d\'une grande ville',
     category: 'Géographie',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const f = FUSEAUX_QUIZ[Math.floor(Math.random() * FUSEAUX_QUIZ.length)];
       return message.reply(`🕐 **${f.ville}** (${f.pays}) est en **${f.utc}**`);
     }
@@ -231,7 +231,7 @@ const commands = [
     description: 'Question quiz de géographie',
     category: 'Géographie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const QUIZ = [
         { q:"Quelle est la capitale de l'Australie ?", r:"Canberra (pas Sydney ni Melbourne !)" },
         { q:"Quel pays a le plus grand nombre de lacs du monde ?", r:"Le Canada (plus de 2 millions de lacs)" },
@@ -253,7 +253,7 @@ const commands = [
     description: 'Deviner le drapeau d\'un pays (quiz)',
     category: 'Géographie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const p = PAYS_DATA[Math.floor(Math.random() * PAYS_DATA.length)];
       if (args[0] === 'quiz') {
         // Affiche le drapeau, donne 3 choix

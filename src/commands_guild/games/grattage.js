@@ -263,7 +263,7 @@ async function handleComponent(interaction, customId) {
     // Créditer les gains
     if (result.gain > 0) {
       db.addCoins(session.userId, session.guildId, result.gain);
-      db.addXP(session.userId, session.guildId, Math.max(5, Math.floor(result.gain / 50)));
+      try { db.addXP(session.userId, session.guildId, Math.max(5, Math.floor(result.gain / 50))); } catch {}
     }
     sessions.delete(sessionId);
   }

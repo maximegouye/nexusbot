@@ -132,7 +132,7 @@ module.exports = {
       }
 
       const allowed = Math.min(montant, maxCap - bank);
-      db.addCoins(userId, guildId, -allowed);
+      db.removeCoins(userId, guildId, allowed);
       db.db.prepare('UPDATE users SET bank=COALESCE(bank,0)+? WHERE user_id=? AND guild_id=?').run(allowed, userId, guildId);
       db.db.prepare('INSERT INTO bank_transactions (guild_id,user_id,type,amount) VALUES (?,?,?,?)').run(guildId, userId, 'depot', allowed);
 

@@ -67,7 +67,7 @@ const commands = [
     description: 'Convertir en MAJUSCULES',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!upper <texte>`');
       return message.reply('**' + args.join(' ').toUpperCase() + '**');
     }
@@ -78,7 +78,7 @@ const commands = [
     description: 'Convertir en minuscules',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!lower <texte>`');
       return message.reply(args.join(' ').toLowerCase());
     }
@@ -89,7 +89,7 @@ const commands = [
     description: 'Convertir en code Morse',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!morse <texte>`');
       const result = toMorse(args.join(' '));
       return message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('📡 Code Morse').setDescription(`\`${result.slice(0, 1000)}\``)] });
@@ -101,7 +101,7 @@ const commands = [
     description: 'Convertir en binaire',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!binary <texte>`');
       const result = toBinary(args.join(' ').slice(0, 50));
       return message.reply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('💻 Binaire').setDescription(`\`${result.slice(0, 1000)}\``)] });
@@ -113,7 +113,7 @@ const commands = [
     description: 'Encoder en Base64',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!base64 <texte>`');
       const result = toBase64(args.join(' '));
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('🔒 Base64').setDescription(`\`${result.slice(0, 1000)}\``)] });
@@ -125,7 +125,7 @@ const commands = [
     description: 'Décoder depuis Base64',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!debase64 <base64>`');
       const result = fromBase64(args[0]);
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E67E22').setTitle('🔓 Décodé').setDescription(result.slice(0, 1000))] });
@@ -137,7 +137,7 @@ const commands = [
     description: 'Chiffrement de César',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (args.length < 2) return message.reply('❌ Usage : `n!caesar <décalage> <texte>`');
       const shift = parseInt(args[0]);
       if (isNaN(shift)) return message.reply('❌ Le décalage doit être un nombre.');
@@ -152,7 +152,7 @@ const commands = [
     description: 'Transformer en texte glitch Zalgo',
     category: 'Texte',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!zalgo <texte>`');
       const result = zalgo(args.join(' ').slice(0, 100));
       return message.reply(result.slice(0, 500));
@@ -164,7 +164,7 @@ const commands = [
     description: 'Convertir en petites capitales',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!smallcaps <texte>`');
       return message.reply(toSmallCaps(args.join(' ')));
     }
@@ -175,7 +175,7 @@ const commands = [
     description: 'Retourner le texte à l\'envers',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!upsidedown <texte>`');
       return message.reply(toUpsideDown(args.join(' ')));
     }
@@ -186,7 +186,7 @@ const commands = [
     description: 'Compter les mots dans un texte',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!wordcount <texte>`');
       const text = args.join(' ');
       const words = countWords(text);
@@ -207,7 +207,7 @@ const commands = [
     description: 'Espacer les lettres d\'un texte',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!spacer <texte>`');
       return message.reply(args.join(' ').split('').join(' ').slice(0, 500));
     }
@@ -218,7 +218,7 @@ const commands = [
     description: 'Alterner majuscules et minuscules',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!alternate <texte>`');
       const result = args.join(' ').split('').map((c, i) => i % 2 === 0 ? c.toUpperCase() : c.toLowerCase()).join('');
       return message.reply(result);
@@ -230,7 +230,7 @@ const commands = [
     description: 'Répéter un texte N fois',
     category: 'Texte',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (args.length < 2) return message.reply('❌ Usage : `n!repeat <fois> <texte>`');
       const times = Math.min(10, Math.max(1, parseInt(args[0]) || 1));
       const text = args.slice(1).join(' ');
@@ -243,7 +243,7 @@ const commands = [
     description: 'Créer un acronyme',
     category: 'Texte',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!acronyme <phrase>`');
       const text = args.join(' ');
       const acro = text.split(' ').map(w => w[0]?.toUpperCase() || '').join('');

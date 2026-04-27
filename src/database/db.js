@@ -1059,6 +1059,15 @@ const helpers = {
 
   setConfig(guildId, key, value) {
     helpers.getConfig(guildId); // ensure row exists
+    // Whitelist allowed columns to prevent SQL injection
+    const allowedKeys = ['prefix', 'lang', 'color', 'xp_enabled', 'xp_multiplier', 'eco_enabled',
+      'welcome_channel', 'welcome_msg', 'leave_channel', 'leave_msg', 'log_channel', 'mod_log_channel',
+      'level_channel', 'level_msg', 'starboard_channel', 'starboard_threshold', 'automod_enabled',
+      'automod_badwords', 'automod_antispam', 'automod_antilink', 'mute_role', 'autorole',
+      'ticket_category', 'ticket_log', 'ticket_staff_role', 'ticket_channel', 'currency_name',
+      'currency_emoji', 'daily_amount', 'xp_rate', 'coins_per_msg', 'quest_channel', 'birthday_channel',
+      'birthday_role', 'health_channel', 'tempvoice_creator'];
+    if (!allowedKeys.includes(key)) throw new Error(`Invalid config key: ${key}`);
     db.prepare(`UPDATE guild_config SET ${key} = ? WHERE guild_id = ?`).run(value, guildId);
   },
 
@@ -1073,9 +1082,20 @@ const helpers = {
   },
 
   updateUser(userId, guildId, data) {
-    const keys   = Object.keys(data).map(k => `${k} = ?`).join(', ');
-    const values = [...Object.values(data), userId, guildId];
-    db.prepare(`UPDATE users SET ${keys} WHERE user_id = ? AND guild_id = ?`).run(...values);
+    // Whitelist allowed columns to prevent SQL injection
+    const allowedKeys = ['balance', 'bank', 'total_earned', 'xp', 'level', 'voice_xp', 'voice_minutes',
+      'message_count', 'reputation', 'last_daily', 'last_work', 'last_crime', 'last_rob', 'last_message',
+      'streak', 'birthday', 'birth_year', 'timezone', 'bio', 'background'];
+    const keys   = [];
+    const values = [];
+    for (const [k, v] of Object.entries(data)) {
+      if (!allowedKeys.includes(k)) throw new Error(`Invalid user column: ${k}`);
+      keys.push(`${k} = ?`);
+      values.push(v);
+    }
+    if (!keys.length) return;
+    values.push(userId, guildId);
+    db.prepare(`UPDATE users SET ${keys.join(', ')} WHERE user_id = ? AND guild_id = ?`).run(...values);
   },
 
   // ── Économie ──
@@ -1130,6 +1150,53 @@ const helpers = {
       }
     } catch {}
     return realDeduct;
+  },
+
+  // ── Banque (Bank) ──
+  // Dépôt d'argent du solde vers la banque
+  deposit(userId, guildId, amount, opts = {}) {
+    helpers.getUser(userId, guildId);
+    const amt = Math.max(0, Math.floor(Number(amount) || 0));
+    if (amt === 0) return 0;
+    const user = db.prepare('SELECT balance FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+    const actualDeposit = Math.min(amt, user?.balance || 0);
+    db.prepare('UPDATE users SET balance = balance - ?, bank = bank + ? WHERE user_id = ? AND guild_id = ?')
+      .run(actualDeposit, actualDeposit, userId, guildId);
+    try {
+      if (opts.skipLog !== true && actualDeposit > 0) {
+        helpers.logTransaction({
+          userId, guildId,
+          type: 'deposit',
+          amount: -actualDeposit,
+          note: opts.note || null,
+          meta: opts.meta || null,
+        });
+      }
+    } catch {}
+    return actualDeposit;
+  },
+
+  // Retrait d'argent de la banque vers le solde
+  withdraw(userId, guildId, amount, opts = {}) {
+    helpers.getUser(userId, guildId);
+    const amt = Math.max(0, Math.floor(Number(amount) || 0));
+    if (amt === 0) return 0;
+    const user = db.prepare('SELECT bank FROM users WHERE user_id = ? AND guild_id = ?').get(userId, guildId);
+    const actualWithdraw = Math.min(amt, user?.bank || 0);
+    db.prepare('UPDATE users SET bank = bank - ?, balance = balance + ? WHERE user_id = ? AND guild_id = ?')
+      .run(actualWithdraw, actualWithdraw, userId, guildId);
+    try {
+      if (opts.skipLog !== true && actualWithdraw > 0) {
+        helpers.logTransaction({
+          userId, guildId,
+          type: 'withdraw',
+          amount: actualWithdraw,
+          note: opts.note || null,
+          meta: opts.meta || null,
+        });
+      }
+    } catch {}
+    return actualWithdraw;
   },
 
   // ── XP ──
@@ -1198,6 +1265,9 @@ const helpers = {
 
   // ── Stats ──
   incrementStat(guildId, key) {
+    // Whitelist allowed columns to prevent SQL injection
+    const allowedKeys = ['total_messages', 'commands_used', 'joined_members', 'left_members', 'bans', 'new_members'];
+    if (!allowedKeys.includes(key)) throw new Error(`Invalid stat column: ${key}`);
     const today = new Date().toISOString().split('T')[0];
     db.prepare(`
       INSERT INTO guild_stats (guild_id, date, ${key}) VALUES (?, ?, 1)
@@ -1719,6 +1789,55 @@ const helpers = {
   },
   deleteScheduledMessage(guildId, id) { return db.prepare('DELETE FROM scheduled_messages WHERE guild_id = ? AND id = ?').run(guildId, id).changes; },
 
+  // ── Tags (réponses prédéfinies) ──
+  getTag(guildId, name) {
+    return db.prepare('SELECT * FROM tags WHERE guild_id = ? AND LOWER(name) = LOWER(?)').get(guildId, name);
+  },
+
+  getTags(guildId) {
+    return db.prepare('SELECT * FROM tags WHERE guild_id = ? ORDER BY name ASC').all(guildId);
+  },
+
+  createTag(guildId, name, content, authorId) {
+    db.prepare(`INSERT INTO tags (guild_id, name, content, author_id) VALUES (?, ?, ?, ?)`)
+      .run(guildId, String(name).toLowerCase(), content, authorId);
+    return helpers.getTag(guildId, name);
+  },
+
+  deleteTag(guildId, name) {
+    return db.prepare('DELETE FROM tags WHERE guild_id = ? AND LOWER(name) = LOWER(?)').run(guildId, name).changes;
+  },
+
+  incrementTagUses(guildId, name) {
+    try {
+      db.prepare('UPDATE tags SET uses = uses + 1 WHERE guild_id = ? AND LOWER(name) = LOWER(?)').run(guildId, name);
+    } catch {}
+  },
+
+  // ── Highlights (mots-clés personnalisés) ──
+  getHighlights(guildId, userId) {
+    return db.prepare('SELECT * FROM highlights WHERE guild_id = ? AND user_id = ? ORDER BY keyword ASC').all(guildId, userId);
+  },
+
+  hasHighlight(guildId, userId, keyword) {
+    return db.prepare('SELECT 1 FROM highlights WHERE guild_id = ? AND user_id = ? AND LOWER(keyword) = LOWER(?)')
+      .get(guildId, userId, keyword) != null;
+  },
+
+  addHighlight(guildId, userId, keyword) {
+    db.prepare(`INSERT OR IGNORE INTO highlights (guild_id, user_id, keyword) VALUES (?, ?, ?)`)
+      .run(guildId, userId, String(keyword).toLowerCase());
+  },
+
+  removeHighlight(guildId, userId, keyword) {
+    return db.prepare('DELETE FROM highlights WHERE guild_id = ? AND user_id = ? AND LOWER(keyword) = LOWER(?)')
+      .run(guildId, userId, keyword).changes;
+  },
+
+  getAllHighlights(guildId) {
+    return db.prepare('SELECT user_id, keyword FROM highlights WHERE guild_id = ?').all(guildId);
+  },
+
   // ── Éditeur BDD universel (pour /cfg-set) ──
   // Liste toutes les tables du serveur (à filtrer par guild_id quand pertinent)
   listAllTables() {
@@ -1858,8 +1977,17 @@ const helpers = {
 
   setGuildConfigColumn(guildId, column, value) {
     // Sécurité : whitelist stricte sur les colonnes existantes
-    const cols = helpers.listGuildConfigColumns().map(c => c.name);
-    if (!cols.includes(column)) throw new Error(`Colonne inconnue: ${column}`);
+    const allowedCols = ['prefix', 'lang', 'color', 'xp_enabled', 'xp_multiplier', 'eco_enabled',
+      'welcome_channel', 'welcome_msg', 'leave_channel', 'leave_msg', 'log_channel', 'mod_log_channel',
+      'level_channel', 'level_msg', 'starboard_channel', 'starboard_threshold', 'automod_enabled',
+      'automod_badwords', 'automod_antispam', 'automod_antilink', 'mute_role', 'autorole',
+      'ticket_category', 'ticket_log', 'ticket_staff_role', 'ticket_channel', 'currency_name',
+      'currency_emoji', 'daily_amount', 'xp_rate', 'coins_per_msg', 'quest_channel', 'birthday_channel',
+      'birthday_role', 'health_channel', 'tempvoice_creator', 'boost_channel', 'xp_cooldown_ms',
+      'xp_voice_rate', 'xp_voice_enabled', 'xp_weekend_bonus', 'xp_stack_roles', 'xp_min_level_msg',
+      'work_min', 'work_max', 'work_cooldown', 'crime_min', 'crime_max', 'crime_cooldown',
+      'daily_cooldown', 'daily_streak_bonus', 'bank_interest_rate', 'bank_max_deposit'];
+    if (!allowedCols.includes(column)) throw new Error(`Colonne inconnue: ${column}`);
     if (column === 'guild_id') throw new Error('guild_id est read-only');
     helpers.getConfig(guildId); // ensure row
     db.prepare(`UPDATE guild_config SET ${column} = ? WHERE guild_id = ?`).run(value, guildId);
@@ -1898,12 +2026,22 @@ const helpers = {
   importGuildConfig(guildId, payload) {
     // payload: résultat de exportGuildConfig()
     // Écrase les tables listées. Ne supprime pas les données existantes, fait des upserts.
+    const allowedGuildConfigCols = ['prefix', 'lang', 'color', 'xp_enabled', 'xp_multiplier', 'eco_enabled',
+      'welcome_channel', 'welcome_msg', 'leave_channel', 'leave_msg', 'log_channel', 'mod_log_channel',
+      'level_channel', 'level_msg', 'starboard_channel', 'starboard_threshold', 'automod_enabled',
+      'automod_badwords', 'automod_antispam', 'automod_antilink', 'mute_role', 'autorole',
+      'ticket_category', 'ticket_log', 'ticket_staff_role', 'ticket_channel', 'currency_name',
+      'currency_emoji', 'daily_amount', 'xp_rate', 'coins_per_msg', 'quest_channel', 'birthday_channel',
+      'birthday_role', 'health_channel', 'tempvoice_creator'];
+    const allowedTables = ['custom_commands','command_aliases','cooldown_overrides','command_toggles','embed_templates','system_messages','autoresponder','level_roles','guild_kv'];
+
     const tx = db.transaction(() => {
       if (payload.guild_config && Object.keys(payload.guild_config).length) {
         const gc = { ...payload.guild_config };
         delete gc.guild_id; delete gc.created_at;
         helpers.getConfig(guildId); // ensure row
         for (const k of Object.keys(gc)) {
+          if (!allowedGuildConfigCols.includes(k)) continue; // skip unknown columns
           try { db.prepare(`UPDATE guild_config SET ${k} = ? WHERE guild_id = ?`).run(gc[k], guildId); } catch {}
         }
       }
@@ -1914,7 +2052,7 @@ const helpers = {
         }
       };
       // Nettoyer puis réinsérer pour une import propre des listes
-      for (const tbl of ['custom_commands','command_aliases','cooldown_overrides','command_toggles','embed_templates','system_messages','autoresponder','level_roles','guild_kv']) {
+      for (const tbl of allowedTables) {
         if (payload[tbl]) db.prepare(`DELETE FROM ${tbl} WHERE guild_id = ?`).run(guildId);
       }
       // Ré-import brut : INSERT OR REPLACE pour chaque

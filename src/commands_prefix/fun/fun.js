@@ -8,7 +8,7 @@ const commands = [
     description: 'Posez une question à la boule magique',
     usage: '[question]',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const q = args.join(' ');
       if (!q) return message.reply('❌ Posez une question !');
       const answers = ['✅ Absolument oui.','✅ C\'est certain !','✅ Sans aucun doute.','✅ Oui, définitivement !','✅ Vous pouvez compter dessus.','🟡 Je ne peux pas prédire maintenant.','🟡 Réponse floue, réessayez.','🟡 Pas encore sûr.','🟡 Mieux vaut ne pas vous le dire.','❌ N\'y comptez pas.','❌ Ma réponse est non.','❌ Mes sources disent non.','❌ Très peu probable.','❌ Non.'];
@@ -23,7 +23,7 @@ const commands = [
     aliases: ['blague', 'joke'],
     description: 'Blague aléatoire',
     cooldown: 5,
-    async execute(message) {
+    async run(message) {
       const blagues = [
         ['Pourquoi les plongeurs plongent toujours en arrière ?', 'Parce que sinon, ils tomberaient dans le bateau !'],
         ['Qu\'est-ce qu\'un crocodile qui surveille les gardes-robes ?', 'Un vestiaire-dile !'],
@@ -45,7 +45,7 @@ const commands = [
     description: 'Mesurer la taille de votre truc',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const target = message.mentions.users.first() || message.author;
       const size = Math.floor(Math.random() * 20);
       const bar = '8' + '='.repeat(size) + 'D';
@@ -59,7 +59,7 @@ const commands = [
     description: 'Évaluer quelque chose',
     usage: '[chose à noter]',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const thing = args.join(' ') || message.author.username;
       const score = Math.floor(Math.random() * 101);
       const bar = '█'.repeat(Math.floor(score / 10)) + '░'.repeat(10 - Math.floor(score / 10));
@@ -74,7 +74,7 @@ const commands = [
     description: 'Calculer la compatibilité entre deux membres',
     usage: '@membre1 @membre2',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const u1 = message.mentions.users.first() || message.author;
       const u2 = message.mentions.users.at(1) || { username: args[1] || 'Quelqu\'un', id: '0' };
       const pct = Math.floor(Math.random() * 101);
@@ -90,7 +90,7 @@ const commands = [
     description: 'Pierre Feuille Ciseaux',
     usage: '[pierre/feuille/ciseaux]',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const choices = { pierre: '🪨', feuille: '📄', ciseaux: '✂️', rock: '🪨', paper: '📄', scissors: '✂️', p: '🪨', f: '📄', c: '✂️' };
       const userPick = args[0]?.toLowerCase();
       if (!choices[userPick]) return message.reply('❌ Choisissez `pierre`, `feuille` ou `ciseaux`.');
@@ -109,7 +109,7 @@ const commands = [
     aliases: ['wouldyourather', 'plutot', 'dilemme'],
     description: 'Tu préfères... ?',
     cooldown: 5,
-    async execute(message) {
+    async run(message) {
       const questions = [
         ['Être riche mais malheureux', 'Être pauvre mais heureux'],
         ['Avoir la capacité de voler', 'Être invisible'],
@@ -130,7 +130,7 @@ const commands = [
     description: 'Complimenter un membre',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const target = message.mentions.users.first() || message.author;
       const compliments = ['est absolument brillant(e) !','a un sourire qui illumine la pièce !','est incroyablement talentueux/se !','est une personne exceptionnelle !','a un cœur en or !','est la meilleure personne du serveur !','rend ce serveur meilleur rien qu\'en étant là !','est un génie incompris !','a une présence charismatique !'];
       const c = compliments[Math.floor(Math.random() * compliments.length)];
@@ -144,7 +144,7 @@ const commands = [
     description: 'Inverser du texte',
     usage: '[texte]',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Donnez du texte à inverser.');
       const text = args.join(' ');
       message.channel.send(`🔄 **${text.split('').reverse().join('')}**`);
@@ -157,7 +157,7 @@ const commands = [
     description: 'Transformer du texte en mode moqueur (SpOnGeBoB)',
     usage: '[texte]',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Donnez du texte.');
       const text = args.join(' ').split('').map((c, i) => i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()).join('');
       message.channel.send(`🐠 ${text}`);
@@ -170,7 +170,7 @@ const commands = [
     description: 'Câliner quelqu\'un',
     usage: '@membre',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const target = message.mentions.users.first();
       if (!target) return message.reply('❌ Mentionnez quelqu\'un à câliner.');
       const actions = ['🤗 serre fort dans ses bras','💕 donne un bisou sur la joue à','🫂 câline affectueusement','❤️ envoie tout son amour à','🌹 offre des fleurs à'];
@@ -185,7 +185,7 @@ const commands = [
     description: 'Vannes humoristiques',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const target = message.mentions.users.first() || message.author;
       const roasts = ['Si l\'intelligence était une maladie, tu serais en parfaite santé.','Tu es tellement lent que les escargots te klaxonnent.','Si les bêtises étaient de l\'or, tu serais millionnaire.','Même Google ne pourrait pas trouver ta logique.','Tu es la raison pour laquelle le bouton "muet" existe.'];
       const r = roasts[Math.floor(Math.random() * roasts.length)];
@@ -198,7 +198,7 @@ const commands = [
     aliases: ['fait', 'saviez', 'info'],
     description: 'Fait aléatoire intéressant',
     cooldown: 5,
-    async execute(message) {
+    async run(message) {
       const facts = ['Les pieuvres ont 3 cœurs et du sang bleu.','Un groupe de flamants roses s\'appelle un flamant.','Le miel ne se périme jamais — on en a trouvé dans des pyramides vieilles de 3000 ans.','Les fourmis n\'ont pas de poumons.','Le cerveau humain génère suffisamment d\'électricité pour allumer une ampoule.','Les dauphins dorment avec un seul œil ouvert.','Il y a plus de combinaisons possibles dans un jeu de 52 cartes qu\'il y a d\'atomes sur Terre.','Les chats passent 70% de leur vie à dormir.','Les piranhas sont omnivores et mangent aussi des fruits.','Un nuage pèse environ 500 tonnes en moyenne.'];
       const f = facts[Math.floor(Math.random() * facts.length)];
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🧠 Le Saviez-Vous ?').setDescription(f)] });

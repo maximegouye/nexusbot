@@ -87,6 +87,7 @@ function startCryptoPriceWorker(db) {
   console.log('[CryptoPrices] Worker demarre.');
   updatePrices(db);
   _priceTimer = setInterval(()=>updatePrices(db), PRICE_INTERVAL_MS);
+  if (_priceTimer?.unref) _priceTimer.unref();
 }
 function stopCryptoPriceWorker() {
   if (_priceTimer) { clearInterval(_priceTimer); _priceTimer=null; }

@@ -53,7 +53,7 @@ const commands = [
     description: 'Recette simple et détaillée',
     category: 'Cuisine',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const search = args.join(' ').toLowerCase();
       let r;
       if (search) {
@@ -78,7 +78,7 @@ const commands = [
     description: 'Informations sur une épice',
     category: 'Cuisine',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const search = args[0]?.toLowerCase();
       let e;
       if (search) {
@@ -101,7 +101,7 @@ const commands = [
     description: 'Technique culinaire professionnelle',
     category: 'Cuisine',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const t = TECHNIQUES[Math.floor(Math.random() * TECHNIQUES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`👨‍🍳 Technique : ${t.name}`)
@@ -114,7 +114,7 @@ const commands = [
     description: 'Tableau de conversions de mesures culinaires',
     category: 'Cuisine',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const desc = Object.entries(CONVERSIONS_CUISINE).map(([k, v]) => `📏 **${k}** = ${v}`).join('\n');
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle('📐 Conversions culinaires')
@@ -128,7 +128,7 @@ const commands = [
     description: 'Idée de menu pour la semaine',
     category: 'Cuisine',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const REPAS = [
         ['Crêpes salées au jambon','Poulet rôti + purée','Soupe de légumes','Pâtes bolognaise','Quiche lorraine','Couscous','Brunch dominical'],
         ['Omelette aux champignons','Lentilles corail au lait de coco','Ratatouille + riz','Poisson vapeur + légumes','Pizza maison','Tajine de poulet','Risotto aux poireaux'],
@@ -149,7 +149,7 @@ const commands = [
     description: 'Accord mets-vins',
     category: 'Cuisine',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const ACCORDS = [
         { plat:'Poisson grillé', vin:'Blanc sec (Chablis, Muscadet, Sauvignon Blanc)', conseil:'La légèreté du blanc complète la délicatesse du poisson.' },
         { plat:'Viande rouge', vin:'Rouge structuré (Bordeaux, Côte du Rhône, Barolo)', conseil:'Les tanins du rouge s\'adoucissent avec les protéines de la viande.' },
@@ -173,7 +173,7 @@ const commands = [
     description: 'Astuce de chef cuisinier',
     category: 'Cuisine',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const ASTUCES = [
         "🧂 **Sel pâtes** : L\'eau doit être aussi salée que la mer (~10g/L). Ça fait toute la différence !",
         "🥚 **Œufs frais** : Plongez-les dans l\'eau froide. Un œuf frais coule, un œuf moins frais flotte.",
@@ -198,7 +198,7 @@ const commands = [
     description: 'Valeur nutritive d\'un aliment commun',
     category: 'Cuisine',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const ALIMENTS = [
         { name:'Œuf entier', cal:'155 kcal/100g', prot:'13g', lipides:'11g', glucides:'1g', fait:'Protéine de référence. Contient les 9 acides aminés essentiels.' },
         { name:'Poulet (sans peau)', cal:'165 kcal/100g', prot:'31g', lipides:'3.6g', glucides:'0g', fait:'Excellent rapport protéines/calories. Aliment de base fitness.' },

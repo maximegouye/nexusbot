@@ -1,7 +1,7 @@
 'use strict';
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { db } = require('../database/db');
+const db = require('../database/db');
 
 const BUMP_COOLDOWN_SECS = 7200; // 2 heures
 

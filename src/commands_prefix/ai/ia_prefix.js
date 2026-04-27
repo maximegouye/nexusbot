@@ -11,7 +11,7 @@ module.exports = {
   category: 'IA',
   cooldown: 5,
 
-  async execute(message, args, client, db) {
+  async run(message, args, client, db) {
     const question = args.join(' ').trim();
     if (!question) {
       return message.reply({ content: '❌ Pose ta question : `&ia Comment fait-on une config qui claque ?`' });

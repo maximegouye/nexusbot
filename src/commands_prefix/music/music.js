@@ -66,7 +66,7 @@ const commands = [
     description: 'Infos sur une note de musique',
     category: 'Musique',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args[0]?.toLowerCase();
       const note = NOTES[key];
       if (!key || !note) return message.reply(`❌ Usage : \`n!note_musique <note>\` — Disponibles : ${Object.keys(NOTES).join(', ')}`);
@@ -86,7 +86,7 @@ const commands = [
     description: 'Informations sur un genre musical',
     category: 'Musique',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const g = GENRES[Math.floor(Math.random() * GENRES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle(`🎶 Genre : ${g.name}`)
@@ -102,7 +102,7 @@ const commands = [
     description: 'Infos sur un instrument de musique',
     category: 'Musique',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const i = INSTRUMENTS[Math.floor(Math.random() * INSTRUMENTS.length)];
       const fields = [
         { name: '🎼 Famille', value: i.famille, inline: true },
@@ -120,7 +120,7 @@ const commands = [
     description: 'Afficher une gamme musicale',
     category: 'Musique',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args[0]?.toLowerCase();
       if (!key || !GAMMES[key]) {
         return message.reply(`❌ Usage : \`n!gamme <type>\` — Disponibles : ${Object.keys(GAMMES).join(', ')}`);
@@ -138,7 +138,7 @@ const commands = [
     description: 'Guide des tempos musicaux',
     category: 'Musique',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const bpmVal = parseInt(args[0]);
       if (!isNaN(bpmVal)) {
         const t = TEMPOS.find(t => {
@@ -160,7 +160,7 @@ const commands = [
     description: 'Accords de guitare de base',
     category: 'Musique',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const ACCORDS = {
         'C':  { nom:'Do majeur',      notes:'Do-Mi-Sol',     doigte:'x32010' },
         'G':  { nom:'Sol majeur',     notes:'Sol-Si-Ré',     doigte:'320003' },
@@ -188,7 +188,7 @@ const commands = [
     description: 'Histoire de la musique par époque',
     category: 'Musique',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const EPOQUES = [
         { era:'Antiquité (avant 500)', desc:'Instruments à vent, cordes et percussion. Musique dans rituels religieux en Grèce, Égypte, Mésopotamie.' },
         { era:'Médiéval (500-1400)', desc:'Chant grégorien, polyphonie naissante. Guillaume de Machaut, Hildegard von Bingen.' },
@@ -211,7 +211,7 @@ const commands = [
     description: 'Records musicaux mondials',
     category: 'Musique',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const RECORDS = [
         "🎵 **Album le plus vendu** : Thriller de Michael Jackson (~66 millions d'exemplaires)",
         "🎤 **Single le plus vendu** : Candle in the Wind (1997) - Elton John (37 millions)",
@@ -233,7 +233,7 @@ const commands = [
     description: 'Mini cours de solfège',
     category: 'Musique',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const LECONS = [
         { titre:'Les clés (clefs)', contenu:'Clé de sol : pour voix aiguës et instruments à tessiture haute.\nClé de fa : pour voix graves et instruments graves (basse, violoncelle).\nClé d\'ut : pour violon alto, violoncelle, trombone.' },
         { titre:'Les durées', contenu:'Ronde = 4 temps\nBlanche = 2 temps\nNoire = 1 temps\nCroche = 1/2 temps\nDouble croche = 1/4 temps' },
@@ -252,7 +252,7 @@ const commands = [
     description: 'Suggestion de playlist selon votre humeur',
     category: 'Musique',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const HUMEURS = {
         triste:     { genres:['Blues','Soul','Ballades rock'], artistes:['Adele','Jeff Buckley','Nina Simone'], conseil:'La musique triste aide souvent à se libérer des émotions.' },
         heureux:    { genres:['Pop','Afrobeats','Funk'], artistes:['Pharrell Williams','Daft Punk','Burna Boy'], conseil:'Let the music make you dance !' },

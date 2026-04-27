@@ -21,7 +21,7 @@ module.exports = {
   category: 'IA',
   cooldown: 5,
 
-  async execute(message, args, client, db) {
+  async run(message, args, client, db) {
     if (!args.length) return message.reply('❌ Usage : `&traduis <langue> <texte>` ou `&traduis <texte>` (défaut: français).');
 
     let lang = 'français';

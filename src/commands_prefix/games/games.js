@@ -7,7 +7,7 @@ const commands = [
     description: 'Question de culture générale',
     category: 'Jeux',
     cooldown: 10,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const questions = [
         { q: 'Quelle est la capitale de l\'Australie ?', a: ['canberra'], wrong: ['sydney', 'melbourne', 'perth'] },
         { q: 'Combien de côtés a un hexagone ?', a: ['6', 'six'], wrong: ['5','7','8'] },
@@ -50,7 +50,7 @@ const commands = [
     description: 'Roulette russe — 1 chance sur 6 de perdre tout',
     category: 'Jeux',
     cooldown: 30,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet = parseInt(args[0]);
@@ -76,7 +76,7 @@ const commands = [
     description: 'Puissance 4 contre le bot',
     category: 'Jeux',
     cooldown: 15,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const COLS = 7, ROWS = 6;
@@ -135,7 +135,7 @@ const commands = [
     description: 'Acheter un ticket de loterie (tirage chaque heure)',
     category: 'Jeux',
     cooldown: 3600,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const price = 100;
@@ -158,7 +158,7 @@ const commands = [
     description: 'Devinez si le prochain nombre est plus haut ou plus bas',
     category: 'Jeux',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet = parseInt(args[0]) || 100;
@@ -183,7 +183,7 @@ const commands = [
     description: 'Je pense à un animal/objet, devinez lequel !',
     category: 'Jeux',
     cooldown: 10,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const things = ['chien','chat','éléphant','guitare','voiture','pizza','soleil','montagne','livre','téléphone','ordinateur','avion','dauphin','bouteille','parapluie'];
       const thing = things[Math.floor(Math.random()*things.length)];
       const cfg = db.getConfig(message.guild.id);
@@ -213,7 +213,7 @@ const commands = [
     description: 'La bombe ! Passez-la avant qu\'elle explose',
     category: 'Jeux',
     cooldown: 10,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const bet = parseInt(args[0]) || 200;
@@ -246,7 +246,7 @@ const commands = [
     description: 'Chaîne de mots - chaque mot doit commencer par la dernière lettre',
     category: 'Jeux',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
       const seed = ['chat','soleil','train','nuage','arbre','bateau'];

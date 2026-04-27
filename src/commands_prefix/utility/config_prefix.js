@@ -12,7 +12,7 @@ module.exports = {
   cooldown: 5,
   permissions: '8', // ManageGuild
 
-  async execute(message, args, client, db) {
+  async run(message, args, client, db) {
     if (!message.member.permissions.has(8n)) {
       return message.reply('❌ Tu dois avoir la permission **Gérer le serveur** pour accéder à la configuration.');
     }

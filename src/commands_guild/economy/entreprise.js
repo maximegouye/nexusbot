@@ -67,7 +67,7 @@ module.exports = {
       const u = db.getUser(userId, guildId);
       if ((u.balance||0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Créer une entreprise coûte **${cost} ${coin}**.`, ephemeral: true });
 
-      db.addCoins(userId, guildId, -cost);
+      db.removeCoins(userId, guildId, cost);
       db.db.prepare('INSERT INTO entreprises (guild_id,owner_id,name,secteur,revenue_per_hour) VALUES(?,?,?,?,?)').run(guildId, userId, nom, secteur, s.base_revenue);
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle(`${s.emoji} ${nom} — Fondée !`)
@@ -130,7 +130,7 @@ module.exports = {
       if ((u.balance||0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ L'amélioration coûte **${cost.toLocaleString()} ${coin}**.`, ephemeral: true });
 
       const revenueBonus = Math.floor(ent.revenue_per_hour * 0.3);
-      db.addCoins(userId, guildId, -cost);
+      db.removeCoins(userId, guildId, cost);
       db.db.prepare('UPDATE entreprises SET level=level+1, revenue_per_hour=revenue_per_hour+? WHERE guild_id=? AND owner_id=?').run(revenueBonus, guildId, userId);
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`⬆️ ${ent.name} — Niveau ${ent.level+1} !`)

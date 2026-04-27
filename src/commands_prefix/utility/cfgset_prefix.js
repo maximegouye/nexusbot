@@ -15,7 +15,7 @@ module.exports = {
   permissions: String(PermissionFlagsBits.ManageGuild),
   cooldown: 1,
 
-  async execute(message, args, client, db) {
+  async run(message, args, client, db) {
     if (!message.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
       return message.reply({ embeds: [ef.error('Permission manquante', 'Tu dois avoir **Gérer le serveur**.')] });
     }

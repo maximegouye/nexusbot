@@ -45,7 +45,7 @@ const commands = [
     description: 'Conseil de productivité aléatoire',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const c = CONSEILS_PROD[Math.floor(Math.random() * CONSEILS_PROD.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#3498DB')
         .setTitle('⚡ Conseil Productivité')
@@ -58,7 +58,7 @@ const commands = [
     description: 'Habitude saine à adopter',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const h = HABITUDES_SAINES[Math.floor(Math.random() * HABITUDES_SAINES.length)];
       const colors = { Facile:'#2ECC71', Modéré:'#F39C12', Difficile:'#E74C3C' };
       return message.reply({ embeds: [new EmbedBuilder().setColor(colors[h.difficulte] || '#3498DB')
@@ -76,7 +76,7 @@ const commands = [
     description: 'Guide de la technique Pomodoro',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle('🍅 Technique Pomodoro')
         .setDescription('La méthode Pomodoro divise le travail en blocs de 25 minutes avec des pauses régulières.')
@@ -95,7 +95,7 @@ const commands = [
     description: 'Exercice de gratitude quotidien',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const name = message.member?.displayName || message.author.username;
       const PROMPTS = [
         "Cite 3 choses qui se sont bien passées aujourd'hui.",
@@ -119,7 +119,7 @@ const commands = [
     description: 'Framework SMART pour fixer un objectif',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) {
         return message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
           .setTitle('🎯 Méthode SMART pour vos objectifs')
@@ -149,7 +149,7 @@ const commands = [
     description: 'Idées de bucket list (liste de vie)',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const ITEMS = [
         "🌏 Voyager dans au moins 10 pays différents",
         "🏔️ Gravir une grande montagne ou marcher un sentier célèbre",
@@ -177,7 +177,7 @@ const commands = [
     description: 'Conseil mindset et état d\'esprit de croissance',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const MINDSETS = [
         { fixed:'❌ Fixe : "Je ne suis pas doué pour ça."', growth:'✅ Croissance : "Je ne suis pas encore doué — je peux apprendre."' },
         { fixed:'❌ Fixe : "Les talents sont innés."', growth:'✅ Croissance : "Les compétences se développent avec l\'effort."' },
@@ -201,7 +201,7 @@ const commands = [
     description: 'Bilan de journée guidé (journaling)',
     category: 'Mode de vie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const name = message.member?.displayName || message.author.username;
       return message.reply({ embeds: [new EmbedBuilder().setColor('#1ABC9C')
         .setTitle(`📔 Bilan de journée — ${name}`)

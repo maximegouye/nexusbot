@@ -51,7 +51,7 @@ module.exports = {
   category: 'Économie',
   cooldown: 3,
 
-  async execute(message, args, client, db) {
+  async run(message, args, client, db) {
     const cfg  = db.getConfig(message.guild.id);
     const user = db.getUser(message.author.id, message.guild.id);
     const symbol = cfg.currency_emoji || '€';

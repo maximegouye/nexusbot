@@ -8,7 +8,7 @@ const commands = [
     description: 'Voir son niveau et XP',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       const u = db.getUser(target.id, message.guild.id);
       const level = u.level || 1;
@@ -31,7 +31,7 @@ const commands = [
     aliases: ['toplvl', 'topxp', 'classement', 'lb'],
     description: 'Classement XP',
     cooldown: 10,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const top = db.db.prepare('SELECT user_id, level, xp FROM users WHERE guild_id=? ORDER BY level DESC, xp DESC LIMIT 10').all(message.guild.id);
       const desc = top.map((u, i) => `${['🥇','🥈','🥉'][i]||`**${i+1}.**`} <@${u.user_id}> — Niveau **${u.level||1}** (${u.xp||0} XP)`).join('\n');
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('🏆 Top Niveaux').setDescription(desc||'Aucune donnée.')] });
@@ -44,7 +44,7 @@ const commands = [
     description: 'Donner de la réputation',
     usage: '@membre [raison]',
     cooldown: 86400,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first();
       if (!target || target.id === message.author.id || target.bot) return message.reply('❌ Mentionnez un autre membre valide.');
       const reason = args.slice(1).join(' ') || null;
@@ -70,7 +70,7 @@ const commands = [
     description: 'Passer en mode AFK',
     usage: '[raison]',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const reason = args.join(' ') || 'AFK';
       db.setAfk(message.guild.id, message.author.id, reason);
       message.reply(`💤 Vous êtes maintenant AFK : *"${reason}"*`);
@@ -82,7 +82,7 @@ const commands = [
     aliases: ['streaks', 'serie', 'combo'],
     description: 'Voir votre streak quotidien',
     cooldown: 3,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const u = db.getUser(message.author.id, message.guild.id);
       const streak = u.streak || 0;
       const lastDaily = u.last_daily || 0;
@@ -99,7 +99,7 @@ const commands = [
     description: 'Voir ses badges',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       let badgesRows;
       try { badgesRows = db.db.prepare('SELECT * FROM user_badges WHERE guild_id=? AND user_id=?').all(message.guild.id, target.id); } catch { badgesRows = []; }
@@ -115,7 +115,7 @@ const commands = [
     description: 'Voir son inventaire',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       let items;
       try { items = db.db.prepare('SELECT ui.quantity, si.name, si.emoji FROM user_inventory ui JOIN shop_items si ON ui.item_id=si.id WHERE ui.guild_id=? AND ui.user_id=?').all(message.guild.id, target.id); } catch { items = []; }
@@ -131,7 +131,7 @@ const commands = [
     description: 'Définir sa bio',
     usage: '[texte]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const texte = args.join(' ');
       if (!texte) return message.reply('❌ Donnez une bio.');
       if (texte.length > 200) return message.reply('❌ Max 200 caractères.');
@@ -149,7 +149,7 @@ const commands = [
     description: 'Voir son profil complet',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.users.first() || message.author;
       const u = db.getUser(target.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);

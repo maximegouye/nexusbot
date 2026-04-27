@@ -31,7 +31,7 @@ const commands = [
     description: 'Générer une couleur aléatoire',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const hex = randomHex();
       const { r, g, b } = hexToRgb(hex);
       return message.reply({ embeds: [new EmbedBuilder().setColor(hex)
@@ -49,7 +49,7 @@ const commands = [
     description: 'Nombre aléatoire entre min et max',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const min = parseInt(args[0]) || 1;
       const max = parseInt(args[1]) || 100;
       if (min >= max) return message.reply('❌ Usage : `n!nombre_alea <min> <max>`');
@@ -62,7 +62,7 @@ const commands = [
     description: 'Choisir aléatoirement parmi des options',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (args.length < 2) return message.reply('❌ Usage : `n!choix_alea option1 option2 option3...`');
       const choice = args[Math.floor(Math.random() * args.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
@@ -77,7 +77,7 @@ const commands = [
     description: 'Lancer des dés aléatoires (ex: 2d6, 1d20)',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const notation = args[0] || '1d6';
       const match = notation.match(/^(\d+)d(\d+)$/i);
       if (!match) return message.reply('❌ Usage : `n!des <NdF>` ex: `n!des 2d6`, `n!des 1d20`');
@@ -101,7 +101,7 @@ const commands = [
     description: 'Pile ou face',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const result = Math.random() < 0.5 ? '🟡 PILE' : '⚪ FACE';
       return message.reply(`Résultat du lancer : **${result}** !`);
     }
@@ -112,7 +112,7 @@ const commands = [
     description: 'Mot français aléatoire',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const word = MOTS_FR[Math.floor(Math.random() * MOTS_FR.length)];
       return message.reply(`📚 Mot aléatoire : **${word}**`);
     }
@@ -123,7 +123,7 @@ const commands = [
     description: 'Générer un pseudo aléatoire',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const adj = PSEUDOS_ADJ[Math.floor(Math.random() * PSEUDOS_ADJ.length)];
       const nom = PSEUDOS_NOM[Math.floor(Math.random() * PSEUDOS_NOM.length)];
       const num = randInt(1, 9999);
@@ -136,7 +136,7 @@ const commands = [
     description: 'Générer un token/mot de passe sécurisé',
     category: 'Aléatoire',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const length = Math.min(64, Math.max(8, parseInt(args[0]) || 32));
       const token = generateToken(length);
       try {
@@ -153,7 +153,7 @@ const commands = [
     description: 'Tirer une carte de tarot au hasard',
     category: 'Aléatoire',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const card = TAROT[Math.floor(Math.random() * TAROT.length)];
       const MEANINGS = ['Nouveau départ', 'Réflexion nécessaire', 'Transformation', 'Abondance', 'Voyage imminent', 'Décision importante', 'Surprise positive', 'Attention aux obstacles'];
       const meaning = MEANINGS[Math.floor(Math.random() * MEANINGS.length)];
@@ -171,7 +171,7 @@ const commands = [
     description: 'Pays aléatoire',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const pays = PAYS[Math.floor(Math.random() * PAYS.length)];
       return message.reply(`🌍 Pays aléatoire : **${pays}**`);
     }
@@ -182,7 +182,7 @@ const commands = [
     description: 'Métier aléatoire',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const m = METIERS[Math.floor(Math.random() * METIERS.length)];
       return message.reply(`💼 Métier aléatoire : **${m}**`);
     }
@@ -193,7 +193,7 @@ const commands = [
     description: 'Générer des valeurs RGB aléatoires',
     category: 'Aléatoire',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const r = randInt(0, 255), g = randInt(0, 255), b = randInt(0, 255);
       const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
       return message.reply({ embeds: [new EmbedBuilder().setColor(hex)

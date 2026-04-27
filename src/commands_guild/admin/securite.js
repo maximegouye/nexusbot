@@ -1,12 +1,12 @@
 // securite.js — Commande admin sécurité
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { addBlacklist, removeBlacklist, getBlacklist, auditLog, getAuditLogs } = require('../../utils/securityManager');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('securite')
     .setDescription('🔒 Gestion de la sécurité du bot')
-    .setDefaultMemberPermissions(0x8)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand(s => s.setName('blacklist').setDescription('🚫 Blacklister un utilisateur')
       .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
       .addStringOption(o => o.setName('raison').setDescription('Raison')))
@@ -17,7 +17,7 @@ module.exports = {
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    if (!interaction.member.permissions.has('Administrator'))
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator))
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🔒 Réservé aux administrateurs.', ephemeral: true });
     const sub = interaction.options.getSubcommand(), guildId = interaction.guildId;
     if (sub === 'blacklist') {

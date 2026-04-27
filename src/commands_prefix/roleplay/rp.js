@@ -29,7 +29,7 @@ const commands = [
     description: `RP: ${action.verb}`,
     category: 'Roleplay',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const target = action.targets
         ? (message.mentions.users.first() || (args[0] ? { username: args[0] } : null))
         : null;
@@ -56,7 +56,7 @@ const commands = [
     description: 'Effectuer une action RP personnalisée',
     category: 'Roleplay',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!me <action>`');
       const actor = message.member?.displayName || message.author.username;
       const action = args.join(' ');
@@ -72,7 +72,7 @@ const commands = [
     description: 'Dire quelque chose en RP',
     category: 'Roleplay',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!say <texte>`');
       const actor = message.member?.displayName || message.author.username;
       const text = args.join(' ');
@@ -88,7 +88,7 @@ const commands = [
     description: 'Décrire une scène RP',
     category: 'Roleplay',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!scene <description>`');
       const text = args.join(' ');
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2C3E50').setTitle('🎬 Nouvelle scène')
@@ -105,7 +105,7 @@ const commands = [
     description: 'Lancer une session de roleplay',
     category: 'Roleplay',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const theme = args.join(' ') || 'Aventure libre';
       return message.reply({ embeds: [new EmbedBuilder().setColor('#8E44AD').setTitle('🎭 Session RP ouverte !')
         .setDescription(`**Thème :** ${theme}\n\nTous les membres peuvent participer ! Utilisez \`n!me <action>\` ou \`n!say <texte>\` pour interagir.`)
@@ -121,7 +121,7 @@ const commands = [
     description: 'Définir votre personnage RP',
     category: 'Roleplay',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!char <nom> [description]`');
       const name = args[0];
       const desc = args.slice(1).join(' ') || 'Mystérieux personnage sans description.';
@@ -139,7 +139,7 @@ const commands = [
     description: 'Afficher un tableau de jeu RP',
     category: 'Roleplay',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const title = args.join(' ') || 'Tableau de jeu';
       return message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`📋 ${title}`)
         .setDescription('*(Tableau vide — complétez avec les règles de votre RP)*')
@@ -155,7 +155,7 @@ const commands = [
     description: 'Chuchoter un message à un membre en RP',
     category: 'Roleplay',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const target = message.mentions.users.first();
       if (!target || args.length < 2) return message.reply('❌ Usage : `n!whisper @membre <message>`');
       const text = args.slice(1).join(' ');

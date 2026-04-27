@@ -106,7 +106,7 @@ module.exports = {
       const u = db.getUser(userId, guildId);
       if (u.balance < crop.cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant. Coût : **${crop.cost} ${coin}**.`, ephemeral: true });
 
-      db.addCoins(userId, guildId, -crop.cost);
+      db.removeCoins(userId, guildId, crop.cost);
       db.db.prepare(`UPDATE ferme SET slot${slot}=?, slot${slot}_planted_at=? WHERE guild_id=? AND user_id=?`).run(culture, now, guildId, userId);
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [

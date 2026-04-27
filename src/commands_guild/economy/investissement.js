@@ -72,7 +72,7 @@ module.exports = {
       const isFailed = Math.random() < inv.risk;
       const actualMult = isFailed ? 0.7 : inv.mult; // perd 30% si échec
 
-      db.addCoins(userId, guildId, -montant);
+      db.removeCoins(userId, guildId, montant);
       const returnAt = now + inv.duration;
       const expectedReturn = Math.floor(montant * actualMult);
 

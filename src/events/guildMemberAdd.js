@@ -202,7 +202,7 @@ module.exports = {
               await refreshed.kick('Vérification non complétée dans les 10 minutes').catch(() => {});
             }
           } catch {}
-        }, 10 * 60 * 1000);
+        }, 10 * 60 * 1000).unref(); // unref() permet au processus de se terminer si aucune autre tâche n'est en attente
       }
     }
 

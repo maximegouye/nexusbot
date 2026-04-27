@@ -62,7 +62,7 @@ function cleanExpired() {
 }
 
 // Nettoyage automatique toutes les 10 minutes
-setInterval(cleanExpired, 10 * 60 * 1000);
+setInterval(cleanExpired, 10 * 60 * 1000).unref();
 
 module.exports = { checkCooldown, resetCooldown, cooldownMessage };
 

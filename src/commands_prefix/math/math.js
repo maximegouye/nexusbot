@@ -43,7 +43,7 @@ const commands = [
     description: 'Calculatrice avancée',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!calc <expression>` ex: `n!calc 2+2*3`');
       const expr = args.join(' ').replace(/[^0-9+\-*/().%^ ]/g, '');
       if (!expr) return message.reply('❌ Expression invalide. Utilisez uniquement des chiffres et opérateurs.');
@@ -65,7 +65,7 @@ const commands = [
     description: 'Convertir des unités (km, kg, °C, °F...)',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (args.length < 2) return message.reply('❌ Usage : `n!convert <valeur> <unité>` ex: `n!convert 100 km_miles`\nUnités : km_miles, miles_km, kg_lbs, lbs_kg, c_f, f_c, m_ft, ft_m, l_gal, gal_l');
       const val = parseFloat(args[0]);
       const unit = args[1]?.toLowerCase();
@@ -83,7 +83,7 @@ const commands = [
     description: 'Calculer le PGCD de deux nombres',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const [a, b] = args.map(Number);
       if (!a || !b || isNaN(a) || isNaN(b)) return message.reply('❌ Usage : `n!pgcd <a> <b>`');
       return message.reply(`📐 PGCD(${a}, ${b}) = **${gcd(Math.abs(Math.round(a)), Math.abs(Math.round(b)))}**`);
@@ -95,7 +95,7 @@ const commands = [
     description: 'Calculer le PPCM de deux nombres',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const [a, b] = args.map(Number);
       if (!a || !b || isNaN(a) || isNaN(b)) return message.reply('❌ Usage : `n!ppcm <a> <b>`');
       return message.reply(`📐 PPCM(${a}, ${b}) = **${lcm(Math.abs(Math.round(a)), Math.abs(Math.round(b)))}**`);
@@ -107,7 +107,7 @@ const commands = [
     description: 'Vérifier si un nombre est premier',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const n = parseInt(args[0]);
       if (isNaN(n) || n < 0) return message.reply('❌ Usage : `n!premier <nombre>`');
       if (n > 1e8) return message.reply('❌ Nombre trop grand (max 100 000 000).');
@@ -120,7 +120,7 @@ const commands = [
     description: 'Décomposition en facteurs premiers',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       let n = parseInt(args[0]);
       if (isNaN(n) || n < 2 || n > 1e7) return message.reply('❌ Usage : `n!facteurs <nombre>` (2 à 10 000 000)');
       const factors = [];
@@ -137,7 +137,7 @@ const commands = [
     description: 'Calculer le n-ième terme de Fibonacci',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const n = parseInt(args[0]);
       if (isNaN(n) || n < 0 || n > 500) return message.reply('❌ Usage : `n!fibonacci <n>` (0 à 500)');
       const result = fibonacci(n).toString();
@@ -151,7 +151,7 @@ const commands = [
     description: 'Calculer la factorielle d\'un nombre',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const n = parseInt(args[0]);
       if (isNaN(n) || n < 0 || n > 200) return message.reply('❌ Usage : `n!factorielle <n>` (0 à 200)');
       const result = factorial(n).toString();
@@ -165,7 +165,7 @@ const commands = [
     description: 'Calcul statistique sur une série de nombres',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!stats 4 8 15 16 23 42`');
       const nums = args.map(Number).filter(n => !isNaN(n));
       if (nums.length < 2) return message.reply('❌ Donnez au moins 2 nombres.');
@@ -189,7 +189,7 @@ const commands = [
     description: 'Convertir décimal → hexadécimal',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const n = parseInt(args[0]);
       if (isNaN(n)) return message.reply('❌ Usage : `n!hex <nombre_décimal>`');
       return message.reply(`🔢 **${n}** en hexadécimal = **0x${n.toString(16).toUpperCase()}**`);
@@ -201,7 +201,7 @@ const commands = [
     description: 'Convertir hexadécimal → décimal',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const h = args[0]?.replace(/^0x/i, '');
       if (!h) return message.reply('❌ Usage : `n!hex2dec <valeur_hex>` ex: `n!hex2dec FF`');
       const n = parseInt(h, 16);
@@ -215,7 +215,7 @@ const commands = [
     description: 'Convertir binaire → décimal',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const b = args[0];
       if (!b || !/^[01]+$/.test(b)) return message.reply('❌ Usage : `n!bin2dec <binaire>` ex: `n!bin2dec 1010`');
       return message.reply(`🔢 **${b}** en décimal = **${parseInt(b, 2)}**`);
@@ -227,7 +227,7 @@ const commands = [
     description: 'Calcul : périmètre et aire d\'un cercle',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const r = parseFloat(args[0]);
       if (isNaN(r) || r <= 0) return message.reply('❌ Usage : `n!cercle <rayon>`');
       return message.reply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('⭕ Cercle (r = ' + r + ')')
@@ -244,7 +244,7 @@ const commands = [
     description: 'Calculer l\'hypoténuse (Pythagore)',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const [a, b] = args.map(parseFloat);
       if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return message.reply('❌ Usage : `n!triangle <a> <b>`');
       const c = Math.sqrt(a * a + b * b);
@@ -257,7 +257,7 @@ const commands = [
     description: 'Calculer a^n',
     category: 'Mathématiques',
     cooldown: 2,
-    async execute(message, args) {
+    async run(message, args) {
       const [a, n] = args.map(Number);
       if (isNaN(a) || isNaN(n)) return message.reply('❌ Usage : `n!puissance <base> <exposant>`');
       const result = Math.pow(a, n);

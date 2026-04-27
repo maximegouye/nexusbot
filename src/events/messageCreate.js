@@ -12,6 +12,21 @@ const PREFIX = '&';
 // Cooldown par utilisateur pour éviter le spam (60 secondes)
 const _xpCooldown = new Map(); // key: `${userId}-${guildId}`
 
+// Cleanup des cooldowns expirés toutes les 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const expiredKeys = [];
+  for (const [key, timestamp] of _xpCooldown.entries()) {
+    if (now - timestamp > 120_000) { // Purge après 2 minutes
+      expiredKeys.push(key);
+    }
+  }
+  expiredKeys.forEach(key => _xpCooldown.delete(key));
+  if (expiredKeys.length > 0) {
+    console.log(`[XP Cooldown] Cleanup: ${expiredKeys.length} entries supprimées`);
+  }
+}, 300_000); // Exécute toutes les 5 minutes
+
 async function handleMessageXP(message) {
   try {
     if (!message.guild) return;

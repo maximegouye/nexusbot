@@ -101,7 +101,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const r = db.db.prepare('SELECT * FROM rappels WHERE id=? AND guild_id=? AND user_id=? AND done=0').get(id, guildId, userId);
       if (!r) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Rappel #${id} introuvable.`, ephemeral: true });
 

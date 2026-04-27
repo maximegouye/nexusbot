@@ -136,7 +136,7 @@ module.exports = {
       if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
       return Math.floor(n);
     };
-    const miseRaw = interaction.options.get('mise')?.value;
+    const miseRaw = interaction.options.getString('mise');
     const mise = parseBet(miseRaw, user.balance);
     if (!Number.isFinite(mise) || mise < 10) {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
@@ -345,7 +345,7 @@ module.exports = {
         case 'sept':   won = total === 7; mult = 5; label = '🎯 Sept';   break;
       }
 
-      const gain = won ? mise * mult : 0;
+      const gain = won ? Math.floor(mise * mult) : 0;
       if (gain > 0) db.addCoins(interaction.user.id, interaction.guildId, gain);
       const userAfter = db.getUser(interaction.user.id, interaction.guildId);
 
@@ -384,7 +384,7 @@ module.exports = {
       }
 
       const numEmoji = num === 0 ? '🟢 0' : isRed ? `🔴 ${num}` : `⚫ ${num}`;
-      if (won) db.addCoins(interaction.user.id, interaction.guildId, mise * 2);
+      if (won) db.addCoins(interaction.user.id, interaction.guildId, Math.floor(mise * 2));
       const userAfter = db.getUser(interaction.user.id, interaction.guildId);
 
       return reply({ embeds: [new EmbedBuilder()

@@ -90,9 +90,9 @@ module.exports = {
   },
   name: 'richlist',
   aliases: ["toprichesse"],
-    async run(message, args) {
-    const type = args[0] || 'global';
-    const fake = mkFake(message, { getString: () => ['global','banque','total'].includes(type) ? type : 'global' });
+  async run(message, args) {
+    const type = args[0] || 'total';
+    const fake = mkFake(message, { getString: (k) => k === 'type' ? type : null });
     await this.execute(fake);
   },
 };

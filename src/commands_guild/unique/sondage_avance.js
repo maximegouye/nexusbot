@@ -36,7 +36,7 @@ module.exports = {
     if (sub === 'creer') {
       const question = interaction.options.getString('question');
       const optionsRaw = interaction.options.getString('options');
-      const duree = parseInt(interaction.options.getString('duree')) || 0;
+      const duree = interaction.options.getInteger('duree') || 0;
       const anonymous = interaction.options.getBoolean('anonyme') || false;
 
       const options = optionsRaw.split('|').map(o => o.trim()).filter(o => o.length > 0);
@@ -110,8 +110,13 @@ module.exports = {
         db.db.prepare('UPDATE sondages SET ended=1 WHERE id=?').run(sondage.id);
       }
 
-      const options = JSON.parse(sondage.options);
-      const votes = JSON.parse(sondage.votes || '{}');
+      let options, votes;
+      try {
+        options = JSON.parse(sondage.options);
+        votes = JSON.parse(sondage.votes || '{}');
+      } catch {
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Erreur: données corrompues.', ephemeral: true });
+      }
       const totalVotes = Object.values(votes).flat().length;
       const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
 
@@ -150,8 +155,13 @@ module.exports = {
         return true;
       }
 
-      const options = JSON.parse(sondage.options);
-      const votes = JSON.parse(sondage.votes || '{}');
+      let options, votes;
+      try {
+        options = JSON.parse(sondage.options);
+        votes = JSON.parse(sondage.votes || '{}');
+      } catch {
+        return true;
+      }
       const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
 
       // Initialiser

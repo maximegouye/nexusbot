@@ -8,7 +8,7 @@ const commands = [
     description: 'Infos sur un membre',
     usage: '[@membre]',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]) || message.member;
       const u = db.getUser(target.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);
@@ -30,7 +30,7 @@ const commands = [
     aliases: ['si', 'server', 'guild', 'serveur'],
     description: 'Infos sur le serveur',
     cooldown: 5,
-    async execute(message, args, client, db) {
+    async run(message, args, client, db) {
       const g = message.guild;
       await g.members.fetch().catch(() => {});
       const bots = g.members.cache.filter(m => m.user.bot).size;
@@ -53,7 +53,7 @@ const commands = [
     description: 'Voir l\'avatar d\'un membre',
     usage: '[@membre]',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const target = message.mentions.users.first() || message.author;
       const url = target.displayAvatarURL({ size: 4096 });
       message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle(`🖼️ Avatar de ${target.username}`).setImage(url).setDescription(`[PNG](${target.displayAvatarURL({ extension: 'png', size: 4096 })}) | [WebP](${url})`)] });
@@ -66,7 +66,7 @@ const commands = [
     description: 'Voir la bannière d\'un utilisateur',
     usage: '[@membre]',
     cooldown: 3,
-    async execute(message, args, client) {
+    async run(message, args, client) {
       const target = message.mentions.users.first() || message.author;
       const fetched = await client.users.fetch(target.id, { force: true });
       const url = fetched.bannerURL({ size: 4096 });
@@ -81,7 +81,7 @@ const commands = [
     description: 'Infos sur un rôle',
     usage: '@role',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const role = message.mentions.roles.first() || message.guild.roles.cache.get(args[0]);
       if (!role) return message.reply('❌ Mentionnez un rôle valide.');
       message.channel.send({ embeds: [new EmbedBuilder().setColor(role.hexColor || '#7B2FBE').setTitle(`🎭 ${role.name}`).addFields(
@@ -101,7 +101,7 @@ const commands = [
     aliases: ['bot', 'stats', 'about', 'nexus'],
     description: 'Infos sur NexusBot',
     cooldown: 5,
-    async execute(message, args, client) {
+    async run(message, args, client) {
       const uptime = process.uptime();
       const d = Math.floor(uptime / 86400), h = Math.floor((uptime % 86400) / 3600), m = Math.floor((uptime % 3600) / 60);
       const mem = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
@@ -122,7 +122,7 @@ const commands = [
     aliases: ['pong', 'latence', 'latency'],
     description: 'Ping du bot',
     cooldown: 3,
-    async execute(message, args, client) {
+    async run(message, args, client) {
       const m = await message.reply('🏓 Calcul...');
       const latency = m.createdTimestamp - message.createdTimestamp;
       m.edit({ content: null, embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🏓 Pong !').addFields({ name: '🌐 Latence API', value: `**${client.ws.ping}ms**`, inline: true }, { name: '💬 Latence message', value: `**${latency}ms**`, inline: true })] });
@@ -135,7 +135,7 @@ const commands = [
     description: 'Infos sur un salon',
     usage: '[#salon]',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const channel = message.mentions.channels.first() || message.channel;
       const fields = [
         { name: '🆔 ID', value: channel.id, inline: true },
@@ -154,7 +154,7 @@ const commands = [
     aliases: ['mc', 'membres', 'count'],
     description: 'Nombre de membres du serveur',
     cooldown: 5,
-    async execute(message, args, client) {
+    async run(message, args, client) {
       const g = message.guild;
       await g.members.fetch().catch(() => {});
       const bots = g.members.cache.filter(m => m.user.bot).size;

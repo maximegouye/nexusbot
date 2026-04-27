@@ -90,7 +90,7 @@ module.exports = {
       const ecoRow = db.getUser(userId, guildId);
       const balance = ecoRow?.balance || 0;
       if (balance < total) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Fonds insuffisants. Besoin: **${total.toLocaleString()} 🪙**, Solde: **${balance.toLocaleString()} 🪙**.`, ephemeral: true });
-      db.addCoins(userId, guildId, -total);
+      db.removeCoins(userId, guildId, total);
       const existing = db.db.prepare('SELECT quantite FROM portfolio WHERE userId = ? AND guildId = ? AND symbole = ?').get(userId, guildId, sym);
       if (existing) {
         db.db.prepare('UPDATE portfolio SET quantite = quantite + ? WHERE userId = ? AND guildId = ? AND symbole = ?').run(qty, userId, guildId, sym);

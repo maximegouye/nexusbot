@@ -73,7 +73,7 @@ const commands = [
     description: 'Horoscope du jour pour votre signe',
     category: 'Astrologie',
     cooldown: 30,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args[0]?.toLowerCase();
       const signes = Object.keys(SIGNES);
       const signe = signes.includes(key) ? key : signes[Math.floor(Math.random() * signes.length)];
@@ -98,7 +98,7 @@ const commands = [
     description: 'Trouver son signe astrologique depuis sa date de naissance',
     category: 'Astrologie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args[0]) return message.reply('❌ Usage : `n!signe <DD/MM>` ex: `n!signe 15/04`');
       const [d, m] = args[0].split('/').map(Number);
       if (!d || !m || d > 31 || m > 12) return message.reply('❌ Format : DD/MM');
@@ -120,7 +120,7 @@ const commands = [
     description: 'Compatibilité astrologique entre deux signes',
     category: 'Astrologie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const [s1, s2] = args.map(a => a?.toLowerCase());
       if (!s1 || !s2 || !SIGNES[s1] || !SIGNES[s2]) {
         return message.reply(`❌ Usage : \`n!compatibilite <signe1> <signe2>\` — Signes : ${Object.keys(SIGNES).join(', ')}`);
@@ -158,7 +158,7 @@ const commands = [
     description: 'Infos sur une constellation',
     category: 'Astrologie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const c = CONSTELLATIONS[Math.floor(Math.random() * CONSTELLATIONS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#1A1A2E')
         .setTitle(`⭐ Constellation : ${c.name}`)
@@ -171,7 +171,7 @@ const commands = [
     description: 'Influence astrologique d\'une planète',
     category: 'Astrologie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args[0]?.toLowerCase();
       const p = key && PLANETES_ASTRO[key] ? PLANETES_ASTRO[key] : PLANETES_ASTRO[Object.keys(PLANETES_ASTRO)[Math.floor(Math.random() * Object.keys(PLANETES_ASTRO).length)]];
       const pNom = key && PLANETES_ASTRO[key] ? key : '(aléatoire)';
@@ -192,7 +192,7 @@ const commands = [
     description: 'Informations sur l\'ascendant astrologique',
     category: 'Astrologie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       return message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('🌅 L\'Ascendant astrologique')
         .setDescription('L\'**ascendant** (ou signe ascendant) est le signe du zodiaque qui se levait à l\'horizon Est au moment exact de votre naissance.\n\nIl représente votre **façade sociale** — comment les autres vous perçoivent au premier abord, votre apparence et vos réactions instinctives.\n\nPour le calculer précisément, il faut :\n• Votre date de naissance\n• Votre heure de naissance\n• Votre lieu de naissance\n\nL\'ascendant change d\'environ 2 heures en 2 heures. Rendez-vous sur un site d\'astrologie pour calculer le vôtre précisément !')
@@ -205,7 +205,7 @@ const commands = [
     description: 'Phase de la lune approximative du jour',
     category: 'Astrologie',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       // Approximation simple de la phase lunaire
       const now = new Date();
       const lune_ref = new Date(2024, 0, 11); // Nouvelle lune référence
@@ -236,7 +236,7 @@ const commands = [
     description: 'Informations sur les 7 chakras',
     category: 'Astrologie',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const CHAKRAS = [
         { nom:'Racine (Muladhara)', couleur:'🔴 Rouge', element:'Terre', role:'Sécurité, stabilité, survie' },
         { nom:'Sacré (Svadhisthana)', couleur:'🟠 Orange', element:'Eau', role:'Créativité, sexualité, émotions' },

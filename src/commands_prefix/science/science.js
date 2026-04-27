@@ -69,7 +69,7 @@ const commands = [
     description: 'Infos sur un élément chimique',
     category: 'Sciences',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args[0]?.toLowerCase();
       if (!key) return message.reply(`❌ Usage : \`n!element <symbole>\` — Disponibles : ${Object.keys(ELEMENTS).join(', ')}`);
       const el = ELEMENTS[key] || Object.values(ELEMENTS).find(e => e.name.toLowerCase() === key || e.symbol.toLowerCase() === key);
@@ -90,7 +90,7 @@ const commands = [
     description: 'Infos sur une planète du système solaire',
     category: 'Sciences',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const key = args[0]?.toLowerCase();
       if (!key || !PLANETES[key]) return message.reply(`❌ Usage : \`n!planete <nom>\` — Disponibles : ${Object.keys(PLANETES).join(', ')}`);
       const p = PLANETES[key];
@@ -111,7 +111,7 @@ const commands = [
     description: 'Constante physique ou mathématique',
     category: 'Sciences',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const c = CONSTANTES[Math.floor(Math.random() * CONSTANTES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E67E22')
         .setTitle(`🔬 ${c.name}`)
@@ -128,7 +128,7 @@ const commands = [
     description: 'Loi ou formule physique/mathématique',
     category: 'Sciences',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const l = LOIS[Math.floor(Math.random() * LOIS.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle(`📐 ${l.name}`)
@@ -144,7 +144,7 @@ const commands = [
     description: 'Faits sur l\'âge et la taille de l\'univers',
     category: 'Sciences',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       return message.reply({ embeds: [new EmbedBuilder().setColor('#1A1A2E')
         .setTitle('🌌 L\'Univers en chiffres')
         .addFields(
@@ -162,7 +162,7 @@ const commands = [
     description: 'Faits sur le corps humain',
     category: 'Sciences',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const FAITS = [
         "Le corps humain contient environ **37 000 milliards de cellules**.",
         "Le cerveau humain consomme **20% de l'énergie** du corps pour 2% de sa masse.",
@@ -184,7 +184,7 @@ const commands = [
     description: 'Phénomène météo ou atmosphérique expliqué',
     category: 'Sciences',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const PHENO = [
         { name:'Arc-en-ciel', exp:'Réfraction et dispersion de la lumière dans les gouttes d\'eau. Longueurs d\'onde séparées de 400nm (violet) à 700nm (rouge).'},
         { name:'Foudre', exp:'Décharge électrostatique entre nuages et sol. Température : ~30 000 K (5x plus chaud que le soleil !).'},
@@ -204,7 +204,7 @@ const commands = [
     description: 'Fait technologique ou informatique insolite',
     category: 'Sciences',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const FACTS = [
         "Le premier ordinateur pesait **27 tonnes** et occupait une pièce entière (ENIAC, 1945).",
         "L'erreur **404** vient du numéro de bureau au CERN où était stocké le World Wide Web original.",
@@ -226,7 +226,7 @@ const commands = [
     description: 'Molécule ou réaction chimique courante',
     category: 'Sciences',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const MOLS = [
         { name:'Eau', formula:'H₂O', desc:'Indispensable à la vie. Polaire, solvant universel. Ebullition : 100°C.' },
         { name:'Dioxyde de carbone', formula:'CO₂', desc:'Gaz à effet de serre. Produit de la respiration et des combustions.' },
@@ -248,7 +248,7 @@ const commands = [
     description: 'Conversion et infos sur les unités d\'énergie',
     category: 'Sciences',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       const val = parseFloat(args[0]);
       const unit = args[1]?.toLowerCase();
       if (!isNaN(val) && unit === 'kwh') {

@@ -55,7 +55,7 @@ const commands = [
     description: 'Devinette aléatoire (réponse en spoiler)',
     category: 'Énigmes',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const d = DEVINETTES[Math.floor(Math.random() * DEVINETTES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F')
         .setTitle('🧩 Devinette !')
@@ -69,7 +69,7 @@ const commands = [
     description: 'Énigme logique aléatoire',
     category: 'Énigmes',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const e = ENIGMES[Math.floor(Math.random() * ENIGMES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#8E44AD')
         .setTitle('🔍 Énigme !')
@@ -83,7 +83,7 @@ const commands = [
     description: 'Puzzle de logique avec solution',
     category: 'Énigmes',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const l = LOGIQUE[Math.floor(Math.random() * LOGIQUE.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setTitle('🧠 Puzzle logique')
@@ -96,7 +96,7 @@ const commands = [
     description: 'Charade classique',
     category: 'Énigmes',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const c = CHARADES[Math.floor(Math.random() * CHARADES.length)];
       return message.reply({ embeds: [new EmbedBuilder().setColor('#E67E22')
         .setTitle('🎭 Charade')
@@ -109,7 +109,7 @@ const commands = [
     description: 'Mini test de QI en une question',
     category: 'Énigmes',
     cooldown: 10,
-    async execute(message, args) {
+    async run(message, args) {
       const QI_TESTS = [
         { q:"Complétez la suite : 2, 4, 8, 16, 32, ___", r:"64 (×2 à chaque fois)" },
         { q:"Quel est le nombre qui manque ? 3, 6, 9, 12, ___, 18", r:"15 (multiples de 3)" },
@@ -130,7 +130,7 @@ const commands = [
     description: 'Blague aléatoire',
     category: 'Énigmes',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const BLAGUES = [
         { setup:"Pourquoi les plongeurs plongent-ils toujours en arrière et jamais en avant ?", punchline:"Parce que sinon ils tomberaient dans le bateau !" },
         { setup:"Qu'est-ce qu'un canif ?", punchline:"Le petit frère du canif... wait, le petit frère du caniveau ! (CANIF = petite lame, jeu de mots avec 'caniveau')" },
@@ -155,7 +155,7 @@ const commands = [
     description: 'Vrai ou faux ? Testez vos connaissances',
     category: 'Énigmes',
     cooldown: 5,
-    async execute(message, args) {
+    async run(message, args) {
       const VF = [
         { q:"Les chauves-souris sont aveugles.", r:false, exp:"FAUX — Elles voient très bien, elles utilisent EN PLUS l'écholocation." },
         { q:"La Grande Muraille de Chine est visible depuis l'espace.", r:false, exp:"FAUX — C'est un mythe. Elle est trop étroite (~5m) pour être visible depuis l'orbite." },
@@ -178,7 +178,7 @@ const commands = [
     description: 'Pose une question, la boule magique répond',
     category: 'Énigmes',
     cooldown: 3,
-    async execute(message, args) {
+    async run(message, args) {
       if (!args.length) return message.reply('❌ Pose une question ! Ex: `n!reponse_magique Vais-je réussir mon examen ?`');
       const REP = [
         "🟢 Oui, absolument !",
