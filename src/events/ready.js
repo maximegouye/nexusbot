@@ -221,6 +221,44 @@ module.exports = {
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.tag} (${client.user.id})`);
 
+    // ── Avatar auto (si le bot a encore l'avatar par défaut) ──
+    if (!client.user.avatar) {
+      try {
+        const axios = require('axios');
+        const avatarUrl = 'https://api.dicebear.com/9.x/bottts/png?seed=NexusBot&size=256&backgroundColor=1a1b3a,0d1b3e&backgroundType=gradientLinear&eyes=eva&mouth=smile01&texture=circuits';
+        const res = await axios.get(avatarUrl, { responseType: 'arraybuffer', timeout: 12_000 });
+        await client.user.setAvatar(Buffer.from(res.data));
+        console.log('✅ Avatar NexusBot mis à jour via DiceBear');
+      } catch (e) {
+        console.log('⚠️  Avatar skip (rate limit ou erreur):', e?.message || e);
+      }
+    }
+
+    // ── Description application (profil du bot sur Discord) ──
+    try {
+      const token2 = process.env.TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN;
+      if (token2) {
+        const { REST: REST2, Routes: Routes2 } = require('discord.js');
+        const rest2 = new REST2({ version: '10' }).setToken(token2);
+        await rest2.patch(Routes2.currentApplication(), {
+          body: {
+            description:
+              '🤖 Le bot tout-en-un pour ton serveur Discord\n\n' +
+              '🎰 15+ jeux de casino\n' +
+              '💰 Système d\'économie complet\n' +
+              '🎫 Tickets & support\n' +
+              '🏆 XP, classements & récompenses\n' +
+              '🎁 Giveaways & événements\n' +
+              '⚙️ Config complète avec /config\n\n' +
+              '/aide pour voir toutes les commandes',
+          },
+        });
+        console.log('✅ Description application mise à jour');
+      }
+    } catch (e) {
+      console.log('⚠️  Description app skip:', e?.rawError?.message || e?.message || e);
+    }
+
     // ── Présence initiale + rotation toutes les 30s ────────
     rotateActivity(client);
     setInterval(() => rotateActivity(client), 30_000);
