@@ -11,7 +11,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('duel')
     .setDescription('⚔️ Défie un membre en duel pour voler ses coins !')
-    .addUserOption(o => o.setName('adversaire').setDescription('Ton adversaire').setRequired(true))
+    .addUserOption(o => o.setName('adversaire').setDescription('Ton adversaire').setRequired(true)),
   cooldown: 10,
 
   async execute(interaction) {

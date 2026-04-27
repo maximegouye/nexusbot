@@ -36,7 +36,7 @@ module.exports = {
     .addSubcommand(s => s.setName('config')
       .setDescription('⚙️ Configurer le système (admin)')
       .addChannelOption(o => o.setName('salon').setDescription('Salon des confessions').setRequired(true))
-      .addBooleanOption(o => o.setName('moderation').setDescription('Activer la modération avant publication'))
+      .addBooleanOption(o => o.setName('moderation').setDescription('Activer la modération avant publication')))
     .addSubcommand(s => s.setName('voir')
       .setDescription('📋 Voir les dernières confessions')),
 

@@ -18,7 +18,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('defi')
     .setDescription('🎯 Défie un membre avec un vrai défi !')
-    .addUserOption(o => o.setName('cible').setDescription('Membre à défier').setRequired(true))
+    .addUserOption(o => o.setName('cible').setDescription('Membre à défier').setRequired(true)),
   cooldown: 10,
 
   async execute(interaction) {

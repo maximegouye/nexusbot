@@ -45,9 +45,9 @@ module.exports = {
     .setDescription('🧠 Duel Trivia 1v1 !')
     .addSubcommand(s => s.setName('defier')
       .setDescription('⚔️ Défier quelqu\'un en trivia')
-      .addUserOption(o => o.setName('adversaire').setDescription('Votre adversaire').setRequired(true))
+      .addUserOption(o => o.setName('adversaire').setDescription('Votre adversaire').setRequired(true)))
     .addSubcommand(s => s.setName('solo')
-      .setDescription('🎯 Jouer seul contre la montre')
+      .setDescription('🎯 Jouer seul contre la montre')),
 
   cooldown: 5,
 

@@ -35,11 +35,20 @@ module.exports = {
   category: 'admin',
 
   async execute(interaction) {
-    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-      const fn = interaction.deferred || interaction.replied ? interaction.editReply : interaction.reply;
-      return fn.bind(interaction)({ content: '🚫 Réservé aux administrateurs.', ephemeral: true });
+    try {
+    // Vérification permission (null-safe)
+    const isAdmin = interaction.member?.permissions?.has(PermissionFlagsBits.Administrator)
+      || interaction.guild?.ownerId === interaction.user.id;
+    if (!isAdmin) {
+      if (!interaction.deferred && !interaction.replied) {
+        return interaction.reply({ content: '🚫 Réservé aux administrateurs.', ephemeral: true }).catch(() => {});
+      }
+      return interaction.editReply({ content: '🚫 Réservé aux administrateurs.' }).catch(() => {});
     }
-    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+    }
 
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guild.id;
@@ -243,6 +252,14 @@ module.exports = {
         .setTimestamp();
 
       return reply({ embeds: [publicEmbed] });
+    }
+    } catch (err) {
+      console.error('[ADMIN] execute error:', err?.message || err);
+      try {
+        const errMsg = { content: `❌ Erreur : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+        if (interaction.deferred || interaction.replied) await interaction.editReply(errMsg).catch(() => {});
+        else await interaction.reply(errMsg).catch(() => {});
+      } catch {}
     }
   },
 };

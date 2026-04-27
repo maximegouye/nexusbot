@@ -18,7 +18,7 @@ module.exports = {
     .setDescription('🤖 Configurez la modération automatique du serveur')
     .addSubcommand(s => s.setName('voir').setDescription('📋 Voir la configuration actuelle'))
     .addSubcommand(s => s.setName('spam').setDescription('🚫 Anti-spam')
-      .addBooleanOption(o => o.setName('actif').setDescription('Activer/Désactiver').setRequired(true))
+      .addBooleanOption(o => o.setName('actif').setDescription('Activer/Désactiver').setRequired(true)))
     .addSubcommand(s => s.setName('caps').setDescription('🔠 Anti-MAJUSCULES excessives')
       .addBooleanOption(o => o.setName('actif').setDescription('Activer/Désactiver').setRequired(true)))
     .addSubcommand(s => s.setName('invites').setDescription('🔗 Bloquer les invitations Discord')

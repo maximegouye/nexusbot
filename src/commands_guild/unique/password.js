@@ -47,7 +47,7 @@ module.exports = {
       .addBooleanOption(o => o.setName('majuscules').setDescription('Inclure des majuscules (défaut: oui)'))
       .addBooleanOption(o => o.setName('chiffres').setDescription('Inclure des chiffres (défaut: oui)'))
       .addBooleanOption(o => o.setName('symboles').setDescription('Inclure des symboles (défaut: non)'))
-      .addBooleanOption(o => o.setName('nosimilaires').setDescription('Exclure les caractères similaires (i,l,1,o,0)'))
+      .addBooleanOption(o => o.setName('nosimilaires').setDescription('Exclure les caractères similaires (i,l,1,o,0)')))
     .addSubcommand(s => s.setName('analyser').setDescription('🔍 Analyser la force d\'un mot de passe')
       .addStringOption(o => o.setName('mot_de_passe').setDescription('Mot de passe à analyser').setRequired(true))),
 

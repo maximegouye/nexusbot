@@ -37,11 +37,11 @@ module.exports = {
     .addSubcommand(s => s.setName('acheter').setDescription('💸 Acheter une crypto')
       .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).addChoices(
         ...CRYPTOS.map(s => ({ name: s, value: s }))
-      ))
+      )))
     .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre une crypto')
       .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).addChoices(
         ...CRYPTOS.map(s => ({ name: s, value: s }))
-      ))
+      )))
     .addSubcommand(s => s.setName('classement').setDescription('🏆 Top investisseurs')),
 
   async execute(interaction) {

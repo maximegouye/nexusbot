@@ -7,7 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('chainemots')
     .setDescription('🔤 Jeu de la chaîne de mots !')
-    .addSubcommand(s => s.setName('start').setDescription('▶️ Démarrer une partie')
+    .addSubcommand(s => s.setName('start').setDescription('▶️ Démarrer une partie'))
     .addSubcommand(s => s.setName('stop').setDescription('⏹️ Arrêter la partie en cours'))
     .addSubcommand(s => s.setName('info').setDescription('ℹ️ Voir les règles')),
   cooldown: 5,

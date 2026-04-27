@@ -5,7 +5,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('birthday')
     .setDescription('🎂 Gérer les anniversaires')
-    .addSubcommand(s => s.setName('set').setDescription('🎂 Enregistrer ton anniversaire')
+    .addSubcommand(s => s.setName('set').setDescription('🎂 Enregistrer ton anniversaire'))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir les prochains anniversaires'))
     .addSubcommand(s => s.setName('setup').setDescription('⚙️ Configurer le canal anniversaires (Admin)')
       .addChannelOption(o => o.setName('canal').setDescription('Canal pour les annonces').setRequired(true))

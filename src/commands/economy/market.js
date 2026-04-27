@@ -8,13 +8,13 @@ module.exports = {
     .addSubcommand(s => s.setName('voir').setDescription('📋 Voir les annonces du marché'))
     .addSubcommand(s => s
       .setName('vendre')
-      .setDescription('📤 Mettre un article en vente')
+      .setDescription('📤 Mettre un article en vente'))
     .addSubcommand(s => s
       .setName('acheter')
-      .setDescription('📥 Acheter une annonce du marché')
+      .setDescription('📥 Acheter une annonce du marché'))
     .addSubcommand(s => s
       .setName('retirer')
-      .setDescription('❌ Retirer ta propre annonce')
+      .setDescription('❌ Retirer ta propre annonce')),
   cooldown: 5,
 
   async execute(interaction) {
