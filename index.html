@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zone Entraide — Communauté Discord française · Entraide, Écoute, Économie</title>
+  <meta name="description" content="Zone Entraide : communauté Discord française bienveillante. Numéros d'urgence, écoute, soutien, économie virtuelle, jeux. 5 000€ offerts à l'arrivée. Rejoins-nous.">
+  <meta name="keywords" content="discord français, entraide, soutien, numéros urgence france, communauté bienveillante, économie virtuelle, discord soutien, zone entraide">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#060611">
+  <link rel="canonical" href="https://zone-entraide.fr/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Zone Entraide — Communauté, Écoute &amp; Soutien">
+  <meta property="og:description" content="Parle, joue, évolue — et trouve de l'aide si tu en as besoin. Zone Entraide : la communauté Discord qui ne juge pas.">
+  <meta property="og:url" content="https://zone-entraide.fr/">
+  <meta property="og:locale" content="fr_FR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Zone Entraide — Discord français bienveillant">
+  <meta name="twitter:description" content="Communauté Discord : entraide, soutien, économie virtuelle, 15+ jeux. 5 000€ offerts dès l'arrivée.">
+
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"C'est quoi Zone Entraide ?","acceptedAnswer":{"@type":"Answer","text":"Zone Entraide est une communauté Discord française bienveillante. On se retrouve pour s'entraider, parler, jouer et grandir ensemble. Le bot NexusBot offre 5 000€ virtuels à chaque arrivant, 15+ jeux de casino, un système de crypto et d'économie complet."}},
+    {"@type":"Question","name":"Puis-je parler de mes problèmes sur Zone Entraide ?","acceptedAnswer":{"@type":"Answer","text":"Oui. Zone Entraide dispose d'un espace d'écoute bienveillant. Si tu te sens seul, stressé ou en détresse, tu trouveras une oreille attentive — sans jugement. En cas d'urgence, nous renvoyons toujours vers les numéros professionnels (3114 pour la prévention du suicide, 15 pour le SAMU…)."}},
+    {"@type":"Question","name":"Comment fonctionnent les 5 000€ virtuels ?","acceptedAnswer":{"@type":"Answer","text":"Dès ton arrivée, NexusBot te crédite 5 000€ automatiquement. Tu peux les faire fructifier via /work, /daily, les jeux de casino ou le trading crypto simulé avec les vrais cours du marché (BTC, ETH, SOL…)."}},
+    {"@type":"Question","name":"C'est vraiment gratuit ?","acceptedAnswer":{"@type":"Answer","text":"100% gratuit. Aucun abonnement, aucun achat réel, aucune carte bancaire. Juste un compte Discord."}},
+    {"@type":"Question","name":"Comment contacter l'équipe ?","acceptedAnswer":{"@type":"Answer","text":"Tu peux nous contacter directement sur Discord en rejoignant le serveur, ou par e-mail via le formulaire de contact sur cette page."}}
+  ]}</script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Organization","name":"Zone Entraide","url":"https://zone-entraide.fr","description":"Communauté Discord française d'entraide et de soutien humain","contactPoint":{"@type":"ContactPoint","contactType":"customer support","availableLanguage":"French"},"sameAs":["https://discord.gg/BBAd2JAZKV"]}</script>
+
+  <style>
+    /* ═══ RESET & BASE ═══ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #060611;
+      color: #e8e8f0;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+    /* ═══ VARIABLES ═══ */
+    :root {
+      --bg:       #060611;
+      --bg2:      #0a0a1a;
+      --bg3:      #0f0f22;
+      --card:     rgba(255,255,255,0.04);
+      --card2:    rgba(255,255,255,0.07);
+      --border:   rgba(255,255,255,0.08);
+      --border2:  rgba(255,255,255,0.14);
+      --text:     #e8e8f0;
+      --text2:    #9999b8;
+      --text3:    #6666a0;
+      --purple:   #7c3aed;
+      --purple2:  #5b21b6;
+      --purple3:  rgba(124,58,237,0.15);
+      --discord:  #5865F2;
+      --green:    #22c55e;
+      --green2:   rgba(34,197,94,0.12);
+      --red:      #ef4444;
+      --red2:     rgba(239,68,68,0.12);
+      --orange:   #f97316;
+      --orange2:  rgba(249,115,22,0.12);
+      --yellow:   #eab308;
+      --blue:     #3b82f6;
+      --blue2:    rgba(59,130,246,0.12);
+      --pink:     #ec4899;
+      --grad:     linear-gradient(135deg, #7c3aed, #5865F2);
+      --radius:   12px;
+      --radius2:  18px;
+      --shadow:   0 4px 24px rgba(0,0,0,0.4);
+      --shadow2:  0 8px 48px rgba(124,58,237,0.2);
+    }
+
+    /* ═══ CANVAS ÉTOILES ═══ */
+    #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .5; }
+
+    /* ═══ NAVIGATION ═══ */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(6,6,17,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 1.1rem;
+    }
+    .nav-logo span { font-size: 1.4rem; }
+    .nav-links {
+      display: flex; align-items: center; gap: 4px;
+      list-style: none;
+    }
+    .nav-links a {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: .9rem;
+      color: var(--text2);
+      transition: all .2s;
+    }
+    .nav-links a:hover { color: var(--text); background: var(--card2); }
+    .nav-links .urgent-link a {
+      color: #fca5a5;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+    .nav-links .urgent-link a:hover { background: rgba(239,68,68,0.2); }
+    .nav-cta {
+      background: var(--grad);
+      color: #fff !important;
+      padding: 8px 18px !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      font-size: .9rem !important;
+      transition: opacity .2s !important;
+    }
+    .nav-cta:hover { opacity: .85; background: var(--bg) !important; }
+    .nav-burger { display: none; font-size: 1.4rem; color: var(--text2); }
+    .mobile-menu {
+      display: none;
+      position: fixed; top: 60px; left: 0; right: 0; z-index: 99;
+      background: rgba(6,6,17,0.97);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      flex-direction: column; gap: 8px;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { padding: 12px 16px; border-radius: 8px; font-size: 1rem; color: var(--text2); }
+    .mobile-menu a:hover { color: var(--text); background: var(--card2); }
+    .mobile-menu .urgent-link a { color: #fca5a5; }
+
+    /* ═══ UTILITAIRES ═══ */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    .section { padding: 80px 0; }
+    .section-sm { padding: 60px 0; }
+    .section-title {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+    }
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text2);
+      max-width: 600px;
+      margin-bottom: 48px;
+    }
+    .tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .tag-purple { background: var(--purple3); color: #c4b5fd; border: 1px solid rgba(124,58,237,.3); }
+    .tag-red { background: var(--red2); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+    .tag-green { background: var(--green2); color: #86efac; border: 1px solid rgba(34,197,94,.3); }
+    .tag-blue { background: var(--blue2); color: #93c5fd; border: 1px solid rgba(59,130,246,.3); }
+    .tag-orange { background: var(--orange2); color: #fdba74; border: 1px solid rgba(249,115,22,.3); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 600; font-size: .95rem;
+      transition: all .2s;
+    }
+    .btn-primary { background: var(--grad); color: #fff; }
+    .btn-primary:hover { opacity: .85; transform: translateY(-1px); box-shadow: var(--shadow2); }
+    .btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border2); }
+    .btn-secondary:hover { background: var(--card); border-color: var(--purple); }
+    .btn-discord { background: var(--discord); color: #fff; }
+    .btn-discord:hover { background: #4752c4; transform: translateY(-1px); }
+    .btn-danger { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      padding: 24px;
+      transition: all .3s;
+    }
+    .card:hover { border-color: var(--border2); background: var(--card2); transform: translateY(-2px); }
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s, transform .6s; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+
+    /* ═══ HERO ═══ */
+    #hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding-top: 60px;
+      position: relative;
+    }
+    .hero-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+      position: relative; z-index: 1;
+    }
+    .hero-glow {
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,58,237,.18) 0%, transparent 70%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      background: var(--purple3);
+      border: 1px solid rgba(124,58,237,.3);
+      border-radius: 100px;
+      font-size: .8rem; font-weight: 600; color: #c4b5fd;
+      margin-bottom: 20px;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #a855f7; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em { font-style: normal; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub {
+      font-size: 1.1rem; color: var(--text2);
+      margin-bottom: 32px; line-height: 1.7;
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
+    .hero-stats {
+      display: flex; gap: 32px; flex-wrap: wrap;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+    .hero-stat { }
+    .hero-stat strong { display: block; font-size: 1.5rem; font-weight: 800; }
+    .hero-stat span { font-size: .85rem; color: var(--text2); }
+    .hero-visual {
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .hero-card {
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius2);
+      padding: 20px;
+    }
+    .hero-card-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+    .hero-card-header .icon { font-size: 1.2rem; }
+    .msg-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+    .msg-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--grad);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem;
+    }
+    .msg-content { }
+    .msg-user { font-size: .78rem; font-weight: 700; color: #c4b5fd; margin-bottom: 2px; }
+    .msg-text { font-size: .88rem; color: var(--text2); background: var(--card); padding: 8px 12px; border-radius: 0 8px 8px 8px; }
+    .msg-bot .msg-text { background: var(--purple3); border-radius: 8px 8px 8px 0; }
+    .hero-alert {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,.2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: .88rem;
+    }
+    .hero-alert .alert-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .hero-alert a { color: #fca5a5; text-decoration: underline; }
+
+    /* ═══ TICKER ═══ */
+    .ticker-wrap {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      padding: 10px 0;
+      position: relative; z-index: 1;
+    }
+    .ticker {
+      display: flex;
+      animation: ticker 30s linear infinite;
+      white-space: nowrap;
+    }
+    .ticker span {
+      padding: 0 32px;
+      font-size: .85rem;
+      color: var(--text2);
+    }
+    .ticker span strong { color: var(--text); }
+    @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* ═══ URGENCES ═══ */
+    #urgences {
+      padding: 80px 0;
+      background: linear-gradient(180deg, var(--bg) 0%, rgba(239,68,68,0.04) 50%, var(--bg) 100%);
+    }
+    .urgences-alert {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,.25);
+      border-radius: var(--radius2);
+      padding: 20px 24px;
+      margin-bottom: 40px;
+      display: flex; align-items: flex-start; gap: 16px;
+    }
+    .urgences-alert .alert-main { font-size: 1.5rem; flex-shrink: 0; }
+    .urgences-alert h3 { font-size: 1rem; font-weight: 700; color: #fca5a5; margin-bottom: 4px; }
+    .urgences-alert p { font-size: .9rem; color: var(--text2); }
+    .urgences-alert strong { color: #fca5a5; }
+    .urgences-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .urg-cat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      overflow: hidden;
+    }
+    .urg-cat-header {
+      padding: 14px 18px;
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: .95rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .urg-cat-header .cat-icon { font-size: 1.2rem; }
+    .urg-cat.red .urg-cat-header { background: rgba(239,68,68,0.1); color: #fca5a5; }
+    .urg-cat.orange .urg-cat-header { background: rgba(249,115,22,0.1); color: #fdba74; }
+    .urg-cat.blue .urg-cat-header { background: rgba(59,130,246,0.1); color: #93c5fd; }
+    .urg-cat.purple .urg-cat-header { background: rgba(124,58,237,0.1); color: #c4b5fd; }
+    .urg-cat.green .urg-cat-header { background: rgba(34,197,94,0.1); color: #86efac; }
+    .urg-cat.pink .urg-cat-header { background: rgba(236,72,153,0.1); color: #f9a8d4; }
+    .urg-nums { list-style: none; }
+    .urg-num {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .urg-num:last-child { border-bottom: none; }
+    .urg-info { }
+    .urg-name { font-size: .9rem; font-weight: 600; color: var(--text); }
+    .urg-desc { font-size: .78rem; color: var(--text2); margin-top: 1px; }
+    .urg-num-badge {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .urg-num-val {
+      font-size: 1rem; font-weight: 800;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+    .urg-cat.red .urg-num-val { color: #f87171; }
+    .urg-cat.orange .urg-num-val { color: #fb923c; }
+    .urg-cat.blue .urg-num-val { color: #60a5fa; }
+    .urg-cat.purple .urg-num-val { color: #a78bfa; }
+    .urg-cat.green .urg-num-val { color: #4ade80; }
+    .urg-cat.pink .urg-num-val { color: #f472b6; }
+    .urg-free {
+      font-size: .68rem; font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(34,197,94,0.15);
+      color: #86efac;
+      white-space: nowrap;
+    }
+    .urg-footer {
+      margin-top: 28px;
+      text-align: center;
+      font-size: .85rem;
+      color: var(--text3);
+    }
+    .urg-footer strong { color: var(--text2); }
+
+    /* ═══ QUI SOMMES-NOUS ═══ */
+    .about-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+    }
+    .about-values { display: flex; flex-direction: column; gap: 16px; }
+    .about-val {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 16px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .about-val .val-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+    .about-val h4 { font-size: .95rem; font-weight: 700; margin-bottom: 3px; }
+    .about-val p { font-size: .85rem; color: var(--text2); }
+    .about-img {
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius2);
+      padding: 32px;
+      text-align: center;
+    }
+    .about-emoji { font-size: 4rem; margin-bottom: 16px; }
+    .about-quote {
+      font-size: 1.1rem; font-style: italic; color: var(--text2);
+      line-height: 1.6;
+      border-left: 3px solid var(--purple);
+      padding-left: 16px;
+      text-align: left;
+      margin-top: 20px;
+    }
+    .about-sig { font-size: .85rem; color: var(--text3); margin-top: 12px; }
+
+    /* ═══ FEATURES BOT ═══ */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;
+    }
+    .feat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      padding: 24px;
+      transition: all .3s;
+    }
+    .feat:hover { border-color: var(--purple); background: var(--card2); transform: translateY(-3px); }
+    .feat-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+    .feat h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .feat p { font-size: .88rem; color: var(--text2); line-height: 1.6; }
+
+    /* ═══ ONBOARDING ═══ */
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before {
+      content: '';
+      position: absolute; left: 8px; top: 0; bottom: 0;
+      width: 2px; background: var(--border2);
+    }
+    .timeline-item {
+      position: relative;
+      padding: 0 0 32px 28px;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute; left: -7px; top: 4px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--purple);
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 0 4px rgba(124,58,237,.2);
+    }
+    .timeline-item.active::before {
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.2);
+    }
+    .timeline-day {
+      font-size: .75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+    .timeline-title { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .timeline-desc { font-size: .88rem; color: var(--text2); line-height: 1.5; }
+
+    /* ═══ ÉCONOMIE TABS ═══ */
+    .tabs { display: flex; gap: 4px; background: var(--card); border-radius: var(--radius); padding: 4px; margin-bottom: 32px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: .9rem; font-weight: 600;
+      color: var(--text2);
+      transition: all .2s;
+      flex: 1; min-width: 80px; text-align: center;
+    }
+    .tab-btn.active { background: var(--bg3); color: var(--text); box-shadow: var(--shadow); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .eco-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .eco-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+    }
+    .eco-card .eco-icon { font-size: 1.6rem; margin-bottom: 8px; }
+    .eco-card .eco-name { font-size: .85rem; font-weight: 700; margin-bottom: 4px; }
+    .eco-card .eco-gain { font-size: .8rem; color: var(--green); }
+    .calc-wrap {
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius2);
+      padding: 28px;
+    }
+    .calc-slider-row { margin-bottom: 20px; }
+    .calc-slider-row label { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 8px; }
+    .calc-slider-row label span { color: var(--purple); font-weight: 700; }
+    input[type=range] {
+      width: 100%; height: 4px;
+      -webkit-appearance: none;
+      background: var(--border2); border-radius: 2px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--purple);
+      cursor: pointer;
+      box-shadow: 0 0 0 4px rgba(124,58,237,.2);
+    }
+    .calc-result {
+      text-align: center;
+      background: var(--purple3);
+      border: 1px solid rgba(124,58,237,.3);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .calc-result .big { font-size: 2rem; font-weight: 800; color: #c4b5fd; }
+    .calc-result p { font-size: .85rem; color: var(--text2); margin-top: 4px; }
+
+    /* ═══ EVENTS ═══ */
+    .events-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+    .event-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      overflow: hidden;
+    }
+    .event-banner {
+      height: 80px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem;
+    }
+    .event-body { padding: 16px 18px; }
+    .event-badge {
+      font-size: .72rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 100px;
+      margin-bottom: 8px; display: inline-block;
+    }
+    .event-badge.upcoming { background: var(--blue2); color: #93c5fd; }
+    .event-badge.recurring { background: var(--green2); color: #86efac; }
+    .event-badge.special { background: var(--purple3); color: #c4b5fd; }
+    .event-body h3 { font-size: .95rem; font-weight: 700; margin-bottom: 4px; }
+    .event-body p { font-size: .82rem; color: var(--text2); }
+
+    /* ═══ FONDATEURS ═══ */
+    .fondateurs-wrap {
+      background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(88,101,242,0.1));
+      border: 1px solid rgba(124,58,237,.2);
+      border-radius: var(--radius2);
+      padding: 48px;
+    }
+    .fondateurs-perks { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 28px 0; }
+    .fondateurs-perks li {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.04);
+      border-radius: var(--radius);
+      font-size: .9rem;
+    }
+    .fondateurs-perks li .perk-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    /* ═══ CONTACT ═══ */
+    #contact { background: var(--bg2); }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+    .contact-methods { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+    .contact-method {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: all .2s;
+    }
+    .contact-method:hover { border-color: var(--purple); background: var(--card2); }
+    .contact-method .cm-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .contact-method .cm-label { font-size: .78rem; color: var(--text3); }
+    .contact-method .cm-val { font-size: .92rem; font-weight: 600; color: var(--text); }
+    .contact-form { }
+    .form-row { margin-bottom: 16px; }
+    .form-row label { display: block; font-size: .85rem; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+    .form-row input, .form-row textarea, .form-row select {
+      width: 100%;
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: .92rem;
+      font-family: inherit;
+      transition: border-color .2s;
+      outline: none;
+    }
+    .form-row input:focus, .form-row textarea:focus, .form-row select:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+    }
+    .form-row textarea { resize: vertical; min-height: 120px; }
+    .form-row select option { background: #111124; }
+    .form-submit {
+      background: var(--grad); color: #fff;
+      padding: 13px 28px;
+      border-radius: var(--radius);
+      font-weight: 700; font-size: .95rem;
+      width: 100%;
+      transition: all .2s;
+    }
+    .form-submit:hover { opacity: .85; transform: translateY(-1px); }
+    .form-note { font-size: .78rem; color: var(--text3); margin-top: 10px; text-align: center; }
+    #form-success {
+      display: none;
+      background: var(--green2);
+      border: 1px solid rgba(34,197,94,.3);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      color: #86efac;
+      margin-top: 12px;
+    }
+
+    /* ═══ FAQ ═══ */
+    .faq-list { max-width: 750px; display: flex; flex-direction: column; gap: 8px; }
+    .faq-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+      font-weight: 600; font-size: .95rem;
+      gap: 12px;
+    }
+    .faq-arrow { font-size: .8rem; color: var(--text3); transition: transform .3s; flex-shrink: 0; }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .35s ease, padding .3s;
+      font-size: .9rem; color: var(--text2); line-height: 1.7;
+    }
+    .faq-item.open .faq-a { max-height: 300px; padding: 0 20px 16px; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); color: var(--purple); }
+    .faq-item.open { border-color: var(--border2); }
+
+    /* ═══ CHATBOT ═══ */
+    #chat-btn {
+      position: fixed; bottom: 90px; right: 20px; z-index: 200;
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--grad);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: var(--shadow2);
+      transition: transform .2s;
+      cursor: pointer;
+    }
+    #chat-btn:hover { transform: scale(1.1); }
+    #chat-panel {
+      position: fixed; bottom: 155px; right: 20px; z-index: 200;
+      width: 320px; max-width: calc(100vw - 40px);
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow2);
+      display: none;
+      flex-direction: column;
+      max-height: 440px;
+    }
+    #chat-panel.open { display: flex; }
+    .chat-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .chat-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: .9rem; }
+    .chat-hname { font-size: .9rem; font-weight: 700; }
+    .chat-hstatus { font-size: .72rem; color: var(--green); }
+    .chat-close { margin-left: auto; color: var(--text3); font-size: 1rem; cursor: pointer; }
+    .chat-msgs {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .chat-msg {
+      max-width: 85%;
+      padding: 9px 13px;
+      border-radius: 12px;
+      font-size: .85rem; line-height: 1.5;
+    }
+    .chat-msg.bot { background: var(--card2); align-self: flex-start; border-radius: 4px 12px 12px 12px; }
+    .chat-msg.user { background: var(--purple); color: #fff; align-self: flex-end; border-radius: 12px 4px 12px 12px; }
+    .chat-suggestions {
+      padding: 8px 12px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .chat-sug {
+      padding: 5px 10px;
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: 100px;
+      font-size: .78rem; color: var(--text2);
+      cursor: pointer; transition: all .2s;
+    }
+    .chat-sug:hover { border-color: var(--purple); color: var(--text); }
+    .chat-input-row {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 8px;
+    }
+    .chat-input {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text); font-size: .85rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .chat-input:focus { border-color: var(--purple); }
+    .chat-send {
+      background: var(--purple);
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: .85rem; font-weight: 700;
+    }
+
+    /* ═══ STICKY DISCORD MOBILE ═══ */
+    .sticky-discord {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 150;
+      background: rgba(6,6,17,0.97);
+      border-top: 1px solid var(--border2);
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+    }
+    .sticky-discord span { font-size: .88rem; color: var(--text2); }
+    @media(min-width: 768px) { .sticky-discord { display: none; } }
+
+    /* ═══ FOOTER ═══ */
+    footer {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 48px 0 32px;
+    }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    .footer-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; margin-bottom: 12px; }
+    .footer-desc { font-size: .85rem; color: var(--text2); line-height: 1.7; }
+    .footer-col h4 { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin-bottom: 14px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .footer-col ul a { font-size: .88rem; color: var(--text2); transition: color .2s; }
+    .footer-col ul a:hover { color: var(--text); }
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .footer-bottom p { font-size: .8rem; color: var(--text3); }
+    .footer-bottom a { color: var(--text2); }
+    .footer-update { font-size: .75rem; color: var(--text3); }
+
+    /* ═══ RESPONSIVE ═══ */
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+      .hero-visual { display: none; }
+      .about-grid { grid-template-columns: 1fr; }
+      .about-img { display: none; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .nav-burger { display: block; }
+      .section { padding: 60px 0; }
+      .section-title { font-size: 1.6rem; }
+      .fondateurs-wrap { padding: 28px; }
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<!-- ═══ NAVIGATION ═══ -->
+<nav role="navigation" aria-label="Navigation principale">
+  <div class="nav-logo">
+    <span>🤝</span> Zone Entraide
+  </div>
+  <ul class="nav-links">
+    <li><a href="#hero">Accueil</a></li>
+    <li class="urgent-link"><a href="#urgences">🆘 Urgences</a></li>
+    <li><a href="#qui">Communauté</a></li>
+    <li><a href="#bot">Le Bot</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="nav-cta">Rejoindre Discord</a></li>
+  </ul>
+  <button class="nav-burger" onclick="toggleMenu()" aria-label="Menu">☰</button>
+</nav>
+<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+  <a href="#hero" onclick="toggleMenu()">🏠 Accueil</a>
+  <a href="#urgences" onclick="toggleMenu()" class="urgent-link" style="color:#fca5a5">🆘 Urgences</a>
+  <a href="#qui" onclick="toggleMenu()">👥 Communauté</a>
+  <a href="#bot" onclick="toggleMenu()">🤖 Le Bot</a>
+  <a href="#contact" onclick="toggleMenu()">✉️ Contact</a>
+  <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" style="background:var(--grad);color:#fff;font-weight:700;margin-top:4px;text-align:center" onclick="toggleMenu()">Rejoindre Discord ↗</a>
+</div>
+
+<!-- ═══ TICKER ═══ -->
+<div class="ticker-wrap" style="margin-top:60px">
+  <div class="ticker" aria-hidden="true">
+    <span>✅ <strong>Arrivée sur Discord</strong> → 5 000€ offerts automatiquement</span>
+    <span>🆘 <strong>En détresse ?</strong> Appelle le 3114 (gratuit, 24h/24)</span>
+    <span>🎰 <strong>15+ jeux</strong> de casino avec le bot NexusBot</span>
+    <span>📈 <strong>Crypto en temps réel</strong> — BTC, ETH, SOL et +</span>
+    <span>🏆 <strong>Niveaux & récompenses</strong> — plus tu participes, plus tu évolues</span>
+    <span>🤝 <strong>Communauté bienveillante</strong> — zéro jugement, zéro toxicité</span>
+    <span>✅ <strong>Arrivée sur Discord</strong> → 5 000€ offerts automatiquement</span>
+    <span>🆘 <strong>En détresse ?</strong> Appelle le 3114 (gratuit, 24h/24)</span>
+    <span>🎰 <strong>15+ jeux</strong> de casino avec le bot NexusBot</span>
+    <span>📈 <strong>Crypto en temps réel</strong> — BTC, ETH, SOL et +</span>
+    <span>🏆 <strong>Niveaux & récompenses</strong> — plus tu participes, plus tu évolues</span>
+    <span>🤝 <strong>Communauté bienveillante</strong> — zéro jugement, zéro toxicité</span>
+  </div>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero" aria-labelledby="hero-title">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="dot" aria-hidden="true"></span>
+        Communauté en construction — Fondateurs bienvenus
+      </div>
+      <h1 id="hero-title">
+        Une communauté qui<br>
+        <em>t'écoute vraiment</em>
+      </h1>
+      <p class="hero-sub">
+        Zone Entraide est un espace Discord où tu peux parler librement, jouer, évoluer — et trouver du soutien si tu en as besoin. Sans jugement. Sans obligation.
+      </p>
+      <div class="hero-actions">
+        <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="btn btn-discord">
+          💬 Rejoindre le Discord
+        </a>
+        <a href="#urgences" class="btn btn-danger">
+          🆘 Numéros d'urgence
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <strong>5 000€</strong>
+          <span>offerts à l'arrivée</span>
+        </div>
+        <div class="hero-stat">
+          <strong>15+</strong>
+          <span>jeux de casino</span>
+        </div>
+        <div class="hero-stat">
+          <strong>100%</strong>
+          <span>gratuit et sans pub</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="hero-card">
+        <div class="hero-card-header">
+          <span class="icon">💬</span>
+          #🤝・zone-entraide
+        </div>
+        <div class="msg-row">
+          <div class="msg-avatar">A</div>
+          <div class="msg-content">
+            <div class="msg-user">Alexis</div>
+            <div class="msg-text">Je me sens vraiment seul en ce moment...</div>
+          </div>
+        </div>
+        <div class="msg-row msg-bot">
+          <div class="msg-avatar" style="background:var(--purple)">🤖</div>
+          <div class="msg-content">
+            <div class="msg-user" style="color:#c4b5fd">NexusBot</div>
+            <div class="msg-text">Tu n'es pas seul ici 💜 La communauté est là pour toi. N'hésite pas à partager, personne ne juge.</div>
+          </div>
+        </div>
+        <div class="msg-row">
+          <div class="msg-avatar" style="background:#22c55e">M</div>
+          <div class="msg-content">
+            <div class="msg-user" style="color:#86efac">Marie</div>
+            <div class="msg-text">Je t'entends Alexis 🤗 On est là si tu veux parler.</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-alert">
+        <span class="alert-icon">🆘</span>
+        <span>En cas de détresse grave, appelle le <strong style="color:#fca5a5">3114</strong> — Prévention du suicide — gratuit 24h/24</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION URGENCES ═══ -->
+<section id="urgences" class="section" aria-labelledby="urgences-title">
+  <div class="container">
+    <div class="tag tag-red reveal">🆘 Aide immédiate</div>
+    <h2 class="section-title reveal" id="urgences-title">Numéros d'urgence & d'écoute</h2>
+    <p class="section-sub reveal">Tous ces numéros sont gratuits depuis un téléphone fixe ou mobile. Mis à jour en 2026. Si tu te trouves dans une situation difficile, n'hésite pas à les appeler — c'est fait pour ça.</p>
+
+    <div class="urgences-alert reveal">
+      <span class="alert-main">⚠️</span>
+      <div>
+        <h3>Tu es en danger immédiat ?</h3>
+        <p>Appelle le <strong>15 (SAMU)</strong>, le <strong>17 (Police)</strong> ou le <strong>18 (Pompiers)</strong>. Le <strong>112</strong> fonctionne partout en Europe, même sans réseau. Si tu ne peux pas parler, envoie un SMS au <strong>114</strong> (pour les personnes sourdes ou en situation de danger silencieux).</p>
+      </div>
+    </div>
+
+    <div class="urgences-grid reveal">
+
+      <!-- Urgences vitales -->
+      <div class="urg-cat red">
+        <div class="urg-cat-header"><span class="cat-icon">🚨</span> Urgences vitales</div>
+        <ul class="urg-nums">
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">SAMU — Urgences médicales</div><div class="urg-desc">Ambulance, médecin urgent 24h/24</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">15</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Police secours</div><div class="urg-desc">Urgences policières 24h/24</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">17</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Pompiers</div><div class="urg-desc">Incendie, accidents, secours</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">18</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Numéro européen d'urgence</div><div class="urg-desc">Fonctionne partout en Europe, sans réseau</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">112</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Urgences sourds/muets (SMS/tchat)</div><div class="urg-desc">SMS, visiophonie, fax 24h/24</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">114</span><span class="urg-free">Gratuit</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Suicide & détresse -->
+      <div class="urg-cat orange">
+        <div class="urg-cat-header"><span class="cat-icon">💜</span> Suicide &amp; détresse psychologique</div>
+        <ul class="urg-nums">
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Numéro national prévention suicide</div><div class="urg-desc">Professionnels formés, 24h/24, 7j/7</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">3114</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Suicide Écoute</div><div class="urg-desc">Écoute bienveillante, disponible 24h/24</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">01 45 39 40 00</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">SOS Suicide Phénix</div><div class="urg-desc">Écoute et orientation</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">01 40 44 46 45</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">SOS Amitié — solitude &amp; mal-être</div><div class="urg-desc">Pour parler, quelle que soit la raison</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">09 72 39 40 50</span><span class="urg-free">Gratuit</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Enfants & jeunes -->
+      <div class="urg-cat blue">
+        <div class="urg-cat-header"><span class="cat-icon">🧒</span> Enfants, ados &amp; jeunes</div>
+        <ul class="urg-nums">
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Allô Enfance Maltraitée</div><div class="urg-desc">Enfants, ados en danger ou maltraités — 24h/24</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">119</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Fil Santé Jeunes</div><div class="urg-desc">Santé, sexualité, mal-être — 9h à minuit</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">0800 235 236</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">E-enfance — Cyberharcèlement</div><div class="urg-desc">Harcèlement, revenge porn, signalement</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">3018</span><span class="urg-free">Gratuit</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Violences -->
+      <div class="urg-cat pink">
+        <div class="urg-cat-header"><span class="cat-icon">🛡️</span> Violences &amp; victimes</div>
+        <ul class="urg-nums">
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Violences Femmes Info</div><div class="urg-desc">Violence conjugale, harcèlement — 24h/24</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">3919</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">France Victimes</div><div class="urg-desc">Aide aux victimes — lun-dim 9h–19h</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">116 006</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Maltraitance adultes vulnérables</div><div class="urg-desc">Depuis mars 2026 (remplace le 3977)</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">3133</span><span class="urg-free">Gratuit</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- LGBTQ+ & diversité -->
+      <div class="urg-cat purple">
+        <div class="urg-cat-header"><span class="cat-icon">🏳️‍🌈</span> LGBTQ+ &amp; identités</div>
+        <ul class="urg-nums">
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">SOS Homophobie</div><div class="urg-desc">Écoute, soutien, signalement — lun-sam</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">0800 846 864</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Association Ligne Azur</div><div class="urg-desc">Orientation sexuelle, identité de genre</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">0810 20 30 40</span><span class="urg-free">Gratuit</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Addictions & santé -->
+      <div class="urg-cat green">
+        <div class="urg-cat-header"><span class="cat-icon">💊</span> Addictions &amp; santé mentale</div>
+        <ul class="urg-nums">
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Drogues Info Service</div><div class="urg-desc">Drogues, alcool, tabac — 8h–2h</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">0 800 23 13 13</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Écoute Alcool</div><div class="urg-desc">Dépendance à l'alcool — 8h–2h</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">0 800 91 13 13</span><span class="urg-free">Gratuit</span></div>
+          </li>
+          <li class="urg-num">
+            <div class="urg-info"><div class="urg-name">Agri'écoute</div><div class="urg-desc">Agriculteurs en souffrance — 24h/24</div></div>
+            <div class="urg-num-badge"><span class="urg-num-val">09 69 39 29 19</span><span class="urg-free">Gratuit</span></div>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <p class="urg-footer reveal">
+      ⚠️ Ces numéros sont <strong>gratuits et confidentiels</strong> depuis un téléphone fixe ou mobile. Ils n'apparaissent pas sur les factures téléphoniques.
+      <br>Dernière vérification : <strong>avril 2026</strong>.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ QUI SOMMES-NOUS ═══ -->
+<section id="qui" class="section" style="background:var(--bg2)" aria-labelledby="qui-title">
+  <div class="container">
+    <div class="about-grid">
+      <div>
+        <div class="tag tag-purple reveal">👥 Notre mission</div>
+        <h2 class="section-title reveal" id="qui-title">Pas juste un serveur.<br>Un espace pour toi.</h2>
+        <p class="section-sub reveal" style="margin-bottom:32px">Zone Entraide est né d'une idée simple : créer un endroit sur Discord où les gens peuvent parler, rire, jouer, et trouver de l'aide — sans filtre, sans jugement, sans prise de tête.</p>
+        <div class="about-values">
+          <div class="about-val reveal">
+            <span class="val-icon">🤝</span>
+            <div>
+              <h4>Bienveillance d'abord</h4>
+              <p>Ici, on ne juge pas. Peu importe ton histoire, ton âge, d'où tu viens — tu as ta place.</p>
+            </div>
+          </div>
+          <div class="about-val reveal">
+            <span class="val-icon">🎯</span>
+            <div>
+              <h4>Honnêteté totale</h4>
+              <p>Le serveur est en construction. On préfère te le dire clairement plutôt que de gonfler des chiffres.</p>
+            </div>
+          </div>
+          <div class="about-val reveal">
+            <span class="val-icon">🛡️</span>
+            <div>
+              <h4>Sécurité &amp; responsabilité</h4>
+              <p>Si quelqu'un est en détresse grave, on ne fait pas semblant : on renvoie vers les professionnels.</p>
+            </div>
+          </div>
+          <div class="about-val reveal">
+            <span class="val-icon">🌱</span>
+            <div>
+              <h4>Croissance ensemble</h4>
+              <p>Plus tu participes, plus tu évolues — en niveaux, en rang, et dans la communauté.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="about-img reveal" aria-hidden="true">
+        <div class="about-emoji">🤝</div>
+        <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">Zone Entraide</div>
+        <div style="font-size:.85rem;color:var(--text2)">Communauté Discord française</div>
+        <div class="about-quote">
+          "J'ai créé ce serveur parce que j'avais besoin d'un endroit où les gens peuvent être eux-mêmes. Pas de façade, juste de l'humain."
+        </div>
+        <div class="about-sig">— Maxime, fondateur de Zone Entraide</div>
+        <div style="margin-top:24px">
+          <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="btn btn-discord" style="width:100%;justify-content:center">
+            💬 Rejoindre le Discord
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ LE BOT ═══ -->
+<section id="bot" class="section" aria-labelledby="bot-title">
+  <div class="container">
+    <div class="tag tag-purple reveal">🤖 NexusBot</div>
+    <h2 class="section-title reveal" id="bot-title">Tout ce dont tu as besoin</h2>
+    <p class="section-sub reveal">Le bot NexusBot propulse le serveur avec un système d'économie complet, des jeux interactifs, de la modération avancée et bien plus.</p>
+
+    <div class="features-grid">
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:var(--green2)">💰</div>
+        <h3>Économie en €</h3>
+        <p>5 000€ offerts à l'arrivée. Gagne avec <code>/work</code>, <code>/daily</code>, le crime, ou les crimes. Place ton argent en banque pour des intérêts.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:rgba(234,179,8,.12)">🎰</div>
+        <h3>15+ jeux de casino</h3>
+        <p>Blackjack, Roulette, Slots, Crash, Mines, Video Poker, Baccarat, Hi-Lo, Hippodrome, Plinko, Grattage et plus encore.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:var(--blue2)">📈</div>
+        <h3>Crypto &amp; Bourse</h3>
+        <p>Achète, vends et donne du BTC, ETH, SOL, BNB, ADA avec les vrais prix en temps réel via CoinGecko. Porte-feuille virtuel complet.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:var(--purple3)">🏆</div>
+        <h3>Niveaux &amp; XP</h3>
+        <p>Gagne de l'XP à chaque message. Monte en grade, décroche des rôles exclusifs et grimpe dans le classement.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:var(--orange2)">🎫</div>
+        <h3>Tickets de support</h3>
+        <p>Système de tickets premium : catégories, transcripts, panels de modération. L'équipe répond dans les meilleurs délais.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:var(--green2)">🎁</div>
+        <h3>Giveaways &amp; Events</h3>
+        <p>Cadeaux en €, tirages au sort, événements communautaires réguliers avec le bot comme organisateur.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:var(--blue2)">📊</div>
+        <h3>Sondages &amp; Votes</h3>
+        <p>Sondages interactifs, votes de la communauté, suggestions directes à l'équipe — ta voix compte.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="feat-icon" style="background:rgba(236,72,153,.12)">🔗</div>
+        <h3>Invitations &amp; Récompenses</h3>
+        <p>Invite tes amis et reçois des €. Paliers à 1, 5, 10, 25, 50, 100 invitations avec des rôles exclusifs.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ONBOARDING ═══ -->
+<section class="section" style="background:var(--bg2)" aria-labelledby="onboarding-title">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">
+      <div>
+        <div class="tag tag-green reveal">📅 Tes 7 premiers jours</div>
+        <h2 class="section-title reveal" id="onboarding-title">Comment bien démarrer</h2>
+        <p class="section-sub reveal" style="margin-bottom:32px">Voici ce qui t'attend dès que tu rejoins la communauté.</p>
+        <div class="timeline reveal">
+          <div class="timeline-item active">
+            <div class="timeline-day">Jour 1 — Arrivée</div>
+            <div class="timeline-title">💰 5 000€ automatiques</div>
+            <div class="timeline-desc">NexusBot te crédite instantanément. Dis bonjour dans le salon d'accueil, lis les règles, choisis tes rôles.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-day">Jour 2 — Mise en route</div>
+            <div class="timeline-title">⚙️ Premiers gains</div>
+            <div class="timeline-desc">Lance <code>/work</code> et <code>/daily</code> pour tes premières récompenses. Commence à chatter pour gagner de l'XP.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-day">Jour 3 — Découverte</div>
+            <div class="timeline-title">🎰 Casino &amp; crypto</div>
+            <div class="timeline-desc">Essaie tes premiers jeux de casino. Regarde les cours crypto et investis si le cœur t'en dit.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-day">Jour 4–6 — Participation</div>
+            <div class="timeline-title">💬 Deviens membre actif</div>
+            <div class="timeline-desc">Participe aux discussions, réponds à des sondages, invite tes amis, participe aux events.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-day">Jour 7 — Reconnaissance</div>
+            <div class="timeline-title">🏅 Rôle Fondateur</div>
+            <div class="timeline-desc">Si tu es actif dès le lancement, tu obtiens le badge Fondateur exclusif — pour toujours dans ton profil.</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="tag tag-orange reveal">💰 Simuler tes gains</div>
+        <h2 class="section-title reveal">Calculateur d'économie</h2>
+        <p class="section-sub reveal" style="margin-bottom:24px">Estime tes revenus virtuels quotidiens.</p>
+        <div class="calc-wrap reveal">
+          <div class="calc-slider-row">
+            <label>Messages par jour <span id="msg-val">20</span></label>
+            <input type="range" min="1" max="100" value="20" oninput="updateCalc()" id="msgs">
+          </div>
+          <div class="calc-slider-row">
+            <label>Jeux de casino (parties) <span id="casino-val">5</span></label>
+            <input type="range" min="0" max="30" value="5" oninput="updateCalc()" id="casino">
+          </div>
+          <div class="calc-slider-row">
+            <label>Invitations par semaine <span id="inv-val">2</span></label>
+            <input type="range" min="0" max="20" value="2" oninput="updateCalc()" id="invits">
+          </div>
+          <div class="calc-result">
+            <div class="big" id="calc-total">~2 850€</div>
+            <p>gain estimé par semaine • Hors gains casino</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ÉVÉNEMENTS ═══ -->
+<section class="section" aria-labelledby="events-title">
+  <div class="container">
+    <div class="tag tag-blue reveal">🗓️ Événements</div>
+    <h2 class="section-title reveal" id="events-title">Ce qui se passe dans la communauté</h2>
+    <p class="section-sub reveal">Des events réguliers organisés par l'équipe et la communauté elle-même.</p>
+    <div class="events-grid">
+      <div class="event-card reveal">
+        <div class="event-banner" style="background:linear-gradient(135deg,#1a1a3a,#2d1b69)">🎰</div>
+        <div class="event-body">
+          <span class="event-badge recurring">Récurrent</span>
+          <h3>Tournoi Casino Mensuel</h3>
+          <p>Le meilleur joueur du mois remporte un bonus de 50 000€ virtuels.</p>
+        </div>
+      </div>
+      <div class="event-card reveal">
+        <div class="event-banner" style="background:linear-gradient(135deg,#1a2a1a,#1a4a2a)">🎁</div>
+        <div class="event-body">
+          <span class="event-badge recurring">Récurrent</span>
+          <h3>Giveaway hebdomadaire</h3>
+          <p>Tirage au sort chaque semaine parmi les membres actifs. Récompenses en €.</p>
+        </div>
+      </div>
+      <div class="event-card reveal">
+        <div class="event-banner" style="background:linear-gradient(135deg,#1a1a3a,#1a3a4a)">💬</div>
+        <div class="event-body">
+          <span class="event-badge upcoming">À venir</span>
+          <h3>Soirée Discussion Libre</h3>
+          <p>Session vocale communautaire pour parler de tout et n'importe quoi.</p>
+        </div>
+      </div>
+      <div class="event-card reveal">
+        <div class="event-banner" style="background:linear-gradient(135deg,#2a1a1a,#4a1a2a)">🏆</div>
+        <div class="event-body">
+          <span class="event-badge special">Spécial</span>
+          <h3>Défi Communautaire</h3>
+          <p>Objectif collectif : si le serveur atteint 100 membres, tout le monde reçoit +10 000€.</p>
+        </div>
+      </div>
+      <div class="event-card reveal">
+        <div class="event-banner" style="background:linear-gradient(135deg,#1a2a1a,#2a3a1a)">🌿</div>
+        <div class="event-body">
+          <span class="event-badge upcoming">À venir</span>
+          <h3>Atelier bien-être</h3>
+          <p>Partage de conseils, techniques de gestion du stress, dans une ambiance bienveillante.</p>
+        </div>
+      </div>
+      <div class="event-card reveal">
+        <div class="event-banner" style="background:linear-gradient(135deg,#2a1a2a,#3a1a4a)">🎤</div>
+        <div class="event-body">
+          <span class="event-badge upcoming">À venir</span>
+          <h3>Karaoké Discord</h3>
+          <p>Chante, écoute, ris. Événement vocal détendu prévu prochainement.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FONDATEURS ═══ -->
+<section class="section" style="background:var(--bg2)" aria-labelledby="fondateurs-title">
+  <div class="container">
+    <div class="tag tag-purple reveal">⭐ Fondateurs</div>
+    <h2 class="section-title reveal" id="fondateurs-title">Rejoins maintenant, reste pour toujours</h2>
+    <p class="section-sub reveal">Les premiers membres façonnent la communauté. Ils obtiendront des avantages permanents que les futurs membres n'auront jamais.</p>
+    <div class="fondateurs-wrap reveal">
+      <ul class="fondateurs-perks">
+        <li><span class="perk-icon">🏅</span> Badge Fondateur exclusif et permanent</li>
+        <li><span class="perk-icon">💰</span> 5 000€ virtuels offerts dès l'arrivée</li>
+        <li><span class="perk-icon">🎰</span> Accès prioritaire aux events casino</li>
+        <li><span class="perk-icon">📣</span> Voix dans les décisions du serveur</li>
+        <li><span class="perk-icon">🏆</span> Mention dans l'histoire du serveur</li>
+        <li><span class="perk-icon">🛡️</span> Accès au salon Fondateurs privé</li>
+        <li><span class="perk-icon">🎁</span> Bonus bonus événements exclusifs</li>
+        <li><span class="perk-icon">⚡</span> Bonus d'XP ×1.5 à vie</li>
+      </ul>
+      <div style="text-align:center">
+        <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="btn btn-primary" style="font-size:1.05rem;padding:14px 32px">
+          💬 Devenir Fondateur maintenant
+        </a>
+        <p style="font-size:.82rem;color:var(--text3);margin-top:12px">Places illimitées pendant la phase de lancement · 100% gratuit</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ RESSOURCES EXTERNES ═══ -->
+<section class="section" aria-labelledby="ressources-title">
+  <div class="container">
+    <div class="tag tag-blue reveal">📚 Ressources</div>
+    <h2 class="section-title reveal" id="ressources-title">Sites officiels utiles</h2>
+    <p class="section-sub reveal">Des liens vers des ressources fiables si tu as besoin d'aide au-delà de notre communauté.</p>
+    <div class="grid-3 reveal">
+      <a href="https://www.3114.fr" target="_blank" rel="noopener" class="card" style="border-color:rgba(249,115,22,.2)">
+        <div style="font-size:1.8rem;margin-bottom:10px">💜</div>
+        <div style="font-weight:700;margin-bottom:6px">3114.fr</div>
+        <div style="font-size:.85rem;color:var(--text2)">Site officiel du numéro national de prévention du suicide. Ressources, FAQ, aide en ligne.</div>
+      </a>
+      <a href="https://www.infosuicide.org" target="_blank" rel="noopener" class="card" style="border-color:rgba(124,58,237,.2)">
+        <div style="font-size:1.8rem;margin-bottom:10px">ℹ️</div>
+        <div style="font-weight:700;margin-bottom:6px">infosuicide.org</div>
+        <div style="font-size:.85rem;color:var(--text2)">Ressources, lignes d'écoute, témoignages. Site de référence sur la prévention.</div>
+      </a>
+      <a href="https://www.filsantejeunes.com" target="_blank" rel="noopener" class="card" style="border-color:rgba(59,130,246,.2)">
+        <div style="font-size:1.8rem;margin-bottom:10px">🧑</div>
+        <div style="font-weight:700;margin-bottom:6px">filsantejeunes.com</div>
+        <div style="font-size:.85rem;color:var(--text2)">Santé, sexualité, bien-être des jeunes. Tchat, forum, fiches pratiques.</div>
+      </a>
+      <a href="https://www.service-public.fr/particuliers/vosdroits/F33954" target="_blank" rel="noopener" class="card">
+        <div style="font-size:1.8rem;margin-bottom:10px">🇫🇷</div>
+        <div style="font-weight:700;margin-bottom:6px">Service Public</div>
+        <div style="font-size:.85rem;color:var(--text2)">Liste officielle du gouvernement français de tous les numéros d'urgence.</div>
+      </a>
+      <a href="https://www.sosamitie.org" target="_blank" rel="noopener" class="card">
+        <div style="font-size:1.8rem;margin-bottom:10px">🤝</div>
+        <div style="font-weight:700;margin-bottom:6px">sosamitie.org</div>
+        <div style="font-size:.85rem;color:var(--text2)">Association d'écoute et de soutien pour les personnes isolées ou en souffrance.</div>
+      </a>
+      <a href="https://www.e-enfance.org" target="_blank" rel="noopener" class="card">
+        <div style="font-size:1.8rem;margin-bottom:10px">🛡️</div>
+        <div style="font-weight:700;margin-bottom:6px">e-enfance.org</div>
+        <div style="font-size:.85rem;color:var(--text2)">Protection des mineurs sur internet, cyberharcèlement, signalement en ligne (3018).</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="section" style="background:var(--bg2)" aria-labelledby="faq-title">
+  <div class="container">
+    <div class="tag tag-purple reveal">❓ FAQ</div>
+    <h2 class="section-title reveal" id="faq-title">Questions fréquentes</h2>
+    <div class="faq-list reveal" role="list">
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" role="button" tabindex="0">C'est quoi Zone Entraide exactement ? <span class="faq-arrow">▼</span></div>
+        <div class="faq-a">Une communauté Discord française bienveillante et gratuite. On peut y parler librement, jouer à des jeux avec une économie virtuelle en €, échanger avec d'autres membres, participer à des événements — et trouver du soutien si on en a besoin. Le bot NexusBot offre 5 000€ virtuels dès l'arrivée.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" role="button" tabindex="0">Puis-je parler de mes problèmes sur le serveur ? <span class="faq-arrow">▼</span></div>
+        <div class="faq-a">Oui, sans problème. Il y a un salon dédié à l'écoute et à la parole libre. La communauté ne juge pas. Si tu traverses quelque chose de difficile, parle — quelqu'un sera là. Et si la situation est grave, on te redirigera vers les professionnels (3114 pour les situations de détresse sévère).</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" role="button" tabindex="0">Comment fonctionnent les 5 000€ virtuels ? <span class="faq-arrow">▼</span></div>
+        <div class="faq-a">C'est une monnaie interne au serveur Discord, 100% virtuelle. Dès que tu rejoins, NexusBot te crédite 5 000€ automatiquement. Tu peux les utiliser dans les jeux de casino, investir en crypto simulée (avec les vrais cours de BTC, ETH, etc.), travailler avec /work, ou les garder en banque pour des intérêts. Aucune transaction réelle, aucune valeur monétaire réelle.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" role="button" tabindex="0">C'est gratuit ? Il y a des pubs ou des achats ? <span class="faq-arrow">▼</span></div>
+        <div class="faq-a">100% gratuit, 0 publicité, 0 achat. Il suffit d'avoir un compte Discord (gratuit). Tout le contenu, tous les jeux, toutes les fonctionnalités sont accessibles sans rien dépenser.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" role="button" tabindex="0">Quel âge faut-il pour rejoindre ? <span class="faq-arrow">▼</span></div>
+        <div class="faq-a">13 ans minimum selon les CGU de Discord (16 ans en Europe selon le RGPD). Zone Entraide accueille toutes les tranches d'âge dans le respect. Les mineurs sont les bienvenus tant qu'ils respectent les règles de la communauté.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" role="button" tabindex="0">Comment devenir Fondateur ? <span class="faq-arrow">▼</span></div>
+        <div class="faq-a">En rejoignant le serveur pendant la phase de lancement et en étant actif. Les membres présents dès le début et qui participent à la construction de la communauté reçoivent le badge Fondateur permanent — il restera dans leur profil pour toujours, même quand le serveur sera grand.</div>
+      </div>
+      <div class="faq-item" role="listitem">
+        <div class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" role="button" tabindex="0">Comment contacter l'équipe ? <span class="faq-arrow">▼</span></div>
+        <div class="faq-a">Via le formulaire de contact sur cette page, ou directement sur le serveur Discord en ouvrant un ticket support. On répond généralement dans les 24 heures. Tu peux aussi envoyer un message directement à Maxime (fondateur) sur Discord.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CONTACT ═══ -->
+<section id="contact" class="section" aria-labelledby="contact-title">
+  <div class="container">
+    <div class="tag tag-green reveal">✉️ Nous contacter</div>
+    <h2 class="section-title reveal" id="contact-title">On est là pour toi</h2>
+    <p class="section-sub reveal">Tu as une question, une suggestion, un problème ou juste envie de dire bonjour ? Utilise une des méthodes ci-dessous.</p>
+    <div class="contact-grid">
+      <div>
+        <div class="contact-methods reveal">
+          <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="contact-method">
+            <span class="cm-icon">💬</span>
+            <div>
+              <div class="cm-label">Discord — le plus rapide</div>
+              <div class="cm-val">Zone Entraide · discord.gg/BBAd2JAZKV</div>
+            </div>
+          </a>
+          <a href="mailto:contact@zone-entraide.fr" class="contact-method">
+            <span class="cm-icon">📧</span>
+            <div>
+              <div class="cm-label">E-mail</div>
+              <div class="cm-val">contact@zone-entraide.fr</div>
+            </div>
+          </a>
+          <div class="contact-method" style="cursor:default">
+            <span class="cm-icon">🎫</span>
+            <div>
+              <div class="cm-label">Ticket de support</div>
+              <div class="cm-val">Ouvre un ticket directement sur Discord</div>
+            </div>
+          </div>
+          <div class="contact-method" style="cursor:default">
+            <span class="cm-icon">⏰</span>
+            <div>
+              <div class="cm-label">Temps de réponse moyen</div>
+              <div class="cm-val">Moins de 24 heures</div>
+            </div>
+          </div>
+        </div>
+        <div class="urgences-alert reveal" style="margin-top:20px">
+          <span class="alert-main" style="font-size:1.2rem">🆘</span>
+          <div>
+            <h3 style="font-size:.9rem">En cas d'urgence réelle</h3>
+            <p>Ne passe pas par nous — appelle directement le <strong>3114</strong> (détresse psychologique), le <strong>15</strong> (urgences médicales) ou le <strong>17</strong> (police). Ces services sont disponibles 24h/24 et sont équipés pour t'aider.</p>
+          </div>
+        </div>
+      </div>
+      <div class="contact-form reveal">
+        <form onsubmit="sendForm(event)">
+          <div class="form-row">
+            <label for="f-nom">Ton prénom *</label>
+            <input type="text" id="f-nom" required placeholder="Maxime" autocomplete="given-name">
+          </div>
+          <div class="form-row">
+            <label for="f-email">Ton e-mail *</label>
+            <input type="email" id="f-email" required placeholder="toi@exemple.fr" autocomplete="email">
+          </div>
+          <div class="form-row">
+            <label for="f-sujet">Sujet *</label>
+            <select id="f-sujet" required>
+              <option value="" disabled selected>Choisis un sujet...</option>
+              <option>Question sur la communauté</option>
+              <option>Suggestion ou amélioration</option>
+              <option>Problème technique / bug</option>
+              <option>Partenariat ou collaboration</option>
+              <option>Signalement</option>
+              <option>Autre</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="f-msg">Ton message *</label>
+            <textarea id="f-msg" required placeholder="Dis-nous ce que tu as en tête..."></textarea>
+          </div>
+          <button type="submit" class="form-submit">Envoyer le message ✉️</button>
+          <p class="form-note">Tes données ne sont partagées avec personne. Réponse sous 24h.</p>
+        </form>
+        <div id="form-success" role="alert">
+          ✅ Message envoyé ! On te répond dans les 24 heures.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA FINAL ═══ -->
+<section class="section" style="background:var(--bg2);text-align:center" aria-labelledby="cta-title">
+  <div class="container" style="max-width:700px">
+    <div style="font-size:3rem;margin-bottom:16px">🤝</div>
+    <h2 class="section-title reveal" id="cta-title" style="text-align:center">Prêt à rejoindre ?</h2>
+    <p class="reveal" style="font-size:1.05rem;color:var(--text2);margin-bottom:32px;text-align:center">Rejoins la communauté, récupère tes 5 000€ virtuels et deviens l'un des premiers membres fondateurs de Zone Entraide.</p>
+    <div class="reveal" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="btn btn-primary" style="font-size:1.1rem;padding:14px 36px">
+        💬 Rejoindre maintenant — C'est gratuit
+      </a>
+      <a href="#urgences" class="btn btn-secondary">🆘 Numéros d'urgence</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">🤝 Zone Entraide</div>
+        <p class="footer-desc">Communauté Discord française bienveillante, gratuite et sans publicité. Entraide, économie virtuelle, jeux — et un espace humain pour ceux qui en ont besoin.</p>
+        <div style="margin-top:16px">
+          <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="btn btn-discord" style="font-size:.85rem;padding:8px 16px">Discord ↗</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navigation</h4>
+        <ul>
+          <li><a href="#hero">Accueil</a></li>
+          <li><a href="#urgences">Urgences 🆘</a></li>
+          <li><a href="#qui">Communauté</a></li>
+          <li><a href="#bot">Le Bot</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Aide & urgences</h4>
+        <ul>
+          <li><a href="tel:3114">3114 — Prévention suicide</a></li>
+          <li><a href="tel:15">15 — SAMU</a></li>
+          <li><a href="tel:17">17 — Police</a></li>
+          <li><a href="tel:18">18 — Pompiers</a></li>
+          <li><a href="tel:119">119 — Enfance maltraitée</a></li>
+          <li><a href="tel:3018">3018 — Cyberharcèlement</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Liens utiles</h4>
+        <ul>
+          <li><a href="https://www.3114.fr" target="_blank" rel="noopener">3114.fr</a></li>
+          <li><a href="https://www.service-public.fr" target="_blank" rel="noopener">Service-public.fr</a></li>
+          <li><a href="https://www.e-enfance.org" target="_blank" rel="noopener">E-enfance.org</a></li>
+          <li><a href="https://discord.com" target="_blank" rel="noopener">Discord.com</a></li>
+          <li><a href="https://www.ovhcloud.com/fr/domains/" target="_blank" rel="noopener">Acheter zone-entraide.fr</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Zone Entraide — Tous droits réservés · <a href="#contact">Contact</a></p>
+      <p class="footer-update">Numéros d'urgence vérifiés en avril 2026 · Signaler une erreur par <a href="#contact">formulaire</a></p>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══ STICKY DISCORD MOBILE ═══ -->
+<div class="sticky-discord" role="complementary" aria-label="Rejoindre la communauté">
+  <span>Rejoins la communauté Discord !</span>
+  <a href="https://discord.gg/BBAd2JAZKV" target="_blank" rel="noopener" class="btn btn-discord" style="font-size:.85rem;padding:9px 18px">
+    Rejoindre
+  </a>
+</div>
+
+<!-- ═══ CHATBOT ═══ -->
+<button id="chat-btn" onclick="toggleChat()" aria-label="Ouvrir le chat d'aide" title="Besoin d'aide ?">💬</button>
+<div id="chat-panel" role="dialog" aria-label="Chat d'aide Zone Entraide" aria-modal="false">
+  <div class="chat-header">
+    <div class="chat-avatar">🤖</div>
+    <div>
+      <div class="chat-hname">Zone Bot</div>
+      <div class="chat-hstatus">● En ligne</div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()" aria-label="Fermer">✕</button>
+  </div>
+  <div class="chat-msgs" id="chat-msgs" aria-live="polite" aria-label="Messages du chat">
+    <div class="chat-msg bot">Salut ! Je suis là pour t'aider 👋 Qu'est-ce que je peux faire pour toi ?</div>
+  </div>
+  <div class="chat-suggestions" id="chat-sug">
+    <button class="chat-sug" onclick="chatAsk('urgences')">🆘 Urgences</button>
+    <button class="chat-sug" onclick="chatAsk('rejoindre')">💬 Rejoindre</button>
+    <button class="chat-sug" onclick="chatAsk('economie')">💰 Économie</button>
+    <button class="chat-sug" onclick="chatAsk('seul')">😔 Je me sens seul</button>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chat-input" type="text" placeholder="Tape un message..." onkeydown="if(event.key==='Enter')chatSend()" aria-label="Tape un message">
+    <button class="chat-send" onclick="chatSend()">→</button>
+  </div>
+</div>
+
+<!-- ═══ SCRIPTS ═══ -->
+<script>
+// ── Étoiles canvas ──
+(function() {
+  const c = document.getElementById('stars');
+  const ctx = c.getContext('2d');
+  let W, H, stars = [];
+  function resize() { W = c.width = window.innerWidth; H = c.height = window.innerHeight; }
+  function init() {
+    resize();
+    stars = Array.from({length: 120}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      r: Math.random()*1.2+.2, o: Math.random()*.7+.1,
+      s: Math.random()*.4+.05
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    stars.forEach(s => {
+      s.o += (Math.random()-.5)*s.s;
+      s.o = Math.max(.05, Math.min(.9, s.o));
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(200,200,255,${s.o})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  init(); draw();
+})();
+
+// ── Nav burger ──
+function toggleMenu() {
+  const m = document.getElementById('mobileMenu');
+  const open = m.classList.toggle('open');
+  m.setAttribute('aria-hidden', !open);
+}
+
+// ── Reveal on scroll ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── FAQ ──
+function toggleFaq(el) {
+  const item = el.parentElement;
+  const isOpen = item.classList.toggle('open');
+  el.setAttribute('aria-expanded', isOpen);
+}
+document.querySelectorAll('.faq-q').forEach(q => {
+  q.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFaq(q); } });
+});
+
+// ── Tabs économie (supprimés dans cette version, calc direct) ──
+
+// ── Calculateur ──
+function updateCalc() {
+  const msgs = parseInt(document.getElementById('msgs').value);
+  const casino = parseInt(document.getElementById('casino').value);
+  const invits = parseInt(document.getElementById('invits').value);
+  document.getElementById('msg-val').textContent = msgs;
+  document.getElementById('casino-val').textContent = casino;
+  document.getElementById('inv-val').textContent = invits;
+  // Estimation hebdo
+  const workDaily = 1200; // /work ~6/jour × 200
+  const daily = 500;
+  const msgXP = msgs * 7 * 2; // ~2€ par message en coins équivalents
+  const inv = invits * 50;
+  const total = (workDaily + daily + msgXP) * 7 + inv;
+  document.getElementById('calc-total').textContent = '~' + total.toLocaleString('fr-FR') + '€';
+}
+
+// ── Formulaire de contact ──
+function sendForm(e) {
+  e.preventDefault();
+  const nom = document.getElementById('f-nom').value;
+  const email = document.getElementById('f-email').value;
+  const sujet = document.getElementById('f-sujet').value;
+  const msg = document.getElementById('f-msg').value;
+  // Ouvre le client mail avec les données
+  const mailBody = encodeURIComponent(`Prénom: ${nom}\n\n${msg}`);
+  window.location.href = `mailto:contact@zone-entraide.fr?subject=${encodeURIComponent('[Zone Entraide] ' + sujet)}&body=${mailBody}`;
+  document.getElementById('form-success').style.display = 'block';
+  e.target.reset();
+}
+
+// ── Chatbot ──
+const chatResponses = {
+  'urgences': {
+    text: '🆘 Si tu es en danger immédiat : appelle le 15 (SAMU), 17 (Police) ou 18 (Pompiers).\n\nPour la détresse psychologique et les pensées suicidaires : le 3114 répond 24h/24 et c\'est gratuit.\n\nTu peux voir tous les numéros en cliquant sur "Numéros d\'urgence" dans le menu.',
+    sug: ['rejoindre', 'seul', 'economie']
+  },
+  'rejoindre': {
+    text: '💬 Pour rejoindre Zone Entraide, c\'est simple :\n\n1. Clique sur le bouton "Rejoindre Discord" en haut de la page\n2. Accepte l\'invitation\n3. Lis les règles\n4. Tes 5 000€ virtuels sont crédités automatiquement ! 🎉',
+    sug: ['economie', 'fondateurs', 'urgences']
+  },
+  'economie': {
+    text: '💰 L\'économie de Zone Entraide fonctionne en € virtuels :\n\n• 5 000€ offerts à l\'arrivée\n• /work — jusqu\'à 6 fois par jour\n• /daily — bonus quotidien\n• 15+ jeux de casino\n• Crypto simulée (vrais cours BTC, ETH…)\n• Banque avec intérêts\n\nTout est 100% virtuel, 0 argent réel.',
+    sug: ['rejoindre', 'casino', 'crypto']
+  },
+  'seul': {
+    text: '💜 Je t\'entends. Te sentir seul, c\'est difficile — et c\'est courageux d\'en parler.\n\nSur Zone Entraide, tu trouveras des gens prêts à t\'écouter sans te juger. Parfois, juste parler aide énormément.\n\nSi tu traverses quelque chose de plus lourd, le 3114 est disponible 24h/24 — des professionnels formés sont là pour toi.',
+    sug: ['urgences', 'rejoindre', 'communaute']
+  },
+  'casino': {
+    text: '🎰 15+ jeux disponibles avec NexusBot :\n\nBlackjack · Roulette · Slots · Crash · Mines · Video Poker · Baccarat · Hi-Lo · Hippodrome · Plinko · Keno · Grattage · Roue de Fortune · Dés · Tour\n\nTous jouables avec tes € virtuels, sans risque réel.',
+    sug: ['economie', 'rejoindre']
+  },
+  'crypto': {
+    text: '📈 Le système crypto de NexusBot utilise les vrais cours en temps réel (via CoinGecko).\n\nDisponible : BTC, ETH, SOL, BNB, ADA et plus encore.\n\nTu peux acheter, vendre, ou donner des cryptos à d\'autres membres avec /crypto.',
+    sug: ['economie', 'rejoindre']
+  },
+  'fondateurs': {
+    text: '⭐ Les Fondateurs sont les premiers membres de Zone Entraide.\n\nAvantages permanents : badge exclusif, XP ×1.5, accès salon privé, voix dans les décisions.\n\nIl suffit de rejoindre maintenant et d\'être actif pendant la phase de lancement.',
+    sug: ['rejoindre', 'economie']
+  },
+  'communaute': {
+    text: '🤝 Zone Entraide c\'est avant tout des gens bienveillants.\n\nOn peut parler de tout, jouer ensemble, s\'entraider. Zéro jugement, zéro toxicité.\n\nLe serveur est en construction — les premiers membres façonnent vraiment l\'ambiance.',
+    sug: ['rejoindre', 'seul']
+  }
+};
+
+const defaultResponse = {
+  text: 'Je ne suis qu\'un petit bot 😅 Pour une vraie réponse, rejoins le Discord ou utilise le formulaire de contact. L\'équipe répond sous 24h !',
+  sug: ['rejoindre', 'urgences', 'contact']
+};
+
+function chatAsk(key) {
+  const resp = chatResponses[key] || defaultResponse;
+  addChatMsg(key === 'seul' ? '😔 Je me sens seul...' : key, 'user');
+  setTimeout(() => {
+    addChatMsg(resp.text, 'bot');
+    updateSuggestions(resp.sug);
+  }, 400);
+}
+
+function chatSend() {
+  const input = document.getElementById('chat-input');
+  const val = input.value.trim();
+  if (!val) return;
+  input.value = '';
+  addChatMsg(val, 'user');
+  const lower = val.toLowerCase();
+  let key = 'default';
+  if (lower.match(/urgence|danger|aide|sos|3114|suicide|mour/)) key = 'urgences';
+  else if (lower.match(/seul|triste|mal|pleure|vide|nuit|peur|dur|chagrin/)) key = 'seul';
+  else if (lower.match(/rejoindre|rejoins|join|discord|entrer/)) key = 'rejoindre';
+  else if (lower.match(/argent|euro|monnaie|work|daily|économie|eco|gagner/)) key = 'economie';
+  else if (lower.match(/casino|jeu|jouer|pari|slot|blackjack/)) key = 'casino';
+  else if (lower.match(/crypto|bitcoin|btc|eth|sol/)) key = 'crypto';
+  else if (lower.match(/fondateur|badge|premium/)) key = 'fondateurs';
+  const resp = chatResponses[key] || defaultResponse;
+  setTimeout(() => {
+    addChatMsg(resp.text, 'bot');
+    if (resp.sug) updateSuggestions(resp.sug);
+  }, 500);
+}
+
+function addChatMsg(text, type) {
+  const msgs = document.getElementById('chat-msgs');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${type}`;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function updateSuggestions(keys) {
+  const labels = {
+    urgences: '🆘 Urgences', rejoindre: '💬 Rejoindre',
+    economie: '💰 Économie', seul: '😔 Je me sens seul',
+    casino: '🎰 Casino', crypto: '📈 Crypto',
+    fondateurs: '⭐ Fondateurs', communaute: '🤝 Communauté',
+    contact: '✉️ Contact'
+  };
+  const sug = document.getElementById('chat-sug');
+  sug.innerHTML = '';
+  keys.slice(0,4).forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'chat-sug';
+    btn.textContent = labels[k] || k;
+    btn.onclick = () => chatAsk(k);
+    sug.appendChild(btn);
+  });
+}
+
+function toggleChat() {
+  const p = document.getElementById('chat-panel');
+  const isOpen = p.classList.toggle('open');
+  document.getElementById('chat-btn').textContent = isOpen ? '✕' : '💬';
+  p.setAttribute('aria-modal', isOpen);
+  if (isOpen) document.getElementById('chat-input').focus();
+}
+</script>
+
+</body>
+</html>
