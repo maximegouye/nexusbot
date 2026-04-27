@@ -1,0 +1,128 @@
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const db = require('../../database/db');
+
+const WEAPONS = [
+  { name: 'Épée', emoji: '⚔️' }, { name: 'Arc', emoji: '🏹' },
+  { name: 'Magie', emoji: '🔮' }, { name: 'Dague', emoji: '🗡️' },
+  { name: 'Masse', emoji: '🔨' },
+];
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('duel-argent')
+    .setDescription('⚔️ Défie un membre en duel pour voler ses coins !')
+    .addUserOption(o => o.setName('adversaire').setDescription('Ton adversaire').setRequired(true))
+    .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)),
+  cooldown: 10,
+
+  async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    const opponent = interaction.options.getUser('adversaire');
+    const miseRaw  = interaction.options.get('mise')?.value;
+    const cfg      = db.getConfig(interaction.guildId);
+    const _me      = db.getUser(interaction.user.id, interaction.guildId);
+    const parseBet = (raw, base) => {
+      const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
+      if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
+      if (s === 'half' || s === 'moitié' || s === 'moitie' || s === '50%') return Math.floor(Number(base || 0) / 2);
+      const m = s.match(/^(\d+(?:\.\d+)?)(%)?$/);
+      if (!m) return NaN;
+      const n = parseFloat(m[1]);
+      if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
+      return Math.floor(n);
+    };
+    const mise = parseBet(miseRaw, _me.balance);
+    if (!Number.isFinite(mise) || mise < 50) {
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide. Minimum **50**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+    }
+    const emoji    = cfg.currency_emoji || '€';
+    const name     = cfg.currency_name  || 'Euros';
+
+    if (opponent.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
+    if (opponent.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te battre contre toi-même.', ephemeral: true });
+
+    const challenger = db.getUser(interaction.user.id, interaction.guildId);
+    const defender   = db.getUser(opponent.id, interaction.guildId);
+
+    if (challenger.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
+    if (defender.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr-FR')} ${name}**. Mise trop élevée.`, ephemeral: true });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('duel_accept').setLabel('⚔️ Accepter le duel').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('duel_refuse').setLabel('🏳️ Refuser').setStyle(ButtonStyle.Secondary),
+    );
+
+    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+      content: `${opponent} — Tu es défié(e) en duel !`,
+      embeds: [new EmbedBuilder()
+        .setColor('#E74C3C')
+        .setTitle('⚔️ Duel lancé !')
+        .setDescription(`**${interaction.user.username}** défie **${opponent.username}** en combat !\n\n💰 Mise : **${mise.toLocaleString('fr-FR')} ${name}** chacun\n🏆 Le gagnant emporte **${(mise * 2).toLocaleString('fr-FR')} ${name}**`)
+        .setFooter({ text: `${opponent.username} a 60 secondes pour accepter` })
+      ],
+      components: [row],
+      fetchReply: true
+    });
+
+    const collector = msg.createMessageComponentCollector({
+      filter: i => i.user.id === opponent.id,
+      time: 60000, max: 1
+    });
+
+    collector.on('collect', async i => {
+      if (i.customId === 'duel_refuse') {
+        return i.update({
+          embeds: [new EmbedBuilder().setColor('#888888').setDescription(`🏳️ **${opponent.username}** a refusé le duel. Quelle trouille !`)],
+          components: []
+        });
+      }
+
+      // Duel accepté — simulation de combat
+      db.removeCoins(interaction.user.id, interaction.guildId, mise);
+      db.removeCoins(opponent.id, interaction.guildId, mise);
+
+      const challengerHP = 100 + challenger.level * 5;
+      const defenderHP   = 100 + defender.level * 5;
+      let cHP = challengerHP, dHP = defenderHP;
+
+      const rounds = [];
+      for (let r = 1; r <= 5 && cHP > 0 && dHP > 0; r++) {
+        const cWeapon = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
+        const dWeapon = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
+        const cDmg = Math.floor(Math.random() * 30) + 10 + challenger.level;
+        const dDmg = Math.floor(Math.random() * 30) + 10 + defender.level;
+        dHP -= cDmg;
+        cHP -= dDmg;
+        rounds.push(`Tour ${r}: ${interaction.user.username} ${cWeapon.emoji}(-${cDmg}) | ${opponent.username} ${dWeapon.emoji}(-${dDmg})`);
+      }
+
+      const cWon = cHP > dHP;
+      const winner = cWon ? interaction.user : opponent;
+      const loser  = cWon ? opponent : interaction.user;
+
+      db.addCoins(winner.id, interaction.guildId, mise * 2);
+
+      await i.update({
+        embeds: [new EmbedBuilder()
+          .setColor(cWon ? '#F39C12' : '#8E44AD')
+          .setTitle(`⚔️ Duel terminé — 🏆 ${winner.username} gagne !`)
+          .setDescription(rounds.join('\n'))
+          .addFields(
+            { name: `❤️ PV ${interaction.user.username}`, value: `${Math.max(0, cHP)}`, inline: true },
+            { name: `❤️ PV ${opponent.username}`,         value: `${Math.max(0, dHP)}`, inline: true },
+            { name: '💰 Gains',                            value: `+**${(mise * 2).toLocaleString('fr-FR')} ${name}**`, inline: true },
+          )
+          .setFooter({ text: `${loser.username} perd sa mise !` })
+        ],
+        components: []
+      });
+    });
+
+    collector.on('end', (_, reason) => {
+      if (reason === 'time') msg.edit({ content: '⏱️ Duel expiré.', components: [] }).catch(() => {});
+    });
+  }
+};
+
+// Réactivé comme prefix-only (limite slash Discord)
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

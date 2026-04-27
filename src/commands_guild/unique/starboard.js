@@ -1,0 +1,83 @@
+/**
+ * NexusBot — Starboard configurable
+ * /starboard — Épingler les meilleurs messages automatiquement
+ */
+const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
+const db = require('../../database/db');
+
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS starboard_entries (
+    message_id TEXT PRIMARY KEY,
+    guild_id TEXT, channel_id TEXT,
+    author_id TEXT, star_message_id TEXT,
+    star_count INTEGER DEFAULT 0,
+    created_at INTEGER DEFAULT (strftime('%s','now'))
+  )`).run();
+} catch {}
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('starboard')
+    .setDescription('⭐ Configurer et gérer le starboard du serveur')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+
+    .addSubcommand(s => s.setName('configurer').setDescription('⚙️ Configurer le starboard')
+      .addChannelOption(o => o.setName('salon').setDescription('Salon starboard').setRequired(true).addChannelTypes(ChannelType.GuildText))
+      .addStringOption(o => o.setName('emoji').setDescription('Emoji à utiliser (défaut: ⭐)').setMaxLength(5)))
+
+    .addSubcommand(s => s.setName('activer').setDescription('✅ Activer le starboard'))
+    .addSubcommand(s => s.setName('desactiver').setDescription('❌ Désactiver le starboard'))
+    .addSubcommand(s => s.setName('voir').setDescription('📋 Voir la configuration du starboard'))
+    .addSubcommand(s => s.setName('top').setDescription('🏆 Top des messages les plus étoilés')),
+
+  async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
+    const guildId = interaction.guildId;
+    const cfg = db.getConfig(guildId);
+
+    if (sub === 'configurer') {
+      const salon  = interaction.options.getChannel('salon');
+      const seuil  = interaction.options.getInteger('seuil') || 3;
+      const emoji  = interaction.options.getString('emoji') || '⭐';
+      db.setConfig(guildId, 'starboard_channel', salon.id);
+      db.setConfig(guildId, 'starboard_threshold', seuil);
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        .setTitle('⭐ Starboard configuré')
+        .addFields(
+          { name: '📢 Salon',    value: `${salon}`,   inline: true },
+          { name: '🔢 Seuil',   value: `${seuil} ${emoji}`, inline: true },
+          { name: '😀 Emoji',   value: emoji,         inline: true },
+        )
+        .setDescription(`Les messages avec **${seuil} ${emoji}** ou plus seront épinglés dans ${salon}.`)] });
+    }
+    if (sub === 'activer') {
+      if (!cfg.starboard_channel) return interaction.reply({ content: '❌ Configurez d\'abord le starboard avec `/starboard configurer`.', ephemeral: true });
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B').setDescription(`⭐ Starboard activé dans <#${cfg.starboard_channel}> (seuil: ${cfg.starboard_threshold || 3}).`)] });
+    }
+    if (sub === 'desactiver') {
+      db.setConfig(guildId, 'starboard_channel', null);
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setDescription('❌ Starboard désactivé.')] });
+    }
+    if (sub === 'voir') {
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        .setTitle('⭐ Configuration du Starboard')
+        .addFields(
+          { name: '📢 Salon',  value: cfg.starboard_channel ? `<#${cfg.starboard_channel}>` : '`Non configuré`', inline: true },
+          { name: '🔢 Seuil', value: `${cfg.starboard_threshold || 3} ⭐`, inline: true },
+          { name: '📊 Statut', value: cfg.starboard_channel ? '✅ Actif' : '❌ Inactif', inline: true },
+        )], ephemeral: true });
+    }
+    if (sub === 'top') {
+      const top = db.db.prepare('SELECT * FROM starboard_entries WHERE guild_id=? ORDER BY star_count DESC LIMIT 10').all(guildId);
+      if (!top.length) return interaction.reply({ content: '⭐ Aucune entrée dans le starboard.', ephemeral: true });
+      const medals = ['🥇','🥈','🥉'];
+      const lines = top.map((e,i) => `${medals[i]||`**${i+1}.**`} ⭐ **${e.star_count}** — <@${e.author_id}> dans <#${e.channel_id}>`);
+      return interaction.reply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+        .setTitle('🏆 Top Starboard')
+        .setDescription(lines.join('\n'))] });
+    }
+  }
+};
+
+// Réactivé comme prefix-only (limite slash Discord)
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

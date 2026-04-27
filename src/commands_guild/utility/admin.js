@@ -1,3 +1,4 @@
+module.exports = {}; // DISABLED — exceeds 100 cmd limit
 /**
  * NexusBot — Panneau d'administration complet
  * /admin — Gérer la monnaie, l'XP, les utilisateurs, les sanctions et le serveur

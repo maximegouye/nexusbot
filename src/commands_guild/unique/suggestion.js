@@ -1,0 +1,232 @@
+/**
+ * NexusBot — Système de Suggestions
+ * /suggestion — Soumettez, votez et gérez les suggestions du serveur
+ */
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
+const db = require('../../database/db');
+
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS suggestions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id    TEXT NOT NULL,
+    user_id     TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status      TEXT DEFAULT 'pending',
+    votes_up    INTEGER DEFAULT 0,
+    votes_down  INTEGER DEFAULT 0,
+    channel_msg TEXT,
+    admin_note  TEXT,
+    created_at  INTEGER DEFAULT (strftime('%s','now'))
+  )`).run();
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS suggestion_votes (
+    suggestion_id INTEGER NOT NULL,
+    user_id       TEXT NOT NULL,
+    vote          TEXT NOT NULL,
+    PRIMARY KEY (suggestion_id, user_id)
+  )`).run();
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS suggestion_config (
+    guild_id    TEXT PRIMARY KEY,
+    channel_id  TEXT,
+    cooldown_h  INTEGER DEFAULT 24,
+    min_votes   INTEGER DEFAULT 5,
+    notify_dm   INTEGER DEFAULT 1
+  )`).run();
+} catch {}
+
+const STATUS_COLORS = {
+  pending:   '#3498db',
+  approved:  '#2ecc71',
+  rejected:  '#e74c3c',
+  review:    '#f39c12',
+  done:      '#9b59b6',
+};
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('suggestion')
+    .setDescription('💡 Système de suggestions pour le serveur')
+    .addSubcommand(s => s.setName('soumettre')
+      .setDescription('📝 Soumettre une suggestion')
+      .addStringOption(o => o.setName('titre').setDescription('Titre de la suggestion').setRequired(true).setMaxLength(100))
+      .addStringOption(o => o.setName('description').setDescription('Décrivez votre suggestion').setRequired(true).setMaxLength(1000)))
+    .addSubcommand(s => s.setName('voir')
+      .setDescription('👁️ Voir une suggestion')
+      .addIntegerOption(o => o.setName('id').setDescription('ID de la suggestion').setRequired(true)))
+    .addSubcommand(s => s.setName('liste')
+      .setDescription('📋 Voir les suggestions')
+      .addStringOption(o => o.setName('filtre').setDescription('Filtrer par statut')
+        .addChoices(
+          { name: '⏳ En attente', value: 'pending' },
+          { name: '✅ Approuvées', value: 'approved' },
+          { name: '❌ Refusées',   value: 'rejected' },
+          { name: '🔍 En revue',   value: 'review'   },
+          { name: '✔️ Réalisées',  value: 'done'     },
+        )))
+    .addSubcommand(s => s.setName('voter')
+      .setDescription('👍 Voter pour une suggestion')
+      .addIntegerOption(o => o.setName('id').setDescription('ID de la suggestion').setRequired(true))
+      .addStringOption(o => o.setName('vote').setDescription('Votre vote').setRequired(true).addChoices(
+        { name: '👍 Pour', value: 'up' },
+        { name: '👎 Contre', value: 'down' },
+      )))
+    .addSubcommand(s => s.setName('statut')
+      .setDescription('🔄 Changer le statut d\'une suggestion (admin)')
+      .addIntegerOption(o => o.setName('id').setDescription('ID').setRequired(true))
+      .addStringOption(o => o.setName('statut').setDescription('Nouveau statut').setRequired(true).addChoices(
+        { name: '✅ Approuver', value: 'approved' },
+        { name: '❌ Refuser',   value: 'rejected' },
+        { name: '🔍 Mettre en revue', value: 'review' },
+        { name: '✔️ Marquer comme réalisé', value: 'done' },
+      ))
+      .addStringOption(o => o.setName('note').setDescription('Note pour le créateur').setMaxLength(300)))
+    .addSubcommand(s => s.setName('config')
+      .setDescription('⚙️ Configurer le salon de suggestions (admin)')
+      .addChannelOption(o => o.setName('salon').setDescription('Salon pour les suggestions').setRequired(true))),
+
+  cooldown: 5,
+
+  async execute(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+    const sub     = interaction.options.getSubcommand();
+    const guildId = interaction.guildId;
+    const userId  = interaction.user.id;
+
+    if (sub === 'config') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+        return interaction.editReply({ content: '❌ Permission insuffisante.' });
+      const salon = interaction.options.getChannel('salon');
+      db.db.prepare('INSERT OR REPLACE INTO suggestion_config (guild_id, channel_id) VALUES (?,?)').run(guildId, salon.id);
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Salon des suggestions configuré : ${salon}`)] });
+    }
+
+    if (sub === 'soumettre') {
+      const titre       = interaction.options.getString('titre');
+      const description = interaction.options.getString('description');
+
+      // Cooldown check
+      const cfg         = db.db.prepare('SELECT * FROM suggestion_config WHERE guild_id=?').get(guildId);
+      const cooldownH   = cfg?.cooldown_h || 24;
+      const lastSub     = db.db.prepare('SELECT * FROM suggestions WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 1').get(guildId, userId);
+      if (lastSub) {
+        const elapsed = Math.floor(Date.now()/1000) - lastSub.created_at;
+        if (elapsed < cooldownH * 3600) {
+          const remaining = cooldownH * 3600 - elapsed;
+          return interaction.editReply({ content: `⏳ Tu dois attendre encore **${Math.ceil(remaining/3600)}h** avant de soumettre une nouvelle suggestion.` });
+        }
+      }
+
+      const result = db.db.prepare('INSERT INTO suggestions (guild_id, user_id, title, description) VALUES (?,?,?,?)')
+        .run(guildId, userId, titre, description);
+      const id = result.lastInsertRowid;
+
+      const embed = new EmbedBuilder()
+        .setColor('#3498db')
+        .setTitle(`💡 Suggestion #${id} — ${titre}`)
+        .setDescription(description)
+        .addFields(
+          { name: '👤 Auteur', value: `<@${userId}>`, inline: true },
+          { name: '📊 Votes',  value: '👍 0 | 👎 0',  inline: true },
+          { name: '🔖 Statut', value: '⏳ En attente', inline: true },
+        )
+        .setFooter({ text: `ID: #${id} • Votez avec /suggestion voter ${id}` })
+        .setTimestamp();
+
+      // Poster dans le salon si configuré
+      if (cfg?.channel_id) {
+        const ch = interaction.guild.channels.cache.get(cfg.channel_id);
+        if (ch) {
+          const msg = await ch.send({ embeds: [embed] }).catch(() => null);
+          if (msg) {
+            db.db.prepare('UPDATE suggestions SET channel_msg=? WHERE id=?').run(msg.id, id);
+            await msg.react('👍').catch(() => {});
+            await msg.react('👎').catch(() => {});
+          }
+        }
+      }
+
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Suggestion **#${id}** soumise avec succès !\n${cfg?.channel_id ? `Visible dans <#${cfg.channel_id}>` : 'Configure un salon avec `/suggestion config`'}`)] });
+    }
+
+    if (sub === 'voir') {
+      const id = interaction.options.getInteger('id');
+      const s  = db.db.prepare('SELECT * FROM suggestions WHERE id=? AND guild_id=?').get(id, guildId);
+      if (!s) return interaction.editReply({ content: `❌ Suggestion #${id} introuvable.` });
+
+      const statusLabel = { pending: '⏳ En attente', approved: '✅ Approuvée', rejected: '❌ Refusée', review: '🔍 En revue', done: '✔️ Réalisée' };
+
+      const embed = new EmbedBuilder()
+        .setColor(STATUS_COLORS[s.status] || '#3498db')
+        .setTitle(`💡 Suggestion #${id} — ${s.title}`)
+        .setDescription(s.description)
+        .addFields(
+          { name: '👤 Auteur', value: `<@${s.user_id}>`, inline: true },
+          { name: '📊 Votes',  value: `👍 ${s.votes_up} | 👎 ${s.votes_down}`, inline: true },
+          { name: '🔖 Statut', value: statusLabel[s.status] || s.status, inline: true },
+        )
+        .setFooter({ text: `Soumis le ${new Date(s.created_at * 1000).toLocaleDateString('fr-FR')}` });
+      if (s.admin_note) embed.addFields({ name: '📝 Note Admin', value: s.admin_note, inline: false });
+      return interaction.editReply({ embeds: [embed] });
+    }
+
+    if (sub === 'voter') {
+      const id   = interaction.options.getInteger('id');
+      const vote = interaction.options.getString('vote');
+      const s    = db.db.prepare('SELECT * FROM suggestions WHERE id=? AND guild_id=?').get(id, guildId);
+      if (!s) return interaction.editReply({ content: `❌ Suggestion #${id} introuvable.` });
+      if (s.status !== 'pending' && s.status !== 'review') return interaction.editReply({ content: '❌ On ne peut plus voter sur cette suggestion.' });
+      if (s.user_id === userId) return interaction.editReply({ content: '❌ Tu ne peux pas voter sur ta propre suggestion !' });
+
+      const existing = db.db.prepare('SELECT * FROM suggestion_votes WHERE suggestion_id=? AND user_id=?').get(id, userId);
+      if (existing) {
+        if (existing.vote === vote) return interaction.editReply({ content: '❌ Tu as déjà voté de la même façon !' });
+        // Change de vote
+        db.db.prepare('UPDATE suggestion_votes SET vote=? WHERE suggestion_id=? AND user_id=?').run(vote, id, userId);
+        if (vote === 'up') {
+          db.db.prepare('UPDATE suggestions SET votes_up=votes_up+1, votes_down=votes_down-1 WHERE id=?').run(id);
+        } else {
+          db.db.prepare('UPDATE suggestions SET votes_up=votes_up-1, votes_down=votes_down+1 WHERE id=?').run(id);
+        }
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#f39c12').setDescription(`🔄 Vote changé pour **#${id}** : ${vote === 'up' ? '👍' : '👎'}`)] });
+      }
+
+      db.db.prepare('INSERT INTO suggestion_votes (suggestion_id, user_id, vote) VALUES (?,?,?)').run(id, userId, vote);
+      if (vote === 'up') {
+        db.db.prepare('UPDATE suggestions SET votes_up=votes_up+1 WHERE id=?').run(id);
+      } else {
+        db.db.prepare('UPDATE suggestions SET votes_down=votes_down+1 WHERE id=?').run(id);
+      }
+      const updated = db.db.prepare('SELECT * FROM suggestions WHERE id=?').get(id);
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`${vote === 'up' ? '👍' : '👎'} Vote enregistré sur **#${id}** !\n👍 ${updated.votes_up} | 👎 ${updated.votes_down}`)] });
+    }
+
+    if (sub === 'liste') {
+      const filtre = interaction.options.getString('filtre') || 'pending';
+      const list   = db.db.prepare('SELECT * FROM suggestions WHERE guild_id=? AND status=? ORDER BY votes_up DESC LIMIT 15').all(guildId, filtre);
+      if (!list.length) return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune suggestion dans cette catégorie.')] });
+      const embed = new EmbedBuilder()
+        .setColor(STATUS_COLORS[filtre] || '#3498db')
+        .setTitle(`💡 Suggestions — ${filtre}`)
+        .setDescription(list.map(s => `**#${s.id}** — ${s.title.slice(0,60)}\n👍 ${s.votes_up} | 👎 ${s.votes_down}`).join('\n'));
+      return interaction.editReply({ embeds: [embed] });
+    }
+
+    if (sub === 'statut') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+        return interaction.editReply({ content: '❌ Permission insuffisante.' });
+
+      const id     = interaction.options.getInteger('id');
+      const statut = interaction.options.getString('statut');
+      const note   = interaction.options.getString('note');
+      const s      = db.db.prepare('SELECT * FROM suggestions WHERE id=? AND guild_id=?').get(id, guildId);
+      if (!s) return interaction.editReply({ content: `❌ Suggestion #${id} introuvable.` });
+
+      db.db.prepare('UPDATE suggestions SET status=?, admin_note=? WHERE id=?').run(statut, note || null, id);
+      const statusLabel = { approved: '✅ Approuvée', rejected: '❌ Refusée', review: '🔍 En revue', done: '✔️ Réalisée' };
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(STATUS_COLORS[statut]).setDescription(`Suggestion **#${id}** mise à jour : **${statusLabel[statut]}**${note ? `\n> ${note}` : ''}`)] });
+    }
+  }
+};
+
+// Réactivé comme prefix-only (limite slash Discord)
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

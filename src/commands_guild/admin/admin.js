@@ -19,7 +19,18 @@ module.exports = {
       .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
     .addSubcommand(sub => sub.setName('solde').setDescription('Voir le solde exact')
       .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true)))
-    .addSubcommand(sub => sub.setName('config').setDescription('Afficher la configuration du serveur')),
+    .addSubcommand(sub => sub.setName('config').setDescription('Afficher la configuration du serveur'))
+    .addSubcommand(sub => sub.setName('remboursement-ajouter').setDescription('Ajouter un remboursement en attente')
+      .addUserOption(o => o.setName('utilisateur').setDescription('Utilisateur à rembourser').setRequired(true))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à rembourser').setMinValue(1).setRequired(true))
+      .addStringOption(o => o.setName('raison').setDescription('Raison du remboursement').setRequired(false).setMaxLength(200)))
+    .addSubcommand(sub => sub.setName('remboursement-envoyer').setDescription('Envoyer TOUS les remboursements en attente'))
+    .addSubcommand(sub => sub.setName('remboursement-liste').setDescription('Voir les remboursements en attente'))
+    .addSubcommand(sub => sub.setName('remboursement-direct').setDescription('Rembourser immédiatement sans file')
+      .addUserOption(o => o.setName('utilisateur').setDescription('Utilisateur').setRequired(true))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant').setMinValue(1).setRequired(true))
+      .addStringOption(o => o.setName('raison').setDescription('Raison').setRequired(false).setMaxLength(200))
+      .addChannelOption(o => o.setName('salon').setDescription('Salon où annoncer publiquement').setRequired(false))),
 
   category: 'admin',
 
@@ -119,6 +130,119 @@ module.exports = {
           { name: '📊 DB',          value: 'SQLite ✅',                                               inline: true },
         )
         .setTimestamp()] });
+    }
+
+    // ── Remboursements — Ajouter ────────────────────────────
+    if (sub === 'remboursement-ajouter') {
+      const target = interaction.options.getUser('utilisateur');
+      const amount = interaction.options.getInteger('montant');
+      const raison = interaction.options.getString('raison') || 'Bug technique — gain non versé (bug slots)';
+
+      db.db.prepare('INSERT INTO remboursements (guild_id, user_id, amount, raison) VALUES (?,?,?,?)')
+        .run(guildId, target.id, amount, raison);
+
+      const cfg = db.getConfig ? db.getConfig(guildId) : null;
+      const coin = cfg?.currency_emoji || '€';
+      return reply({ embeds: [
+        new EmbedBuilder().setColor('#F1C40F').setTitle('✅ Remboursement enregistré')
+          .setDescription(`<@${target.id}> recevra **${amount.toLocaleString('fr-FR')} ${coin}** dès l'envoi.`)
+          .addFields({ name: '📋 Raison', value: raison })
+      ]});
+    }
+
+    // ── Remboursements — Envoyer ────────────────────────────
+    if (sub === 'remboursement-envoyer') {
+      const pending = db.db.prepare('SELECT * FROM remboursements WHERE guild_id=? AND sent=0 ORDER BY id ASC').all(guildId);
+
+      if (!pending.length) {
+        return reply({ content: '✅ Aucun remboursement en attente.', ephemeral: true });
+      }
+
+      let success = 0;
+      const lines = [];
+      const cfg = db.getConfig ? db.getConfig(guildId) : null;
+      const coin = cfg?.currency_emoji || '€';
+      const { sendRemboursement } = require('./remboursement');
+
+      for (const r of pending) {
+        const ok = await sendRemboursement(interaction.client, guildId, r.user_id, r.amount, r.raison);
+        if (ok) {
+          db.db.prepare('UPDATE remboursements SET sent=1, sent_at=? WHERE id=?').run(Math.floor(Date.now()/1000), r.id);
+          lines.push(`✅ <@${r.user_id}> → **+${r.amount.toLocaleString('fr-FR')} ${coin}**`);
+          success++;
+        } else {
+          lines.push(`❌ <@${r.user_id}> → erreur`);
+        }
+      }
+
+      const publicEmbed = new EmbedBuilder()
+        .setColor('#2ECC71')
+        .setTitle('💸 Remboursements envoyés — Bug technique corrigé')
+        .setDescription(
+          `Suite à un bug qui a pu empêcher certains gains d'être crédités, ` +
+          `**${success} membre(s)** viennent d'être remboursés automatiquement.\n\n` +
+          `Les coins ont été ajoutés directement sur leur compte. Un DM de confirmation leur a été envoyé.\n\n` +
+          `**Merci pour votre patience. 🙏**`
+        )
+        .addFields({ name: '📊 Récapitulatif', value: lines.slice(0, 20).join('\n') || '—' })
+        .setFooter({ text: 'NexusBot — Zone Entraide' })
+        .setTimestamp();
+
+      return reply({ embeds: [publicEmbed] });
+    }
+
+    // ── Remboursements — Liste ──────────────────────────────
+    if (sub === 'remboursement-liste') {
+      const pending = db.db.prepare('SELECT * FROM remboursements WHERE guild_id=? AND sent=0 ORDER BY id ASC').all(guildId);
+      const done    = db.db.prepare('SELECT COUNT(*) as c FROM remboursements WHERE guild_id=? AND sent=1').get(guildId);
+      const cfg = db.getConfig ? db.getConfig(guildId) : null;
+      const coin = cfg?.currency_emoji || '€';
+
+      if (!pending.length) {
+        return reply({ content: `✅ Aucun remboursement en attente. (${done?.c || 0} déjà envoyés)` });
+      }
+
+      const lines = pending.map(r => `<@${r.user_id}> — **${r.amount.toLocaleString('fr-FR')} ${coin}** | ${r.raison}`);
+      return reply({ embeds: [
+        new EmbedBuilder().setColor('#F1C40F').setTitle(`📋 Remboursements en attente (${pending.length})`)
+          .setDescription(lines.slice(0, 25).join('\n'))
+          .setFooter({ text: `${done?.c || 0} déjà envoyés` })
+      ]});
+    }
+
+    // ── Remboursements — Direct ─────────────────────────────
+    if (sub === 'remboursement-direct') {
+      const target  = interaction.options.getUser('utilisateur');
+      const amount  = interaction.options.getInteger('montant');
+      const raison  = interaction.options.getString('raison') || 'Remboursement — bug technique';
+      const salon   = interaction.options.getChannel('salon') || interaction.channel;
+      const { sendRemboursement } = require('./remboursement');
+
+      const ok = await sendRemboursement(interaction.client, guildId, target.id, amount, raison, salon?.id);
+      if (!ok) return reply({ content: '❌ Erreur lors du remboursement.', ephemeral: true });
+
+      db.db.prepare('INSERT INTO remboursements (guild_id, user_id, amount, raison, sent, sent_at) VALUES (?,?,?,?,1,?)')
+        .run(guildId, target.id, amount, raison, Math.floor(Date.now()/1000));
+
+      const newBalance = db.getUser(target.id, guildId)?.balance || 0;
+      const cfg = db.getConfig ? db.getConfig(guildId) : null;
+      const coin = cfg?.currency_emoji || '€';
+      const publicEmbed = new EmbedBuilder()
+        .setColor('#2ECC71')
+        .setTitle('💸 Remboursement effectué !')
+        .setDescription(
+          `<@${target.id}> a été remboursé suite à un bug technique.\n\n` +
+          `Désolé pour ce désagrément — ton gain t'appartient et il est maintenant sur ton compte. 🙏`
+        )
+        .addFields(
+          { name: '💰 Montant remboursé', value: `**+${amount.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+          { name: '👛 Nouveau solde', value: `${newBalance.toLocaleString('fr-FR')} ${coin}`, inline: true },
+          { name: '📋 Raison', value: raison, inline: false },
+        )
+        .setFooter({ text: 'NexusBot — Zone Entraide' })
+        .setTimestamp();
+
+      return reply({ embeds: [publicEmbed] });
     }
   },
 };

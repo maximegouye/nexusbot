@@ -1,3 +1,4 @@
+module.exports = {}; // DISABLED — exceeds 100 cmd limit
 /**
  * NexusBot — Objectifs Communautaires du Serveur
  * /objectifs — Créez et suivez des objectifs collectifs avec récompenses

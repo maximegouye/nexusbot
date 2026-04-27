@@ -1,3 +1,4 @@
+module.exports = {}; // DISABLED — exceeds 100 cmd limit
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 

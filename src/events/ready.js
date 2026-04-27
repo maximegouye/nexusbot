@@ -320,73 +320,52 @@ module.exports = {
         const { sendRemboursement } = require('../commands_guild/admin/remboursement');
         const guildIdHome = process.env.HOME_GUILD_ID || '1492886135159128227';
 
-        // Récupère le guild et le canal casino
+        // IDs réels récupérés depuis Discord le 27 avril 2026
+        const KOBALT_ID  = '197626250066526210';   // Propriétaire (KOBALT)
+        const ZZZZ_ID    = '1440416200646594612';  // Développeur (Zzzz021424 / zzzz027510)
+        const CASINO_CID = '1495333990633177178';  // Canal #casino
+
+        // Vérifier le guild
         const guild = client.guilds.cache.get(guildIdHome);
         if (!guild) { console.log('⚠️  [AUTO-REMB] Guild introuvable'); return; }
 
-        // Canal casino pour les annonces publiques
-        const casinoChannel = guild.channels.cache.find(
-          c => c.name === 'casino' && c.isTextBased && c.isTextBased()
-        );
-        const casinoChannelId = casinoChannel?.id || null;
-        if (casinoChannelId) console.log(`💸 [AUTO-REMB] Canal casino trouvé : #${casinoChannel.name} (${casinoChannelId})`);
-        else console.log('⚠️  [AUTO-REMB] Canal #casino introuvable — annonces publiques désactivées');
-
-        // KOBALT = propriétaire du serveur (ID dynamique)
-        const KOBALT_ID = guild.ownerId;
-        console.log(`💸 [AUTO-REMB] KOBALT ID = ${KOBALT_ID} (ownerId)`);
-
-        // Zzzz021424 = développeur — recherche par username dans les membres
-        let ZZZZ_ID = null;
+        // Canal casino — ID hardcodé + fallback par recherche
+        let casinoChannelId = CASINO_CID;
         try {
-          const members = await guild.members.fetch({ limit: 1000 }).catch(() => guild.members.cache);
-          const zzzzMember = members.find(m =>
-            m.user.username.toLowerCase().includes('zzzz') ||
-            m.user.globalName?.toLowerCase().includes('zzzz') ||
-            m.displayName?.toLowerCase().includes('zzzz')
-          );
-          ZZZZ_ID = zzzzMember?.id || null;
-          if (ZZZZ_ID) console.log(`💸 [AUTO-REMB] Zzzz021424 ID = ${ZZZZ_ID} (${zzzzMember?.user?.username})`);
-          else console.log('⚠️  [AUTO-REMB] Zzzz021424 introuvable dans les membres');
-        } catch (e) {
-          console.log('⚠️  [AUTO-REMB] Impossible de fetch les membres:', e?.message);
-        }
-
-        // ÉTAPE 1 : Insérer les compensations pour KOBALT et Zzzz021424 SI absent
-        if (KOBALT_ID) {
-          const kobaltExists = db.db.prepare(
-            'SELECT id FROM remboursements WHERE guild_id=? AND user_id=? AND raison LIKE ?'
-          ).get(guildIdHome, KOBALT_ID, '%gain potentiel%');
-
-          if (!kobaltExists) {
-            console.log('💸 [AUTO-REMB] Insertion compensation KOBALT...');
-            db.db.prepare(
-              'INSERT INTO remboursements (guild_id, user_id, amount, raison, sent) VALUES (?,?,?,?,0)'
-            ).run(
-              guildIdHome,
-              KOBALT_ID,
-              15_000_000,
-              'Remboursement gain potentiel non versé suite aux bugs techniques du casino (période du 26-27 avril 2026)'
-            );
+          const ch = await client.channels.fetch(CASINO_CID).catch(() => null);
+          if (!ch) {
+            const found = guild.channels.cache.find(c => c.name?.includes('casino') && c.isTextBased?.());
+            casinoChannelId = found?.id || null;
           }
-        }
+        } catch { casinoChannelId = null; }
+        console.log(`💸 [AUTO-REMB] Canal casino = ${casinoChannelId || 'introuvable'}`);
 
-        if (ZZZZ_ID) {
-          const zzzzExists = db.db.prepare(
-            'SELECT id FROM remboursements WHERE guild_id=? AND user_id=? AND raison LIKE ?'
-          ).get(guildIdHome, ZZZZ_ID, '%gain potentiel%');
+        // ─── Raison v2 (27 avril 2026) — montants recalculés sur mise réelle ───
+        // KOBALT : mise 30 000 000 € + jackpot progressif 9 721 582 € → 50 000 000 €
+        // Zzzz   : développeur affecté par les mêmes bugs → 15 000 000 €
+        const RAISON_V2 = 'Remboursement v2 — compensation calculée sur mise réelle + jackpot potentiel perdu (27 avril 2026)';
 
-          if (!zzzzExists) {
-            console.log('💸 [AUTO-REMB] Insertion compensation Zzzz021424...');
-            db.db.prepare(
-              'INSERT INTO remboursements (guild_id, user_id, amount, raison, sent) VALUES (?,?,?,?,0)'
-            ).run(
-              guildIdHome,
-              ZZZZ_ID,
-              5_000_000,
-              'Remboursement gain potentiel non versé suite aux bugs techniques du casino (période du 26-27 avril 2026)'
-            );
+        // Supprimer les anciens enregistrements en attente (v1 avec mauvais montants)
+        // et ré-insérer avec les montants corrects.
+        // Les enregistrements déjà envoyés (sent=1) ne sont pas touchés.
+        for (const [uid, amount] of [[KOBALT_ID, 50_000_000], [ZZZZ_ID, 15_000_000]]) {
+          // Vérifie si v2 déjà traitée (envoyée)
+          const alreadySentV2 = db.db.prepare(
+            'SELECT id FROM remboursements WHERE guild_id=? AND user_id=? AND raison=? AND sent=1'
+          ).get(guildIdHome, uid, RAISON_V2);
+          if (alreadySentV2) {
+            console.log(`💸 [AUTO-REMB] ${uid} — v2 déjà envoyée, skip`);
+            continue;
           }
+          // Supprimer toute entrée pending existante (v1 ou v2)
+          db.db.prepare(
+            'DELETE FROM remboursements WHERE guild_id=? AND user_id=? AND sent=0'
+          ).run(guildIdHome, uid);
+          // Insérer v2 avec le bon montant
+          db.db.prepare(
+            'INSERT INTO remboursements (guild_id, user_id, amount, raison, sent) VALUES (?,?,?,?,0)'
+          ).run(guildIdHome, uid, amount, RAISON_V2);
+          console.log(`💸 [AUTO-REMB] Insertion v2 : ${uid} → +${amount.toLocaleString('fr-FR')} €`);
         }
 
         // ÉTAPE 2 : Traiter tous les remboursements en attente
@@ -402,6 +381,8 @@ module.exports = {
               db.db.prepare('UPDATE remboursements SET sent=1, sent_at=? WHERE id=?')
                 .run(Math.floor(Date.now() / 1000), r.id);
               console.log(`  ✅ Remboursé <@${r.user_id}> +${r.amount}`);
+            } else {
+              console.log(`  ⚠️  Échec remboursement <@${r.user_id}>`);
             }
           }
         } else {

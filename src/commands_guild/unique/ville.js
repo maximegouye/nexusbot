@@ -1,3 +1,4 @@
+module.exports = {}; // DISABLED — exceeds 100 cmd limit
 /**
  * NexusBot — Système de ville virtuelle
  * UNIQUE : créer une ville, construire des bâtiments, taxes, population, guerres

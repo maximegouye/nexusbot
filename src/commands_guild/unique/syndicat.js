@@ -1,3 +1,4 @@
+module.exports = {}; // DISABLED — exceeds 100 cmd limit
 /**
  * NexusBot — Syndicats / Guildes de joueurs
  * UNIQUE : Créer une guilde, recruter, trésor commun, guerres inter-guildes, quêtes collectives
