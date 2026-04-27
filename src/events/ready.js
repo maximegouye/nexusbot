@@ -6,7 +6,7 @@ const { REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle
 
 // ── Statuts rotatifs du bot ────────────────────────────────
 const ACTIVITIES = [
-  { name: '🎰 /casino — /setup global=100 guild=99 ✅',  type: ActivityType.Playing   },
+  { name: '🎰 /setup global=99 guild=96 — deploy-commands ✅',  type: ActivityType.Playing   },
   { name: '🏇 /hippodrome — Course de chevaux',     type: ActivityType.Competing },
   { name: '💰 /daily — Récompense quotidienne',     type: ActivityType.Watching  },
   { name: '🎯 /aide — Toutes les commandes',        type: ActivityType.Listening },
@@ -384,19 +384,29 @@ module.exports = {
     }
 
     // ── Enregistrement GUILD commands ──────────────────────
-    try {
-      await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: guildCmds });
-      console.log(`✅ ${guildCmds.length} guild commands enregistrées`);
-    } catch (error) {
-      console.error('❌ Guild registration:', error.message);
+    if (guildCmds.length > 100) {
+      console.error(`❌ Guild commands OVER LIMIT: ${guildCmds.length}/100 — registration SKIPPED`);
+    } else {
+      try {
+        await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: guildCmds });
+        console.log(`✅ ${guildCmds.length} guild commands enregistrées`);
+      } catch (error) {
+        console.error('❌ Guild registration FAILED:', error.message);
+        if (error.rawError) console.error('  rawError:', JSON.stringify(error.rawError));
+      }
     }
 
     // ── Enregistrement GLOBAL commands ─────────────────────
-    try {
-      await rest.put(Routes.applicationCommands(appId), { body: globalCmds });
-      console.log(`✅ ${globalCmds.length} global commands enregistrées`);
-    } catch (error) {
-      console.error('❌ Global registration:', error.message);
+    if (globalCmds.length > 100) {
+      console.error(`❌ Global commands OVER LIMIT: ${globalCmds.length}/100 — registration SKIPPED`);
+    } else {
+      try {
+        await rest.put(Routes.applicationCommands(appId), { body: globalCmds });
+        console.log(`✅ ${globalCmds.length} global commands enregistrées`);
+      } catch (error) {
+        console.error('❌ Global registration FAILED:', error.message);
+        if (error.rawError) console.error('  rawError:', JSON.stringify(error.rawError));
+      }
     }
 
     // ── Workers automatiques ───────────────────────────────
