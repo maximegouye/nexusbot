@@ -81,22 +81,26 @@ module.exports = {
 
     // -- Slash Commands
     if (interaction.isChatInputCommand()) {
+      // ── Acquittement immédiat (< 3s garantis) ─────────────
+      // Appelé ICI dans le handler pour garantir qu'aucune commande ne timeout,
+      // même si execute() crashe avant son propre deferReply.
+      if (!interaction.deferred && !interaction.replied) {
+        try { await interaction.deferReply({ ephemeral: false }); } catch (_) {}
+      }
+
       const command = client.commands.get(interaction.commandName);
       if (!command) {
-        return interaction.reply({ content: 'Commande inconnue.', ephemeral: true }).catch(() => {});
+        return interaction.editReply({ content: '❌ Commande inconnue.' }).catch(() => {});
       }
 
       try {
         await command.execute(interaction);
       } catch (error) {
         console.error(`[SLASH /${interaction.commandName}] Erreur:`, error?.message || error);
-        const errMsg = { content: 'Une erreur est survenue lors de l\'execution.', ephemeral: true };
+        const errMsg = { content: '❌ Une erreur est survenue. Réessaie dans quelques secondes.' };
         try {
-          if (interaction.deferred || interaction.replied) {
-            await interaction.followUp(errMsg);
-          } else {
-            await interaction.reply(errMsg);
-          }
+          if (interaction.deferred || interaction.replied) await interaction.followUp({ ...errMsg, ephemeral: true });
+          else await interaction.reply({ ...errMsg, ephemeral: true });
         } catch (_) {}
       }
       return;
