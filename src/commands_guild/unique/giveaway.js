@@ -146,6 +146,10 @@ module.exports = {
   endGiveaway,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     if (sub === 'creer' || sub === 'start') {
       const prize = interaction.options.getString('prix');

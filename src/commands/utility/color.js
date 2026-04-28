@@ -71,6 +71,10 @@ module.exports = {
     .addStringOption(o => o.setName('hex').setDescription('Code hex (ex: #7B2FBE ou 7B2FBE)').setRequired(true)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     let hex = interaction.options.getString('hex').trim().replace(/^#/, '');
     if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format invalide. Exemple: `#7B2FBE` ou `FF5500`', ephemeral: true });

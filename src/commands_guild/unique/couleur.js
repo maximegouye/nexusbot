@@ -79,6 +79,10 @@ module.exports = {
       .addStringOption(o => o.setName('hex').setDescription('Couleur de base (HEX)').setRequired(true))),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     try {
     const sub = interaction.options.getSubcommand();
 

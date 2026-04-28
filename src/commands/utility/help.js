@@ -108,6 +108,10 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     const cfg = db.getConfig(interaction.guildId);
     const color = cfg.color || '#7B2FBE';
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({

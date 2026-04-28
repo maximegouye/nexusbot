@@ -34,6 +34,10 @@ module.exports = {
     .addSubcommand(s => s.setName('reset').setDescription('🗑️ Réinitialiser tous les messages étoilés')),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 

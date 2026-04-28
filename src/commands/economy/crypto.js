@@ -159,6 +159,10 @@ module.exports = {
   cooldown: 3,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     const cfg  = db.getConfig(interaction.guildId);
     const user = db.getUser(interaction.user.id, interaction.guildId);
     const sub  = interaction.options.getSubcommand();

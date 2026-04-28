@@ -41,6 +41,10 @@ module.exports = {
     .addStringOption(o => o.setName('heure').setDescription('Heure (ex: 14:30) — optionnel').setRequired(false)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     const dateStr = interaction.options.getString('date').trim();
     const heureStr = interaction.options.getString('heure')?.trim() || '00:00';
 

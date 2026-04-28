@@ -40,6 +40,10 @@ module.exports = {
     .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(false)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     try {
     const target = interaction.options.getMember('membre') || interaction.member;
     const user   = target.user || target;

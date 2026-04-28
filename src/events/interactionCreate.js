@@ -83,7 +83,7 @@ module.exports = {
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) {
-        return interaction.editReply({ content: 'Commande inconnue.', ephemeral: true }).catch(() => {});
+        return interaction.reply({ content: 'Commande inconnue.', ephemeral: true }).catch(() => {});
       }
 
       try {
@@ -95,7 +95,7 @@ module.exports = {
           if (interaction.deferred || interaction.replied) {
             await interaction.followUp(errMsg);
           } else {
-            await interaction.editReply(errMsg);
+            await interaction.reply(errMsg);
           }
         } catch (_) {}
       }

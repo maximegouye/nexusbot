@@ -40,6 +40,10 @@ module.exports = {
     .addRoleOption(o => o.setName('role').setDescription('Le rôle').setRequired(true)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     try {
     const role = interaction.options.getRole('role');
     const memberCount = interaction.guild.members.cache.filter(m => m.roles.cache.has(role.id)).size;

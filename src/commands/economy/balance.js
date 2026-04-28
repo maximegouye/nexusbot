@@ -43,6 +43,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     const target  = interaction.options.getUser('membre') || interaction.user;
     const cfg     = db.getConfig(interaction.guildId);
     const user    = db.getUser(target.id, interaction.guildId);

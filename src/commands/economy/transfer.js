@@ -43,6 +43,10 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* déjà ack */ }
+    }
+
     try {
     const cfg    = db.getConfig(interaction.guildId);
     const emoji  = cfg.currency_emoji || '€';
