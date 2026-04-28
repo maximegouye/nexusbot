@@ -95,4 +95,6 @@ const rest = new REST({ version: '10' }).setToken(token);
   }
 
   console.log('\n✅ Registration complète — démarrage du bot...');
+  // Force l exit pour eviter que le REST keep-alive de discord.js bloque le process
+  process.exit(0);
 })();
