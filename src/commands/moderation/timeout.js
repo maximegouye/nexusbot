@@ -25,75 +25,72 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
     }
 
     try {
-    const sub    = interaction.options.getSubcommand();
-    const target = interaction.options.getMember('membre');
-    const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
+      const sub    = interaction.options.getSubcommand();
+      const target = interaction.options.getMember('membre');
+      const raison = interaction.options.getString('raison') || 'Aucune raison spécifiée';
 
-    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te mettre toi-même en timeout.', ephemeral: true });
-    if (!target.moderatable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas mettre ce membre en timeout (rôle trop élevé).', ephemeral: true });
+      if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
+      if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas te mettre toi-même en timeout.', ephemeral: true });
+      if (!target.moderatable) return interaction.editReply({ content: '❌ Je ne peux pas mettre ce membre en timeout (rôle trop élevé).', ephemeral: true });
 
-    if (sub === 'appliquer') {
-      const duree = interaction.options.getString('duree');
-      const ms    = parseDuration(duree);
-      if (!ms) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Durée invalide. Ex: `10m`, `1h`, `7d` (max 28j, min 5s)', ephemeral: true });
+      if (sub === 'appliquer') {
+        const duree = interaction.options.getString('duree');
+        const ms    = parseDuration(duree);
+        if (!ms) return interaction.editReply({ content: '❌ Durée invalide. Ex: `10m`, `1h`, `7d` (max 28j, min 5s)', ephemeral: true });
 
-      await target.timeout(ms, raison);
+        await target.timeout(ms, raison);
 
-      // Log en BDD
-      db.db.prepare('INSERT INTO warnings (guild_id,user_id,mod_id,reason) VALUES (?,?,?,?)').run(
-        interaction.guildId, target.id, interaction.user.id, `[TIMEOUT ${duree}] ${raison}`);
+        // Log en BDD
+        db.db.prepare('INSERT INTO warnings (guild_id,user_id,mod_id,reason) VALUES (?,?,?,?)').run(
+          interaction.guildId, target.id, interaction.user.id, `[TIMEOUT ${duree}] ${raison}`);
 
-      const expiresAt = Math.floor((Date.now() + ms) / 1000);
-      const embed = new EmbedBuilder()
-        .setColor('Orange')
-        .setTitle('⏱️ Timeout appliqué')
-        .setThumbnail(target.user.displayAvatarURL())
-        .addFields(
-          { name: '👤 Membre',       value: `<@${target.id}>`, inline: true },
-          { name: '⏱️ Durée',        value: duree, inline: true },
-          { name: '🔓 Fin',           value: `<t:${expiresAt}:R>`, inline: true },
-          { name: '🛡️ Modérateur',  value: `<@${interaction.user.id}>`, inline: true },
-          { name: '📋 Raison',        value: raison },
-        );
+        const expiresAt = Math.floor((Date.now() + ms) / 1000);
+        const embed = new EmbedBuilder()
+          .setColor('Orange')
+          .setTitle('⏱️ Timeout appliqué')
+          .setThumbnail(target.user.displayAvatarURL())
+          .addFields(
+            { name: '👤 Membre',       value: `<@${target.id}>`, inline: true },
+            { name: '⏱️ Durée',        value: duree, inline: true },
+            { name: '🔓 Fin',           value: `<t:${expiresAt}:R>`, inline: true },
+            { name: '🛡️ Modérateur',  value: `<@${interaction.user.id}>`, inline: true },
+            { name: '📋 Raison',        value: raison },
+          );
 
-      // Notifier le membre
-      target.user.send({ embeds: [new EmbedBuilder().setColor('Orange')
-        .setDescription(`⏱️ Tu as été mis en sourdine sur **${interaction.guild.name}** pendant **${duree}**.\nRaison: ${raison}`)
-      ]}).catch(() => {});
+        // Notifier le membre
+        target.user.send({ embeds: [new EmbedBuilder().setColor('Orange')
+          .setDescription(`⏱️ Tu as été mis en sourdine sur **${interaction.guild.name}** pendant **${duree}**.\nRaison: ${raison}`)
+        ]}).catch(() => {});
 
-      // Log mod
-      const cfg = db.getConfig(interaction.guildId);
-      if (cfg.mod_log_channel) {
-        const ch = interaction.guild.channels.cache.get(cfg.mod_log_channel);
-        if (ch) ch.send({ embeds: [embed] }).catch(() => {});
+        // Log mod
+        const cfg = db.getConfig(interaction.guildId);
+        if (cfg.mod_log_channel) {
+          const ch = interaction.guild.channels.cache.get(cfg.mod_log_channel);
+          if (ch) ch.send({ embeds: [embed] }).catch(() => {});
+        }
+
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       }
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
-    }
+      if (sub === 'retirer') {
+        if (!target.isCommunicationDisabled()) return interaction.editReply({ content: '❌ Ce membre n\'est pas en timeout.', ephemeral: true });
+        await target.timeout(null, raison);
 
-    if (sub === 'retirer') {
-      if (!target.isCommunicationDisabled()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce membre n\'est pas en timeout.', ephemeral: true });
-      await target.timeout(null, raison);
-
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
-        .setColor('Green')
-        .setDescription(`✅ Timeout retiré pour <@${target.id}>.\nRaison: ${raison}`)
-      ], ephemeral: true });
-    }
+        return interaction.editReply({ embeds: [new EmbedBuilder()
+          .setColor('Green')
+          .setDescription(`✅ Timeout retiré pour <@${target.id}>.\nRaison: ${raison}`)
+        ], ephemeral: true });
+      }
     } catch (err) {
-    console.error('[CMD] Erreur execute:', err?.message || err);
-    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
-    try {
-      if (interaction.deferred || interaction.replied) {
+      console.error('[CMD] Erreur execute:', err?.message || err);
+      const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+      try {
         await interaction.editReply(errMsg).catch(() => {});
-      } else {
-        await interaction.editReply(errMsg).catch(() => {});
-      }
-    } catch {}
-  }}
+      } catch {}
+    }
+  }
 };

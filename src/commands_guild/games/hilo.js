@@ -162,6 +162,8 @@ const data = new SlashCommandBuilder()
 
 async function execute(interaction) {
   try {
+    await interaction.deferReply();
+
     const userId = interaction.user.id;
     const guildId = interaction.guildId;
     const mise = interaction.options.getInteger('mise');
@@ -264,6 +266,7 @@ async function handleComponent(interaction, customId) {
 
     // ───── Rules button ─────
     if (action === 'rules') {
+      await interaction.deferUpdate().catch(() => {});
       const rulesEmbed = new EmbedBuilder()
         .setColor('#3498DB')
         .setTitle('📋 Règles du Hi-Lo')
@@ -282,6 +285,7 @@ async function handleComponent(interaction, customId) {
 
     // ───── Modal for changing bet ─────
     if (action === 'modal') {
+      await interaction.deferReply().catch(() => {});
       try {
         const newMiseRaw = interaction.fields.getTextInputValue('newmise');
         const user = db.getUser(userId, interaction.guildId);
@@ -403,6 +407,7 @@ async function handleComponent(interaction, customId) {
 
     // ───── Collect winnings ─────
     if (action === 'collect') {
+      await interaction.deferUpdate().catch(() => {});
       const winnings = Math.floor(session.initialMise * (1.9 ** session.rounds));
       db.addCoins(userId, session.guildId, winnings);
 

@@ -22,47 +22,44 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
     }
 
     try {
-    const target = interaction.options.getMember('membre');
-    const durStr = interaction.options.getString('duree');
-    const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
+      const target = interaction.options.getMember('membre');
+      const durStr = interaction.options.getString('duree');
+      const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
 
-    if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.moderatable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas muter ce membre.', ephemeral: true });
+      if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
+      if (!target.moderatable) return interaction.editReply({ content: '❌ Je ne peux pas muter ce membre.', ephemeral: true });
 
-    const ms = parseDuration(durStr);
-    if (!ms) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format de durée invalide. Exemples : `10m`, `1h`, `2d`', ephemeral: true });
-    if (ms > 28 * 24 * 3600 * 1000) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ La durée maximale est de 28 jours.', ephemeral: true });
+      const ms = parseDuration(durStr);
+      if (!ms) return interaction.editReply({ content: '❌ Format de durée invalide. Exemples : `10m`, `1h`, `2d`', ephemeral: true });
+      if (ms > 28 * 24 * 3600 * 1000) return interaction.editReply({ content: '❌ La durée maximale est de 28 jours.', ephemeral: true });
 
-    await target.timeout(ms, `${interaction.user.username}: ${raison}`);
+      await target.timeout(ms, `${interaction.user.username}: ${raison}`);
 
-    const expiresAt = Date.now() + ms;
-    const embed = new EmbedBuilder()
-      .setColor('#FFA500')
-      .setTitle('🔇 Membre muet')
-      .addFields(
-        { name: '👤 Membre',     value: target.user.username,        inline: true },
-        { name: '👮 Modérateur', value: interaction.user.username,   inline: true },
-        { name: '⏱️ Durée',      value: durStr,                 inline: true },
-        { name: '⏰ Fin',        value: `<t:${Math.floor(expiresAt / 1000)}:R>`, inline: true },
-        { name: '📝 Raison',     value: raison,                 inline: false },
-      )
-      .setThumbnail(target.user.displayAvatarURL())
-      .setTimestamp();
+      const expiresAt = Date.now() + ms;
+      const embed = new EmbedBuilder()
+        .setColor('#FFA500')
+        .setTitle('🔇 Membre muet')
+        .addFields(
+          { name: '👤 Membre',     value: target.user.username,        inline: true },
+          { name: '👮 Modérateur', value: interaction.user.username,   inline: true },
+          { name: '⏱️ Durée',      value: durStr,                 inline: true },
+          { name: '⏰ Fin',        value: `<t:${Math.floor(expiresAt / 1000)}:R>`, inline: true },
+          { name: '📝 Raison',     value: raison,                 inline: false },
+        )
+        .setThumbnail(target.user.displayAvatarURL())
+        .setTimestamp();
 
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     } catch (err) {
-    console.error('[CMD] Erreur execute:', err?.message || err);
-    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
-    try {
-      if (interaction.deferred || interaction.replied) {
+      console.error('[CMD] Erreur execute:', err?.message || err);
+      const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+      try {
         await interaction.editReply(errMsg).catch(() => {});
-      } else {
-        await interaction.editReply(errMsg).catch(() => {});
-      }
-    } catch {}
-  }}
+      } catch {}
+    }
+  }
 };

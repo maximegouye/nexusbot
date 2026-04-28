@@ -67,15 +67,21 @@ module.exports = {
       .addIntegerOption(o => o.setName('duree_minutes').setDescription('Durée du mute en minutes (si mute)').setMinValue(1))),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const modId = interaction.user.id;
 
+    // Vérification de permission globale
+    if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers))
+      return interaction.editReply({ content: '❌ Tu n\'as pas les permissions.', ephemeral: true });
+
     if (sub === 'avertir') {
       const target = interaction.options.getUser('membre');
       const raison = interaction.options.getString('raison');
-      if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible de s\'avertir soi-même.', ephemeral: true });
+      if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Impossible de s\'avertir soi-même.', ephemeral: true });
 
       const result = db.db.prepare("INSERT INTO sanctions (guild_id,user_id,mod_id,type,reason) VALUES(?,?,?,'warn',?)").run(guildId, target.id, modId, raison);
       const warnCount = getWarnCount(guildId, target.id);
@@ -116,7 +122,7 @@ module.exports = {
         }
       } catch {}
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle(`⚠️ Avertissement — Cas #${result.lastInsertRowid}`)
         .addFields(
           { name: '👤 Membre',      value: `<@${target.id}>`, inline: true },
@@ -220,7 +226,7 @@ module.exports = {
         db.db.prepare(`UPDATE warn_config SET ${col}=?, ${durCol}=? WHERE guild_id=?`).run(act, dur * 60, guildId);
       }
       const actionLabels = { none:'⚠️ Aucune action', mute:`🔇 Mute (${dur}min)`, kick:'👢 Kick', ban:'🔨 Ban' };
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('⚙️ Seuil configuré')
         .setDescription(`À **${n} avertissements** → **${actionLabels[act]}**`)] });
     }

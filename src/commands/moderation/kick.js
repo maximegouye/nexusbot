@@ -12,14 +12,16 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
     }
 
-    const target = interaction.options.getMember('membre');
+    const target = interaction.options.getUser('membre');
     const raison = interaction.options.getString('raison') || 'Aucune raison fournie';
 
     if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.kickable) return interaction.editReply({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
+    const member = await interaction.guild.members.fetch(target.id).catch(() => null);
+    if (!member) return interaction.editReply({ content: '❌ Membre non trouvé sur le serveur.', ephemeral: true });
+    if (!member.kickable) return interaction.editReply({ content: '❌ Je ne peux pas expulser ce membre.', ephemeral: true });
     if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas t\'expulser toi-même.', ephemeral: true });
 
     // ── Confirmation ──────────────────────────────────────
@@ -55,7 +57,7 @@ module.exports = {
     }
 
     // ── Exécution du kick ─────────────────────────────────
-    await target.user.send({
+    await target.send({
       embeds: [new EmbedBuilder()
         .setColor('#FF6B6B')
         .setTitle(`👢 Tu as été expulsé de ${interaction.guild.name}`)
@@ -63,7 +65,7 @@ module.exports = {
       ]
     }).catch(() => {});
 
-    await target.kick(`${interaction.user.username}: ${raison}`);
+    await member.kick(`${interaction.user.username}: ${raison}`);
 
     const resultEmbed = new EmbedBuilder()
       .setColor('#FF6B6B')

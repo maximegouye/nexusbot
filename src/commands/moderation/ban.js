@@ -13,15 +13,17 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
     }
 
-    const target  = interaction.options.getMember('membre');
+    const target  = interaction.options.getUser('membre');
     const raison  = interaction.options.getString('raison') || 'Aucune raison fournie';
     const days    = interaction.options.getInteger('jours') || 0;
 
     if (!target) return interaction.editReply({ content: '❌ Membre introuvable.', ephemeral: true });
-    if (!target.bannable) return interaction.editReply({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });
+    const member = await interaction.guild.members.fetch(target.id).catch(() => null);
+    if (!member) return interaction.editReply({ content: '❌ Membre non trouvé sur le serveur.', ephemeral: true });
+    if (!member.bannable) return interaction.editReply({ content: '❌ Je ne peux pas bannir ce membre (rôle supérieur).', ephemeral: true });
     if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ Tu ne peux pas te bannir toi-même.', ephemeral: true });
 
     // ── Confirmation ──────────────────────────────────────
@@ -58,7 +60,7 @@ module.exports = {
     }
 
     // ── Exécution du ban ──────────────────────────────────
-    await target.user.send({
+    await target.send({
       embeds: [new EmbedBuilder()
         .setColor('#FF0000')
         .setTitle(`🔨 Tu as été banni de ${interaction.guild.name}`)
@@ -66,7 +68,7 @@ module.exports = {
       ]
     }).catch(() => {});
 
-    await target.ban({ reason: `${interaction.user.username}: ${raison}`, deleteMessageSeconds: days * 86400 });
+    await member.ban({ reason: `${interaction.user.username}: ${raison}`, deleteMessageSeconds: days * 86400 });
     try { db.incrementStat(interaction.guildId, 'bans'); } catch {}
 
     const resultEmbed = new EmbedBuilder()

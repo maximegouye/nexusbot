@@ -465,8 +465,7 @@ module.exports = {
     console.error('[CMD] Erreur:', err?.message || err);
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
-      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.editReply(_em).catch(() => {});
+      await interaction.editReply(_em).catch(() => {});
     } catch {}
   }},
 
