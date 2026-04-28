@@ -257,11 +257,12 @@ function cascadeGrid(grid, winResults) {
 // ─── Win Tier avec MEGA WIN ─────────────────────────────
 function getWinTier(gain, mise) {
   const ratio = gain / mise;
+  if (ratio >= 500) return { label: '💀 INSANE WIN !!! 💀', color: '#FF0080', delay: 1200, mega: true, insane: true };
   if (ratio >= 100) return { label: '🌟 LEGENDARY WIN !! 🌟', color: '#FF00FF', delay: 1000, mega: true };
   if (ratio >= 50)  return { label: '🔥 MEGA WIN !!', color: '#FF4500', delay: 900, mega: true };
   if (ratio >= 25)  return { label: '⚡ SUPER WIN !', color: '#FFD700', delay: 800 };
-  if (ratio >= 10)  return { label: '💥 MEGA WIN !', color: '#FF8C00', delay: 700 };
-  if (ratio >= 5)   return { label: '🎊 BIG WIN !', color: '#00FF7F', delay: 600 };
+  if (ratio >= 10)  return { label: '💥 BIG WIN !', color: '#FF8C00', delay: 700 };
+  if (ratio >= 5)   return { label: '🎊 WIN !', color: '#00FF7F', delay: 600 };
   if (ratio >= 1)   return { label: '✅ GAIN !', color: '#2ECC71', delay: 0 };
   return null;
 }
@@ -271,109 +272,260 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function animateSpin(msg, grid, coin, mise, jackpot) {
   const SYM = ['🍒','🍋','🍊','🍇','🍉','🔔','⭐','7️⃣','💎','🃏','🌠','🎴','🏆','💣'];
-  const rndRow = () => Array.from({ length: 3 }, () => SYM[Math.floor(Math.random()*SYM.length)]);
+  const rndSym = () => SYM[Math.floor(Math.random() * SYM.length)];
+  const rndRow = () => [rndSym(),rndSym(),rndSym(),rndSym(),rndSym()];
 
-  const rndGrid = () => [
-    rndRow().join(' │ '),
-    rndRow().join(' │ '),
-    rndRow().join(' │ '),
-  ];
+  const formatGrid = (rows) => {
+    const sep = '─────┼─────┼─────┼─────┼─────';
+    return rows.map((r,i) => {
+      const line = r.join('  │  ');
+      return i === 1 ? `▶  ${line}  ◀` : `   ${line}   `;
+    }).join(`\n${sep}\n`);
+  };
 
-  // PHASE 1: Démarrage explosive
-  for (const [color, text] of [
-    ['#F39C12', '⚡ ROULEAUX EN FUITE !'],
-    ['#E67E22', '🌀 ROTATION TOTALE !']
-  ]) {
-    const [l1, l2, l3] = rndGrid();
+  const spinnerFrames = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+  const jackpotBar = (pct) => {
+    const filled = Math.round(pct * 20);
+    return '🟡'.repeat(filled) + '⬛'.repeat(20 - filled);
+  };
+
+  // PHASE 0: Compte à rebours dramatique
+  for (const [cnt, col] of [['3️⃣','#FF4500'],['2️⃣','#FF8C00'],['1️⃣','#FFD700']]) {
     await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor(color)
-      .setTitle('🎰 MACHINE ALMOSNI — 5 ROULEAUX')
-      .setDescription(`\`\`\`\n   ${l1}\n➤ ${l2} ◀ PAYLINE 1\n   ${l3}\n\`\`\`\n*${text}*`)
+      .setColor(col)
+      .setTitle('🎰 MACHINE ALMOSNI ● 5 ROULEAUX')
+      .setDescription(`## ${cnt}\n\n*Insertion de la mise...*`)
       .addFields(
-        {name:'💰 Mise',value:`${mise.toLocaleString('fr-FR')} ${coin}`,inline:true},
-        {name:'🌟 Jackpot',value:`${jackpot.toLocaleString('fr-FR')} ${coin}`,inline:true}
+        {name:'💰 Mise totale',value:`**${mise.toLocaleString('fr-FR')} ${coin}**`,inline:true},
+        {name:'🏆 Jackpot Progressif',value:`**${jackpot.toLocaleString('fr-FR')} ${coin}**`,inline:true}
       )
+      .setFooter({text:'★ ALMOSNI CASINO ★'})
     ]}).catch(() => {});
-    await sleep(550);
+    await sleep(420);
   }
 
-  // PHASE 2: Ralentissement
-  for (const [color, text] of [
-    ['#7D3C98', '🔄 RALENTISSEMENT...'],
-    ['#5B2C7D', '⏳ DERNIERS SYMBOLES...']
-  ]) {
-    const [l1, l2, l3] = rndGrid();
+  // PHASE 1: Rotation explosive avec animation spinner
+  const spinPhrases = [
+    ['#E74C3C', '🔥 LES ROULEAUX S\'ENFLAMMENT !'],
+    ['#C0392B', '⚡ VITESSE MAXIMALE !!'],
+    ['#9B59B6', '🌪️ TORNADE DE SYMBOLES !!!'],
+    ['#7D3C98', '💫 ACCÉLÉRATION TOTALE !'],
+  ];
+  for (let i = 0; i < spinPhrases.length; i++) {
+    const [color, text] = spinPhrases[i];
+    const r1 = rndRow(), r2 = rndRow(), r3 = rndRow();
+    const sp = spinnerFrames[i % spinnerFrames.length];
     await msg.edit({ embeds: [new EmbedBuilder()
       .setColor(color)
-      .setTitle('🎰 MACHINE ALMOSNI — 5 ROULEAUX')
-      .setDescription(`\`\`\`\n   ${l1}\n➤ ${l2} ◀ PAYLINE 1\n   ${l3}\n\`\`\`\n*${text}*`)
+      .setTitle(`${sp} MACHINE ALMOSNI ● 5 ROULEAUX ${sp}`)
+      .setDescription(`\`\`\`\n${formatGrid([r1,r2,r3])}\n\`\`\`\n### ${text}`)
+      .addFields(
+        {name:'💰 Mise',value:`${mise.toLocaleString('fr-FR')} ${coin}`,inline:true},
+        {name:'🏆 Jackpot',value:`${jackpot.toLocaleString('fr-FR')} ${coin}`,inline:true},
+        {name:'📊 Progression',value:jackpotBar(Math.random()*0.3+0.1),inline:false}
+      )
+      .setFooter({text:`★ ALMOSNI CASINO ★  │  Mise: ${mise} ${coin}`})
+    ]}).catch(() => {});
+    await sleep(480);
+  }
+
+  // PHASE 2: Ralentissement progressif avec tension
+  const slowPhrases = [
+    ['#1A5276', '⏳ RALENTISSEMENT EN COURS...'],
+    ['#154360', '🎯 LES SYMBOLES SE FIGENT...'],
+  ];
+  for (const [color, text] of slowPhrases) {
+    const r1 = rndRow(), r2 = rndRow(), r3 = rndRow();
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(color)
+      .setTitle('⏸️ MACHINE ALMOSNI ● FREINAGE...')
+      .setDescription(`\`\`\`\n${formatGrid([r1,r2,r3])}\n\`\`\`\n### ${text}`)
       .addFields(
         {name:'💰 Mise',value:`${mise.toLocaleString('fr-FR')} ${coin}`,inline:true}
       )
     ]}).catch(() => {});
-    await sleep(600);
+    await sleep(580);
   }
 
-  // PHASE 3-5: Révélation rouleau par rouleau avec grille complète visible
+  // PHASE 3: Révélation rouleau par rouleau CINÉMATIQUE
   const partial = Array.from({length:5}, () => Array.from({length:3}, () => ({emoji:'🌀'})));
-  const stopColors = ['#6C3483','#1A5276','#1E8449','#117A65','#27AE60'];
+  const stopColors = ['#8E44AD','#2980B9','#27AE60','#F39C12','#E74C3C'];
+  const stopLabels = ['ROULEAU 1 ▶ ARRÊT !','ROULEAU 2 ▶ ARRÊT !','ROULEAU 3 ▶ ARRÊT !','ROULEAU 4 ▶ ARRÊT !','🔒 RÉSULTAT FINAL !'];
+  const suspenseEmoji = ['🔴','🟠','🟡','🟢','✅'];
 
   for (let col = 0; col < 5; col++) {
     partial[col] = grid[col];
     const display = gridDisplay(partial);
+    const dots = '●'.repeat(col+1) + '○'.repeat(4-col);
     const rem = 4 - col;
-    const txt = rem > 0 ? `🌀 ${rem} rouleau${rem>1?'x':''} encore...` : '✅ TOUS ARRÊTÉS!';
+    const suspense = rem > 0
+      ? `${suspenseEmoji[col]} **${stopLabels[col]}** — ${rem} restant${rem>1?'s':''}`
+      : `✅ **${stopLabels[col]}**`;
 
     await msg.edit({ embeds: [new EmbedBuilder()
       .setColor(stopColors[col])
-      .setTitle('🎰 MACHINE ALMOSNI — 5 ROULEAUX')
-      .setDescription(`\`\`\`\n${display}\n\`\`\`\n*${txt}*`)
+      .setTitle(`🎰 MACHINE ALMOSNI  ${dots}`)
+      .setDescription(`\`\`\`\n${display}\n\`\`\`\n${suspense}`)
       .addFields(
-        {name:'💰 Mise',value:`${mise.toLocaleString('fr-FR')} ${coin}`,inline:true}
+        {name:'💰 Mise',value:`${mise.toLocaleString('fr-FR')} ${coin}`,inline:true},
+        {name:'🏆 Jackpot',value:`${jackpot.toLocaleString('fr-FR')} ${coin}`,inline:true}
       )
+      .setFooter({text:`★ ALMOSNI CASINO ★  │  Rouleau ${col+1}/5 arrêté`})
     ]}).catch(() => {});
-    await sleep(col < 4 ? 550 : 300);
+    await sleep(col < 4 ? 520 : 280);
   }
 }
 
 async function animateMegaWin(msg, amount, coin, tier) {
+  const amtStr = amount.toLocaleString('fr-FR');
   const frames = [
-    { color: '#FF00FF', title: '🌟✨ MEGA WIN CINÉMATIQUE ✨🌟', desc: '💥 EXPLOSION DE GAINS !' },
-    { color: '#FFD700', title: '🎆 JACKPOT ! 🎆', desc: `+${amount.toLocaleString('fr-FR')} ${coin}` },
-    { color: '#FF4500', title: '🔥 FORTUNE 🔥', desc: '💰 JACKPOT DÉVERROUILLÉ !' },
+    {
+      color: '#FF0080',
+      title: '💥 EXPLOSION DE GAINS !! 💥',
+      desc: `\`\`\`\n${'⚡ '.repeat(16)}\n  !! INCREDIBLE WIN !!\n${'⚡ '.repeat(16)}\n\`\`\``,
+      fields: [{name:'💸 Gain détecté',value:`**??? ${coin}**`}]
+    },
+    {
+      color: '#FF00FF',
+      title: `${tier?.label || '🌟 MEGA WIN !!'} `,
+      desc: `\`\`\`\n${'✨ '.repeat(16)}\n  🎆 FORTUNE DÉVERROUILLÉE 🎆\n${'✨ '.repeat(16)}\n\`\`\``,
+      fields: [{name:'💰 Gain',value:`**+${amtStr} ${coin}**`}]
+    },
+    {
+      color: '#FFD700',
+      title: '🏅 VICTOIRE LÉGENDAIRE 🏅',
+      desc: `\`\`\`\n${'💎 '.repeat(16)}\n  🎊 FÉLICITATIONS ! 🎊\n${'💎 '.repeat(16)}\n\`\`\``,
+      fields: [{name:'💰 Total gagné',value:`**+${amtStr} ${coin}**`},{name:'🎯 Statut',value:'**WINNER**'}]
+    },
+    {
+      color: '#00FF7F',
+      title: `✅ +${amtStr} ${coin} crédités !`,
+      desc: `\`\`\`\n${'🌟 '.repeat(16)}\n  Fonds transférés sur votre compte\n${'🌟 '.repeat(16)}\n\`\`\``,
+      fields: []
+    },
   ];
   for (const frame of frames) {
-    await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor(frame.color)
-      .setTitle(frame.title)
-      .setDescription('```\n' + '💣 '.repeat(15) + '\n' + frame.desc + '\n' + '💣 '.repeat(15) + '\n```')
-    ]}).catch(() => {});
-    await sleep(500);
+    const emb = new EmbedBuilder().setColor(frame.color).setTitle(frame.title).setDescription(frame.desc);
+    if (frame.fields.length) emb.addFields(frame.fields);
+    emb.setFooter({text:'★ ALMOSNI CASINO ★'});
+    await msg.edit({ embeds: [emb] }).catch(() => {});
+    await sleep(600);
   }
 }
 
-async function animateWinTier(msg, tier) {
+async function animateWinTier(msg, tier, amount, coin) {
   if (!tier || tier.delay === 0) return;
-  const frames = [tier.label, `✨ ${tier.label} ✨`, tier.label];
-  for (const frame of frames) {
-    await msg.edit({ embeds: [new EmbedBuilder().setColor(tier.color).setTitle(frame)
-      .setDescription('```\n' + '★'.repeat(32) + '\n```')
-    ]}).catch(() => {});
-    await sleep(tier.delay);
+  const amtStr = amount ? `+${amount.toLocaleString('fr-FR')} ${coin}` : '';
+  const bars = [
+    '▓'.repeat(8)  + '░'.repeat(24),
+    '▓'.repeat(16) + '░'.repeat(16),
+    '▓'.repeat(24) + '░'.repeat(8),
+    '▓'.repeat(32),
+  ];
+
+  if (tier.insane) {
+    // Animation spéciale INSANE WIN — 5 frames explosives
+    const insaneFrames = [
+      { color:'#FF0080', title:'💀 💀 💀  I N S A N E  💀 💀 💀', bar: bars[0] },
+      { color:'#FF00CC', title:'🔥 W I N 🔥', bar: bars[1] },
+      { color:'#FF0080', title:'💀 💀 💀  I N S A N E  💀 💀 💀', bar: bars[2] },
+      { color:'#FF00CC', title:'☠️  FORTUNE ABSOLUE  ☠️', bar: bars[3] },
+      { color:'#FF0080', title:`💀 INSANE WIN !!! 💀  ${amtStr}`, bar: bars[3] },
+    ];
+    for (const f of insaneFrames) {
+      await msg.edit({ embeds: [new EmbedBuilder().setColor(f.color).setTitle(f.title)
+        .setDescription('```\n' + f.bar + '\n```')
+        .setFooter({text:'★ ALMOSNI CASINO ★'})
+      ]}).catch(() => {});
+      await sleep(tier.delay);
+    }
+  } else if (tier.mega) {
+    // Animation MEGA WIN — 4 frames
+    const megaFrames = [
+      { color: tier.color, title: tier.label, bar: bars[0] },
+      { color: tier.color, title: `✨ ${tier.label} ✨`, bar: bars[2] },
+      { color: tier.color, title: tier.label, bar: bars[3] },
+      { color: tier.color, title: `${tier.label}  —  ${amtStr}`, bar: bars[3] },
+    ];
+    for (const f of megaFrames) {
+      await msg.edit({ embeds: [new EmbedBuilder().setColor(f.color).setTitle(f.title)
+        .setDescription('```\n' + f.bar + '\n```')
+        .setFooter({text:'★ ALMOSNI CASINO ★'})
+      ]}).catch(() => {});
+      await sleep(tier.delay);
+    }
+  } else {
+    // Animation normale — 2 frames rapides
+    for (const frame of [tier.label, `${tier.label}  ${amtStr}`]) {
+      await msg.edit({ embeds: [new EmbedBuilder().setColor(tier.color).setTitle(frame)
+        .setDescription('```\n' + bars[3] + '\n```')
+        .setFooter({text:'★ ALMOSNI CASINO ★'})
+      ]}).catch(() => {});
+      await sleep(tier.delay || 500);
+    }
   }
 }
 
-async function animateJackpot(msg, amount, coin) {
-  const frames = [
-    ['#FFD700', '🎊 JACKPOT PROGRESSIF !! 🎊', `+${amount.toLocaleString('fr-FR')} ${coin}`],
-    ['#FFA500', '🏆 LÉGENDAIRE ! 🏆', `Fortune déverrouillée !`],
-    ['#FF6B6B', '💎 QUINTUPLE WILD ! 💎', `+${amount.toLocaleString('fr-FR')} ${coin}`],
+async function animateJackpot(msg, amount, coin, jackpotType = 'MEGA') {
+  const amtStr = amount.toLocaleString('fr-FR');
+  const isMega = jackpotType === 'MEGA';
+  const isMajor = jackpotType === 'MAJOR';
+
+  const megaFrames = [
+    { color:'#FF0000', title:'🚨 🚨 🚨  JACKPOT PROGRESSIF  🚨 🚨 🚨',
+      desc:'```\n' + '🔴 '.repeat(15) + '\n     !! ALERTE JACKPOT !!\n' + '🔴 '.repeat(15) + '\n```',
+      fields:[] },
+    { color:'#FF6B00', title:'💥  EXPLOSION TOTALE DU JACKPOT  💥',
+      desc:'```\n' + '🟠 '.repeat(15) + '\n  LES ROULEAUX SE SONT ALIGNÉS  \n' + '🟠 '.repeat(15) + '\n```',
+      fields:[{name:'🏆 Jackpot accumulé',value:`**${amtStr} ${coin}**`}] },
+    { color:'#FFD700', title:'🏆  MEGA JACKPOT DÉVERROUILLÉ  🏆',
+      desc:'```\n' + '🟡 '.repeat(15) + '\n    ★★★ FORTUNE ABSOLUE ★★★\n' + '🟡 '.repeat(15) + '\n```',
+      fields:[{name:'💰 Gain total',value:`**+${amtStr} ${coin}**`},{name:'🎯 Type',value:'**MEGA JACKPOT**'}] },
+    { color:'#FFFFFF', title:'✨  QUINTUPLE WILD — COMBINAISON PARFAITE  ✨',
+      desc:'```\n' + '⬜ '.repeat(15) + '\n     5 WILDS SUR LA PAYLINE !   \n' + '⬜ '.repeat(15) + '\n```',
+      fields:[{name:'🃏 Symboles',value:'**🃏 🃏 🃏 🃏 🃏**'},{name:'💸 Paiement',value:`**+${amtStr} ${coin}**`}] },
+    { color:'#9B59B6', title:'🌌  LÉGENDE VIVANTE  🌌',
+      desc:'```\n' + '💜 '.repeat(15) + '\n   Votre nom entre dans l\'histoire\n' + '💜 '.repeat(15) + '\n```',
+      fields:[{name:'🎊 Statut',value:'**JACKPOT WINNER**'},{name:'💰 Crédités',value:`**+${amtStr} ${coin}**`}] },
+    { color:'#00FF7F', title:`🎰 +${amtStr} ${coin} — JACKPOT PROGRESSIF REMPORTÉ !`,
+      desc:'```\n' + '💚 '.repeat(15) + '\n  Fonds déposés sur votre compte\n' + '💚 '.repeat(15) + '\n```',
+      fields:[{name:'✅ Transaction',value:'**Confirmée**'},{name:'🏦 Nouveau solde',value:'Mis à jour'}] },
   ];
-  for (const [color, title, desc] of frames) {
-    await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle(title)
-      .setDescription('```\n' + '='.repeat(30) + '\n  🏆 JACKPOT 🏆\n' + '='.repeat(30) + '\n```\n' + desc)
-    ]}).catch(() => {});
-    await sleep(750);
+
+  const majorFrames = [
+    { color:'#C0392B', title:'🥈  MAJOR JACKPOT !!  🥈',
+      desc:'```\n' + '🔴 '.repeat(15) + '\n   5 SYMBOLES PREMIUM ALIGNÉS !\n' + '🔴 '.repeat(15) + '\n```',
+      fields:[] },
+    { color:'#E67E22', title:'💎  COMBINAISON PREMIUM  💎',
+      desc:'```\n' + '🟠 '.repeat(15) + '\n    ★★ FORTUNE MAJOR ★★\n' + '🟠 '.repeat(15) + '\n```',
+      fields:[{name:'🥈 Major Jackpot',value:`**+${amtStr} ${coin}**`}] },
+    { color:'#F39C12', title:'🎊  MAJOR JACKPOT REMPORTÉ !  🎊',
+      desc:'```\n' + '🟡 '.repeat(15) + '\n    Paiement en cours...\n' + '🟡 '.repeat(15) + '\n```',
+      fields:[{name:'💰 Gain',value:`**+${amtStr} ${coin}**`},{name:'🎯 Type',value:'**MAJOR JACKPOT**'}] },
+    { color:'#00FF7F', title:`✅ +${amtStr} ${coin} — MAJOR JACKPOT !`,
+      desc:'```\n' + '💚 '.repeat(15) + '\n  Fonds déposés sur votre compte\n' + '💚 '.repeat(15) + '\n```',
+      fields:[] },
+  ];
+
+  const miniFrames = [
+    { color:'#CD7F32', title:'🥉  MINI JACKPOT !  🥉',
+      desc:'```\n' + '🟤 '.repeat(15) + '\n   4 TROPHÉES ! JACKPOT MINI !\n' + '🟤 '.repeat(15) + '\n```',
+      fields:[{name:'💰 Gain',value:`**+${amtStr} ${coin}**`}] },
+    { color:'#00FF7F', title:`✅ +${amtStr} ${coin} — MINI JACKPOT !`,
+      desc:'```\n' + '💚 '.repeat(15) + '\n  Fonds déposés sur votre compte\n' + '💚 '.repeat(15) + '\n```',
+      fields:[] },
+  ];
+
+  const sequence = isMega ? megaFrames : isMajor ? majorFrames : miniFrames;
+  const delays   = isMega ? [600,750,850,900,900,700] : isMajor ? [650,750,800,700] : [750,650];
+
+  for (let i = 0; i < sequence.length; i++) {
+    const f = sequence[i];
+    const emb = new EmbedBuilder().setColor(f.color).setTitle(f.title).setDescription(f.desc);
+    if (f.fields.length) emb.addFields(f.fields);
+    emb.setFooter({text:'★ ALMOSNI CASINO ★'});
+    await msg.edit({ embeds: [emb] }).catch(() => {});
+    await sleep(delays[i] || 700);
   }
 }
 
@@ -538,7 +690,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
     db.addCoins(userId, guildId, jp);
     color = '#FFD700'; title = '🏆💥 MEGA JACKPOT 💥🏆';
     desc  = `🎊 **FÉLICITATIONS !** Tu as décroché le **MEGA JACKPOT** !\n\n💰 **+${jp.toLocaleString('fr-FR')} ${coin}** remportés !\n\n🏆 Tu entres dans la légende du casino NexusBot !`;
-    await animateJackpot(msg, jp, coin);
+    await animateJackpot(msg, jp, coin, 'MEGA');
     await animateCoinRain(msg, color, title);
 
   // ── MAJOR JACKPOT (25% du pot) ──────────────────────
@@ -552,6 +704,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
     db.db.prepare('UPDATE slots_jackpot SET amount = MAX(5000, amount - ?) WHERE guild_id = ?').run(majorGain, guildId);
     color = '#C0C0C0'; title = '🥈 MAJOR JACKPOT 🥈';
     desc  = `🎉 **MAJOR JACKPOT !** 25% du pot jackpot remporté !\n\n💰 **+${majorGain.toLocaleString('fr-FR')} ${coin}** remportés !\n\nLe jackpot progressif reste actif...`;
+    await animateJackpot(msg, majorGain, coin, 'MAJOR');
     await animateCoinRain(msg, color, title);
 
   // ── MINI JACKPOT (100× mise) ────────────────────────
@@ -561,6 +714,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
     db.addCoins(userId, guildId, totalGain);
     color = '#CD7F32'; title = '🥉 MINI JACKPOT 🥉';
     desc  = `✨ **MINI JACKPOT !** 4 Trophées sur une ligne !\n\n💰 **+${totalGain.toLocaleString('fr-FR')} ${coin}** remportés ! (100× mise)`;
+    await animateJackpot(msg, totalGain, coin, 'MINI');
     await animateCoinRain(msg, color, title);
 
   // ── FREE SPINS (SCATTER ou BOMB) ──────────────────────
@@ -643,7 +797,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
     if (tier && tier.mega) {
       await animateMegaWin(msg, totalGain, coin, tier);
     } else if (tier && tier.delay > 0) {
-      await animateWinTier(msg, tier);
+      await animateWinTier(msg, tier, totalGain, coin);
     }
     if (totalGain > 0) await animateCoinRain(msg, color, title);
 
@@ -1159,7 +1313,7 @@ async function handleComponent(interaction) {
       trackSession(userId, gain, totalMise);
       addStats(userId, guildId, true, gain, true);
 
-      await animateJackpot(msgRef, gain, coin);
+      await animateJackpot(msgRef, gain, coin, 'MEGA');
       const nb = db.getUser(userId, guildId)?.balance || 0;
       await msgRef.edit({ embeds: [new EmbedBuilder()
         .setColor('#FF00FF')

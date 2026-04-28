@@ -16,7 +16,7 @@ try {
 
 // Simulation de prix crypto (basé sur une seed pseudo-aléatoire par heure)
 function getCryptoPrice(symbol) {
-  const base = { BTC: 45000, ETH: 2800, SOL: 120, NEXUS: 1, DOGE: 0.12, BNB: 400, ADA: 0.5 };
+  const base = { BTC: 45000, ETH: 2800, SOL: 120, NEXUS: 1, DOGE: 0.12, BNB: 400, ADA: 0.5, XRP: 0.55, MATIC: 0.90, LINK: 12, AVAX: 35, DOT: 8, SHIB: 0.000012, LTC: 70, UNI: 6, ATOM: 10, FTM: 0.35, APT: 9, NEAR: 4 };
   const seed = Math.floor(Date.now() / 3600000); // Change chaque heure
   const hash = (symbol.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), seed) % 1000) / 1000;
   const variation = (hash - 0.5) * 0.1; // ±5%
@@ -25,7 +25,7 @@ function getCryptoPrice(symbol) {
   return { price: Math.max(0.01, price), change24h: parseFloat(change24h) };
 }
 
-const CRYPTOS = ['BTC', 'ETH', 'SOL', 'NEXUS', 'DOGE', 'BNB', 'ADA'];
+const CRYPTOS = ['BTC', 'ETH', 'SOL', 'NEXUS', 'DOGE', 'BNB', 'ADA', 'XRP', 'MATIC', 'LINK', 'AVAX', 'DOT', 'SHIB', 'LTC', 'UNI', 'ATOM', 'FTM', 'APT', 'NEAR'];
 
 module.exports = {
   data: new SlashCommandBuilder()

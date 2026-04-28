@@ -8,26 +8,26 @@ function trackMission(userId, guildId, type, amount = 1) {
 }
 
 const JOBS = [
-  { name: 'Développeur',    emoji: '💻', min: 18, max: 45 },
-  { name: 'Médecin',        emoji: '🩺', min: 22, max: 55 },
-  { name: 'Chef cuisto',    emoji: '👨‍🍳', min: 12, max: 30 },
-  { name: 'Pilote',         emoji: '✈️', min: 20, max: 50 },
-  { name: 'Pompier',        emoji: '🔥', min: 15, max: 38 },
-  { name: 'Détective',      emoji: '🕵️', min: 18, max: 42 },
-  { name: 'Astronaute',     emoji: '🚀', min: 25, max: 65 },
-  { name: 'Musicien',       emoji: '🎵', min: 8,  max: 35 },
-  { name: 'Streamer',       emoji: '🎮', min: 5,  max: 80 },
-  { name: 'YouTubeur',      emoji: '📹', min: 3,  max: 90 },
-  { name: 'Trader',         emoji: '📈', min: 2,  max: 120 },
-  { name: 'Agriculteur',    emoji: '🌾', min: 10, max: 28 },
-  { name: 'Chirurgien',     emoji: '🔪', min: 25, max: 60 },
-  { name: 'Boxeur',         emoji: '🥊', min: 15, max: 45 },
-  { name: 'Inventeur',      emoji: '💡', min: 12, max: 70 },
-  { name: 'Architecte',     emoji: '🏗️', min: 20, max: 52 },
-  { name: 'Journaliste',    emoji: '📰', min: 14, max: 36 },
-  { name: 'Chauffeur',      emoji: '🚗', min: 10, max: 25 },
-  { name: 'Pharmacien',     emoji: '💊', min: 20, max: 48 },
-  { name: 'Graphiste',      emoji: '🎨', min: 15, max: 40 },
+  { name: 'Développeur',    emoji: '💻', min: 180, max: 450 },
+  { name: 'Médecin',        emoji: '🩺', min: 220, max: 550 },
+  { name: 'Chef cuisto',    emoji: '👨‍🍳', min: 120, max: 300 },
+  { name: 'Pilote',          emoji: '✈️', min: 200, max: 500 },
+  { name: 'Pompier',         emoji: '🔥', min: 150, max: 380 },
+  { name: 'Détective',       emoji: '🕵️', min: 180, max: 420 },
+  { name: 'Astronaute',      emoji: '🚀', min: 250, max: 650 },
+  { name: 'Musicien',        emoji: '🎵', min: 80,  max: 350 },
+  { name: 'Streamer',         emoji: '🎮', min: 50,  max: 800 },
+  { name: 'YouTubeur',        emoji: '📹', min: 30,  max: 900 },
+  { name: 'Trader',           emoji: '📈', min: 20,  max: 1200 },
+  { name: 'Agriculteur',     emoji: '🌾', min: 100, max: 280 },
+  { name: 'Chirurgien',      emoji: '🔪', min: 250, max: 600 },
+  { name: 'Boxeur',           emoji: '🥊', min: 150, max: 450 },
+  { name: 'Inventeur',        emoji: '💡', min: 120, max: 700 },
+  { name: 'Architecte',      emoji: '🏗️', min: 200, max: 520 },
+  { name: 'Journaliste',     emoji: '📰', min: 140, max: 360 },
+  { name: 'Chauffeur',        emoji: '🚗', min: 100, max: 250 },
+  { name: 'Pharmacien',      emoji: '💊', min: 200, max: 480 },
+  { name: 'Graphiste',        emoji: '🎨', min: 150, max: 400 },
 ];
 
 const PHRASES = [
@@ -92,7 +92,10 @@ module.exports = {
     const yesterdayDate = new Date(Date.now() - 86400000).toDateString();
     const workStreak = (lastWorkDate === yesterdayDate) ? (user.work_streak || 0) + 1 : 1;
     const streakBonus = workStreak >= 3 ? Math.floor(earned * 0.15) : 0;
-    const total = earned + streakBonus;
+    // Boost Travail depuis boutique
+    const workBoostActive = (user.boost_work_until || 0) > Math.floor(Date.now() / 1000);
+    const workMult = workBoostActive ? 2 : 1;
+    const total = Math.floor((earned + streakBonus) * workMult);
 
     // ── Animation de travail ──────────────────────────────
     const replyFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);

@@ -76,16 +76,20 @@ module.exports = {
     const wasYesterday = lastDaily > 0 && (now - lastDaily) < (cooldown * 2);
     const newStreak    = wasYesterday ? (user.streak || 0) + 1 : 1;
 
-    const base         = cfg.daily_amount || 25;
+    const base         = cfg.daily_amount || 250;
     const streakPct    = Math.max(0, cfg.daily_streak_bonus ?? 10);
     const streakBonus  = Math.min(newStreak - 1, 60) * Math.max(1, Math.floor(base * streakPct / 100));
     const milestones   = { 7: base * 2, 14: base * 4, 30: base * 10, 60: base * 20, 100: base * 40 };
     const milestone    = milestones[newStreak] || 0;
-    const total        = base + streakBonus + milestone;
+    // Boost Daily depuis boutique
+    const dailyMult = (user.boost_daily_mult || 1) > 1 ? (user.boost_daily_mult) : 1;
+    const total     = Math.floor((base + streakBonus + milestone) * dailyMult);
 
     db.addCoins(interaction.user.id, interaction.guildId, total);
     db.db.prepare('UPDATE users SET last_daily = ?, streak = ? WHERE user_id = ? AND guild_id = ?')
       .run(now, newStreak, interaction.user.id, interaction.guildId);
+    // Reset boost après utilisation
+    if (dailyMult > 1) db.db.prepare('UPDATE users SET boost_daily_mult=1 WHERE user_id=? AND guild_id=?').run(interaction.user.id, interaction.guildId);
 
     trackMission(interaction.user.id, interaction.guildId, 'daily');
     trackMission(interaction.user.id, interaction.guildId, 'earn_coins', total);
