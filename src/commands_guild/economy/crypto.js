@@ -102,8 +102,9 @@ module.exports = {
       const symbol = interaction.options.getString('crypto');
       const montant = interaction.options.getInteger('montant');
       const user = db.getUser(userId, guildId);
+      if (!user) return interaction.editReply({ content: `❌ Compte introuvable.`, ephemeral: true });
 
-      if (user.balance < montant) return interaction.editReply({ content: `❌ Tu n'as pas assez de ${coin}. Tu as **${user.balance}**.`, ephemeral: true });
+      if (user.balance < montant) return interaction.editReply({ content: `❌ Tu n'as pas assez de ${coin}. Tu as **${(user.balance||0).toLocaleString('fr-FR')} ${coin}**.`, ephemeral: true });
 
       const { price } = getCryptoPrice(symbol);
       const qte = montant / price;
