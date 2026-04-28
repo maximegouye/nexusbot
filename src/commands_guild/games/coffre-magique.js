@@ -5,10 +5,23 @@
 // Bombe → tu perds tout. Encaisser → tu repars avec le gain.
 // ============================================================
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const db = require('../../database/db');
+const wheelImage = require('../../utils/wheelImage');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── Helper : génère l'attachment image du coffre si dispo ──
+async function buildCoffreAttachment(opened, content, level) {
+  if (!wheelImage.isAvailable()) return null;
+  try {
+    const buf = await wheelImage.generateCoffreImage(opened, content, level);
+    return buf ? new AttachmentBuilder(buf, { name: 'coffre.png' }) : null;
+  } catch (e) {
+    console.error('[coffre-magique] image gen error:', e.message);
+    return null;
+  }
+}
 
 // ─── State en mémoire (par userId_guildId) ──────────────────
 const sessions = new Map();
@@ -120,11 +133,17 @@ async function playCoffre(source, userId, guildId, mise) {
     new ButtonBuilder().setCustomId(`cf_pick_${userId}_2`).setLabel('🚪 Porte C').setStyle(ButtonStyle.Primary),
   );
 
+  // ── Image PNG des 3 portes fermées (niveau 1) ──
+  const introImg = await buildCoffreAttachment(-1, null, 0);
+  if (introImg) {
+    introEmbed.setImage('attachment://coffre.png');
+  }
+
   let msg;
   if (isInteraction) {
-    msg = await source.editReply({ embeds: [introEmbed], components: [buttons] });
+    msg = await source.editReply({ embeds: [introEmbed], components: [buttons], files: introImg ? [introImg] : [] });
   } else {
-    msg = await source.reply({ embeds: [introEmbed], components: [buttons] });
+    msg = await source.reply({ embeds: [introEmbed], components: [buttons], files: introImg ? [introImg] : [] });
   }
   // Stocker un ref vers le message pour edits ultérieurs
   sessions.get(key).messageId = msg.id;
@@ -192,21 +211,21 @@ async function handleDoorPick(interaction, userId, guildId, doorIdx) {
     }
 
     const newBal = db.getUser(userId, guildId)?.balance || 0;
-    await interaction.editReply({ embeds: [new EmbedBuilder()
+    const bombImg = await buildCoffreAttachment(doorIdx, 'bomb', sess.level);
+    const bombEmbed = new EmbedBuilder()
       .setColor('#C0392B')
       .setTitle('💣 COFFRE EXPLOSÉ — Tu as perdu')
       .setDescription([
-        renderDoors(sess.level, doorIdx, 'bomb'),
-        '',
         `💀 La **Porte ${'ABC'[doorIdx]}** contenait une bombe.`,
         `💸 Tu as perdu **${sess.mise.toLocaleString('fr-FR')} ${coin}**.`,
         '',
         `🏦 Solde : **${newBal.toLocaleString('fr-FR')} ${coin}**`,
       ].join('\n'))
-      .setFooter({ text: 'Coffre Magique · Retente ta chance avec /coffre-magique' })
-    ], components: [new ActionRowBuilder().addComponents(
+      .setFooter({ text: 'Coffre Magique · Retente ta chance avec /coffre-magique' });
+    if (bombImg) bombEmbed.setImage('attachment://coffre.png');
+    await interaction.editReply({ embeds: [bombEmbed], components: [new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`cf_replay_${userId}_${sess.mise}`).setLabel(`🔄 Rejouer (${sess.mise} ${coin})`).setStyle(ButtonStyle.Success),
-    )] }).catch(() => {});
+    )], files: bombImg ? [bombImg] : [] }).catch(() => {});
     return;
   }
 
@@ -238,22 +257,22 @@ async function handleDoorPick(interaction, userId, guildId, doorIdx) {
       await sleep(450);
     }
 
-    await interaction.editReply({ embeds: [new EmbedBuilder()
+    const winImg = await buildCoffreAttachment(doorIdx, 'treasure', 4);
+    const winEmbed = new EmbedBuilder()
       .setColor('#FFD700')
       .setTitle('🏆 GRAND COFFRE — CONQUIS !')
       .setDescription([
         `🌟 Niveau **MAX** atteint ! Tu as remporté tous les coffres.`,
         '',
-        renderTreasureChest(20),
-        '',
         `💰 **+${newGain.toLocaleString('fr-FR')} ${coin}** (×${LEVEL_MULTS[4]})`,
         `🏦 Solde : **${newBal.toLocaleString('fr-FR')} ${coin}**`,
       ].join('\n'))
       .setFooter({ text: 'Légende absolue · Coffre Magique · Almosni Casino' })
-      .setTimestamp()
-    ], components: [new ActionRowBuilder().addComponents(
+      .setTimestamp();
+    if (winImg) winEmbed.setImage('attachment://coffre.png');
+    await interaction.editReply({ embeds: [winEmbed], components: [new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`cf_replay_${userId}_${sess.mise}`).setLabel(`🔄 Rejouer (${sess.mise} ${coin})`).setStyle(ButtonStyle.Success),
-    )] }).catch(() => {});
+    )], files: winImg ? [winImg] : [] }).catch(() => {});
     return;
   }
 
@@ -262,14 +281,11 @@ async function handleDoorPick(interaction, userId, guildId, doorIdx) {
   const nextMult = LEVEL_MULTS[sess.level];
   const projectedGain = Math.floor(sess.mise * nextMult);
 
-  await interaction.editReply({ embeds: [new EmbedBuilder()
+  const trsImg = await buildCoffreAttachment(doorIdx, 'treasure', sess.level - 1);
+  const trsEmbed = new EmbedBuilder()
     .setColor('#2ECC71')
     .setTitle(`💎 TRÉSOR ! Niveau ${sess.level}/5 réussi`)
     .setDescription([
-      renderDoors(sess.level - 1, doorIdx, 'treasure'),
-      '',
-      renderTreasureChest(Math.min(20, sess.level * 4)),
-      '',
       `✅ La **Porte ${'ABC'[doorIdx]}** contenait un trésor !`,
       `💰 Gain accumulé : **${newGain.toLocaleString('fr-FR')} ${coin}** (×${LEVEL_MULTS[sess.level - 1]})`,
       '',
@@ -279,15 +295,16 @@ async function handleDoorPick(interaction, userId, guildId, doorIdx) {
       '',
       `⚖️ Encaisser maintenant ou continuer ?`,
     ].join('\n'))
-    .setFooter({ text: `Coffre Magique · Niveau ${sess.level + 1} / 5` })
-  ], components: [
+    .setFooter({ text: `Coffre Magique · Niveau ${sess.level + 1} / 5` });
+  if (trsImg) trsEmbed.setImage('attachment://coffre.png');
+  await interaction.editReply({ embeds: [trsEmbed], components: [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`cf_pick_${userId}_0`).setLabel('🚪 Porte A').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`cf_pick_${userId}_1`).setLabel('🚪 Porte B').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`cf_pick_${userId}_2`).setLabel('🚪 Porte C').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`cf_cashout_${userId}`).setLabel(`💵 Encaisser (+${newGain.toLocaleString('fr-FR')} ${coin})`).setStyle(ButtonStyle.Success),
     ),
-  ] }).catch(() => {});
+  ], files: trsImg ? [trsImg] : [] }).catch(() => {});
 }
 
 // ─── Encaissement ──────────────────────────────────────────

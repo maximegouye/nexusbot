@@ -240,8 +240,315 @@ async function generateRouletteGif(wheelOrder, resultIdx, options = {}) {
   });
 }
 
+// ─── Génère un GIF de Plinko (bille qui tombe à travers les pegs) ───
+// path : array d'indices de colonnes [start, ...intermediates, finalSlot]
+// mults : array de multiplicateurs pour chaque slot du bas
+// finalSlot : index du slot final
+async function generatePlinkoGif(path, mults, options = {}) {
+  if (!isAvailable()) return null;
+
+  const W = options.width || 360;
+  const H = options.height || 480;
+  const ROWS = path.length - 1; // nombre de rangées de pegs
+  const COLS = mults.length; // nombre de slots du bas
+
+  // Géométrie
+  const padTop = 40;
+  const padBottom = 70;
+  const padX = 30;
+  const boardW = W - 2 * padX;
+  const boardH = H - padTop - padBottom;
+  const rowSpacing = boardH / (ROWS + 1);
+  const colSpacing = boardW / (COLS - 1);
+
+  function pegX(col) { return padX + col * colSpacing; }
+  function pegY(row) { return padTop + row * rowSpacing; }
+
+  // Couleurs des slots selon multiplicateur
+  function slotColor(m) {
+    if (m >= 10) return '#3498DB';
+    if (m >= 5)  return '#27AE60';
+    if (m >= 2)  return '#F1C40F';
+    if (m >= 1)  return '#E67E22';
+    return '#E74C3C';
+  }
+
+  // Dessine le board (pegs + slots)
+  function drawBoard(ctx) {
+    // Fond
+    ctx.fillStyle = '#0A0A0F';
+    ctx.fillRect(0, 0, W, H);
+
+    // Bordure dorée
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(8, 8, W - 16, H - 16);
+
+    // Pegs (forme triangulaire)
+    for (let r = 0; r < ROWS; r++) {
+      const colsThisRow = r + 3; // ligne 0 a 3 pegs, ligne 1 a 4, etc.
+      const startCol = (COLS - colsThisRow) / 2;
+      for (let c = 0; c < colsThisRow; c++) {
+        const x = padX + (startCol + c) * colSpacing;
+        const y = pegY(r);
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = '#CCCCCC';
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // Slots du bas
+    const slotY = H - padBottom + 5;
+    const slotH = padBottom - 15;
+    for (let i = 0; i < COLS; i++) {
+      const x = pegX(i) - colSpacing / 2 + 2;
+      const w = colSpacing - 4;
+      ctx.fillStyle = slotColor(mults[i]);
+      ctx.fillRect(x, slotY, w, slotH);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, slotY, w, slotH);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const txt = '×' + mults[i];
+      ctx.strokeText(txt, pegX(i), slotY + slotH / 2);
+      ctx.fillText(txt, pegX(i), slotY + slotH / 2);
+    }
+  }
+
+  function drawBall(ctx, x, y) {
+    // Trail
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, 2 * Math.PI);
+    const grad = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, 8);
+    grad.addColorStop(0, '#FFFFFF');
+    grad.addColorStop(0.5, '#FFD700');
+    grad.addColorStop(1, '#B8860B');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  const totalFrames = ROWS * 3 + 8; // ~3 frames par row + hold final
+  const finalSlot = path[path.length - 1];
+
+  const enc = new GIFEncoder(W, H, 'octree', true, totalFrames);
+  enc.start();
+  enc.setRepeat(-1);
+  enc.setQuality(20);
+
+  // Animation : la bille parcourt path[] en interpolant entre chaque rangée
+  const stepsPerRow = 3;
+  for (let r = 0; r < ROWS; r++) {
+    const colA = path[r];
+    const colB = path[r + 1];
+    const yA = pegY(r);
+    const yB = pegY(r + 1);
+    const xA = pegX(colA);
+    const xB = pegX(colB);
+
+    for (let s = 0; s < stepsPerRow; s++) {
+      const t = (s + 1) / stepsPerRow;
+      // Easing parabolic pour effet de gravité
+      const ease = t * t;
+      const x = xA + (xB - xA) * ease;
+      const y = yA + (yB - yA) * t;
+
+      const c = createCanvas(W, H);
+      const ctx = c.getContext('2d');
+      drawBoard(ctx);
+      drawBall(ctx, x, y);
+
+      enc.setDelay(60);
+      enc.addFrame(ctx);
+    }
+  }
+
+  // Hold final : bille atterrit dans le slot, flash sur le slot gagnant
+  for (let h = 0; h < 8; h++) {
+    const c = createCanvas(W, H);
+    const ctx = c.getContext('2d');
+    drawBoard(ctx);
+
+    // Highlight final slot
+    const slotY = H - padBottom + 5;
+    const slotH = padBottom - 15;
+    const x = pegX(finalSlot) - colSpacing / 2 + 2;
+    const w = colSpacing - 4;
+    if (h % 2 === 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillRect(x, slotY, w, slotH);
+      ctx.restore();
+    }
+
+    drawBall(ctx, pegX(finalSlot), H - padBottom + slotH / 2);
+    enc.setDelay(220);
+    enc.addFrame(ctx);
+  }
+
+  enc.finish();
+  return enc.out.getData();
+}
+
+// ─── Génère un PNG des 3 portes du coffre magique ───
+// opened : index de la porte ouverte (-1 si toutes fermées)
+// content : 'treasure' | 'bomb' | null (si ouverte)
+// level : 1-5 (numero du niveau actuel)
+async function generateCoffreImage(opened, content, level, options = {}) {
+  if (!isAvailable()) return null;
+
+  const W = options.width || 540;
+  const H = options.height || 360;
+
+  const c = createCanvas(W, H);
+  const ctx = c.getContext('2d');
+
+  // Fond
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#1A1A2E');
+  bgGrad.addColorStop(1, '#0F0F1B');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Titre
+  ctx.fillStyle = '#FFD700';
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 3;
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const title = '🗝️ COFFRE MAGIQUE — NIVEAU ' + level + ' / 5';
+  ctx.strokeText(title, W / 2, 18);
+  ctx.fillText(title, W / 2, 18);
+
+  // 3 portes
+  const doorW = 130;
+  const doorH = 230;
+  const gap = 30;
+  const totalW = 3 * doorW + 2 * gap;
+  const startX = (W - totalW) / 2;
+  const doorY = 80;
+
+  for (let i = 0; i < 3; i++) {
+    const x = startX + i * (doorW + gap);
+
+    // Cadre extérieur (or)
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(x - 6, doorY - 6, doorW + 12, doorH + 12);
+
+    if (opened === i) {
+      // Porte ouverte : montrer le contenu
+      ctx.fillStyle = '#0A0A0F';
+      ctx.fillRect(x, doorY, doorW, doorH);
+
+      const cx = x + doorW / 2;
+      const cy = doorY + doorH / 2;
+
+      if (content === 'bomb') {
+        // Bombe : cercle noir avec mèche
+        ctx.beginPath();
+        ctx.arc(cx, cy + 10, 45, 0, 2 * Math.PI);
+        ctx.fillStyle = '#1C1C1C';
+        ctx.fill();
+        ctx.strokeStyle = '#E74C3C';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillStyle = '#FF4500';
+        ctx.font = 'bold 60px sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💣', cx, cy);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText('BOMBE !', cx, cy + 60);
+      } else {
+        // Trésor : pile d'or
+        const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 50);
+        grad.addColorStop(0, '#FFE680');
+        grad.addColorStop(1, '#B8860B');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy + 10, 45, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.font = 'bold 50px sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText('💎', cx, cy);
+        ctx.fillText('💎', cx, cy);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText('TRÉSOR !', cx, cy + 60);
+      }
+    } else {
+      // Porte fermée : couleur bois + lettre
+      const woodGrad = ctx.createLinearGradient(x, doorY, x + doorW, doorY + doorH);
+      woodGrad.addColorStop(0, '#8B4513');
+      woodGrad.addColorStop(0.5, '#6B3410');
+      woodGrad.addColorStop(1, '#4A2510');
+      ctx.fillStyle = woodGrad;
+      ctx.fillRect(x, doorY, doorW, doorH);
+
+      // Détails de la porte (panneaux)
+      ctx.strokeStyle = '#3A1A0A';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 12, doorY + 18, doorW - 24, 90);
+      ctx.strokeRect(x + 12, doorY + 122, doorW - 24, 90);
+
+      // Poignée
+      ctx.beginPath();
+      ctx.arc(x + doorW - 22, doorY + doorH / 2, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#FFD700';
+      ctx.fill();
+      ctx.strokeStyle = '#8B6914';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Lettre A/B/C en gros
+      ctx.fillStyle = '#FFD700';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 4;
+      ctx.font = 'bold 64px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const letter = 'ABC'[i];
+      ctx.strokeText(letter, x + doorW / 2, doorY + doorH / 2);
+      ctx.fillText(letter, x + doorW / 2, doorY + doorH / 2);
+    }
+
+    // Étiquette en bas
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const lbl = 'PORTE ' + 'ABC'[i];
+    ctx.fillText(lbl, x + doorW / 2, doorY + doorH + 12);
+  }
+
+  return c.toBuffer('image/png');
+}
+
 module.exports = {
   isAvailable,
   generateWheelGif,
   generateRouletteGif,
+  generatePlinkoGif,
+  generateCoffreImage,
 };

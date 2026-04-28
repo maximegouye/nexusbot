@@ -3,9 +3,10 @@
 // Emplacement : src/commands_guild/games/plinko.js
 // ============================================================
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const db = require('../../database/db');
 const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
+const wheelImage = require('../../utils/wheelImage');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -152,23 +153,42 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     msg = await source.reply({ embeds: [startEmbed] });
   }
 
-  // Animation bille rangée par rangée avec accélération gravitationnelle
-  // Plus la bille tombe, plus elle va vite (delays décroissants = accélération)
-  const baseDelays = [320, 300, 270, 240, 220, 200, 180, 160];
-
-  for (let step = 1; step <= 8; step++) {
-    // Chaque rangée a 3 frames de transition pour plus de fluidité
-    const delayPerFrame = Math.floor(baseDelays[step - 1] / 3);
-
-    for (let frame = 0; frame < 3; frame++) {
-      // Transition progressive vers la prochaine position
-      const e = buildBoardEmbed(path, step, mults, mise, coin, riskKey);
-      await msg.edit({ embeds: [e] });
-      await sleep(delayPerFrame);
-    }
+  // ── BRANCH GIF : génère vraie animation graphique si dispo ──
+  let gifBuffer = null;
+  if (wheelImage.isAvailable()) {
+    try {
+      gifBuffer = await wheelImage.generatePlinkoGif(path, mults);
+    } catch (e) { console.error('[plinko] GIF gen error:', e.message); }
   }
 
-  await sleep(300);
+  if (gifBuffer) {
+    const file = new AttachmentBuilder(gifBuffer, { name: 'plinko.gif' });
+    const spinEmbed = new EmbedBuilder()
+      .setColor(RISK_COLORS[riskKey])
+      .setTitle('🎯 PLINKO — La bille tombe !')
+      .setDescription('🔵 *La bille rebondit à travers les pegs...*')
+      .setImage('attachment://plinko.gif')
+      .addFields(
+        { name: '⚠️ Risque', value: RISK_LABELS[riskKey], inline: true },
+        { name: '💰 Mise',   value: `${mise} ${coin}`,     inline: true },
+      )
+      .setFooter({ text: 'Plinko · Image animée temps réel' });
+    await msg.edit({ embeds: [spinEmbed], files: [file] }).catch(() => {});
+    // Durée GIF: 8 rows × 3 steps × 60ms + 8 hold × 220ms ≈ ~3.2 sec
+    await sleep(3500);
+  } else {
+    // ── FALLBACK ASCII : animation textuelle d'origine ──
+    const baseDelays = [320, 300, 270, 240, 220, 200, 180, 160];
+    for (let step = 1; step <= 8; step++) {
+      const delayPerFrame = Math.floor(baseDelays[step - 1] / 3);
+      for (let frame = 0; frame < 3; frame++) {
+        const e = buildBoardEmbed(path, step, mults, mise, coin, riskKey);
+        await msg.edit({ embeds: [e] });
+        await sleep(delayPerFrame);
+      }
+    }
+    await sleep(300);
+  }
 
   // Animation finale dramatique : explosion/impact quand la bille arrive
   for (let pulse = 0; pulse < 3; pulse++) {
