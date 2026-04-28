@@ -408,7 +408,9 @@ async function handleComponent(interaction) {
     const mines = parseInt(parts[4]);
 
     if (customUserId !== userId) {
-      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+
+
     }
 
     await interaction.deferUpdate();
@@ -448,13 +450,13 @@ async function handleComponent(interaction) {
     const customUserId = parts[2];
     const minesCount = parseInt(parts[3]) || 3;
     if (customUserId !== userId) {
-      return interaction.editReply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true });
+      return interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true });
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await playMines(interaction, userId, guildId, newMise, minesCount);

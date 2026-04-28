@@ -413,9 +413,7 @@ module.exports = {
       .setRequired(true)),
 
   async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    }
+    // NOTE: deferReply is already called by interactionCreate.js
     await playRoulette(
       interaction,
       interaction.user.id,
@@ -453,7 +451,9 @@ module.exports = {
       const mise    = parseInt(parts[3]);
       const betType = parts[4]; // rouge, noir, ou pairimpair
       if (interaction.user.id !== userId) {
-        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+
+
         return true;
       }
       await interaction.deferUpdate();
@@ -520,14 +520,14 @@ module.exports = {
       const userId  = parts[2];
       const betStr  = parts.slice(3).join('_');
       if (interaction.user.id !== userId) {
-        await interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        await interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
         return true;
       }
       const rawMise = interaction.fields.getTextInputValue('newmise');
       const u       = db.getUser(userId, interaction.guildId);
       const newMise = parseMise(rawMise, u?.balance || 0);
       if (!newMise || newMise < 5) {
-        return interaction.editReply({ content: '❌ Mise invalide (min 5 coins/pari).', ephemeral: true });
+        return interaction.reply({ content: '❌ Mise invalide (min 5 coins/pari).', ephemeral: true });
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
       await playRoulette(interaction, userId, interaction.guildId, newMise, betStr);

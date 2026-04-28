@@ -57,6 +57,10 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'canal_ajouter') {
@@ -72,9 +76,9 @@ module.exports = {
           .setTitle('✅ Canal Ajouté')
           .setDescription(`${canal} n'accordera plus d'XP`);
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       } catch (err) {
-        return interaction.reply({ content: '❌ Ce canal est déjà configuré.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce canal est déjà configuré.', ephemeral: true });
       }
     }
 
@@ -86,7 +90,7 @@ module.exports = {
       ).run(interaction.guildId, 'channel', canal.id);
 
       if (result.changes === 0) {
-        return interaction.reply({ content: '❌ Ce canal n\'est pas configuré.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce canal n\'est pas configuré.', ephemeral: true });
       }
 
       const embed = new EmbedBuilder()
@@ -94,7 +98,7 @@ module.exports = {
         .setTitle('✅ Canal Retiré')
         .setDescription(`${canal} accordera à nouveau de l'XP`);
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'role_ajouter') {
@@ -110,9 +114,9 @@ module.exports = {
           .setTitle('✅ Rôle Ajouté')
           .setDescription(`Les membres avec <@&${role.id}> n'auront plus d'XP`);
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
       } catch (err) {
-        return interaction.reply({ content: '❌ Ce rôle est déjà configuré.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce rôle est déjà configuré.', ephemeral: true });
       }
     }
 
@@ -124,7 +128,7 @@ module.exports = {
       ).run(interaction.guildId, 'role', role.id);
 
       if (result.changes === 0) {
-        return interaction.reply({ content: '❌ Ce rôle n\'est pas configuré.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Ce rôle n\'est pas configuré.', ephemeral: true });
       }
 
       const embed = new EmbedBuilder()
@@ -132,7 +136,7 @@ module.exports = {
         .setTitle('✅ Rôle Retiré')
         .setDescription(`Les membres avec <@&${role.id}> auront à nouveau de l'XP`);
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'liste') {
@@ -168,10 +172,11 @@ module.exports = {
         embed.setDescription('Aucun canal ou rôle configuré actuellement.');
       }
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
   }
 };
 
 // Export de la fonction pour messageCreate
 module.exports.isNoXP = isNoXP;
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

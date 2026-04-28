@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── AUTH ──────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── USER ──────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  username      String?   @unique
+  bio           String?    reputation    Int       @default(0)
+  level         Int       @default(1)
+  isPremium     Boolean   @default(false)
+  premiumUntil  DateTime?
+  stripeCustomerId String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  questions     Question[]
+  answers       Answer[]
+  votes         Vote[]
+  comments      Comment[]
+  services      Service[]
+  orders        Order[]   @relation("BuyerOrders")
+  sales         Order[]   @relation("SellerOrders")
+  notifications Notification[]
+  reports       Report[]
+  badges        UserBadge[]
+  subscriptions Subscription[]
+
+  @@index([email])
+  @@index([username])
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+// ── CATEGORIES ────────────────────────────────────────────
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+  icon        String?
+  color       String     @default("#7c3aed")
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  questions   Question[]
+  services    Service[]
+
+  @@index([slug])
+}
+
+// ── QUESTIONS ─────────────────────────────────────────────
+
+model Question {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  body        String     views       Int       @default(0)
+  voteScore   Int       @default(0)
+  isPinned    Boolean   @default(false)
+  isClosed    Boolean   @default(false)
+  isAnswered  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  tags        Tag[]     @relation("QuestionTags")
+  answers     Answer[]
+  votes       Vote[]    @relation("QuestionVotes")
+  comments    Comment[] @relation("QuestionComments")
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([voteScore])
+}
+
+// ── ANSWERS ───────────────────────────────────────────────
+
+model Answer {
+  id          String    @id @default(cuid())
+  body        String     voteScore   Int       @default(0)
+  isAccepted  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  questionId  String
+  question    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  votes       Vote[]    @relation("AnswerVotes")
+  comments    Comment[] @relation("AnswerComments")
+
+  @@index([questionId])
+  @@index([authorId])
+}
+
+// ── VOTES ─────────────────────────────────────────────────
+
+model Vote {
+  id         String   @id @default(cuid())
+  value      Int      // +1 ou -1
+  createdAt  DateTime @default(now())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  questionId String?
+  question   Question? @relation("QuestionVotes", fields: [questionId], references: [id], onDelete: Cascade)
+  answerId   String?
+  answer     Answer?   @relation("AnswerVotes", fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@unique([userId, answerId])
+}
+
+// ── TAGS ──────────────────────────────────────────────────
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  count     Int        @default(0)
+
+  questions Question[] @relation("QuestionTags")
+
+  @@index([slug])
+}
+
+// ── COMMENTS ──────────────────────────────────────────────
+
+model Comment {
+  id         String    @id @default(cuid())
+  body       String     createdAt  DateTime  @default(now())
+
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  questionId String?
+  question   Question? @relation("QuestionComments", fields: [questionId], references: [id], onDelete: Cascade)
+  answerId   String?
+  answer     Answer?   @relation("AnswerComments", fields: [answerId], references: [id], onDelete: Cascade)
+}
+
+// ── MARKETPLACE ───────────────────────────────────────────
+
+model Service {
+  id          String         @id @default(cuid())
+  title       String
+  slug        String         @unique
+  description String          price       Int            // en centimes
+  deliveryDays Int           @default(3)
+  images      String[]
+  tags        String[]
+  isActive    Boolean        @default(true)
+  rating      Float          @default(0)
+  reviewCount Int            @default(0)
+  salesCount  Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  sellerId    String
+  seller      User           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category?      @relation(fields: [categoryId], references: [id])
+  orders      Order[]
+
+  @@index([slug])
+  @@index([sellerId])
+  @@index([categoryId])
+}
+
+// ── ORDERS ────────────────────────────────────────────────
+
+model Order {
+  id                String      @id @default(cuid())
+  amount            Int         // en centimes
+  platformFee       Int         // commission 10%
+  status            OrderStatus @default(PENDING)
+  stripePaymentId   String?     @unique
+  deliveryNote      String?      createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  buyerId   String
+  buyer     User    @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    User    @relation("SellerOrders", fields: [sellerId], references: [id])
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+  review    Review?
+
+  @@index([buyerId])
+  @@index([sellerId])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  DISPUTED
+  REFUNDED
+}
+
+// ── REVIEWS ───────────────────────────────────────────────
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5
+  comment   String?   createdAt DateTime @default(now())
+
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// ── SUBSCRIPTIONS ─────────────────────────────────────────
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  stripeSubscriptionId String   @unique
+  stripePriceId        String
+  status               String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  createdAt            DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+// ── REPORTS ───────────────────────────────────────────────
+
+model Report {
+  id         String   @id @default(cuid())
+  reason     String
+  details    String?   status     String   @default("PENDING")
+  targetType String   // QUESTION | ANSWER | SERVICE | USER
+  targetId   String
+  createdAt  DateTime @default(now())
+
+  reporterId String
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+}
+
+// ── BADGES ────────────────────────────────────────────────
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String
+  icon        String
+  color       String      @default("#f59e0b")
+
+  users       UserBadge[]
+}
+
+model UserBadge {
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeId])
+}

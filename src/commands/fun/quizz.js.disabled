@@ -28,6 +28,11 @@ module.exports = {
   cooldown: 30,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
+    }
+
+    try {
     const cfg    = db.getConfig(interaction.guildId);
     const emoji  = cfg.currency_emoji || '🪙';
     const name   = cfg.currency_name  || 'Coins';
@@ -61,7 +66,7 @@ module.exports = {
       .addFields({ name: '🏆 Récompense', value: `**${reward} ${name}** ${emoji}`, inline: true })
       .setFooter({ text: `Difficulté : ${diff}` });
 
-    const msg = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+    const msg = await interaction.editReply({ embeds: [embed], components: [row], fetchReply: true });
     const answered = new Set();
 
     const collector = msg.createMessageComponentCollector({ time: timeLimit * 1000 });
@@ -97,5 +102,16 @@ module.exports = {
         .setDescription(`⏰ Temps écoulé ! La bonne réponse était : **${q.a}**`);
       msg.edit({ embeds: [revealEmbed], components: [] }).catch(() => {});
     });
-  }
+    } catch (err) {
+    console.error('[CMD] Erreur execute:', err?.message || err);
+    const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(errMsg).catch(() => {});
+      } else {
+        await interaction.editReply(errMsg).catch(() => {});
+      }
+    } catch {}
+  }}
 };
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

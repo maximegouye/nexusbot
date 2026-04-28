@@ -367,7 +367,9 @@ async function handleComponent(interaction) {
     const mise         = parseInt(parts[3]);
     const autoCashout  = parseFloat(parts[4]);
     if (customUserId !== userId) {
-      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+
+
     }
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
@@ -428,7 +430,7 @@ async function handleComponent(interaction) {
     const u = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await playCrash(interaction, userId, guildId, newMise, null);
@@ -447,9 +449,7 @@ module.exports = {
       .setName('auto').setDescription('Cash-out automatique a ce multiplicateur (ex: 2.5)').setMinValue(1.1)),
 
   async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    }
+    // NOTE: deferReply is already called by interactionCreate.js
     await playCrash(
       interaction,
       interaction.user.id,

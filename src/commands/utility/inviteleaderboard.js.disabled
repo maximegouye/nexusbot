@@ -53,3 +53,4 @@ module.exports = {
     }
   }
 };
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

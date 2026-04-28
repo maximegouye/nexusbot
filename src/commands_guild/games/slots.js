@@ -396,7 +396,6 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
 
   let msg;
   if (isInteraction) {
-    if (!source.deferred && !source.replied) await source.deferReply().catch(() => {});
     msg = await source.editReply({ embeds: [startEmbed], components: [] });
   } else {
     msg = await source.reply({ embeds: [startEmbed] });
@@ -715,7 +714,7 @@ async function handleComponent(interaction) {
   if (cid.startsWith('cslot_')) {
     const ownerId = cid.split(':')[1];
     if (ownerId && ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     let mise = 100;
@@ -783,14 +782,14 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const lines   = parseInt(parts[3]) || 1;
     if (ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce modal n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 5) {
-      await interaction.editReply({ content: '❌ Mise invalide (min 5 par ligne).', ephemeral: true });
+      await interaction.reply({ content: '❌ Mise invalide (min 5 par ligne).', ephemeral: true });
       return true;
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
@@ -843,7 +842,7 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const amount  = parseInt(parts[3]);
     if (ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -883,13 +882,13 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const pick    = parseInt(parts[3]); // 1, 2, 3
     if (ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     const bonusKey = `${userId}_${guildId}`;
     const game = bonusGames.get(bonusKey);
     if (!game || game.claimed) {
-      await interaction.editReply({ content: '❌ Ce bonus a déjà été réclamé.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bonus a déjà été réclamé.', ephemeral: true }).catch(() => {});
       return true;
     }
     game.claimed = true;
@@ -950,7 +949,7 @@ async function handleComponent(interaction) {
         { name: '⚡ Cascading Reels', value: 'Symboles gagnants remplacés → jusqu\'à 2 cascades bonus', inline: false },
       )
       .setFooter({ text: 'Les gains sont multiplicateurs × mise par ligne · Jackpot: 2% de chaque mise' });
-    await interaction.editReply({ embeds: [embed], ephemeral: true }).catch(() => {});
+    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
     return true;
   }
 
@@ -960,7 +959,7 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const lines   = parseInt(parts[3]) || 1;
     if (ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -988,7 +987,7 @@ async function handleComponent(interaction) {
     }
     const u = db.getUser(userId, guildId);
     if (!u || u.balance < mise * lines) {
-      await interaction.editReply({ content: '❌ Solde insuffisant pour l\'auto-spin.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Solde insuffisant pour l\'auto-spin.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -1027,6 +1026,7 @@ module.exports = {
       .setName('lignes').setDescription('Nombre de paylines actives (1-5, défaut 1)').setMinValue(1).setMaxValue(5)),
 
   async execute(interaction) {
+    // NOTE: deferReply is already called by interactionCreate.js
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply({ ephemeral: false }).catch(() => {});
     }

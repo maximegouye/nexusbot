@@ -186,7 +186,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) await interaction.deferReply().catch(() => {});
+    // NOTE: deferReply is already called by interactionCreate.js
     const rawNums = interaction.options.getString('numeros');
     const mise    = interaction.options.getInteger('mise');
     return runGame(interaction, rawNums, mise, false);

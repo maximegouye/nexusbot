@@ -318,7 +318,9 @@ module.exports = {
       const userId  = parts[2];
       const riskKey = parts[3] || 'medium';
       if (interaction.user.id !== userId) {
-        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+
+
         return true;
       }
       await interaction.deferUpdate();
@@ -367,7 +369,7 @@ module.exports = {
       const u = db.getUser(userId, interaction.guildId);
       const newMise = parseMise(rawMise, u?.balance || 0);
       if (!newMise || newMise < 10) {
-        return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+        return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
       await playPlinko(interaction, userId, interaction.guildId, newMise, riskKey);

@@ -512,7 +512,9 @@ async function handleComponent(interaction) {
     const userId = parts[2];
     const mise   = parseInt(parts[3]);
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true }).catch(() => {});
+
+
     }
     await interaction.deferUpdate().catch(() => {});
     await startGame(interaction, userId, interaction.guildId, mise);
@@ -535,13 +537,13 @@ async function handleComponent(interaction) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+      return interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u       = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await startGame(interaction, userId, interaction.guildId, newMise);
@@ -574,7 +576,7 @@ async function handleComponent(interaction) {
   const userId = parts.length > 2 ? parts[2] : null;
 
   if (!userId || interaction.user.id !== userId) {
-    return interaction.editReply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
   }
 
   await interaction.deferUpdate().catch(() => {});
@@ -654,9 +656,7 @@ module.exports = {
       .setName('cote').setDescription('Pari annexe 21+3 (5× flush … 100× brelan suited, opt.)').setMinValue(5)),
 
   async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    }
+    // NOTE: deferReply is already called by interactionCreate.js
     const mise    = interaction.options.getInteger('mise');
     const sideBet = interaction.options.getInteger('cote') || 0;
     await startGame(interaction, interaction.user.id, interaction.guildId, mise, sideBet);

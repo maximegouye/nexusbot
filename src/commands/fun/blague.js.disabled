@@ -62,3 +62,4 @@ module.exports = {
     await interaction.editReply({ embeds: [embed] });
   }
 };
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

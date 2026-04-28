@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zone Entraide 🤝 — Communauté Discord</title>
+<meta name="description" content="Zone Entraide est une communauté Discord bienveillante pour s'entraider, progresser ensemble et profiter d'un bot ultra-complet.">
+<meta property="og:title" content="Zone Entraide 🤝">
+<meta property="og:description" content="Rejoins la communauté — Entraide, Jeux, Casino, Économie">
+<meta property="og:image" content="https://i.imgur.com/placeholder.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤝</text></svg>">
+
+<style>
+:root {
+  --bg:       #0a0b0f;
+  --bg2:      #12141c;
+  --bg3:      #1a1d2e;
+  --accent:   #7c3aed;
+  --accent2:  #a855f7;
+  --gold:     #f59e0b;
+  --green:    #10b981;
+  --red:      #ef4444;
+  --blue:     #3b82f6;
+  --text:     #e2e8f0;
+  --muted:    #94a3b8;
+  --border:   rgba(124,58,237,0.2);
+  --card:     rgba(26,29,46,0.8);
+  --glow:     0 0 40px rgba(124,58,237,0.3);
+  --radius:   16px;
+  --discord:  #5865f2;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND ANIMÉ ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(124,58,237,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168,85,247,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(59,130,246,0.05) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(10,11,15,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 clamp(16px, 5vw, 64px);
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent2), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  list-style: none;
+}
+
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.nav-links a:hover { color: var(--text); background: var(--bg3); }
+
+.btn-discord-nav {
+  background: var(--discord) !important;
+  color: white !important;
+  font-weight: 600;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+}
+
+.btn-discord-nav:hover { background: #4752c4 !important; transform: translateY(-1px); }
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* ── HERO ── */
+#hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 100px clamp(16px, 5vw, 64px) 60px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.4);
+  color: var(--accent2);
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.pulse { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); }
+  50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+}
+
+h1 {
+  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #a855f7 0%, #f59e0b 50%, #a855f7 100%);
+  background-size: 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+@keyframes shimmer { to { background-position: 200% center; } }
+
+.hero-sub {
+  font-size: clamp(1rem, 2.5vw, 1.3rem);
+  color: var(--muted);
+  max-width: 600px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.25s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  box-shadow: 0 8px 24px rgba(124,58,237,0.35);
+}
+
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(124,58,237,0.5); }
+
+.btn-discord {
+  background: var(--discord);
+  color: white;
+  box-shadow: 0 8px 24px rgba(88,101,242,0.35);
+}
+
+.btn-discord:hover { transform: translateY(-3px); background: #4752c4; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-outline:hover { background: var(--bg3); transform: translateY(-2px); }
+
+/* Stats hero */
+.hero-stats {
+  display: flex;
+  gap: clamp(24px, 5vw, 64px);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 60px;
+  animation: fadeUp 0.6s 0.4s ease both;
+}
+
+.stat-item { text-align: center; }
+
+.stat-number {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--accent2), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-label { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+/* Scroll indicator */
+.scroll-hint {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+/* ── SECTIONS ── */
+section {
+  position: relative;
+  z-index: 1;
+  padding: clamp(60px, 10vw, 120px) clamp(16px, 5vw, 64px);
+}
+
+.section-label {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--accent2);
+  margin-bottom: 16px;
+}
+
+h2 {
+  text-align: center;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.section-sub {
+  text-align: center;
+  color: var(--muted);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto 60px;
+  line-height: 1.7;
+}
+
+/* ── FEATURES GRID ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  transition: all 0.3s;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+  transform: scaleX(0);
+  transition: transform 0.4s;
+}
+
+.feature-card:hover::before { transform: scaleX(1); }
+.feature-card:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.5); box-shadow: var(--glow); }
+
+.feature-icon { font-size: 2.2rem; margin-bottom: 16px; }
+.feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 10px; }
+.feature-card p { color: var(--muted); line-height: 1.6; font-size: 0.93rem; }
+
+.feature-tag {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(124,58,237,0.15);
+  color: var(--accent2);
+  border: 1px solid rgba(124,58,237,0.3);
+}
+
+/* ── BOT SHOWCASE ── */
+#bot {
+  background: linear-gradient(180deg, transparent 0%, rgba(124,58,237,0.05) 50%, transparent 100%);
+}
+
+.bot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.bot-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.bot-card:hover { transform: translateY(-3px); border-color: rgba(124,58,237,0.5); }
+
+.bot-card-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.bot-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+.bot-card p { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+
+.bot-badge {
+  margin-top: 12px;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badge-new { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+.badge-hot { background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+.badge-fun { background: rgba(168,85,247,0.15); color: var(--accent2); border: 1px solid rgba(168,85,247,0.3); }
+
+/* ── COMMANDES ── */
+.commands-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.commands-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.tab-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.tab-btn.active, .tab-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.commands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+}
+
+.command-chip {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: var(--accent2);
+  transition: all 0.2s;
+}
+
+.command-chip span {
+  display: block;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.command-chip:hover { background: var(--bg2); border-color: var(--accent2); transform: translateY(-2px); }
+
+/* ── RÈGLES / INFO ── */
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.rule-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  transition: all 0.2s;
+}
+
+.rule-card:hover { border-color: rgba(124,58,237,0.5); }
+
+.rule-num {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+.rule-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+.rule-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+/* ── PALIERS RÉCOMPENSES ── */
+.rewards-track {
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.rewards-track::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--accent), var(--accent2), var(--gold));
+  transform: translateX(-50%);
+}
+
+.reward-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.reward-row:nth-child(odd) { flex-direction: row-reverse; text-align: right; }
+.reward-row:nth-child(even) { text-align: left; }
+
+.reward-content {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  transition: all 0.3s;
+}
+
+.reward-content:hover { border-color: rgba(124,58,237,0.5); transform: scale(1.02); }
+
+.reward-dot {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  z-index: 1;
+  box-shadow: 0 0 0 4px var(--bg), 0 0 20px rgba(124,58,237,0.4);
+}
+
+.reward-empty { flex: 1; }
+.reward-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+.reward-desc { color: var(--muted); font-size: 0.88rem; }
+.reward-prize { color: var(--gold); font-weight: 700; font-size: 1.1rem; }
+
+/* ── FAQ ── */
+.faq-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.faq-item.open { border-color: rgba(124,58,237,0.5); }
+
+.faq-q {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  padding: 20px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  transition: color 0.2s;
+}
+
+.faq-q:hover { color: var(--accent2); }
+
+.faq-arrow {
+  font-size: 0.8rem;
+  transition: transform 0.3s;
+  color: var(--accent2);
+  min-width: 20px;
+}
+
+.faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.3s;
+  color: var(--muted);
+  line-height: 1.7;
+  padding: 0 24px;
+  font-size: 0.95rem;
+}
+
+.faq-item.open .faq-a { max-height: 300px; padding: 0 24px 20px; }
+
+/* ── CTA JOIN ── */
+#join {
+  text-align: center;
+  background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(245,158,11,0.05));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.join-card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.join-icon { font-size: 4rem; margin-bottom: 24px; }
+
+#join h2 { font-size: clamp(2rem, 5vw, 3rem); }
+
+.join-steps {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 32px 0;
+}
+
+.join-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+}
+
+.step-n {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 24px;
+}
+
+/* ── FOOTER ── */
+footer {
+  position: relative;
+  z-index: 1;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 48px clamp(16px, 5vw, 64px) 32px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr);
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto 40px;
+}
+
+.footer-brand p { color: var(--muted); font-size: 0.9rem; line-height: 1.7; margin-top: 12px; max-width: 280px; }
+
+footer h4 { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent2); margin-bottom: 16px; }
+
+footer ul { list-style: none; }
+footer ul li { margin-bottom: 10px; }
+footer ul li a { color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+footer ul li a:hover { color: var(--text); }
+
+.footer-bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg3);
+  border: 1px solid var(--green);
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: var(--green);
+  font-weight: 600;
+  z-index: 9999;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(.175,.885,.32,1.275);
+  pointer-events: none;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .nav-links { display: none; flex-direction: column; position: absolute; top: 64px; left: 0; right: 0; background: rgba(10,11,15,0.98); border-bottom: 1px solid var(--border); padding: 16px; gap: 4px; }
+  .nav-links.open { display: flex; }
+  .nav-toggle { display: block; }
+
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .footer-grid > div:first-child { grid-column: 1/-1; }
+
+  .rewards-track::before { left: 24px; transform: none; }
+  .reward-row, .reward-row:nth-child(odd) { flex-direction: row; text-align: left; }
+  .reward-empty { display: none; }
+  .reward-dot { width: 40px; height: 40px; min-width: 40px; font-size: 1.1rem; }
+}
+
+@media (max-width: 480px) {
+  .footer-grid { grid-template-columns: 1fr; }
+  .hero-stats { gap: 24px; }
+}
+
+/* Couleur accent des liens */
+a.accent { color: var(--accent2); }
+
+/* Séparateur vague */
+.wave-sep {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  max-width: 200px;
+  margin: 0 auto 60px;
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#hero" class="nav-logo">🤝 Zone Entraide</a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#features">Fonctionnalités</a></li>
+    <li><a href="#bot">NexusBot</a></li>
+    <li><a href="#commandes">Commandes</a></li>
+    <li><a href="#recompenses">Récompenses</a></li>
+    <li><a href="#regles">Règles</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="https://discord.gg/zone-entraide" class="btn-discord-nav" id="discordInvite">Discord</a></li>
+  </ul>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-badge">
+    <div class="pulse"></div>
+    Serveur en ligne · NexusBot actif
+  </div>
+
+  <h1>
+    Bienvenue sur<br>
+    <span class="gradient-text">Zone Entraide</span>
+  </h1>
+
+  <p class="hero-sub">
+    Une communauté Discord bienveillante pour s'entraider, progresser ensemble,
+    et profiter d'un bot ultra-complet avec casino, économie, jeux et bien plus.
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://discord.gg/zone-entraide" class="btn btn-discord" id="joinBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      Rejoindre le serveur
+    </a>
+    <a href="#features" class="btn btn-outline">Découvrir →</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat-item">
+      <div class="stat-number" id="memberCount">500+</div>
+      <div class="stat-label">Membres</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">458</div>
+      <div class="stat-label">Commandes bot</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">9</div>
+      <div class="stat-label">Jeux de casino</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">25</div>
+      <div class="stat-label">Paliers récompenses</div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span>Découvrir</span>
+    <span>↓</span>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <p class="section-label">Pourquoi nous rejoindre ?</p>
+  <h2>Tout ce dont tu as besoin</h2>
+  <div class="wave-sep"></div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon">🤝</div>
+      <h3>Entraide réelle</h3>
+      <p>Pose tes questions, partage tes connaissances, reçois de l'aide de vrais humains bienveillants. Aucun jugement.</p>
+      <span class="feature-tag">Community</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">🎰</div>
+      <h3>Casino complet</h3>
+      <p>9 jeux : Blackjack, Roulette, Slots, Crash, Mines, Baccarat, Hilo, Hippodrome, Vidéo Poker. Animations premium.</p>
+      <span class="feature-tag">9 jeux</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">💰</div>
+      <h3>Économie avancée</h3>
+      <p>Système monétaire complet : daily, work, crimes, transferts, bourse, crypto, boutique, dons de clan.</p>
+      <span class="feature-tag">Économie</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">🏆</div>
+      <h3>Système de niveaux</h3>
+      <p>Gagne de l'XP en chattant, monte de niveau, débloque des rôles exclusifs et des récompenses en coins.</p>
+      <span class="feature-tag">Progression</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">🎁</div>
+      <h3>Récompenses par paliers</h3>
+      <p>25 paliers de récompenses basés sur ton niveau, ta richesse, ton streak quotidien et tes messages.</p>
+      <span class="feature-tag">NEW</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">🛡️</div>
+      <h3>Modération puissante</h3>
+      <p>Anti-raid automatique, sanctions, historique complet, avertissements progressifs, mute/ban/kick.</p>
+      <span class="feature-tag">Sécurité</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">🎫</div>
+      <h3>Tickets d'assistance</h3>
+      <p>Système de tickets premium avec catégories, transcripts automatiques, fermeture programmée.</p>
+      <span class="feature-tag">Support</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">🏅</div>
+      <h3>Clans & Social</h3>
+      <p>Crée ou rejoint un clan, gérez votre trésorerie commune, gagnez des badges et de la réputation.</p>
+      <span class="feature-tag">Social</span>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon">⚡</div>
+      <h3>Toujours en ligne</h3>
+      <p>Hébergé sur Railway avec reconnexion automatique. Disponible 24h/24, 7j/7, sans interruption.</p>
+      <span class="feature-tag">99.9% uptime</span>
+    </div>
+  </div>
+</section>
+
+<!-- BOT NEXUSBOT -->
+<section id="bot">
+  <p class="section-label">NexusBot</p>
+  <h2>Un bot, des <span class="gradient-text">dizaines de fonctions</span></h2>
+  <p class="section-sub">NexusBot est le cerveau du serveur. Économie, jeux, modération, social — tout en un.</p>
+  <div class="wave-sep"></div>
+
+  <div class="bot-grid">
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">🎰</div>
+      <h3>Casino & Jeux</h3>
+      <p>9 jeux complets avec animations et boutons interactifs</p>
+      <span class="bot-badge badge-hot">HOT 🔥</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">💵</div>
+      <h3>Économie</h3>
+      <p>Daily, work, crime, rob, transfert, boutique, banque</p>
+      <span class="bot-badge badge-fun">Popular</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">📈</div>
+      <h3>Crypto & Bourse</h3>
+      <p>Marché simulé, achat/vente d'actifs, évolution en temps réel</p>
+      <span class="bot-badge badge-new">Unique</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">🏰</div>
+      <h3>Donjon & RPG</h3>
+      <p>Exploration, combats, objets, progression de personnage</p>
+      <span class="bot-badge badge-fun">Aventure</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">🎁</div>
+      <h3>Récompenses</h3>
+      <p>25 paliers : niveau, richesse, streak, messages</p>
+      <span class="bot-badge badge-new">NEW ✨</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">🏆</div>
+      <h3>Tournois</h3>
+      <p>Crée des tournois par élimination entre joueurs</p>
+      <span class="bot-badge badge-fun">Compétitif</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">📊</div>
+      <h3>Leaderboards</h3>
+      <p>Classements XP, coins, voice, messages, réputation</p>
+      <span class="bot-badge badge-hot">Ranking</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">🎉</div>
+      <h3>Giveaways</h3>
+      <p>Tirages au sort automatiques avec conditions d'entrée</p>
+      <span class="bot-badge badge-new">Auto</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">🌟</div>
+      <h3>XP & Niveaux</h3>
+      <p>Progression par messages et vocal, rôles automatiques</p>
+      <span class="bot-badge badge-fun">Actif</span>
+    </div>
+    <div class="bot-card reveal">
+      <div class="bot-card-icon">🤖</div>
+      <h3>IA Intégrée</h3>
+      <p>Résumés, aide, conversations intelligentes avec Claude AI</p>
+      <span class="bot-badge badge-new">AI 🧠</span>
+    </div>
+  </div>
+</section>
+
+<!-- COMMANDES -->
+<section id="commandes">
+  <p class="section-label">Référence</p>
+  <h2>Commandes principales</h2>
+  <p class="section-sub">Tape ces commandes sur le serveur pour commencer à jouer.</p>
+
+  <div class="commands-container">
+    <div class="commands-tabs">
+      <button class="tab-btn active" data-cat="casino">🎰 Casino</button>
+      <button class="tab-btn" data-cat="eco">💰 Économie</button>
+      <button class="tab-btn" data-cat="social">🏅 Social</button>
+      <button class="tab-btn" data-cat="util">🔧 Utilitaires</button>
+    </div>
+
+    <div class="commands-grid" id="commandsGrid">
+      <!-- Rempli par JS -->
+    </div>
+  </div>
+</section>
+
+<!-- RÉCOMPENSES -->
+<section id="recompenses">
+  <p class="section-label">Paliers</p>
+  <h2>Récompenses par <span class="gradient-text">paliers</span></h2>
+  <p class="section-sub">Progresse et réclame tes récompenses avec <code style="background:var(--bg3);padding:2px 8px;border-radius:4px;color:var(--accent2)">/recompenses</code></p>
+
+  <div class="rewards-track reveal">
+    <div class="reward-row">
+      <div class="reward-content">
+        <div class="reward-title">⭐ Niveau 5</div>
+        <div class="reward-desc">Premier palier — les débuts</div>
+        <div class="reward-prize">+500 €</div>
+      </div>
+      <div class="reward-dot">⭐</div>
+      <div class="reward-empty"></div>
+    </div>
+    <div class="reward-row">
+      <div class="reward-empty"></div>
+      <div class="reward-dot">🌟</div>
+      <div class="reward-content">
+        <div class="reward-title">🌟 Niveau 10 — Actif</div>
+        <div class="reward-desc">Titre exclusif débloqué</div>
+        <div class="reward-prize">+1 500 €</div>
+      </div>
+    </div>
+    <div class="reward-row">
+      <div class="reward-content">
+        <div class="reward-title">🏅 Niveau 20 — Vétéran</div>
+        <div class="reward-desc">Tu fais partie des réguliers</div>
+        <div class="reward-prize">+4 000 €</div>
+      </div>
+      <div class="reward-dot">🏅</div>
+      <div class="reward-empty"></div>
+    </div>
+    <div class="reward-row">
+      <div class="reward-empty"></div>
+      <div class="reward-dot">🏆</div>
+      <div class="reward-content">
+        <div class="reward-title">🏆 Niveau 40 — Champion</div>
+        <div class="reward-desc">Membre d'élite du serveur</div>
+        <div class="reward-prize">+15 000 €</div>
+      </div>
+    </div>
+    <div class="reward-row">
+      <div class="reward-content">
+        <div class="reward-title">💎 Niveau 50 — Légende</div>
+        <div class="reward-desc">Légende absolue</div>
+        <div class="reward-prize">+30 000 €</div>
+      </div>
+      <div class="reward-dot">💎</div>
+      <div class="reward-empty"></div>
+    </div>
+    <div class="reward-row">
+      <div class="reward-empty"></div>
+      <div class="reward-dot">🔥</div>
+      <div class="reward-content">
+        <div class="reward-title">🔥 Streak 30 jours — Dédié</div>
+        <div class="reward-desc">30 /daily consécutifs</div>
+        <div class="reward-prize">+10 000 €</div>
+      </div>
+    </div>
+    <div class="reward-row">
+      <div class="reward-content">
+        <div class="reward-title">👑 100 000€ gagnés — Millionnaire</div>
+        <div class="reward-desc">Ton empire financier est réel</div>
+        <div class="reward-prize">+5 000 €</div>
+      </div>
+      <div class="reward-dot">👑</div>
+      <div class="reward-empty"></div>
+    </div>
+  </div>
+</section>
+
+<!-- RÈGLES -->
+<section id="regles">
+  <p class="section-label">Règlement</p>
+  <h2>Les règles du serveur</h2>
+  <p class="section-sub">Pour que tout le monde se sente bien ici.</p>
+  <div class="wave-sep"></div>
+
+  <div class="rules-grid">
+    <div class="rule-card reveal">
+      <div class="rule-num">1</div>
+      <div>
+        <h3>Respect mutuel</h3>
+        <p>Traite chaque membre avec respect. Aucune insulte, discrimination ou harcèlement ne sera toléré.</p>
+      </div>
+    </div>
+    <div class="rule-card reveal">
+      <div class="rule-num">2</div>
+      <div>
+        <h3>Pas de spam</h3>
+        <p>Évite les messages répétitifs, les majuscules excessives et les mentions abusives.</p>
+      </div>
+    </div>
+    <div class="rule-card reveal">
+      <div class="rule-num">3</div>
+      <div>
+        <h3>Contenu approprié</h3>
+        <p>Aucun contenu NSFW, violent ou illégal. Garde les échanges propres et bienveillants.</p>
+      </div>
+    </div>
+    <div class="rule-card reveal">
+      <div class="rule-num">4</div>
+      <div>
+        <h3>Pas de pub non sollicitée</h3>
+        <p>Toute publicité ou invitation vers d'autres serveurs est interdite sans accord du staff.</p>
+      </div>
+    </div>
+    <div class="rule-card reveal">
+      <div class="rule-num">5</div>
+      <div>
+        <h3>Sujets dans le bon salon</h3>
+        <p>Utilise les salons appropriés. L'aide va dans #entraide, les jeux dans #casino, etc.</p>
+      </div>
+    </div>
+    <div class="rule-card reveal">
+      <div class="rule-num">6</div>
+      <div>
+        <h3>Écoute le staff</h3>
+        <p>Les décisions du staff sont finales. En cas de problème, ouvre un ticket plutôt que de débattre en public.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <p class="section-label">Questions fréquentes</p>
+  <h2>FAQ</h2>
+  <p class="section-sub">Les réponses aux questions les plus posées.</p>
+
+  <div class="faq-container">
+    <div class="faq-item">
+      <button class="faq-q">Comment commencer à gagner des coins ?<span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Tape <strong>/daily</strong> chaque jour pour ta récompense quotidienne, <strong>/work</strong> toutes les 30 minutes, et <strong>/crime</strong> pour des gains risqués. Tu gagnes aussi des coins automatiquement en envoyant des messages.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Comment réclamer mes récompenses ?<span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Tape <strong>/recompenses</strong> sur le serveur pour voir tous tes paliers. Si tu as des récompenses disponibles, clique sur "Réclamer" pour les obtenir instantanément.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Comment créer ou rejoindre un clan ?<span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Utilise <strong>/clans creer</strong> pour créer ton clan (50€ requis) ou <strong>/clans rejoindre</strong> pour en rejoindre un existant. Tu peux aussi faire des dons à la trésorerie avec <strong>/clans don</strong>.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Quels jeux de casino sont disponibles ?<span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Blackjack, Roulette, Machines à Sous, Crash, Mines, Baccarat, Hilo, Hippodrome et Vidéo Poker. Tous accessibles via <strong>/blackjack</strong>, <strong>/slots</strong>, <strong>/crash</strong>, etc.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Comment monter de niveau rapidement ?<span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Envoie des messages régulièrement (XP par message), reste actif en vocal (voice XP), et fais ton <strong>/daily</strong> chaque jour pour maintenir ton streak. L'XP se cumule automatiquement.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Comment ouvrir un ticket d'assistance ?<span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Va dans le salon <strong>#🎫・ticket</strong> et clique sur le bouton correspondant à ta demande. Une équipe du staff te répondra dans les meilleurs délais.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Y a-t-il des événements réguliers ?<span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Oui ! Des giveaways automatiques, des tournois, des événements spéciaux et des semaines avec XP boosté sont organisés régulièrement. Reste connecté pour ne rien rater !</div>
+    </div>
+  </div>
+</section>
+
+<!-- JOIN CTA -->
+<section id="join">
+  <div class="join-card">
+    <div class="join-icon">🚀</div>
+    <h2>Prêt à rejoindre <span class="gradient-text">l'aventure</span> ?</h2>
+    <p class="section-sub" style="margin-bottom:0">Rejoins notre communauté Discord maintenant — c'est gratuit, bienveillant et rempli d'activités.</p>
+
+    <div class="join-steps">
+      <div class="join-step"><span class="step-n">1</span>Clique sur Rejoindre</div>
+      <div class="join-step"><span class="step-n">2</span>Accepte les règles</div>
+      <div class="join-step"><span class="step-n">3</span>Tape /daily 🎉</div>
+    </div>
+
+    <a href="https://discord.gg/zone-entraide" class="btn btn-discord" style="font-size:1.1rem;padding:16px 36px;" id="joinBtnBottom">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      Rejoindre Zone Entraide
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#hero" class="nav-logo" style="font-size:1.6rem">🤝 Zone Entraide</a>
+      <p>Communauté Discord bienveillante avec un bot ultra-complet. Économie, casino, entraide — tout en un.</p>
+    </div>
+    <div>
+      <h4>Serveur</h4>
+      <ul>
+        <li><a href="https://discord.gg/zone-entraide">Rejoindre Discord</a></li>
+        <li><a href="#regles">Règlement</a></li>
+        <li><a href="#features">Fonctionnalités</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>NexusBot</h4>
+      <ul>
+        <li><a href="#bot">Présentation</a></li>
+        <li><a href="#commandes">Commandes</a></li>
+        <li><a href="#recompenses">Récompenses</a></li>
+        <li><a href="#commandes">Casino</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="https://discord.gg/zone-entraide">Support Discord</a></li>
+        <li><a href="https://discord.gg/zone-entraide">Ouvrir un ticket</a></li>
+        <li><a href="https://discord.gg/zone-entraide">Staff</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span>© 2025 Zone Entraide · Tous droits réservés</span>
+    <span>Propulsé par NexusBot ⚡</span>
+  </div>
+</footer>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✅ Lien copié !</div>
+
+<script>
+// ── NAV MOBILE ──
+const toggle = document.getElementById('navToggle');
+const links = document.getElementById('navLinks');
+toggle.addEventListener('click', () => links.classList.toggle('open'));
+document.querySelectorAll('#navLinks a').forEach(a => a.addEventListener('click', () => links.classList.remove('open')));
+
+// ── COMMANDES DATA ──
+const COMMANDS = {
+  casino: [
+    { cmd: '/slots', desc: 'Machines à sous' },
+    { cmd: '/blackjack', desc: 'Blackjack' },
+    { cmd: '/roulette', desc: 'Roulette' },
+    { cmd: '/crash', desc: 'Crash' },
+    { cmd: '/mines', desc: 'Mines' },
+    { cmd: '/baccarat', desc: 'Baccarat' },
+    { cmd: '/hilo', desc: 'Hi-Lo' },
+    { cmd: '/hippodrome', desc: 'Courses chevaux' },
+    { cmd: '/videopoker', desc: 'Vidéo Poker' },
+    { cmd: '/casino-stats', desc: 'Tes stats casino' },
+    { cmd: '/tournoi', desc: 'Tournois élim.' },
+    { cmd: '/roue-fortune', desc: 'Roue fortune' },
+  ],
+  eco: [
+    { cmd: '/daily', desc: 'Récompense du jour' },
+    { cmd: '/work', desc: 'Travailler (+coins)' },
+    { cmd: '/crime', desc: 'Crime risqué' },
+    { cmd: '/balance', desc: 'Voir ton solde' },
+    { cmd: '/transfer', desc: 'Envoyer des €' },
+    { cmd: '/shop', desc: 'Boutique' },
+    { cmd: '/buy', desc: 'Acheter un article' },
+    { cmd: '/recompenses', desc: 'Réclamer paliers' },
+    { cmd: '/crypto', desc: 'Marché crypto' },
+    { cmd: '/bourse', desc: 'Bourse simulée' },
+    { cmd: '/leaderboard', desc: 'Classements' },
+    { cmd: '/inventory', desc: 'Ton inventaire' },
+  ],
+  social: [
+    { cmd: '/profile', desc: 'Ton profil' },
+    { cmd: '/level', desc: 'Niveau et XP' },
+    { cmd: '/clans', desc: 'Système de clans' },
+    { cmd: '/reputation', desc: 'Réputation' },
+    { cmd: '/badges', desc: 'Tes badges' },
+    { cmd: '/streaks', desc: 'Tes streaks' },
+    { cmd: '/rob', desc: 'Voler un membre' },
+    { cmd: '/duel', desc: 'Duel économique' },
+    { cmd: '/coinflip', desc: 'Pile ou face' },
+    { cmd: '/anniversaire', desc: 'Ton anniversaire' },
+    { cmd: '/suggestion', desc: 'Faire une sugges.' },
+    { cmd: '/rep', desc: 'Donner réputation' },
+  ],
+  util: [
+    { cmd: '/aide', desc: 'Aide complète' },
+    { cmd: '/nexus', desc: 'Config admin' },
+    { cmd: '/sanctions', desc: 'Historique sanct.' },
+    { cmd: '/ticket', desc: 'Ouvrir un ticket' },
+    { cmd: '/giveaway', desc: 'Créer giveaway' },
+    { cmd: '/partenariat', desc: 'Partenariat' },
+    { cmd: '/serveur-info', desc: 'Info serveur' },
+    { cmd: '/sondage', desc: 'Créer sondage' },
+    { cmd: '/rappel', desc: 'Créer rappel' },
+    { cmd: '/missions', desc: 'Missions actives' },
+    { cmd: '/quiz', desc: 'Jeopardy / Quiz' },
+    { cmd: '/pendu', desc: 'Jeu du pendu' },
+  ],
+};
+
+function renderCommands(cat) {
+  const grid = document.getElementById('commandsGrid');
+  grid.innerHTML = COMMANDS[cat].map(c => `
+    <div class="command-chip">
+      ${c.cmd}
+      <span>${c.desc}</span>
+    </div>
+  `).join('');
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCommands(btn.dataset.cat);
+  });
+});
+
+renderCommands('casino');
+
+// ── FAQ ──
+document.querySelectorAll('.faq-q').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  });
+});
+
+// ── REVEAL ON SCROLL ──
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── COUNTER ANIMATION ──
+function animateCount(el, target, suffix = '') {
+  let current = 0;
+  const step = Math.ceil(target / 60);
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current.toLocaleString('fr-FR') + suffix;
+    if (current >= target) clearInterval(timer);
+  }, 25);
+}
+
+// Trigger counters on scroll into view
+const heroObs = new IntersectionObserver(([entry]) => {
+  if (entry.isIntersecting) {
+    setTimeout(() => animateCount(document.getElementById('memberCount'), 500, '+'), 200);
+    heroObs.disconnect();
+  }
+}, { threshold: 0.5 });
+
+const heroStats = document.querySelector('.hero-stats');
+if (heroStats) heroObs.observe(heroStats);
+
+// ── DISCORD INVITE — à mettre à jour avec vrai lien ──
+const DISCORD_INVITE = 'https://discord.gg/zone-entraide';
+document.querySelectorAll('#joinBtn, #joinBtnBottom, #discordInvite, .btn-discord').forEach(el => {
+  if (el.tagName === 'A') el.href = DISCORD_INVITE;
+});
+
+// Copier le lien au clic (option)
+document.querySelectorAll('#joinBtn, #joinBtnBottom').forEach(btn => {
+  btn.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    navigator.clipboard?.writeText(DISCORD_INVITE).then(() => showToast('✅ Lien copié !'));
+  });
+});
+
+// ── NAV ACTIVE HIGHLIGHT ──
+const sections = document.querySelectorAll('section[id]');
+const navLinks2 = document.querySelectorAll('.nav-links a[href^="#"]');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) current = s.id;
+  });
+  navLinks2.forEach(a => {
+    a.style.color = a.getAttribute('href') === '#' + current ? 'var(--accent2)' : '';
+  });
+}, { passive: true });
+</script>
+</body>
+</html>

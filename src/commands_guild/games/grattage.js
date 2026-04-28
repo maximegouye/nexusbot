@@ -165,10 +165,7 @@ module.exports = {
   cooldown: 8,
 
   async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: false }); } catch (e) { /* already ack'd */ }
-    }
-
+    // NOTE: deferReply is already called by interactionCreate.js, so we don't call it again
     const mise = interaction.options.getInteger('mise');
     return runGame(interaction, mise);
   },
@@ -192,7 +189,7 @@ async function runGame(ctx, mise, isPrefix = false) {
 
   if (!userData || userData.balance < mise) {
     const reply = { content: `❌ Solde insuffisant ! Tu as **${(userData?.balance || 0).toLocaleString()} 💰** et tu mises **${mise.toLocaleString()} 💰**.`, ephemeral: true };
-    return isPrefix ? ctx.reply(reply.content) : ctx.reply(reply);
+    return isPrefix ? ctx.reply(reply.content) : ctx.editReply(reply);
   }
 
   // Débiter
@@ -218,7 +215,7 @@ async function runGame(ctx, mise, isPrefix = false) {
   if (isPrefix) {
     ctx.reply(payload);
   } else {
-    await ctx.reply(payload);
+    await ctx.editReply(payload);
   }
 }
 
@@ -239,14 +236,14 @@ async function handleComponent(interaction, customId) {
 
   const session = sessions.get(sessionId);
   if (!session) {
-    await interaction.editReply({ content: '❌ Session expirée (3 min). Relance une nouvelle carte !', ephemeral: true });
+    await interaction.reply({ content: '❌ Session expirée (3 min). Relance une nouvelle carte !', ephemeral: true });
     return true;
   }
 
   // Vérif ownership
   const userId = interaction.user.id;
   if (session.userId !== userId) {
-    await interaction.editReply({ content: '❌ Ce n\'est pas ta carte à gratter !', ephemeral: true });
+    await interaction.reply({ content: '❌ Ce n\'est pas ta carte à gratter !', ephemeral: true }).catch(() => {});
     return true;
   }
 

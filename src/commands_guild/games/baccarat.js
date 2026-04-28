@@ -289,7 +289,9 @@ async function handleComponent(interaction) {
   if (cid.startsWith('baccarat_stats_')) {
     const userId = cid.split('_')[2];
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Ces stats ne t\'appartiennent pas.', ephemeral: true });
+      return interaction.reply({ content: '❌ Ces stats ne t\'appartiennent pas.', ephemeral: true }).catch(() => {});
+
+
     }
     const sb = getScoreboard(userId);
     const winRate = sb.gamesPlayed > 0 ? ((sb.playerWins + sb.bankerWins + sb.ties) / sb.gamesPlayed * 100).toFixed(1) : '0.0';
@@ -305,7 +307,9 @@ async function handleComponent(interaction) {
         { name: '💰 Gain/Perte net', value: `${sb.netGain >= 0 ? '+' : ''}${sb.netGain} coins`, inline: true }
       )
       .setFooter({ text: 'Stats en mémoire (session seulement)' });
-    return interaction.editReply({ embeds: [statsEmbed], ephemeral: true });
+    return interaction.reply({ embeds: [statsEmbed], ephemeral: true }).catch(() => {});
+
+
   }
 
   if (cid.startsWith('baccarat_replay_')) {
@@ -315,7 +319,9 @@ async function handleComponent(interaction) {
     const betKey = parts[4];
 
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true }).catch(() => {});
+
+
     }
 
     await interaction.deferUpdate().catch(() => {});
@@ -340,13 +346,13 @@ async function handleComponent(interaction) {
     const userId = parts[2];
     const betKey = parts[3];
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+      return interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.editReply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     const betLabels = { player: 'joueur', banker: 'banquier', tie: 'egalite' };

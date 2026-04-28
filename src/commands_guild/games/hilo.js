@@ -256,7 +256,7 @@ async function handleComponent(interaction, customId) {
 
     // Verify permission
     if (interaction.user.id !== userId) {
-      return interaction.editReply({
+      return interaction.reply({
         content: '❌ Ce n\'est pas ton jeu.',
         ephemeral: true,
       });

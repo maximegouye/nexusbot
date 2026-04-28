@@ -473,7 +473,7 @@ async function handleComponent(interaction, cid) {
   // ── Quitter ──────────────────────────────────────────
   if (cid.startsWith('ms_quit_')) {
     const ownerId = cid.split('_')[2];
-    if (ownerId !== userId) { await interaction.editReply({ content: '❌ Pas ton jeu.', ephemeral: true }).catch(() => {}); return true; }
+    if (ownerId !== userId) { await interaction.reply({ content: '❌ Pas ton jeu.', ephemeral: true }).catch(() => {}); return true; }
     await interaction.deferUpdate().catch(() => {});
     await interaction.message.edit({ components: [] }).catch(() => {});
     return true;
@@ -616,10 +616,10 @@ async function handleComponent(interaction, cid) {
   if (cid.startsWith('ms_auto_')) {
     const parts   = cid.split('_');
     const ownerId = parts[2]; const mise = parseInt(parts[3]); const count = parseInt(parts[4]);
-    if (ownerId !== userId) { await interaction.editReply({ content: '❌ Pas ton jeu.', ephemeral: true }).catch(() => {}); return true; }
+    if (ownerId !== userId) { await interaction.reply({ content: '❌ Pas ton jeu.', ephemeral: true }).catch(() => {}); return true; }
     const u = db.getUser(userId, guildId);
     if (!u || u.balance < mise * count) {
-      await interaction.editReply({ content: `❌ Solde insuffisant pour ${count} auto-spins à ${mise.toLocaleString('fr-FR')} ${coin_}.`, ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: `❌ Solde insuffisant pour ${count} auto-spins à ${mise.toLocaleString('fr-FR')} ${coin_}.`, ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
