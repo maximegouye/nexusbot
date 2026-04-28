@@ -18,16 +18,18 @@ try {
 } catch {}
 
 module.exports = {
+  // ⚠️ setDefaultMemberPermissions est appliqué AU TOP-LEVEL (pas sur subcommands).
+  // Discord.js v14+ : les subcommand builders n'exposent pas cette méthode.
   data: new SlashCommandBuilder()
     .setName('activity-roles')
     .setDescription('⚙️ Gérer les rôles attribués automatiquement selon l\'activité')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand(s => s
       .setName('voir')
       .setDescription('📋 Voir les paliers d\'activité configurés'))
     .addSubcommand(s => s
       .setName('ajouter')
       .setDescription('➕ Ajouter un palier d\'activité')
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addStringOption(o => o.setName('type').setDescription('Type de palier').setRequired(true)
         .addChoices(
           { name: '⭐ XP total', value: 'xp' },
@@ -39,7 +41,6 @@ module.exports = {
     .addSubcommand(s => s
       .setName('supprimer')
       .setDescription('🗑️ Supprimer un palier')
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addStringOption(o => o.setName('type').setDescription('Type de palier').setRequired(true)
         .addChoices(
           { name: '⭐ XP total', value: 'xp' },
@@ -49,8 +50,7 @@ module.exports = {
       .addIntegerOption(o => o.setName('seuil').setDescription('Seuil à supprimer').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s
       .setName('verifier')
-      .setDescription('🔄 Vérifier et attribuer les rôles à tous les membres (peut être lent)')
-      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)),
+      .setDescription('🔄 Vérifier et attribuer les rôles à tous les membres (peut être lent)')),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true }).catch(() => {});

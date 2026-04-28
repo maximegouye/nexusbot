@@ -1,4 +1,6 @@
-const snipe = require('../commands/utility/snipe');
+// snipe.js a été supprimé/déplacé — require optionnel pour ne pas planter le bot
+let snipe = null;
+try { snipe = require('../commands/utility/snipe'); } catch { snipe = { storeEdit: () => {} }; }
 const db    = require('../database/db');
 
 module.exports = {
@@ -9,8 +11,8 @@ module.exports = {
     if (oldMessage.content === newMessage.content) return;
     if (oldMessage.author?.bot) return;
 
-    // Alimenter le cache editsnipe
-    snipe.storeEdit(oldMessage, newMessage);
+    // Alimenter le cache editsnipe (si dispo)
+    if (snipe && typeof snipe.storeEdit === 'function') snipe.storeEdit(oldMessage, newMessage);
 
     // Log modération si configuré
     const cfg = db.getConfig(oldMessage.guild.id);
