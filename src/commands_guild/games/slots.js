@@ -30,8 +30,8 @@ const SYMBOLS = [
   { id: 'trophy',  emoji: '🏆', name: 'Trophée',  weight: 2,  value: 50 }, // NOUVEAU TRÈS RARE
   { id: 'diamond', emoji: '💎', name: 'Diamant',  weight: 2,  value: 40 },
   { id: 'bomb',    emoji: '💣', name: 'Bombe',    weight: 1,  value: 0  }, // SCATTER SPÉCIAL
-  { id: 'wild',    emoji: '🃏', name: 'WILD',     weight: 3,  value: 0  },
-  { id: 'wild2',   emoji: '🎴', name: 'WILD×2',   weight: 1,  value: 0  },
+  { id: 'wild',    emoji: '🃏', name: 'WILD',     weight: 6,  value: 0  },
+  { id: 'wild2',   emoji: '🎴', name: 'WILD×2',   weight: 2,  value: 0  },
   { id: 'scatter', emoji: '🌠', name: 'SCATTER',  weight: 2,  value: 0  },
   { id: 'bonus',   emoji: '🎁', name: 'BONUS',    weight: 1,  value: 0  },
 ];
@@ -125,10 +125,16 @@ function spinGrid() {
 
 // ─── WILD REEL FEATURE (10% chance) ────────────────────
 function applyWildReelFeature(grid) {
-  if (Math.random() < 0.1) { // 10% de chance
+  if (Math.random() < 0.20) { // 20% de chance — Wild Reel Feature
     const wildCol = Math.floor(Math.random() * 5);
     const wildSymbol = SYMBOLS.find(s => s.id === 'wild');
     grid[wildCol] = [wildSymbol, wildSymbol, wildSymbol];
+    // 5% chance d'une 2ème colonne wild (Double Wild Reel!)
+    if (Math.random() < 0.05) {
+      const otherCols = [0,1,2,3,4].filter(c => c !== wildCol);
+      const col2 = otherCols[Math.floor(Math.random() * otherCols.length)];
+      grid[col2] = [wildSymbol, wildSymbol, wildSymbol];
+    }
   }
   return grid;
 }
@@ -166,8 +172,19 @@ function evalPayline(grid, payline) {
     counts[c.id] = (counts[c.id] || 0) + 1;
   }
 
-  // JACKPOT : 5 wilds (incluant wild2)
+  // ── JACKPOT MEGA : 5 wilds (incluant wild2) ──
   if (totalWilds === 5) return { type: 'jackpot', mult: 0 };
+
+  // ── JACKPOT MAJOR : 5 trophées/diamants/7 (+ wilds) ──
+  const premiumIds = ['trophy', 'diamond', 'seven'];
+  for (const pid of premiumIds) {
+    const cnt = cells.filter(c => c.id === pid).length;
+    if (cnt + totalWilds >= 5) return { type: 'jackpot_major', symbol: pid, mult: 0 };
+  }
+
+  // ── JACKPOT MINI : 4 trophées (+ wilds) ──
+  const trophyCount = cells.filter(c => c.id === 'trophy').length;
+  if (trophyCount + totalWilds >= 4) return { type: 'jackpot_mini', mult: 0 };
 
   // Find best symbol match left-to-right
   let bestSym = null, bestCount = 0;
@@ -207,10 +224,12 @@ function evalGridFull(grid, activeLines = 5) {
   const bombCount    = allCells.filter(c => c.id === 'bomb').length;
   const bonusCount   = allCells.filter(c => c.id === 'bonus').length;
 
-  const hasJackpot = results.some(r => r.type === 'jackpot');
+  const hasJackpot      = results.some(r => r.type === 'jackpot');
+  const hasJackpotMajor = results.some(r => r.type === 'jackpot_major');
+  const hasJackpotMini  = results.some(r => r.type === 'jackpot_mini');
   const wins = results.filter(r => r.type === 'win');
 
-  return { results, hasJackpot, scatterCount, bombCount, bonusCount, wins };
+  return { results, hasJackpot, hasJackpotMajor, hasJackpotMini, scatterCount, bombCount, bonusCount, wins };
 }
 
 // ─── Cascading reels ─────────────────────────────────────
@@ -489,7 +508,15 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
 
   await animateSpin(msg, grid, coin, totalMise, jackpot);
 
-  const { results, hasJackpot, scatterCount, bombCount, bonusCount, wins } = evalGridFull(grid, activeLines);
+  const { results, hasJackpot, hasJackpotMajor, hasJackpotMini, scatterCount, bombCount, bonusCount, wins } = evalGridFull(grid, activeLines);
+
+  // ── Probabilité aléatoire jackpot (comme les vraies machines) ──
+  // Indépendante des symboles — 1/2500 pour MEGA, 1/800 pour MAJOR
+  const rng1 = Math.random();
+  const rng2 = Math.random();
+  const finalHasJackpot = hasJackpot || (rng1 < 1/2500);
+  const finalHasMajor   = !finalHasJackpot && (hasJackpotMajor || (rng2 < 1/800));
+  const finalHasMini    = !finalHasJackpot && !finalHasMajor && hasJackpotMini;
 
   let totalGain = 0;
   let color  = '#E74C3C';
@@ -502,16 +529,38 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
 
   const gridBase = gridDisplay(grid, null, activeLines);
 
-  // ── JACKPOT ────────────────────────────────────────────
-  if (hasJackpot) {
+  // ── MEGA JACKPOT (progressif complet) ─────────────────
+  if (finalHasJackpot) {
     isJackpotWon = true;
     const jp = getJackpot(guildId);
     totalGain = jp;
     resetJackpot(guildId);
     db.addCoins(userId, guildId, jp);
-    color = '#FFD700'; title = '🏆 JACKPOT PROGRESSIF 🏆';
-    desc  = `🎊 **FÉLICITATIONS !** Tu as décroché le **JACKPOT** !\n\n**+${jp.toLocaleString('fr-FR')} ${coin}** remportés !`;
+    color = '#FFD700'; title = '🏆💥 MEGA JACKPOT 💥🏆';
+    desc  = `🎊 **FÉLICITATIONS !** Tu as décroché le **MEGA JACKPOT** !\n\n💰 **+${jp.toLocaleString('fr-FR')} ${coin}** remportés !\n\n🏆 Tu entres dans la légende du casino NexusBot !`;
     await animateJackpot(msg, jp, coin);
+    await animateCoinRain(msg, color, title);
+
+  // ── MAJOR JACKPOT (25% du pot) ──────────────────────
+  } else if (finalHasMajor) {
+    isJackpotWon = true;
+    const jp = getJackpot(guildId);
+    const majorGain = Math.max(Math.floor(jp / 4), totalMise * 50);
+    totalGain = majorGain;
+    db.addCoins(userId, guildId, majorGain);
+    // Réduire le jackpot du montant versé (sans reset complet)
+    db.db.prepare('UPDATE slots_jackpot SET amount = MAX(5000, amount - ?) WHERE guild_id = ?').run(majorGain, guildId);
+    color = '#C0C0C0'; title = '🥈 MAJOR JACKPOT 🥈';
+    desc  = `🎉 **MAJOR JACKPOT !** 25% du pot jackpot remporté !\n\n💰 **+${majorGain.toLocaleString('fr-FR')} ${coin}** remportés !\n\nLe jackpot progressif reste actif...`;
+    await animateCoinRain(msg, color, title);
+
+  // ── MINI JACKPOT (100× mise) ────────────────────────
+  } else if (finalHasMini) {
+    isJackpotWon = false; // pas de reset jackpot
+    totalGain = totalMise * 100;
+    db.addCoins(userId, guildId, totalGain);
+    color = '#CD7F32'; title = '🥉 MINI JACKPOT 🥉';
+    desc  = `✨ **MINI JACKPOT !** 4 Trophées sur une ligne !\n\n💰 **+${totalGain.toLocaleString('fr-FR')} ${coin}** remportés ! (100× mise)`;
     await animateCoinRain(msg, color, title);
 
   // ── FREE SPINS (SCATTER ou BOMB) ──────────────────────
@@ -678,7 +727,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
   const newBalance = db.getUser(userId, guildId)?.balance || 0;
 
   // Paytable compact dans l'embed
-  const paytableCompact = `💎×5=${(SYMBOLS.find(s=>s.id==='diamond')?.value * 8) || '?'} | 🏆×5=50 | ⭐×3=20 | 🃏=WILD`;
+  const paytableCompact = `🏆 MEGA JACKPOT: 5🃏 ou 1/2500 | 🥈 MAJOR: 5💎/7️⃣/🏆 ou 1/800 | 🥉 MINI: 4🏆 = ×100mise`;
 
   const plNames = PAYLINES.slice(0, activeLines).map(p => p.name).join(' · ');
 
@@ -1102,7 +1151,7 @@ async function handleComponent(interaction) {
     const grid = spinGrid();
     const { hasJackpot, wins } = evalGridFull(grid, lines);
 
-    if (hasJackpot || Math.random() < 0.1) { // 10% chance bonus jackpot
+    if (hasJackpot || Math.random() < (1/800)) { // Jackpot Room: 2× les chances normales
       const jp = getJackpot(guildId);
       const gain = jp * 2; // Double pour jackpot room
       db.addCoins(userId, guildId, gain);
