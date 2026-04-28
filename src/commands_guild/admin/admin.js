@@ -40,10 +40,8 @@ module.exports = {
     const isAdmin = interaction.member?.permissions?.has(PermissionFlagsBits.Administrator)
       || interaction.guild?.ownerId === interaction.user.id;
     if (!isAdmin) {
-      if (!interaction.deferred && !interaction.replied) {
-        return interaction.editReply({ content: '🚫 Réservé aux administrateurs.', ephemeral: true }).catch(() => {});
-      }
-      return interaction.editReply({ content: '🚫 Réservé aux administrateurs.' }).catch(() => {});
+      const errFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return errFn({ content: '🚫 Réservé aux administrateurs.', ephemeral: true }).catch(() => {});
     }
 
     if (!interaction.deferred && !interaction.replied) {

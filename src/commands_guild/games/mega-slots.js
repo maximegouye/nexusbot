@@ -117,7 +117,8 @@ function drawSym() {
   return 'coin';
 }
 
-function spinReels(held = []) {
+function spinReels(held) {
+  if (!held) held = [];
   // 3×3 grille : reels[col][row]
   const reels = [];
   for (let c = 0; c < 3; c++) {
