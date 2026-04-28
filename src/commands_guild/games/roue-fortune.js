@@ -1,6 +1,8 @@
 // ============================================================
-// roue-fortune.js — La Roue de la Fortune v6 — VRAIE ROUE
-// Représentation circulaire, animation rotative, 24 segments
+// roue-fortune.js — 🎡 GRANDE ROUE ALMOSNI PREMIUM 🎡
+// Animation épique multi-phases, 12 segments multiplicateurs,
+// historique des 5 derniers tours, bonus spéciaux dynamiques
+// Mise minimum: 50€, pas de limite max
 // ============================================================
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -8,123 +10,84 @@ const db = require('../../database/db');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ─── 24 secteurs équilibrés ──────────────────────────────────
-const SECTORS = [
-  { label: '🟡 100',      type: 'win',     coins: 100,   color: '#F1C40F', emoji: '🟡' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '🟠 300',      type: 'win',     coins: 300,   color: '#E67E22', emoji: '🟠' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '🔵 500',      type: 'win',     coins: 500,   color: '#2980B9', emoji: '🔵' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '🟢 750',      type: 'win',     coins: 750,   color: '#27AE60', emoji: '🟢' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '🔴 1 000',   type: 'win',     coins: 1000,  color: '#E74C3C', emoji: '🔴' },
-  { label: '⚡ ×2 MISE', type: 'double',  coins: 0,     color: '#F39C12', emoji: '⚡' },
-  { label: '🟣 1 500',   type: 'win',     coins: 1500,  color: '#8E44AD', emoji: '🟣' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '⭐ 2 500',   type: 'win',     coins: 2500,  color: '#F39C12', emoji: '⭐' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '🎁 MYSTÈRE', type: 'mystery', coins: 0,     color: '#9B59B6', emoji: '🎁' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '🟡 200',      type: 'win',     coins: 200,   color: '#F1C40F', emoji: '🟡' },
-  { label: '➡️ PASSE',   type: 'pass',    coins: 0,     color: '#7F8C8D', emoji: '➡️' },
-  { label: '🔴 800',      type: 'win',     coins: 800,   color: '#E74C3C', emoji: '🔴' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '💎 5 000',   type: 'win',     coins: 5000,  color: '#1ABC9C', emoji: '💎' },
-  { label: '💀 FAILLITE', type: 'lose',    coins: 0,     color: '#1a1a2e', emoji: '💀' },
-  { label: '🔄 RELANCER', type: 'reroll',  coins: 150,   color: '#3498DB', emoji: '🔄' },
-  { label: '🌟 JACKPOT', type: 'jackpot', coins: 15000, color: '#FFD700', emoji: '🌟' },
+// ─── 12 segments variés avec multiplicateurs ─────────────────
+const SEGMENTS = [
+  { label: '×0.5 REMB',    mult: 0.5,   emoji: '🔄', color: '#95A5A6', type: 'partial' },
+  { label: '×1.5 GAIN',    mult: 1.5,   emoji: '📈', color: '#F39C12', type: 'win' },
+  { label: '×2 MISE',      mult: 2,     emoji: '💰', color: '#2ECC71', type: 'win' },
+  { label: '×2.5 BOOST',   mult: 2.5,   emoji: '⚡', color: '#F1C40F', type: 'win' },
+  { label: '×3 SUPER',     mult: 3,     emoji: '🔥', color: '#E67E22', type: 'win' },
+  { label: '×5 MEGA',      mult: 5,     emoji: '💎', color: '#9B59B6', type: 'mega' },
+  { label: '×10 ULTRA',    mult: 10,    emoji: '👑', color: '#E74C3C', type: 'ultra' },
+  { label: 'JACKPOT ×50',  mult: 50,    emoji: '🌟', color: '#FFD700', type: 'jackpot' },
+  { label: '💸 PERTE',     mult: 0,     emoji: '💀', color: '#2C3E50', type: 'lose' },
+  { label: '🎁 DOUBLE MISE', mult: 2,   emoji: '🎁', color: '#3498DB', type: 'special_double' },
+  { label: '🔁 REMBOURSÉ', mult: 1,     emoji: '✅', color: '#1ABC9C', type: 'special_refund' },
+  { label: '🎯 GRATUIT +500', mult: null, emoji: '🎯', color: '#16A085', type: 'special_free' },
 ];
 
-// Poids (index = secteur)
-const WEIGHTS = [12, 14, 9, 14, 7, 14, 6, 14, 5, 4, 4, 14, 3, 14, 5, 14, 10, 5, 5, 14, 1, 14, 3, 1];
+// Poids (probabilités) pour chaque segment
+const WEIGHTS = [8, 9, 8, 7, 6, 4, 2, 1, 12, 3, 5, 4];
 
 function weightedSpin() {
   const total = WEIGHTS.reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
-  for (let i = 0; i < SECTORS.length; i++) {
+  for (let i = 0; i < SEGMENTS.length; i++) {
     r -= WEIGHTS[i];
     if (r <= 0) return i;
   }
   return 0;
 }
 
-// ─── Roue circulaire — 8 secteurs autour d'un centre ──────────
-// Layout :
-//      [N-1] [N]  [N+1]
-//  [N-2]              [N+2]
-//  [N-3]    🎡       [N+3]
-//      [N+6][N+5][N+4]
-//             ▼
-//        ❱❱ résultat ❰❰
-function renderWheelCircle(idx, spinning = true, highlight = false) {
-  const N = SECTORS.length;
-  const g = (off) => {
-    const i = ((idx + off) % N + N) % N;
-    return SECTORS[i];
-  };
+// Historique des tours (stocké en mémoire par guildId)
+const spinHistory = new Map(); // guildId → [{idx, gain, emoji}, ...]
 
-  // 8 positions autour du centre + la position résultat (bas, idx lui-même)
-  // Top row : N+12, N+11, N+10  (côté opposé de la roue)
-  // Left : N+9, N+8
-  // Right : N+1, N+2 (en descendant)  -- wait, actually going clockwise
-  // Bottom row : N-1, N, N+1  (= la flèche pointe vers N)
+// ─── Animation textuelle de la roue (12 segments circulaires) ──
+function renderWheelFrame(centerIdx, phase = 0) {
+  const N = SEGMENTS.length;
+  const getSegment = (offset) => SEGMENTS[(centerIdx + offset + N) % N];
 
-  // Sens : la flèche est en bas. Les numéros "descendent" vers la flèche.
-  // Tournage sens antihoraire = idx augmente à gauche de la flèche.
-
-  const top1 = g(12); const top2 = g(11); const top3 = g(10);
-  const midL1 = g(9);  const midL2 = g(8);
-  const midR1 = g(1);  const midR2 = g(2);
-  const bot1 = g(-1); const bot2 = g(0); const bot3 = g(1); // bot2 = current = g(0)
-
-  // Pour la rangée du bas, l'index 0 est le résultat
-  const botL = g(-1); const botC = g(0); const botR = g(1);
-
-  // Top : opposé (milieu de la roue = ±12)
-  const topL  = g(13); const topC = g(12); const topR = g(11);
-
-  // Sides
-  const leftUp   = g(10); const leftDown  = g(9);
-  const rightUp  = g(2);  const rightDown = g(3);
-
-  const fmtTop  = (s) => s.emoji;
-  const fmtSide = (s) => s.emoji;
-  const fmtBot  = (s, center) => center ? (highlight ? `❱${s.emoji}❰` : `◉${s.emoji}◉`) : s.emoji;
-  const spin    = spinning ? '🌀' : '🎡';
+  const top = getSegment(-1).emoji;
+  const center = getSegment(0).emoji;
+  const bottom = getSegment(1).emoji;
+  const phases = ['▀', '▄', '█', '▓', '▒'][phase % 5];
 
   return [
-    `        ${fmtTop(topL)}  ${fmtTop(topC)}  ${fmtTop(topR)}`,
-    `      ╭─────────────────╮`,
-    `  ${fmtSide(leftUp)}  │                 │  ${fmtSide(rightUp)}`,
-    `  ${fmtSide(leftDown)}  │       ${spin}       │  ${fmtSide(rightDown)}`,
-    `      ╰─────────────────╯`,
-    `        ${fmtBot(botL,false)}  ${fmtBot(botC,true)}  ${fmtBot(botR,false)}`,
-    `              ▲`,
-    highlight ? `       ❱❱ ${botC.label} ❰❰` : `          (en cours...)`,
+    `      ${top}`,
+    `    ◆ ${phases}${center}${phases} ◆`,
+    `      ${bottom}`,
+    `        ▼`,
   ].join('\n');
 }
 
-// ─── Bande défilante (animation) ─────────────────────────────
-function renderBand(centerIdx, wide = false) {
-  const N = SECTORS.length;
-  const window = wide ? 5 : 3;
-  const parts = [];
-  for (let off = -window; off <= window; off++) {
-    const i = ((centerIdx + off) % N + N) % N;
-    const s = SECTORS[i];
-    if (off === 0) parts.push(`❱❱${s.emoji}${s.label}❰❰`);
-    else if (Math.abs(off) === 1) parts.push(`${s.emoji}`);
-    else parts.push(s.emoji);
-  }
-  return parts.join(' ') + '\n           ▲';
+// ─── Visualisation finale avec l'étiquette ──────────
+function renderFinalSegment(idx) {
+  const seg = SEGMENTS[idx];
+  return [
+    '```',
+    '╔════════════════════════════════╗',
+    `║  ${seg.emoji}  ${seg.label.padEnd(24)}║`,
+    '╚════════════════════════════════╝',
+    '```',
+  ].join('\n');
 }
 
-// ─── Jeu principal ────────────────────────────────────────────
-async function playRoueFortune(source, userId, guildId) {
+// ─── Historique des 5 derniers tours ─────────────────────────
+function renderHistory(guildId, coin) {
+  const hist = spinHistory.get(guildId) || [];
+  if (hist.length === 0) return '';
+
+  const last5 = hist.slice(-5).reverse();
+  const lines = last5.map(h => `${h.emoji} **${h.label}** → ${h.gain >= 0 ? `+${h.gain}` : h.gain} ${coin}`);
+  return '\n📊 **Derniers tours :**\n' + lines.join('\n');
+}
+
+// ─── Fonction principale du jeu ──────────────────────────────
+async function playRoueFortune(source, userId, guildId, mise) {
   const isInteraction = !!source.editReply;
-  const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
+  const cfg = db.getConfig ? db.getConfig(guildId) : {};
+  const coin = cfg.currency_emoji || '€';
+  const u = db.getUser(userId, guildId);
 
   if (!u) {
     const err = '❌ Compte introuvable.';
@@ -132,232 +95,222 @@ async function playRoueFortune(source, userId, guildId) {
     return source.reply(err);
   }
 
-  // ── Cooldown 30 min ─────────────────────────────────────────
-  const COOLDOWN_MS = 30 * 60 * 1000;
-  const now = Date.now();
-  try { db.db.prepare('ALTER TABLE users ADD COLUMN last_roue INTEGER DEFAULT 0').run(); } catch {}
-
-  const rowCd    = db.db.prepare('SELECT last_roue FROM users WHERE user_id=? AND guild_id=?').get(userId, guildId);
-  const lastRoue = (rowCd?.last_roue || 0) * 1000;
-  const elapsed  = now - lastRoue;
-
-  if (elapsed < COOLDOWN_MS) {
-    const reste  = Math.ceil((COOLDOWN_MS - elapsed) / 60000);
-    const done   = Math.floor((elapsed / COOLDOWN_MS) * 20);
-    const bar    = '█'.repeat(done) + '░'.repeat(20 - done);
-    const embed  = new EmbedBuilder()
-      .setColor('#7F8C8D')
-      .setTitle('🎡 Roue de la Fortune')
-      .setDescription([
-        '```',
-        '╔══════════════════════════════════╗',
-        '║   ⏳  ROUE EN RECHARGE...  ⏳     ║',
-        '╚══════════════════════════════════╝',
-        '```',
-        `**Rechargement :** \`[${bar}]\` ${Math.round(elapsed/COOLDOWN_MS*100)}%`,
-        `⏰ Disponible dans **${reste} minute${reste > 1 ? 's' : ''}**`,
-        '',
-        '*Reviens bientôt pour tenter ta chance !*',
-      ].join('\n'))
-      .setFooter({ text: '🎡 Roue de la Fortune · Gratuit · Cooldown 30 min' });
-    if (isInteraction) return source.editReply({ embeds: [embed] });
-    return source.reply({ embeds: [embed] });
+  // Validation de la mise
+  if (!mise) mise = 100; // défaut
+  mise = Math.floor(mise);
+  if (mise < 50) {
+    const err = `❌ Mise minimum : 50 ${coin}`;
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    return source.reply(err);
+  }
+  if (mise > u.balance) {
+    const err = `❌ Solde insuffisant : **${u.balance} ${coin}**`;
+    if (isInteraction) return source.editReply({ content: err, ephemeral: true });
+    return source.reply(err);
   }
 
-  db.db.prepare('UPDATE users SET last_roue=? WHERE user_id=? AND guild_id=?')
-    .run(Math.floor(now / 1000), userId, guildId);
+  // Prélever la mise
+  db.removeCoins(userId, guildId, mise);
 
+  // Sélectionner le résultat
   const finalIdx = weightedSpin();
-  const N = SECTORS.length;
+  const segment = SEGMENTS[finalIdx];
 
-  // ── Intro ────────────────────────────────────────────────────
-  let startPos = Math.floor(Math.random() * N);
+  // ── Phase 1 : Introduction ────────────────────────────────────
+  let startPos = Math.floor(Math.random() * SEGMENTS.length);
   const introEmbed = new EmbedBuilder()
     .setColor('#F39C12')
-    .setTitle('🎡 ━━━ ROUE DE LA FORTUNE ━━━ 🎡')
+    .setTitle('🎡 ━━━ GRANDE ROUE ALMOSNI PREMIUM ━━━ 🎡')
     .setDescription([
-      '```',
-      '╔══════════════════════════════════════════╗',
-      '║    🎵  Bienvenue — Tournez la Roue !  🎵  ║',
-      '╚══════════════════════════════════════════╝',
-      '```',
-      renderWheelCircle(startPos, true),
+      `**${source.user.username}** mise **${mise.toLocaleString()} ${coin}**`,
+      '',
+      renderWheelFrame(startPos, 0),
       '',
       '🎬 *La roue commence à tourner...*',
     ].join('\n'))
-    .setFooter({ text: '🎡 Roue de la Fortune · Gratuit · Cooldown 30 min' });
+    .setFooter({ text: 'Grande Roue Almosni Premium · Jeu de hasard' });
 
   let msg;
   if (isInteraction) msg = await source.editReply({ embeds: [introEmbed] });
   else               msg = await source.reply({ embeds: [introEmbed] });
 
-  // ── Animation par phases ─────────────────────────────────────
-  const phases = [
-    { steps: 8, jump: 5, delay: 90,  color: '#E74C3C', txt: '⚡ **La roue s\'élance à pleine vitesse !**',   bar: '▓▓▓▓▓▓▓▓▓▓ 100%' },
-    { steps: 7, jump: 4, delay: 130, color: '#E67E22', txt: '🌀 **Elle tourne très vite...**',                bar: '▓▓▓▓▓▓▓▓░░  80%' },
-    { steps: 6, jump: 3, delay: 200, color: '#F39C12', txt: '💨 **Ralentissement en cours...**',              bar: '▓▓▓▓▓▓░░░░  60%' },
-    { steps: 5, jump: 2, delay: 320, color: '#F1C40F', txt: '🎯 **Le pointeur hésite...**',                   bar: '▓▓▓▓░░░░░░  40%' },
-    { steps: 4, jump: 1, delay: 480, color: '#2ECC71', txt: '😮 **Tout se joue maintenant !**',               bar: '▓▓░░░░░░░░  20%' },
-    { steps: 3, jump: 1, delay: 650, color: '#1ABC9C', txt: '🛑 **Arrêt imminent...**',                       bar: '▓░░░░░░░░░   5%' },
-  ];
-
+  // ── Phase 2 : Rotation rapide (6 frames) ──────────────────────
   let pos = startPos;
-  for (const ph of phases) {
-    for (let s = 0; s < ph.steps; s++) {
-      pos = (pos + ph.jump) % N;
-      const spinEmbed = new EmbedBuilder()
-        .setColor(ph.color)
-        .setTitle('🎡 ━━━ ROUE DE LA FORTUNE ━━━ 🎡')
-        .setDescription([
-          renderWheelCircle(pos, true),
-          '',
-          ph.txt,
-          `\`${ph.bar}\``,
-        ].join('\n'));
-      await msg.edit({ embeds: [spinEmbed] }).catch(() => {});
-      await sleep(ph.delay);
-    }
-  }
-
-  // Aligner exactement sur finalIdx
-  // Animation finale lente vers la cible
-  let cur = pos;
-  const diff = ((finalIdx - cur) % N + N) % N;
-  for (let s = 0; s < diff; s++) {
-    cur = (cur + 1) % N;
-    const isLast = cur === finalIdx;
+  for (let i = 0; i < 6; i++) {
+    pos = (pos + (Math.floor(Math.random() * 3) + 2)) % SEGMENTS.length;
     const spinEmbed = new EmbedBuilder()
-      .setColor(isLast ? '#FFFFFF' : '#3498DB')
-      .setTitle(isLast ? '🛑 ✨ ARRÊT ! ✨ 🛑' : '🎡 ━━━ ROUE DE LA FORTUNE ━━━ 🎡')
+      .setColor('#E74C3C')
+      .setTitle('🎡 ━━━ EN TRAIN DE TOURNER... ━━━ 🎡')
       .setDescription([
-        renderWheelCircle(cur, !isLast, isLast),
+        renderWheelFrame(pos, i),
         '',
-        isLast ? '🔔 **Clic ! La flèche s\'immobilise !**' : '🛑 *Dernier tour...*',
-        `\`░░░░░░░░░░   0%\``,
+        '⚡ **La roue tourne à pleine vitesse !**',
+        '`▓▓▓▓▓▓▓▓░░  80%`',
       ].join('\n'));
     await msg.edit({ embeds: [spinEmbed] }).catch(() => {});
-    await sleep(isLast ? 200 : 750);
+    await sleep(120);
   }
 
-  await sleep(600);
+  // ── Phase 3 : Ralentissement (4 frames) ──────────────────────
+  for (let i = 0; i < 4; i++) {
+    pos = (pos + 1) % SEGMENTS.length;
+    const spinEmbed = new EmbedBuilder()
+      .setColor('#F39C12')
+      .setTitle('🎡 ━━━ EN TRAIN DE TOURNER... ━━━ 🎡')
+      .setDescription([
+        renderWheelFrame(pos, i + 1),
+        '',
+        '💨 **Ralentissement en cours...**',
+        '`▓▓▓▓▓▓░░░░  60%`',
+      ].join('\n'));
+    await msg.edit({ embeds: [spinEmbed] }).catch(() => {});
+    await sleep(250);
+  }
 
-  // ── Résultat ─────────────────────────────────────────────────
-  const sector  = SECTORS[finalIdx];
+  // ── Phase 4 : Approche lente vers le résultat ────────────────
+  const diff = ((finalIdx - pos) % SEGMENTS.length + SEGMENTS.length) % SEGMENTS.length;
+  for (let s = 0; s < diff; s++) {
+    pos = (pos + 1) % SEGMENTS.length;
+    const isLast = pos === finalIdx;
+    const spinEmbed = new EmbedBuilder()
+      .setColor(isLast ? '#FFD700' : '#2ECC71')
+      .setTitle(isLast ? '🛑 ✨ ARRÊT ! ✨ 🛑' : '🎡 ━━━ EN TRAIN DE TOURNER... ━━━ 🎡')
+      .setDescription([
+        renderWheelFrame(pos, 3),
+        '',
+        isLast ? '🔔 **Clic ! La roue s\'arrête !**' : '🎯 *Dernier rebond...*',
+        `\`${isLast ? '▓▓░░░░░░░░   5%' : '▓▓▓░░░░░░░  30%'}\``,
+      ].join('\n'));
+    await msg.edit({ embeds: [spinEmbed] }).catch(() => {});
+    await sleep(isLast ? 300 : 200);
+  }
+
+  await sleep(500);
+
+  // ── Calcul du gain ──────────────────────────────────────────
   let gain = 0;
-  const uFresh  = db.getUser(userId, guildId);
+  const balanceBefore = db.getUser(userId, guildId)?.balance || 0;
 
-  if (sector.type === 'jackpot') {
-    gain = sector.coins;
+  if (segment.type === 'jackpot') {
+    gain = segment.mult * mise;
     db.addCoins(userId, guildId, gain);
-  } else if (sector.type === 'win') {
-    gain = sector.coins;
+  } else if (segment.type === 'win' || segment.type === 'mega' || segment.type === 'ultra') {
+    gain = Math.floor(segment.mult * mise);
     db.addCoins(userId, guildId, gain);
-  } else if (sector.type === 'double') {
-    gain = uFresh.balance;
+  } else if (segment.type === 'special_double') {
+    gain = mise;
     db.addCoins(userId, guildId, gain);
-  } else if (sector.type === 'mystery') {
-    gain = Math.floor(Math.random() * 3000) + 300;
+  } else if (segment.type === 'special_free') {
+    gain = 500;
     db.addCoins(userId, guildId, gain);
-  } else if (sector.type === 'reroll') {
-    gain = sector.coins;
+  } else if (segment.type === 'special_refund') {
+    gain = mise;
     db.addCoins(userId, guildId, gain);
-    db.db.prepare('UPDATE users SET last_roue=0 WHERE user_id=? AND guild_id=?').run(userId, guildId);
+  } else if (segment.type === 'partial') {
+    gain = Math.floor(segment.mult * mise);
+    db.addCoins(userId, guildId, gain);
   }
+  // lose: gain reste 0
 
-  const newBalance = db.getUser(userId, guildId)?.balance || 0;
+  const balanceAfter = db.getUser(userId, guildId)?.balance || 0;
 
-  // ── Animations pré-résultat spectaculaires ───────────────────
-  if (sector.type === 'jackpot') {
-    const jpSeq = [
-      { c:'#FFD700', t:'🌟 ★ JACKPOT ★ 🌟',     d:'```\n═══════════════════════════════\n    🌟  J A C K P O T  🌟    \n═══════════════════════════════\n```' },
-      { c:'#FFA500', t:`🎆 💥 ${sector.coins.toLocaleString()} ${coin} ! 💥 🎆`, d:'*Le sol tremble, les euros pleuvent !*\n\n🎊 🥳 🎆 🎇 💰 🎇 🎆 🥳 🎊' },
-      { c:'#FFD700', t:'✨ VOUS ENTREZ DANS LA LÉGENDE ! ✨',      d:renderWheelCircle(finalIdx, false, true) },
-    ];
-    for (const { c, t, d } of jpSeq) {
-      await msg.edit({ embeds:[new EmbedBuilder().setColor(c).setTitle(t).setDescription(d)] }).catch(()=>{});
-      await sleep(500);
-    }
-  } else if (sector.type === 'mystery') {
-    const mSeq = [
-      { c:'#6C3483', t:'🎁 SECTEUR MYSTÈRE...',         d:'*La boîte s\'ouvre lentement...*\n\n`▓░░░░░░░░░ 10%`' },
-      { c:'#7D3C98', t:'🎁 Que cache-t-il ?',           d:'*La fortune réserve une surprise...*\n\n`▓▓▓▓░░░░░░ 40%`' },
-      { c:'#9B59B6', t:'🎁 Voici ce que tu remportes !',d:`*Révélation !*\n\n\`▓▓▓▓▓▓▓▓▓▓ 100%\`\n\n💰 **+${gain.toLocaleString()} ${coin}**` },
-    ];
-    for (const { c, t, d } of mSeq) {
-      await msg.edit({ embeds:[new EmbedBuilder().setColor(c).setTitle(t).setDescription(d)] }).catch(()=>{});
-      await sleep(500);
-    }
-  } else if (sector.type === 'double') {
-    const dSeq = [
-      { c:'#F39C12', t:'⚡ MULTIPLICATEUR × 2 !', d:'```\n× 1.0 → × 1.25 → × 1.5 → × 1.75 → × 2.0 !!!\n```' },
-      { c:'#E67E22', t:'⚡⚡ SOLDE DOUBLÉ ⚡⚡',   d:`*Ton solde vient de doubler !*\n\n💥 **+${gain.toLocaleString()} ${coin}**` },
-    ];
-    for (const { c, t, d } of dSeq) {
-      await msg.edit({ embeds:[new EmbedBuilder().setColor(c).setTitle(t).setDescription(d)] }).catch(()=>{});
-      await sleep(450);
-    }
-  }
+  // ── Ajouter à l'historique ─────────────────────────────────
+  if (!spinHistory.has(guildId)) spinHistory.set(guildId, []);
+  spinHistory.get(guildId).push({
+    idx: finalIdx,
+    gain: gain,
+    emoji: segment.emoji,
+    label: segment.label,
+  });
+  // Garder max 5
+  if (spinHistory.get(guildId).length > 5) spinHistory.get(guildId).shift();
 
-  // ── Résultat final ───────────────────────────────────────────
-  let resTitle, resDesc, resColor;
+  // ── Résultat final ──────────────────────────────────────────
+  let resTitle, resColor, resEmoji;
 
-  if (sector.type === 'jackpot') {
-    resColor = '#FFD700'; resTitle = '🌟 ✨ JACKPOT ABSOLU ✨ 🌟';
-    resDesc = [renderWheelCircle(finalIdx, false, true), '', '```', '╔══════════════════════════════════════════╗', '║   🌟  J A C K P O T   A B S O L U  🌟  ║', `║   🎊  +${String((gain.toLocaleString()+' '+coin)).padEnd(34)}║`, '╚══════════════════════════════════════════╝', '```'].join('\n');
-  } else if (sector.type === 'double') {
-    resColor = '#F39C12'; resTitle = '⚡ MISE DOUBLÉE !';
-    resDesc = [renderWheelCircle(finalIdx, false, true), '', '```', '╔══════════════════════════════════════════╗', `║  ⚡  ×2 ACTIVÉ ! +${String((gain.toLocaleString()+' '+coin)).padEnd(22)}║`, '╚══════════════════════════════════════════╝', '```'].join('\n');
-  } else if (sector.type === 'win') {
-    const stars = gain >= 2500 ? '⭐⭐⭐' : gain >= 1000 ? '⭐⭐' : '⭐';
-    resColor = sector.color; resTitle = `${stars} Gagné ! ${stars}`;
-    resDesc = [renderWheelCircle(finalIdx, false, true), '', '```', '╔══════════════════════════════════════════╗', `║  🎉  +${String((gain.toLocaleString()+' '+coin)).padEnd(34)}║`, '╚══════════════════════════════════════════╝', '```'].join('\n');
-  } else if (sector.type === 'mystery') {
-    resColor = '#9B59B6'; resTitle = '🎁 MYSTÈRE !';
-    resDesc = [renderWheelCircle(finalIdx, false, true), '', '```', '╔══════════════════════════════════════════╗', `║  🎁  MYSTÈRE ! +${String((gain.toLocaleString()+' '+coin)).padEnd(25)}║`, '╚══════════════════════════════════════════╝', '```'].join('\n');
-  } else if (sector.type === 'reroll') {
-    resColor = '#3498DB'; resTitle = '🔄 RELANCER !';
-    resDesc = [renderWheelCircle(finalIdx, false, true), '', '```', '╔══════════════════════════════════════════╗', '║  🔄  RELANCER — Cooldown réinitialisé !  ║', `║  🎡  +${String((gain+' '+coin)).padEnd(35)}║`, '╚══════════════════════════════════════════╝', '```'].join('\n');
-  } else if (sector.type === 'pass') {
-    resColor = '#7F8C8D'; resTitle = '➡️ PASSE';
-    resDesc = [renderWheelCircle(finalIdx, false, true), '', '*Ni gagné, ni perdu — tu passes ce tour.*'].join('\n');
+  if (segment.type === 'jackpot') {
+    resColor = '#FFD700';
+    resTitle = '🌟 ✨✨ JACKPOT ABSOLU ✨✨ 🌟';
+    resEmoji = '🌟';
+  } else if (segment.type === 'ultra') {
+    resColor = '#E74C3C';
+    resTitle = '👑 VICTOIRE ULTRA !';
+    resEmoji = '👑';
+  } else if (segment.type === 'mega') {
+    resColor = '#9B59B6';
+    resTitle = '💎 MÉGA VICTOIRE !';
+    resEmoji = '💎';
+  } else if (segment.type === 'win') {
+    resColor = '#2ECC71';
+    resTitle = '🎉 VICTOIRE !';
+    resEmoji = '🎉';
+  } else if (segment.type === 'special_double') {
+    resColor = '#3498DB';
+    resTitle = '🎁 MISE DOUBLÉE !';
+    resEmoji = '🎁';
+  } else if (segment.type === 'special_refund') {
+    resColor = '#1ABC9C';
+    resTitle = '✅ REMBOURSÉ !';
+    resEmoji = '✅';
+  } else if (segment.type === 'special_free') {
+    resColor = '#16A085';
+    resTitle = '🎯 BONUS GRATUIT !';
+    resEmoji = '🎯';
+  } else if (segment.type === 'partial') {
+    resColor = '#95A5A6';
+    resTitle = '🔄 REMBOURSEMENT PARTIEL';
+    resEmoji = '🔄';
   } else {
-    resColor = '#2C3E50'; resTitle = '💀 FAILLITE';
-    resDesc = [renderWheelCircle(finalIdx, false, true), '', '```', '╔══════════════════════════════════════════╗', '║  💀  FAILLITE — La Fortune t\'a dit non ! ║', '╚══════════════════════════════════════════╝', '```', '*Courage ! La roue revient dans 30 min.*'].join('\n');
+    resColor = '#2C3E50';
+    resTitle = '💀 PERTE';
+    resEmoji = '💀';
   }
 
   const finalEmbed = new EmbedBuilder()
     .setColor(resColor)
     .setTitle(resTitle)
-    .setDescription(resDesc)
+    .setDescription([
+      renderFinalSegment(finalIdx),
+      '',
+      `**${segment.emoji} ${segment.label}**`,
+      '',
+      gain > 0 ? `💰 **+${gain.toLocaleString()} ${coin}**` : '❌ Pas de gain',
+    ].join('\n'))
     .addFields(
-      { name: '🎡 Secteur',  value: `**${sector.label}**`,                                     inline: true },
-      { name: gain > 0 ? '💰 Gain' : '📊 Résultat', value: gain > 0 ? `**+${gain.toLocaleString()} ${coin}**` : '—', inline: true },
-      { name: '🏦 Solde',    value: `**${newBalance.toLocaleString()} ${coin}**`,              inline: true },
+      { name: '💵 Mise', value: `${mise.toLocaleString()} ${coin}`, inline: true },
+      { name: '📊 Gain', value: `${gain.toLocaleString()} ${coin}`, inline: true },
+      { name: '🏦 Solde', value: `${balanceAfter.toLocaleString()} ${coin}`, inline: true },
     )
-    .setFooter({ text: sector.type === 'reroll' ? '✅ Cooldown réinitialisé — rejoue maintenant !' : '⏳ Reviens dans 30 min · Roue de la Fortune · Gratuit' })
+    .setFooter({ text: 'Grande Roue Almosni Premium' })
     .setTimestamp();
 
-  // ── Boutons ──────────────────────────────────────────────────
-  const canDouble = gain > 0 && !['reroll','jackpot','double'].includes(sector.type);
-  const isReroll  = sector.type === 'reroll';
+  if (spinHistory.get(guildId).length > 0) {
+    finalEmbed.addFields({
+      name: '📊 Historique des 5 derniers tours',
+      value: spinHistory.get(guildId).slice(-5).reverse()
+        .map(h => `${h.emoji} **${h.label}** → ${h.gain >= 0 ? '+' : ''}${h.gain.toLocaleString()} ${coin}`)
+        .join('\n'),
+      inline: false,
+    });
+  }
 
+  // ── Boutons ──────────────────────────────────────────────────
   const btnArr = [
     new ButtonBuilder()
-      .setCustomId(isReroll ? `rf_reroll_${userId}` : `rf_cd_disabled_${userId}`)
-      .setLabel(isReroll ? '🎡 Rejouer maintenant !' : '⏳ Reviens dans 30 min')
-      .setStyle(isReroll ? ButtonStyle.Success : ButtonStyle.Secondary)
-      .setDisabled(!isReroll),
+      .setCustomId(`rf_spin_${userId}`)
+      .setLabel('🎡 Retenter')
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
-      .setCustomId(`rf_sectors_${userId}`)
-      .setLabel('📋 Voir tous les secteurs')
+      .setCustomId(`rf_history_${userId}`)
+      .setLabel('📋 Historique')
       .setStyle(ButtonStyle.Secondary),
   ];
 
-  if (canDouble) {
+  if (gain > 0 && !['jackpot', 'ultra'].includes(segment.type)) {
     btnArr.push(
       new ButtonBuilder()
-        .setCustomId(`rf_doublerien_${userId}_${gain}`)
-        .setLabel(`🎲 Double ou rien (+${gain.toLocaleString()})`)
+        .setCustomId(`rf_gamble_${userId}_${gain}`)
+        .setLabel(`🎲 Double ou Rien (+${gain.toLocaleString()})`)
         .setStyle(ButtonStyle.Danger)
     );
   }
@@ -368,158 +321,106 @@ async function playRoueFortune(source, userId, guildId) {
 
 // ─── handleComponent ──────────────────────────────────────────
 async function handleComponent(interaction, cid) {
-  const userId  = interaction.user.id;
+  const userId = interaction.user.id;
   const guildId = interaction.guildId;
-  const coin    = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
+  const cfg = db.getConfig ? db.getConfig(guildId) : {};
+  const coin = cfg.currency_emoji || '€';
 
-  if (cid.startsWith('rf_cd_disabled_')) {
-    await interaction.reply({ content: '⏳ La roue est en recharge (30 min). Reviens plus tard !', ephemeral: true }).catch(() => {});
-    return true;
-  }
-
-  if (cid.startsWith('rf_sectors_')) {
-    const targetId = cid.replace('rf_sectors_', '');
+  if (cid.startsWith('rf_spin_')) {
+    const targetId = cid.replace('rf_spin_', '');
     if (userId !== targetId) {
       await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
-    const total = WEIGHTS.reduce((a, b) => a + b, 0);
-    const seen  = new Map();
-    SECTORS.forEach((s, idx) => {
-      if (!seen.has(s.label)) seen.set(s.label, { s, w: 0 });
-      seen.get(s.label).w += WEIGHTS[idx];
-    });
-    const lines = [...seen.values()]
-      .sort((a, b) => b.w - a.w)
-      .map(({ s, w }) => {
-        const pct   = ((w / total) * 100).toFixed(1);
-        const prize = s.type === 'jackpot' ? `🌟 ${s.coins.toLocaleString()} ${coin}`
-                    : s.type === 'win'     ? `+${s.coins.toLocaleString()} ${coin}`
-                    : s.type === 'double'  ? '×2 ton solde'
-                    : s.type === 'mystery' ? '🎁 300–3 300 (aléatoire)'
-                    : s.type === 'reroll'  ? `🔄 ${s.coins} ${coin} + cooldown réinitialisé`
-                    : s.type === 'pass'    ? 'Passe le tour'
-                    : '💀 Faillite (0)';
-        return `${s.emoji} **${s.label}** — *${pct}%* → ${prize}`;
-      });
-    const listEmbed = new EmbedBuilder()
+    await playRoueFortune(interaction, userId, guildId, 100);
+    return true;
+  }
+
+  if (cid.startsWith('rf_history_')) {
+    const targetId = cid.replace('rf_history_', '');
+    if (userId !== targetId) {
+      await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+    await interaction.deferUpdate().catch(() => {});
+
+    const hist = spinHistory.get(guildId) || [];
+    if (hist.length === 0) {
+      await interaction.followUp({
+        content: '📊 Aucun historique disponible.',
+        ephemeral: true,
+      }).catch(() => {});
+      return true;
+    }
+
+    const lines = hist.slice(-10).reverse()
+      .map((h, i) => `${i + 1}. ${h.emoji} **${h.label}** → ${h.gain >= 0 ? '+' : ''}${h.gain.toLocaleString()} ${coin}`);
+
+    const histEmbed = new EmbedBuilder()
       .setColor('#F39C12')
-      .setTitle('📋 Secteurs de la Roue — Probabilités')
+      .setTitle('📊 Historique des tours')
       .setDescription(lines.join('\n'))
-      .setFooter({ text: `${SECTORS.length} secteurs au total` });
-    await interaction.followUp({ embeds: [listEmbed], ephemeral: true }).catch(() => {});
+      .setFooter({ text: '10 derniers tours affichés' });
+
+    await interaction.followUp({ embeds: [histEmbed], ephemeral: true }).catch(() => {});
     return true;
   }
 
-  if (cid.startsWith('rf_doublerien_')) {
-    const parts    = cid.split('_');
+  if (cid.startsWith('rf_gamble_')) {
+    const parts = cid.split('_');
     const targetId = parts[2];
-    const gain     = parseInt(parts[3]) || 0;
+    const gain = parseInt(parts[3]) || 0;
 
     if (userId !== targetId) {
       await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
       return true;
     }
-    if (gain <= 0) {
-      await interaction.reply({ content: '❌ Montant invalide.', ephemeral: true }).catch(() => {});
-      return true;
-    }
 
     await interaction.deferUpdate().catch(() => {});
-
-    let disabledRow;
-    try {
-      const comps = interaction.message.components[0]?.components || [];
-      disabledRow = new ActionRowBuilder().addComponents(
-        comps.map(c => ButtonBuilder.from(c.toJSON()).setDisabled(true))
-      );
-    } catch {
-      disabledRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('rf_done').setLabel('Terminé').setStyle(ButtonStyle.Secondary).setDisabled(true)
-      );
-    }
 
     const won = Math.random() < 0.5;
 
-    // Animation pièce qui tourne
-    const coinFaces = ['🟡', '⚪', '🟡', '⚪', '🟡', '⚪'];
-    for (const face of coinFaces) {
-      const frames = `${face} Double ou rien ? ${face}`;
-      await interaction.editReply({ embeds: [new EmbedBuilder()
-        .setColor('#F39C12')
-        .setTitle('🎲 Double ou Rien !')
-        .setDescription([
-          '```',
-          '╔════════════════════════════╗',
-          `║  ${face}  La pièce tourne...  ${face}  ║`,
-          `║  💰  ${gain.toLocaleString().padEnd(8)} ${coin}  en jeu  ║`,
-          '╚════════════════════════════╝',
-          '```',
-          '*Pile = Doublé  |  Face = Perdu*',
-        ].join('\n'))
-      ], components: [disabledRow] }).catch(() => {});
-      await sleep(300);
+    // Animation rapide
+    const faces = ['🟡', '⚪', '🟡', '⚪'];
+    for (const face of faces) {
+      await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor('#F39C12')
+          .setTitle('🎲 Double ou Rien ?')
+          .setDescription([
+            `${face} La pièce tourne... ${face}`,
+            '',
+            `💰 **${gain.toLocaleString()} ${coin}** en jeu`,
+          ].join('\n'))
+        ],
+      }).catch(() => {});
+      await sleep(200);
     }
 
     if (won) {
       db.addCoins(userId, guildId, gain);
-      const nb2 = db.getUser(userId, guildId)?.balance || 0;
+      const newBalance = db.getUser(userId, guildId)?.balance || 0;
       await interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#F1C40F')
-          .setTitle('🎲 DOUBLE OU RIEN → 🎊 DOUBLÉ !')
-          .setDescription([
-            '```',
-            '╔══════════════════════════════════════════╗',
-            '║  🎊  COUP DE MAÎTRE — GAIN DOUBLÉ !  🎊  ║',
-            '╚══════════════════════════════════════════╝',
-            '```',
-            `🍀 **+${gain.toLocaleString()} ${coin}** supplémentaires !`,
-          ].join('\n'))
-          .addFields(
-            { name: '💰 Gain total',    value: `**+${(gain*2).toLocaleString()} ${coin}**`, inline: true },
-            { name: '🏦 Nouveau solde', value: `**${nb2.toLocaleString()} ${coin}**`,        inline: true },
-          )
-          .setFooter({ text: '🎲 Le risque a payé !' })
-          .setTimestamp()],
-        components: [disabledRow],
+          .setTitle('🎲 DOUBLÉ ! 🎊')
+          .setDescription(`💰 **+${(gain * 2).toLocaleString()} ${coin}**\nSolde: **${newBalance.toLocaleString()} ${coin}**`)
+          .setFooter({ text: 'Le risque a payé !' })
+        ],
       }).catch(() => {});
     } else {
       db.addCoins(userId, guildId, -gain);
-      const nb2 = db.getUser(userId, guildId)?.balance || 0;
+      const newBalance = db.getUser(userId, guildId)?.balance || 0;
       await interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
-          .setTitle('🎲 DOUBLE OU RIEN → 💸 PERDU !')
-          .setDescription([
-            '```',
-            '╔══════════════════════════════════════════╗',
-            '║  💸  MALCHANCE — GAIN PERDU !  💸         ║',
-            '╚══════════════════════════════════════════╝',
-            '```',
-            `😔 **-${gain.toLocaleString()} ${coin}** retirés.`,
-          ].join('\n'))
-          .addFields(
-            { name: '📉 Perte',         value: `**-${gain.toLocaleString()} ${coin}**`, inline: true },
-            { name: '🏦 Nouveau solde', value: `**${nb2.toLocaleString()} ${coin}**`,   inline: true },
-          )
-          .setFooter({ text: '🎲 Parfois il faut savoir s\'arrêter !' })
-          .setTimestamp()],
-        components: [disabledRow],
+          .setTitle('🎲 PERDU... 💸')
+          .setDescription(`-${gain.toLocaleString()} ${coin}\nSolde: **${newBalance.toLocaleString()} ${coin}**`)
+          .setFooter({ text: 'Parfois il faut savoir s\'arrêter !' })
+        ],
       }).catch(() => {});
     }
-    return true;
-  }
-
-  if (cid.startsWith('rf_reroll_')) {
-    const targetId = cid.replace('rf_reroll_', '');
-    if (userId !== targetId) {
-      await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
-      return true;
-    }
-    await interaction.deferUpdate().catch(() => {});
-    await playRoueFortune(interaction, userId, guildId);
     return true;
   }
 
@@ -530,20 +431,28 @@ async function handleComponent(interaction, cid) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('roue-fortune')
-    .setDescription('🎡 La Roue de la Fortune — Vraie roue circulaire ! Gratuit · Cooldown 30 min'),
+    .setDescription('🎡 Grande Roue Almosni Premium — Mise minimum 50€, pas de limite max')
+    .addIntegerOption(o =>
+      o.setName('mise')
+        .setDescription('Montant à miser (minimum 50)')
+        .setRequired(false)
+        .setMinValue(50)
+    ),
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply({ ephemeral: false }).catch(() => {});
     }
-    await playRoueFortune(interaction, interaction.user.id, interaction.guildId);
+    const mise = interaction.options.getInteger('mise') || 100;
+    await playRoueFortune(interaction, interaction.user.id, interaction.guildId, mise);
   },
 
   handleComponent,
 
   name: 'roue-fortune',
   aliases: ['roue', 'fortune', 'rf'],
-  async run(message) {
-    await playRoueFortune(message, message.author.id, message.guildId);
+  async run(message, args) {
+    const mise = parseInt(args[0]) || 100;
+    await playRoueFortune(message, message.author.id, message.guildId, mise);
   },
 };
