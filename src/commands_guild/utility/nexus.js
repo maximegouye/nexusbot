@@ -156,10 +156,10 @@ module.exports = {
       .addSubcommand(s => s.setName('ajouter').setDescription('Ajouter un article à la boutique')
         .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
         .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(200))
-        .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false))
-        .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat').setRequired(false))
         .addIntegerOption(o => o.setName('prix').setDescription('Prix').setRequired(true).setMinValue(1))
-        .addIntegerOption(o => o.setName('stock').setDescription('Stock (-1 = illimité)').setRequired(true).setMinValue(-1)))
+        .addIntegerOption(o => o.setName('stock').setDescription('Stock (-1 = illimité)').setRequired(true).setMinValue(-1))
+        .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false))
+        .addRoleOption(o => o.setName('role').setDescription('Rôle à attribuer à l\'achat').setRequired(false)))
 
       .addSubcommand(s => s.setName('supprimer').setDescription('Supprimer un article de la boutique')
         .addStringOption(o => o.setName('id').setDescription('ID de l\'article').setRequired(true)))
