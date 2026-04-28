@@ -1,6 +1,7 @@
 // ============================================================
-// blackjack.js — Blackjack complet (v6)
-// Nouveautés: Split, Double Down, Insurance, Surrender, Blackjack ×2.5, Affichage premium
+// blackjack.js — Blackjack Premium v7 (Vegas Style)
+// Cartes ASCII premium, stratégie de base, comptage HiLo,
+// Insurance timing, Natural BJ cinématique, Perfect Pair SideBet
 // ============================================================
 
 const {
@@ -22,10 +23,38 @@ try {
   )`).run();
 } catch {}
 
+// ─── DB : Comptage Hi-Lo (simulation) ────────────────────
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS bj_hilocount (
+    user_id   TEXT,
+    guild_id  TEXT,
+    running_count INTEGER DEFAULT 0,
+    cards_dealt   INTEGER DEFAULT 0,
+    PRIMARY KEY(user_id, guild_id)
+  )`).run();
+} catch {}
+
 function getStreak(userId, guildId) {
   db.db.prepare('INSERT OR IGNORE INTO bj_streaks (user_id, guild_id) VALUES (?,?)').run(userId, guildId);
   return db.db.prepare('SELECT streak, best FROM bj_streaks WHERE user_id=? AND guild_id=?').get(userId, guildId) || { streak: 0, best: 0 };
 }
+function getHiLoCount(userId, guildId) {
+  db.db.prepare('INSERT OR IGNORE INTO bj_hilocount (user_id, guild_id) VALUES (?,?)').run(userId, guildId);
+  return db.db.prepare('SELECT running_count, cards_dealt FROM bj_hilocount WHERE user_id=? AND guild_id=?').get(userId, guildId) || { running_count: 0, cards_dealt: 0 };
+}
+function updateHiLoCount(userId, guildId, delta, cardsUsed = 1) {
+  const curr = getHiLoCount(userId, guildId);
+  const newRC = curr.running_count + delta;
+  const newCD = curr.cards_dealt + cardsUsed;
+  db.db.prepare('UPDATE bj_hilocount SET running_count=?, cards_dealt=? WHERE user_id=? AND guild_id=?')
+    .run(newRC, newCD, userId, guildId);
+  return { running_count: newRC, cards_dealt: newCD };
+}
+function resetHiLoCount(userId, guildId) {
+  db.db.prepare('UPDATE bj_hilocount SET running_count=0, cards_dealt=0 WHERE user_id=? AND guild_id=?')
+    .run(userId, guildId);
+}
+
 function onWin(userId, guildId) {
   db.db.prepare('INSERT OR IGNORE INTO bj_streaks (user_id, guild_id) VALUES (?,?)').run(userId, guildId);
   db.db.prepare('UPDATE bj_streaks SET streak=streak+1, total_wins=total_wins+1, best=MAX(best,streak+1) WHERE user_id=? AND guild_id=?').run(userId, guildId);
@@ -36,12 +65,12 @@ function onLose(userId, guildId) {
 }
 function onPush(userId, guildId) { /* Égalité : streak inchangé */ }
 
-// Bonus de série : plus tu gagnes d'affilée, plus tu gagnes
+// ─── Multiplicateur de série ──────────────────────────────
 function streakMultiplier(streak) {
-  if (streak >= 7) return 2.0;   // +100%
-  if (streak >= 5) return 1.75;  // +75%
-  if (streak >= 3) return 1.5;   // +50%
-  if (streak >= 2) return 1.25;  // +25%
+  if (streak >= 7) return 2.0;
+  if (streak >= 5) return 1.75;
+  if (streak >= 3) return 1.5;
+  if (streak >= 2) return 1.25;
   return 1.0;
 }
 function streakLabel(streak) {
@@ -52,59 +81,26 @@ function streakLabel(streak) {
   return null;
 }
 
-// ─── Conseils de stratégie simple ─────────────────────────
+// ─── Stratégie de Base (simplifié mais précis) ────────────
 function getBasicAdvice(playerTotal, dealerCard) {
-  const dealerVal = cardVal(dealerCard);
-  
-  if (playerTotal <= 11) return '🃏 Toujours tirer avec 11 ou moins.';
-  if (playerTotal >= 17) return '✋ Rester avec 17 ou plus (risque de bust trop élevé).';
-  
-  // 12-16 : zone dangereuse, dépend de la carte du dealer
-  if (playerTotal >= 12 && playerTotal <= 16) {
-    if (dealerVal >= 7) return '🃏 Tirer (dealer fort, faut prendre le risque).';
-    return '✋ Rester (dealer faible, attends sa main).';
+  const dv = cardVal(dealerCard);
+
+  // Hard totals (sans As souple)
+  if (playerTotal <= 8) return '🃏 Tirer toujours avec 8 ou moins.';
+  if (playerTotal === 9) return dv >= 3 && dv <= 6 ? '⬆️ Doubler' : '🃏 Tirer';
+  if (playerTotal === 10) return dv <= 9 ? '⬆️ Doubler' : '🃏 Tirer';
+  if (playerTotal === 11) return '⬆️ Doubler';
+  if (playerTotal === 12) return dv >= 4 && dv <= 6 ? '✋ Rester' : '🃏 Tirer';
+  if (playerTotal >= 13 && playerTotal <= 16) {
+    return dv >= 2 && dv <= 6 ? '✋ Rester (dealer faible)' : '🃏 Tirer (dealer fort)';
   }
-  
+  if (playerTotal >= 17) return '✋ Rester ou... Stand (risque très élevé).';
+
   return '✋ Rester.';
 }
 
-// ─── Calcul de probabilité de bust ──────────────────────
-function estimateBustProbability(playerTotal) {
-  // Formule simplifiée : plus la main est haute, plus c'est probable de buster
-  if (playerTotal >= 21) return 100;
-  if (playerTotal <= 11) return 0;
-  // Entre 12 et 20, on estime : (total - 11) * 8 pour un approximation
-  return Math.min(100, (playerTotal - 11) * 8);
-}
-
-// ─── Évaluation 21+3 ─────────────────────────────────────
-// Player's 2 cards + Dealer's face card → 3-card poker hand
-function eval21Plus3(card1, card2, dealerCard) {
-  const all = [card1, card2, dealerCard];
-  const suits = all.map(c => c.suit);
-  const toNum = c => {
-    if (c.value === 'A') return 14;
-    if (c.value === 'K') return 13;
-    if (c.value === 'Q') return 12;
-    if (c.value === 'J') return 11;
-    return parseInt(c.value);
-  };
-  const numVals = all.map(toNum).sort((a, b) => a - b);
-  const sameVals = all.every(c => c.value === all[0].value);
-  const isFlush  = suits.every(s => s === suits[0]);
-  const isStraight = (numVals[2] - numVals[0] === 2 && new Set(numVals).size === 3)
-    || (numVals[0] === 2 && numVals[1] === 3 && numVals[2] === 14); // A-2-3
-
-  if (sameVals && isFlush) return { name: '💎 Brelan Suited !', payout: 100, emoji: '💎' };
-  if (isFlush && isStraight) return { name: '♠️ Quinte Flush !', payout: 40,  emoji: '♠️' };
-  if (sameVals)              return { name: '🎰 Brelan !',       payout: 30,  emoji: '🎰' };
-  if (isStraight)            return { name: '📏 Suite !',        payout: 10,  emoji: '📏' };
-  if (isFlush)               return { name: '🌊 Couleur !',      payout: 5,   emoji: '🌊' };
-  return null;
-}
-
 // ─── Deck ─────────────────────────────────────────────────
-const SUITS  = ['♠️','♥️','♦️','♣️'];
+const SUITS  = ['♠', '♥', '♦', '♣'];
 const VALUES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
 function newDeck() {
@@ -124,6 +120,12 @@ function cardVal(card) {
   if (card.value === 'A') return 11;
   return parseInt(card.value);
 }
+function hiLoValue(card) {
+  // Comptage Hi-Lo : 2-6 = +1, 7-9 = 0, 10-A = -1
+  if (['2','3','4','5','6'].includes(card.value)) return 1;
+  if (['7','8','9'].includes(card.value)) return 0;
+  return -1;
+}
 function handValue(hand) {
   let total = hand.reduce((s, c) => s + cardVal(c), 0);
   let aces  = hand.filter(c => c.value === 'A').length;
@@ -136,13 +138,48 @@ function handStr(hand, hideSecond = false) {
 }
 function isBlackjack(hand) { return hand.length === 2 && handValue(hand) === 21; }
 function isSoft17(hand)    { return handValue(hand) === 17 && hand.some(c => c.value === 'A'); }
-// ─── Affichage premium des cartes ──────────────────────
+
+// ─── Cartes ASCII PREMIUM (style Vegas) ───────────────────
 function cardDisplayAscii(card) {
-  const suit = card.suit;
-  const val = card.value.padStart(2);
-  return `╔═══╗\n║${val} ║\n║ ${suit} ║\n║  ${val}║\n╚═══╝`;
+  const suits_map = {
+    '♠': '♠', '♥': '♥', '♦': '♦', '♣': '♣'
+  };
+  const suit = suits_map[card.suit] || card.suit;
+  const val = card.value === '10' ? '10' : card.value;
+  const padding = val.length === 1 ? ' ' : '';
+
+  return (
+    `┌─────┐\n` +
+    `│${val}${padding}   │\n` +
+    `│  ${suit}  │\n` +
+    `│   ${padding}${val}│\n` +
+    `└─────┘`
+  );
 }
 
+// ─── Afficher une main de cartes côte à côte ──────────────
+function displayHandCards(hand) {
+  if (hand.length === 0) return '(pas de cartes)';
+  const cardLines = hand.map(c => cardDisplayAscii(c).split('\n'));
+  const maxRows = Math.max(...cardLines.map(l => l.length));
+  let result = '';
+  for (let row = 0; row < maxRows; row++) {
+    result += cardLines.map(lines => lines[row] || '').join(' ') + '\n';
+  }
+  return result.trim();
+}
+
+// ─── Perfect Pair SideBet ─────────────────────────────────
+function evalPerfectPair(card1, card2) {
+  const sameRank = card1.value === card2.value;
+  const sameSuit = card1.suit === card2.suit;
+  const sameColor = (card1.suit === '♥' || card1.suit === '♦') === (card2.suit === '♥' || card2.suit === '♦');
+
+  if (!sameRank) return null;
+  if (sameSuit) return { name: 'Perfect Pair', payout: 25, emoji: '💎' };
+  if (sameColor) return { name: 'Colored Pair', payout: 12, emoji: '♠️' };
+  return { name: 'Pair', payout: 5, emoji: '🎴' };
+}
 
 // ─── Sessions ─────────────────────────────────────────────
 const gameSessions = new Map();
@@ -159,71 +196,107 @@ function deleteSession(userId) {
   gameSessions.delete(userId);
 }
 
-// ─── Embed ────────────────────────────────────────────────
+// ─── Déterminer couleur embed (dynamique) ─────────────────
+function getEmbedColor(playerTotal, dealerVisible, status = '') {
+  if (status === 'blackjack') return '#FFD700';
+  if (status === 'win') return '#27AE60';
+  if (status === 'lose' || status === 'bust') return '#C0392B';
+  if (status === 'push') return '#F39C12';
+
+  // Couleur dynamique : dealer fort = rouge, joueur fort = vert
+  if (dealerVisible && dealerVisible >= 17 && dealerVisible > playerTotal) return '#C0392B';
+  if (playerTotal >= 18) return '#27AE60';
+  return '#2C3E50';
+}
+
+// ─── Embed Premium ────────────────────────────────────────
 function buildEmbed(state, status = '') {
   const playerVal = handValue(state.player);
   const dealerVal = state.revealed ? handValue(state.dealer) : '?';
-  const color = status === 'win'  ? '#2ECC71'
-              : status === 'lose' ? '#E74C3C'
-              : status === 'push' ? '#F39C12'
-              : status === 'blackjack' ? '#FFD700'
-              : '#2C3E50';
+  const color = getEmbedColor(playerVal, state.revealed ? dealerVal : null, status);
 
-  const headerAscii = '╔═══════════════════════════════╗\n║      ⚡ BLACKJACK TABLE ⚡    ║\n╚═══════════════════════════════╝';
   const cfg  = db.getConfig ? db.getConfig(state.guildId) : { currency_emoji: '€' };
   const coin = cfg?.currency_emoji || '€';
 
+  const hiLo = getHiLoCount(state.userId, state.guildId);
+  const trueCount = hiLo.cards_dealt > 0 ? (hiLo.running_count / (52 - hiLo.cards_dealt)).toFixed(1) : '0';
+
   const embed = new EmbedBuilder()
     .setColor(color)
-    .setTitle('🃏 ・ BlackJack ・')
-    .setDescription(headerAscii)
-    .addFields(
-      { name: `🎩 Croupier ${state.revealed ? `(${dealerVal})` : ''}`, value: handStr(state.dealer, !state.revealed), inline: false },
-      { name: `🎮 Vous (${playerVal})`, value: handStr(state.player), inline: false },
-    );
+    .setTitle('🃏 ・ BLACKJACK TABLE ・ 🃏')
+    .setDescription('```\n' + '═'.repeat(40) + '\n   CASINO ALMOSNI - 6 Decks ・ S17\n' + '═'.repeat(40) + '\n```');
 
-  if (state.split) {
-    embed.addFields({ name: `🎮 Main 2 (${handValue(state.split)})`, value: handStr(state.split), inline: false });
-  }
-  if (state.doubled) {
-    embed.addFields({ name: '✖️ Double Down', value: 'Mise doublée — 1 carte supplémentaire', inline: true });
-  }
-  if (state.insurance !== null) {
-    embed.addFields({ name: '🛡️ Assurance', value: state.insurance ? '✅ Prise' : '❌ Refusée', inline: true });
+  // Affichage dealer avec cartes si révélé
+  if (state.revealed) {
+    embed.addFields({
+      name: `🎩 Dealer (${dealerVal})`,
+      value: `${'```\n' + displayHandCards(state.dealer) + '\n```'}`,
+      inline: false
+    });
+  } else {
+    embed.addFields({
+      name: `🎩 Dealer`,
+      value: `${'```\n' + cardDisplayAscii(state.dealer[0]) + '\n```   🂠 (caché)'}`,
+      inline: false
+    });
   }
 
+  // Affichage joueur
+  embed.addFields({
+    name: `🎮 Vous (Total: ${playerVal})`,
+    value: `${'```\n' + displayHandCards(state.player) + '\n```'}`,
+    inline: false
+  });
+
+  // Split hand si présente
+  if (state.split && state.split.length > 0) {
+    embed.addFields({
+      name: `🎮 Main 2 (Total: ${handValue(state.split)})`,
+      value: `${'```\n' + displayHandCards(state.split) + '\n```'}`,
+      inline: false
+    });
+  }
+
+  // Mise et side bets
   embed.addFields({ name: '💰 Mise', value: `**${state.mise} ${coin}**`, inline: true });
-
-  // Afficher le side bet si présent
   if (state.sideBet > 0) {
-    embed.addFields({ name: '🃏 21+3 Side bet', value: `**${state.sideBet} ${coin}**`, inline: true });
+    embed.addFields({ name: '💎 Side Bet', value: `**${state.sideBet} ${coin}**`, inline: true });
   }
 
-  // Probabilité de bust
-  const bustProb = estimateBustProbability(playerVal);
-  embed.addFields({ name: '🃏 Probabilité bust', value: `${bustProb}%`, inline: true });
+  // Comptage Hi-Lo
+  embed.addFields({
+    name: '📊 Hi-Lo Count',
+    value: `RC: ${hiLo.running_count > 0 ? '+' : ''}${hiLo.running_count} | TC: ${trueCount}`,
+    inline: true
+  });
 
-  // Afficher la série si active
+  // Série de victoires
   const streakData = getStreak(state.userId, state.guildId);
   if (streakData.streak >= 2) {
     const sLabel = streakLabel(streakData.streak);
-    if (sLabel) embed.addFields({ name: '🔥 Série en cours', value: sLabel, inline: false });
+    if (sLabel) embed.addFields({ name: '🔥 Série', value: sLabel, inline: false });
   }
 
+  // Footer casino
+  embed.setFooter({ text: `Casino Almosni Blackjack • 6 decks • S17 • DAS • RSA` });
+
+  // Message de fin de partie
   if (status) {
     const msgs = {
       win:       '🎉 Vous gagnez !',
-      blackjack: '🌟 BLACKJACK ! Payé 3:2 !',
-      lose:      '💸 Perdu...',
-      bust:      '💥 Dépassé ! Perdu.',
+      blackjack: '🌟🎊 BLACKJACK NATUREL ! Payé 3:2 ! 🎊🌟',
+      lose:      '💸 Dépassé, vous perdez...',
+      bust:      '💥 BUST! Dépassé 21 — Perdu.',
       push:      '🤝 Égalité — mise remboursée.',
       surrender: '🏳️ Abandonné — 50% remboursé.',
     };
-    embed.setDescription(headerAscii + '\n\n' + (msgs[status] || status));
+    embed.setDescription((msgs[status] || status) + '\n\n```\n' + '═'.repeat(40) + '\n```');
   }
+
   return embed;
 }
 
+// ─── Boutons ──────────────────────────────────────────────
 function buildButtons(state) {
   const canDouble = state.player.length === 2 && !state.split && !state.doubled;
   const canSplit  = state.player.length === 2
@@ -234,14 +307,14 @@ function buildButtons(state) {
                  && state.player.length === 2;
 
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bj_hit_${state.userId}`)      .setLabel('🃏 Tirer')      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`bj_stand_${state.userId}`)    .setLabel('✋ Rester')     .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`bj_double_${state.userId}`)   .setLabel('⬆️ Doubler')   .setStyle(ButtonStyle.Success).setDisabled(!canDouble),
+    new ButtonBuilder().setCustomId(`bj_hit_${state.userId}`).setLabel('🃏 Tirer').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`bj_stand_${state.userId}`).setLabel('✋ Rester').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`bj_double_${state.userId}`).setLabel('⬆️ Doubler').setStyle(ButtonStyle.Success).setDisabled(!canDouble),
   );
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`bj_split_${state.userId}`)    .setLabel('✂️ Split')     .setStyle(ButtonStyle.Primary).setDisabled(!canSplit),
-    new ButtonBuilder().setCustomId(`bj_insure_${state.userId}`)   .setLabel('🛡️ Assurance') .setStyle(ButtonStyle.Danger).setDisabled(!canInsure),
-    new ButtonBuilder().setCustomId(`bj_counsel_${state.userId}`)  .setLabel('💡 Conseil')   .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`bj_split_${state.userId}`).setLabel('✂️ Split').setStyle(ButtonStyle.Primary).setDisabled(!canSplit),
+    new ButtonBuilder().setCustomId(`bj_insure_${state.userId}`).setLabel('🛡️ Assurance').setStyle(ButtonStyle.Danger).setDisabled(!canInsure),
+    new ButtonBuilder().setCustomId(`bj_counsel_${state.userId}`).setLabel('💡 Conseil').setStyle(ButtonStyle.Secondary),
   );
   return [row1, row2];
 }
@@ -264,11 +337,9 @@ async function endGame(msg, state, status, winMult = 0) {
   const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '€';
   let payout = 0;
 
-  // Streak courant avant la mise à jour
   const streakBefore = getStreak(state.userId, state.guildId).streak;
 
   if (winMult > 0) {
-    // Appliquer le multiplicateur de série
     const sMult  = streakMultiplier(streakBefore);
     const eff    = winMult * sMult;
     payout = Math.floor(state.mise * eff);
@@ -280,32 +351,32 @@ async function endGame(msg, state, status, winMult = 0) {
     onPush(state.userId, state.guildId);
   }
 
-  // ── Résultat du side bet 21+3 ─────────────────────────
-  let side21Result = null;
+  // ── Évaluation Perfect Pair ──────────────────────────────
+  let perfectPairResult = null;
   if (state.sideBet > 0) {
-    const r21 = eval21Plus3(state.player[0], state.player[1], state.dealer[0]);
-    if (r21) {
-      const sidePayout = state.sideBet * (r21.payout + 1);
+    const pp = evalPerfectPair(state.player[0], state.player[1]);
+    if (pp) {
+      const sidePayout = state.sideBet * (pp.payout + 1);
       db.addCoins(state.userId, state.guildId, sidePayout);
-      side21Result = { won: true, hand: r21, gain: sidePayout };
+      perfectPairResult = { won: true, hand: pp, gain: sidePayout };
     } else {
-      side21Result = { won: false };
+      perfectPairResult = { won: false };
     }
   }
 
   // Animation révélation
   const revealFrames = [
-    { desc: '🎩 *Révélation de la main du croupier...*', delay: 600 },
+    { desc: '🎩 *Révélation du trou...*', delay: 600 },
     { desc: '✨ *Calcul du résultat...*', delay: 400 },
   ];
   for (const frame of revealFrames) {
     const tempEmbed = new EmbedBuilder()
       .setColor('#F39C12')
-      .setTitle('🃏 ・ BlackJack ・')
+      .setTitle('🃏 ・ BLACKJACK TABLE ・ 🃏')
       .setDescription(frame.desc)
       .addFields(
-        { name: '🎩 Croupier', value: handStr(state.dealer), inline: false },
-        { name: '🎮 Vous',     value: handStr(state.player), inline: false },
+        { name: '🎩 Dealer', value: `${'```\n' + displayHandCards(state.dealer) + '\n```'}`, inline: false },
+        { name: '🎮 Vous', value: `${'```\n' + displayHandCards(state.player) + '\n```'}`, inline: false },
       );
     await msg.edit({ embeds: [tempEmbed], components: [] }).catch(() => {});
     await sleep(frame.delay);
@@ -314,6 +385,7 @@ async function endGame(msg, state, status, winMult = 0) {
   const embed = buildEmbed(state, status);
   const newBalance = db.getUser(state.userId, state.guildId)?.balance || 0;
 
+  // Affichage résultat
   if (payout > 0) {
     const streakNow = getStreak(state.userId, state.guildId).streak;
     const sMult     = streakMultiplier(streakBefore);
@@ -321,7 +393,6 @@ async function endGame(msg, state, status, winMult = 0) {
       ? `+**${payout} ${coin}** *(série ×${sMult.toFixed(2)})*`
       : `+**${payout} ${coin}**`;
     embed.addFields({ name: '💵 Gain', value: bonusLine, inline: true });
-    // Afficher la nouvelle série
     if (streakNow >= 2) {
       const sl = streakLabel(streakNow);
       if (sl) embed.addFields({ name: '🔥 Nouvelle série', value: sl, inline: false });
@@ -330,22 +401,30 @@ async function endGame(msg, state, status, winMult = 0) {
     embed.addFields({ name: '💵 Perte', value: `-**${state.mise} ${coin}**`, inline: true });
   }
 
-  // Résultat 21+3
-  if (side21Result) {
-    if (side21Result.won) {
+  // Résultat Perfect Pair
+  if (perfectPairResult) {
+    if (perfectPairResult.won) {
       embed.addFields({
-        name: `🃏 21+3 : ${side21Result.hand.emoji} ${side21Result.hand.name}`,
-        value: `+**${side21Result.gain} ${coin}** (×${side21Result.hand.payout + 1})`,
+        name: `💎 Perfect Pair: ${perfectPairResult.hand.emoji} ${perfectPairResult.hand.name}`,
+        value: `+**${perfectPairResult.gain} ${coin}** (×${perfectPairResult.hand.payout + 1})`,
         inline: false,
       });
     } else {
-      embed.addFields({ name: '🃏 21+3 : ❌ Pas de combo', value: `−${state.sideBet} ${coin}`, inline: false });
+      embed.addFields({ name: '💎 Perfect Pair: ❌ Pas de paire', value: `−${state.sideBet} ${coin}`, inline: false });
     }
   }
 
-  embed.setFooter({ text: `Solde: ${newBalance} ${coin}` });
+  // Résumé final
+  embed.addFields({
+    name: '📊 Résumé Session',
+    value: `Mains: ${streakBefore + 1} | Win Rate: ${Math.round((getStreak(state.userId, state.guildId).total_wins / Math.max(1, streakBefore + 1)) * 100)}%`,
+    inline: false
+  });
+
+  embed.setFooter({ text: `Solde: ${newBalance} ${coin} • Casino Almosni Blackjack` });
 
   deleteSession(state.userId);
+  resetHiLoCount(state.userId, state.guildId);
   await msg.edit({ embeds: [embed], components: playAgainButtons(state.userId, state.mise) });
 }
 
@@ -356,7 +435,10 @@ async function dealerPlay(msg, state) {
   await sleep(800);
 
   while (handValue(state.dealer) < 17 || isSoft17(state.dealer)) {
-    state.dealer.push(state.deck.pop());
+    const newCard = state.deck.pop();
+    state.dealer.push(newCard);
+    // Comptage Hi-Lo
+    updateHiLoCount(state.userId, state.guildId, hiLoValue(newCard));
     await msg.edit({ embeds: [buildEmbed(state, '')], components: [] });
     await sleep(700);
   }
@@ -379,17 +461,17 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
   const totalCost = mise + sideBet;
 
   if (!u || u.balance < totalCost) {
-    const errMsg = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}** (coût total : ${totalCost} ${coin}).`;
+    const errMsg = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}** (coût: ${totalCost} ${coin}).`;
     if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
   if (getSession(userId)) {
-    const errMsg = '⚠️ Tu as déjà une partie en cours ! Termines-la d\'abord.';
+    const errMsg = '⚠️ Partie en cours ! Termines-la d\'abord.';
     if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
   if (mise < 10) {
-    const errMsg = '❌ Mise minimale : **10 €**.';
+    const errMsg = '❌ Mise minimale: **10 €**.';
     if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
@@ -400,36 +482,44 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
   const player = [deck.pop(), deck.pop()];
   const dealer = [deck.pop(), deck.pop()];
 
+  // Comptage initial
+  [...player, ...dealer].forEach(card => {
+    updateHiLoCount(userId, guildId, hiLoValue(card));
+  });
+
   const state = {
     userId, guildId, mise, sideBet, deck, player, dealer,
     revealed: false, insurance: null, split: null, doubled: false,
   };
 
-  // Animation distribution cartes
   function quickEmbed(pCards, dCards, msg_txt) {
     const cn = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
     const streakData = getStreak(userId, guildId);
     const sl = streakLabel(streakData.streak);
-    const e  = new EmbedBuilder()
-      .setColor('#2C3E50').setTitle('🃏 ・ BlackJack ・')
+    const hiLo = getHiLoCount(userId, guildId);
+    const trueCount = hiLo.cards_dealt > 0 ? (hiLo.running_count / (52 - hiLo.cards_dealt)).toFixed(1) : '0';
+
+    const e = new EmbedBuilder()
+      .setColor('#2C3E50').setTitle('🃏 ・ BLACKJACK TABLE ・ 🃏')
       .addFields(
-        { name: '🎩 Croupier', value: dCards || '🂠', inline: false },
-        { name: '🎮 Vous',     value: pCards || '🂠', inline: false },
+        { name: '🎩 Dealer', value: dCards || '🂠', inline: false },
+        { name: '🎮 Vous', value: pCards || '🂠', inline: false },
       )
       .setDescription(msg_txt || '')
+      .addFields({ name: '📊 RC | TC', value: `${hiLo.running_count > 0 ? '+' : ''}${hiLo.running_count} | ${trueCount}`, inline: true })
       .setFooter({ text: `Solde: ${u?.balance || 0} ${cn}` });
-    if (sideBet > 0) e.addFields({ name: '🃏 21+3 Side bet', value: `${sideBet} ${cn}`, inline: true });
-    if (sl)          e.addFields({ name: '🔥 Série', value: sl, inline: true });
+
+    if (sideBet > 0) e.addFields({ name: '💎 Side Bet', value: `${sideBet} ${cn}`, inline: true });
+    if (sl) e.addFields({ name: '🔥 Série', value: sl, inline: true });
     return e;
   }
 
   const dealSteps = [
-    { pCards: '🂠', dCards: '―', txt: '🃏 *Le croupier bat les cartes...*', delay: 500 },
+    { pCards: '🂠', dCards: '―', txt: '🃏 *Les cartes volent !*', delay: 500 },
     { pCards: '🂠', dCards: '―', txt: '✨ *Distribution en cours...*', delay: 350 },
-    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '―', txt: '🃏 *+1 carte joueur*', delay: 400 },
-    { pCards: `\`${player[0].value}${player[0].suit}\``, dCards: '🂠', txt: '✨ *Les cartes volent !*', delay: 400 },
-    { pCards: handStr(player), dCards: '🂠', txt: '🃏 *+2ème carte joueur*', delay: 350 },
-    { pCards: handStr(player), dCards: '🂠', txt: '✅ *Main initiale prête !*', delay: 350 },
+    { pCards: handStr(player), dCards: '―', txt: '🃏 *+1 carte joueur*', delay: 400 },
+    { pCards: handStr(player), dCards: '🂠', txt: '✨ *Cartes du dealer !*', delay: 400 },
+    { pCards: handStr(player), dCards: handStr(dealer, true), txt: '🃏 *Jeu prêt !*', delay: 350 },
   ];
 
   let msg;
@@ -449,47 +539,51 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
   state.dealer = dealer;
   state.revealed = false;
 
-  // Blackjack naturel ?
+  // ─── Blackjack naturel ? ──────────────────────────────
   if (isBlackjack(player)) {
     state.revealed = true;
     if (isBlackjack(dealer)) {
       db.addCoins(userId, guildId, mise);
       onPush(userId, guildId);
-      // Rembourser le side bet aussi si blackjack push
       if (sideBet > 0) db.addCoins(userId, guildId, sideBet);
       const embed = buildEmbed(state, 'push');
       embed.setFooter({ text: `Solde: ${db.getUser(userId, guildId)?.balance || 0} ${coin}` });
       deleteSession(userId);
+      resetHiLoCount(userId, guildId);
       await msg.edit({ embeds: [embed], components: playAgainButtons(userId, state.mise) });
       return;
     }
+
     db.addCoins(userId, guildId, Math.floor(mise * 2.5));
     onWin(userId, guildId);
 
-    // 21+3 sur blackjack naturel
-    let side21 = null;
+    // Perfect Pair sur BJ
+    let perfectPair = null;
     if (sideBet > 0) {
-      const r21 = eval21Plus3(player[0], player[1], dealer[0]);
-      if (r21) {
-        const sp = sideBet * (r21.payout + 1);
+      const pp = evalPerfectPair(player[0], player[1]);
+      if (pp) {
+        const sp = sideBet * (pp.payout + 1);
         db.addCoins(userId, guildId, sp);
-        side21 = { won: true, hand: r21, gain: sp };
+        perfectPair = { won: true, hand: pp, gain: sp };
       } else {
-        side21 = { won: false };
+        perfectPair = { won: false };
       }
     }
 
-    // 🎬 Animation célébration Blackjack naturel !
+    // 🎬 Animation BJ naturel cinématique
     const bjPayout = Math.floor(mise * 2.5);
     const celebFrames = [
-      { color: '#FFD700', title: '🌟 BLACKJACK ! 🌟',           desc: '```\n' + '★'.repeat(34) + '\n' + '    🃏  BLACKJACK NATUREL ! 🃏    \n' + '           Payé 3:2 !           \n' + '★'.repeat(34) + '\n```' },
-      { color: '#F1C40F', title: '✨ 21 ! ✨',                   desc: `*La table frémit ! Vous avez **21** !*` },
-      { color: '#FFD700', title: `🎊 +${bjPayout} ${coin} 🎊`, desc: `**+${bjPayout} ${coin}** empochés !\n\n*Payé à 3:2 — la règle d'or du Blackjack !*` },
+      { color: '#FFD700', title: '🎉 BLACKJACK NATUREL ! 🎉', desc: '```\n' + '★'.repeat(40) + '\n' + '        NATURAL BLACKJACK!\n' + '          Payé 3:2 ! ★2.5\n' + '★'.repeat(40) + '\n```' },
+      { color: '#F1C40F', title: '✨ 21 PARFAIT ! ✨', desc: `*La table frémit... Vous avez **21** !*` },
+      { color: '#FFD700', title: `🎊 +${bjPayout} ${coin} 🎊`, desc: `**+${bjPayout} ${coin}** empochés !\n\n*Payé à 3:2 — la règle d'or du Blackjack !* 🏆` },
     ];
     for (const { color, title, desc: fDesc } of celebFrames) {
       await msg.edit({ embeds: [new EmbedBuilder()
         .setColor(color).setTitle(title).setDescription(fDesc)
-        .addFields({ name: '🎩 Croupier', value: handStr(dealer, false), inline: true }, { name: '🎮 Vous (21)', value: handStr(player), inline: true })
+        .addFields(
+          { name: '🎩 Dealer', value: handStr(dealer), inline: false },
+          { name: '🎮 Vous (21 - BJ!)', value: handStr(player), inline: false }
+        )
       ], components: [] }).catch(() => {});
       await sleep(500);
     }
@@ -497,15 +591,16 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
     const embed = buildEmbed(state, 'blackjack');
     const sNow  = getStreak(userId, guildId).streak;
     const sl    = streakLabel(sNow);
-    if (sl) embed.addFields({ name: '🔥 Série', value: sl, inline: false });
-    if (side21?.won) {
-      embed.addFields({ name: `🃏 21+3 : ${side21.hand.emoji} ${side21.hand.name}`, value: `+**${side21.gain} ${coin}**`, inline: false });
-    } else if (side21) {
-      embed.addFields({ name: '🃏 21+3 : ❌ Pas de combo', value: `−${sideBet} ${coin}`, inline: false });
+    if (sl) embed.addFields({ name: '🔥 Série Actuelle', value: sl, inline: false });
+    if (perfectPair?.won) {
+      embed.addFields({ name: `💎 Perfect Pair: ${perfectPair.hand.emoji} ${perfectPair.hand.name}`, value: `+**${perfectPair.gain} ${coin}**`, inline: false });
+    } else if (perfectPair) {
+      embed.addFields({ name: '💎 Perfect Pair: ❌ Pas de paire', value: `−${sideBet} ${coin}`, inline: false });
     }
     embed.addFields({ name: '💵 Gain', value: `+**${bjPayout} ${coin}** (3:2)`, inline: true });
-    embed.setFooter({ text: `Solde: ${db.getUser(userId, guildId)?.balance || 0} ${coin}` });
+    embed.setFooter({ text: `Solde: ${db.getUser(userId, guildId)?.balance || 0} ${coin} • Casino Almosni Blackjack` });
     deleteSession(userId);
+    resetHiLoCount(userId, guildId);
     await msg.edit({ embeds: [embed], components: playAgainButtons(userId, state.mise) });
     return;
   }
@@ -518,54 +613,54 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
 async function handleComponent(interaction) {
   const customId = interaction.customId;
 
-  // ── Rejouer ──────────────────────────────────────────────
+  // ── Rejouer ───────────────────────────────────────────────
   if (customId.startsWith('bj_replay_')) {
     const parts  = customId.split('_');
     const userId = parts[2];
     const mise   = parseInt(parts[3]);
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true }).catch(() => {});
+      return interaction.reply({ content: '❌ Pas ta partie!', ephemeral: true }).catch(() => {});
     }
     await interaction.deferUpdate().catch(() => {});
     await startGame(interaction, userId, interaction.guildId, mise);
     return true;
   }
 
-  // ── Changer la mise ──────────────────────────────────────
+  // ── Changer mise ──────────────────────────────────────────
   if (customId.startsWith('bj_changemise_')) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Bouton non autorisé.', ephemeral: true });
     }
     await interaction.showModal(changeMiseModal('bj', userId));
     return true;
   }
 
-  // ── Modal mise ───────────────────────────────────────────
+  // ── Modal mise ────────────────────────────────────────────
   if (customId.startsWith('bj_modal_') && interaction.isModalSubmit()) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+      return interaction.reply({ content: '❌ Modal non autorisé.', ephemeral: true });
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u       = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 €).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await startGame(interaction, userId, interaction.guildId, newMise);
     return true;
   }
 
-  // ── Conseil stratégique ──────────────────────────────────
+  // ── Conseil stratégique ───────────────────────────────────
   if (customId.startsWith('bj_counsel_')) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Bouton non autorisé.', ephemeral: true });
     }
     const st = getSession(userId);
     if (!st) {
@@ -575,18 +670,18 @@ async function handleComponent(interaction) {
     const dealerCard = st.dealer[0];
     const advice = getBasicAdvice(playerTotal, dealerCard);
     return interaction.editReply({
-      content: `**💡 Conseil Stratégie Basique :**\n\nTa main : ${handStr(st.player)} (${playerTotal})\nCarte dealer : ${cardStr(dealerCard)}\n\n${advice}`,
+      content: `**💡 Conseil Stratégie Basique:**\n\nTa main: ${handStr(st.player)} = **${playerTotal}**\nCarte dealer: ${cardStr(dealerCard)}\n\n→ ${advice}`,
       ephemeral: true
     });
   }
 
-  // ── Boutons in-game ──────────────────────────────────────
+  // ── Boutons in-game ───────────────────────────────────────
   if (!customId.startsWith('bj_')) return;
   const parts  = customId.split('_');
   const userId = parts.length > 2 ? parts[2] : null;
 
   if (!userId || interaction.user.id !== userId) {
-    return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true });
+    return interaction.reply({ content: '❌ Pas ta partie!', ephemeral: true });
   }
 
   await interaction.deferUpdate().catch(() => {});
@@ -599,7 +694,9 @@ async function handleComponent(interaction) {
   const coin    = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (action === 'hit') {
-    st.player.push(st.deck.pop());
+    const newCard = st.deck.pop();
+    st.player.push(newCard);
+    updateHiLoCount(userId, guildId, hiLoValue(newCard));
     const pv = handValue(st.player);
     if (pv > 21) return endGame(msg, st, 'bust', 0);
     if (pv === 21) return dealerPlay(msg, st);
@@ -613,7 +710,9 @@ async function handleComponent(interaction) {
     if (!u2 || u2.balance < st.mise) return msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
     db.addCoins(userId, guildId, -st.mise);
     st.mise *= 2;
-    st.player.push(st.deck.pop());
+    const newCard = st.deck.pop();
+    st.player.push(newCard);
+    updateHiLoCount(userId, guildId, hiLoValue(newCard));
     const pv = handValue(st.player);
     if (pv > 21) return endGame(msg, st, 'bust', 0);
     await dealerPlay(msg, st);
@@ -622,8 +721,12 @@ async function handleComponent(interaction) {
     const u2 = db.getUser(userId, guildId);
     if (!u2 || u2.balance < st.mise) return;
     db.addCoins(userId, guildId, -st.mise);
-    st.split  = [st.player.pop(), st.deck.pop()];
-    st.player.push(st.deck.pop());
+    const card = st.player.pop();
+    const newCard = st.deck.pop();
+    st.split  = [card, newCard];
+    const pCard2 = st.deck.pop();
+    st.player.push(pCard2);
+    updateHiLoCount(userId, guildId, hiLoValue(newCard) + hiLoValue(pCard2));
     await msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
 
   } else if (action === 'insure') {
@@ -636,8 +739,9 @@ async function handleComponent(interaction) {
       st.revealed = true;
       db.addCoins(userId, guildId, insureCost * 3);
       deleteSession(userId);
+      resetHiLoCount(userId, guildId);
       const e = buildEmbed(st, 'lose');
-      e.setDescription('🛡️ Assurance payée 2:1 — le croupier avait blackjack !');
+      e.setDescription('🛡️ Insurance payée 2:1 — Dealer had Blackjack!');
       onLose(userId, guildId);
       e.setFooter({ text: `Solde: ${db.getUser(userId, guildId)?.balance || 0} ${coin}` });
       return msg.edit({ embeds: [e], components: playAgainButtons(userId, st.mise) });
@@ -646,10 +750,11 @@ async function handleComponent(interaction) {
 
   } else if (action === 'surrender') {
     deleteSession(userId);
+    resetHiLoCount(userId, guildId);
     db.addCoins(userId, guildId, Math.floor(st.mise / 2));
     onLose(userId, guildId);
     const e = buildEmbed(st, 'surrender');
-    e.setDescription('🏳️ Abandonné — moitié de la mise remboursée.');
+    e.setDescription('🏳️ Abandonné — 50% remboursé.');
     e.setFooter({ text: `Solde: ${db.getUser(userId, guildId)?.balance || 0} ${coin}` });
     await msg.edit({ embeds: [e], components: playAgainButtons(userId, st.mise) });
   }
@@ -659,16 +764,15 @@ async function handleComponent(interaction) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('blackjack')
-    .setDescription('🃏 BlackJack — streak bonus & pari annexe 21+3 !')
+    .setDescription('🃏 Blackjack Premium v7 — Cartes visuelles, Stratégie, Hi-Lo Count')
     .addIntegerOption(o => o
       .setName('mise').setDescription('Mise principale (min 10)').setRequired(true).setMinValue(10))
     .addIntegerOption(o => o
-      .setName('cote').setDescription('Pari annexe 21+3 (5× flush … 100× brelan suited, opt.)').setMinValue(5)),
+      .setName('sidebet').setDescription('Perfect Pair Side Bet (opt.)').setMinValue(5)),
 
   async execute(interaction) {
-    // NOTE: deferReply is already called by interactionCreate.js
     const mise    = interaction.options.getInteger('mise');
-    const sideBet = interaction.options.getInteger('cote') || 0;
+    const sideBet = interaction.options.getInteger('sidebet') || 0;
     await startGame(interaction, interaction.user.id, interaction.guildId, mise, sideBet);
   },
 
@@ -680,7 +784,7 @@ module.exports = {
   aliases: ['bj', '21'],
   async run(message, args) {
     const rawMise = (args[0] || '').toLowerCase().trim();
-    if (!rawMise) return message.reply('❌ Usage : `&blackjack <mise> [cote]` — mise minimum 10.');
+    if (!rawMise) return message.reply('❌ Usage: `&blackjack <mise> [sidebet]` — min 10.');
     const u = db.getUser(message.author.id, message.guildId);
     const bal = u?.balance || 0;
     let mise;
@@ -688,7 +792,7 @@ module.exports = {
     else if (rawMise === 'moitie' || rawMise === 'half' || rawMise === '50%') mise = Math.floor(bal / 2);
     else if (rawMise.endsWith('%')) mise = Math.floor(bal * Math.min(100, parseFloat(rawMise)) / 100);
     else mise = parseInt(rawMise);
-    if (!mise || mise < 10) return message.reply('❌ Usage : `&blackjack <mise>` — mise minimum 10.');
+    if (!mise || mise < 10) return message.reply('❌ Usage: `&blackjack <mise>` — min 10.');
     const sideBet = parseInt(args[1]) || 0;
     await startGame(message, message.author.id, message.guildId, mise, sideBet);
   },

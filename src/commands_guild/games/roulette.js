@@ -1,10 +1,9 @@
 // ============================================================
-// roulette.js — Roulette Européenne/Américaine v7 — ROUE AVANCÉE
-// Représentation en arc, table de jeu, animation bille améliorée
-// Mode sélectionnable + paris étendus + visuel amélioré
+// roulette.js — Roulette Époustouflante v8 — CASINO COMPLET
+// TABLE COMPLÈTE, ANIMATION PREMIUM, MODES SPÉCIAUX, STATS SESSION
 // ============================================================
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const db = require('../../database/db');
 const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 
@@ -41,6 +40,53 @@ function getHotCold(guildId) {
   } catch { return null; }
 }
 
+function getRecentSpins(guildId, count = 5) {
+  try {
+    const rows = db.db.prepare(
+      `SELECT number FROM roulette_history WHERE guild_id=?
+       ORDER BY rowid DESC LIMIT ?`
+    ).all(guildId, count);
+    return rows.map(r => r.number).reverse();
+  } catch { return []; }
+}
+
+function getSessionStats(guildId, userId) {
+  try {
+    const rows = db.db.prepare(
+      `SELECT number FROM roulette_history WHERE guild_id=?
+       ORDER BY rowid DESC LIMIT 50`
+    ).all(guildId);
+    if (rows.length === 0) return null;
+
+    // Compter les séries de couleurs
+    let redStreak = 0, blackStreak = 0, maxRedStreak = 0, maxBlackStreak = 0;
+    let redCount = 0, blackCount = 0;
+    for (const row of rows) {
+      if (row.number === 0) {
+        redStreak = 0;
+        blackStreak = 0;
+      } else if (RED_NUMS.includes(row.number)) {
+        redCount++;
+        redStreak++;
+        maxRedStreak = Math.max(maxRedStreak, redStreak);
+        blackStreak = 0;
+      } else {
+        blackCount++;
+        blackStreak++;
+        maxBlackStreak = Math.max(maxBlackStreak, blackStreak);
+        redStreak = 0;
+      }
+    }
+    const totalNonZero = redCount + blackCount;
+    const winRate = totalNonZero > 0 ? Math.round((redCount / totalNonZero) * 100) : 0;
+
+    return {
+      redStreak, blackStreak, maxRedStreak, maxBlackStreak,
+      redCount, blackCount, winRate
+    };
+  } catch { return null; }
+}
+
 // ─── Roues: Européenne et Américaine ───────────────────────────
 const RED_NUMS   = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
 const BLACK_NUMS = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
@@ -51,6 +97,18 @@ const VOISINS   = [22,18,29,7,28,12,35,3,26,0,32,15,19,4,21,2,25];
 const TIERS     = [5,8,10,11,13,16,23,24,27,30,33,36];
 const ORPHELINS = [1,6,9,14,17,20,31,34];
 
+// Voisins du X (5 numéros autour sur la roue réelle)
+function getVoisinsNumber(num, wheelOrder) {
+  const idx = wheelOrder.indexOf(num);
+  if (idx === -1) return null;
+  const neighbors = [];
+  for (let i = -2; i <= 2; i++) {
+    const n = ((idx + i) % wheelOrder.length + wheelOrder.length) % wheelOrder.length;
+    neighbors.push(wheelOrder[n]);
+  }
+  return neighbors;
+}
+
 function numColor(n) {
   if (n === 0) return '🟩';
   return RED_NUMS.includes(n) ? '🔴' : '⚫';
@@ -60,36 +118,40 @@ function nStr(n) {
   return String(n).padStart(2, ' ');
 }
 
+// ─── TABLE COMPLÈTE ALMOSNI ───────────────────────────────────
+function renderCompleteTable() {
+  const lines = [];
+  lines.push('🎡 TABLE DE ROULETTE ALMOSNI');
+  lines.push('┌────┬────┬────┬────┬────┬────┐');
+  lines.push('│ 3  │ 6  │ 9  │ 12 │ 15 │ 18 │ → 2-1');
+  lines.push('│ 2  │ 5  │ 8  │ 11 │ 14 │ 17 │ → 2-1');
+  lines.push('│ 1  │ 4  │ 7  │ 10 │ 13 │ 16 │ → 2-1');
+  lines.push('├────┴────┴────┴────┴────┴────┤');
+  lines.push('│ 1-12  │  13-24  │  25-36   │');
+  lines.push('│ PAIR  │ IMPAIR  │ ROUGE ♥  │');
+  lines.push('│MANQUE │ PASSE   │ NOIR ♠   │');
+  lines.push('└──────────────────────────────┘');
+  return lines.join('\n');
+}
+
 // ─── Roue circulaire ───────────────────────────────────────────
-// Montre la roue comme un arc avec la bille en bas (position courante)
-// Layout :
-//     [top-4] [top-3] [top-2] [top-1] [top]    ← arc supérieur
-//   [L2]                                  [R2]  ← côtés
-//   [L1]        ◉ La bille tourne         [R1]
-//     [bot-2] [bot-1] [BOT] [bot+1] [bot+2]    ← résultat en bas
-//                      ▲ ▲
-function renderWheelArc(centerIdx, spinning = true, highlight = false) {
-  const N = WHEEL_ORDER.length;
+function renderWheelArc(centerIdx, wheelOrder, spinning = true, highlight = false) {
+  const N = wheelOrder.length;
   const g = (off) => {
     const i = ((centerIdx + off) % N + N) % N;
-    const n = WHEEL_ORDER[i];
+    const n = wheelOrder[i];
     return { n, col: numColor(n) };
   };
 
-  // Arc supérieur : 5 numéros opposés (center + 18)
   const topCenter = Math.floor(N / 2);
   const topRow = [-2,-1,0,1,2].map(off => {
     const { n, col } = g(topCenter + off);
     return `${col}${nStr(n)}`;
   }).join(' ');
 
-  // Côtés
   const { n: L1n, col: L1c } = g(topCenter - 3);
-  const { n: L2n, col: L2c } = g(topCenter + 3);
   const { n: R1n, col: R1c } = g(topCenter + 3);
-  const { n: R2n, col: R2c } = g(topCenter - 3);
 
-  // Arc inférieur : résultat au centre
   const botRow = [-2,-1,0,1,2].map(off => {
     const { n, col } = g(off);
     if (off === 0) {
@@ -113,39 +175,20 @@ function renderWheelArc(centerIdx, spinning = true, highlight = false) {
   ].join('\n');
 }
 
-// ─── Table de jeu visuelle ─────────────────────────────────────
-function renderTable() {
-  // Grille 3×12 classique de roulette + 0 + séparateurs
-  const cols = [
-    [3,6,9,12,15,18,21,24,27,30,33,36],
-    [2,5,8,11,14,17,20,23,26,29,32,35],
-    [1,4,7,10,13,16,19,22,25,28,31,34],
-  ];
-  const rows = Array.from({length: 12}, (_, i) => {
-    const r = cols.map(col => {
-      const n = col[i];
-      const c = numColor(n);
-      return `${c}${String(n).padStart(2,' ')}`;
-    });
-    return `│ ${r.join(' │ ')} │`;
-  });
-  return [
-    '```',
-    '╔═══╦═════╦═════╦═════╗',
-    '║ 🟩 0 ║ Col1 │ Col2 │ Col3║',
-    '╠═══╩═════╪═════╪═════╣',
-    ...rows.slice(0, 4),
-    '├─────────┼─────┼─────┤',
-    ...rows.slice(4, 8),
-    '├─────────┼─────┼─────┤',
-    ...rows.slice(8, 12),
-    '╚═════════╧═════╧═════╝',
-    '```',
-  ].join('\n');
-}
+// ─── Animation bille PREMIUM — 8+ frames ─────────────────────────
+const BALL_PHASES = [
+  { label:'⚡ 🎱 *La bille part comme une flèche !*',           color:'#C0392B', delay:50,  steps:8 },
+  { label:'🌀 💨 *Vitesse maximale ! La bille tourbillonne !*', color:'#E74C3C', delay:70,  steps:8 },
+  { label:'💨 🏓 *Ralentissement progressif...*',               color:'#D35400', delay:120, steps:7 },
+  { label:'🏓 ⚪ *La bille rebondit sur les séparateurs !*',    color:'#E67E22', delay:180, steps:6 },
+  { label:'🎯 ⚪ *Elle hésite entre deux cases...*',            color:'#F39C12', delay:260, steps:5 },
+  { label:'🤫 ⚪ *Suspense absolu...*',                         color:'#F1C40F', delay:380, steps:4 },
+  { label:'🔔 ⚪ *Derniers rebonds...*',                        color:'#2ECC71', delay:520, steps:3 },
+  { label:'💫 ✨ *CLIC ! La bille se pose !*',                  color:'#27AE60', delay:280, steps:2 },
+];
 
 // ─── Parsing paris ─────────────────────────────────────────────
-function parseBet(s_raw, maxNum = 36) {
+function parseBet(s_raw, maxNum = 36, wheelOrder = WHEEL_ORDER_EU) {
   const s = s_raw.toLowerCase().trim();
   if (s === 'rouge'  || s === 'red')   return { label:'🔴 Rouge (×2)',       numbers:RED_NUMS,   payout:1, type:'extérieur', key:s };
   if (s === 'noir'   || s === 'black') return { label:'⚫ Noir (×2)',        numbers:BLACK_NUMS, payout:1, type:'extérieur', key:s };
@@ -163,6 +206,16 @@ function parseBet(s_raw, maxNum = 36) {
   if (s === 'tiers'   || s === 'tc')   return { label:'🎡 Tiers du Cylindre (×3)', numbers:TIERS, payout:2, type:'section', key:'tiers' };
   if (s === 'orphelins'|| s === 'orph')return { label:'🎡 Orphelins (×4)',    numbers:ORPHELINS, payout:3, type:'section', key:'orphelins' };
 
+  // PARIS VOISINS — "voisins:X" pour 5 numéros autour de X
+  const voisinMatch = s.match(/^voisins?:(\d+)$/) || s.match(/^vz:(\d+)$/);
+  if (voisinMatch) {
+    const num = parseInt(voisinMatch[1]);
+    const neighbors = getVoisinsNumber(num, wheelOrder);
+    if (neighbors) {
+      return { label:`🎡 Voisins du ${num} (×2)`, numbers:neighbors, payout:1, type:'voisins_num', key:`vz:${num}` };
+    }
+  }
+
   // Cheval (2 numéros)
   const splitM = s.match(/^(\d+)[\/\+](\d+)$/) || s.match(/^(\d+)-(\d+)$/);
   if (splitM) {
@@ -171,7 +224,7 @@ function parseBet(s_raw, maxNum = 36) {
       return { label:`🔀 Cheval ${a}/${b} (×18)`, numbers:[a,b], payout:17, type:'cheval', key:`${a}-${b}` };
   }
 
-  // Carré (4 numéros) : parse "1234" comme carré
+  // Carré (4 numéros)
   const carreM = s.match(/^(\d+)x4$/);
   if (carreM) {
     const base = parseInt(carreM[1]);
@@ -183,16 +236,16 @@ function parseBet(s_raw, maxNum = 36) {
   // Plein (1 numéro)
   const num = parseInt(s);
   if (!isNaN(num) && num >= 0 && num <= maxNum) {
-    const payout = maxNum === 36 ? 35 : 35;
+    const payout = 35;
     return { label:`🎯 Plein ${num} (×${payout + 1})`, numbers:[num], payout: payout, type:'plein', key:`${num}` };
   }
 
   return null;
 }
 
-function parseBets(str, maxNum = 36) {
+function parseBets(str, maxNum = 36, wheelOrder = WHEEL_ORDER_EU) {
   return str.split(/[,~]/).map(s=>s.trim()).filter(Boolean)
-    .map(p=>parseBet(p, maxNum)).filter(Boolean).slice(0, 3);
+    .map(p=>parseBet(p, maxNum, wheelOrder)).filter(Boolean).slice(0, 3);
 }
 
 const BET_HELP = [
@@ -210,6 +263,7 @@ const BET_HELP = [
   '',
   '**══ PARIS DU CYLINDRE ══**',
   '🎡 `voisins`            → ×2  (45.9%) [17 numéros]',
+  '🎡 `voisins:14`         → ×2  (45.9%) [5 autour de 14]',
   '🎡 `tiers`              → ×3  (32.4%) [12 numéros]',
   '🎡 `orphelins`          → ×4  (21.6%) [8 numéros]',
   '',
@@ -234,27 +288,30 @@ function header(mode = 'european') {
   ].join('\n');
 }
 
-// ─── Animation de la bille — Frames améliorées ─────────────────
-const BALL_PHASES = [
-  { label:'⚡ 🎱 *La bille part comme une flèche !*',           color:'#C0392B', delay:60,  steps:6 },
-  { label:'🌀 💨 *Vitesse maximale ! La bille tourbillonne !*', color:'#E74C3C', delay:85,  steps:7 },
-  { label:'💨 🏓 *Ralentissement progressif...*',               color:'#D35400', delay:130, steps:6 },
-  { label:'🏓 ⚪ *La bille rebondit sur les séparateurs !*',    color:'#E67E22', delay:200, steps:5 },
-  { label:'🎯 ⚪ *Elle hésite entre deux cases...*',            color:'#F39C12', delay:280, steps:4 },
-  { label:'🤫 ⚪ *Suspense absolu...*',                         color:'#F1C40F', delay:400, steps:3 },
-  { label:'🔔 ⚪ *Derniers rebonds...*',                        color:'#2ECC71', delay:550, steps:2 },
-  { label:'💫 ✨ *CLIC ! La bille se pose !*',                  color:'#27AE60', delay:300, steps:1 },
-];
+function getModeStats(mode) {
+  if (mode === 'american') {
+    return { name: 'Américain (00)', rtp: '94.7%' };
+  } else if (mode === 'french') {
+    return { name: 'Français (La Partage)', rtp: '98.65%' };
+  }
+  return { name: 'Européen', rtp: '97.3%' };
+}
+
+function getRecentSpinsDisplay(guildId) {
+  const recent = getRecentSpins(guildId, 5);
+  if (recent.length === 0) return '';
+  return '```\n' + 'Derniers : ' + recent.map(n => `${numColor(n)}${n}`).join(' ') + '\n```';
+}
 
 // ─── Jeu principal ─────────────────────────────────────────────
 async function playRoulette(source, userId, guildId, mise, betString, mode = 'european') {
-  if (!['european', 'american'].includes(mode)) mode = 'european';
+  if (!['european', 'american', 'french'].includes(mode)) mode = 'european';
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
   const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
   const WHEEL_ORDER = mode === 'american' ? WHEEL_ORDER_US : WHEEL_ORDER_EU;
-  const maxNum = mode === 'american' ? 36 : 36;
-  const bets = parseBets(betString, maxNum);
+  const maxNum = 36;
+  const bets = parseBets(betString, maxNum, WHEEL_ORDER);
 
   if (!bets.length) {
     const err = `❌ Type de pari invalide.\n\n${BET_HELP}`;
@@ -286,18 +343,22 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
 
   let frameIdx = Math.floor(Math.random() * WHEEL_ORDER.length);
 
+  const modeStats = getModeStats(mode);
+  const modeEmoji = mode === 'american' ? '🇺🇸' : mode === 'french' ? '🇫🇷' : '🇪🇺';
+
   // ── Embed départ ──────────────────────────────────────────────
   const startEmbed = new EmbedBuilder()
     .setColor('#1A5276')
-    .setTitle(`🎡 Roulette Royale ${mode === 'american' ? '🇺🇸' : '🇪🇺'}`)
+    .setTitle(`🎡 Roulette Royale ${modeEmoji}`)
     .setDescription([
       header(mode),
       '🎩 *"Messieurs-dames, faites vos jeux !"*',
       '',
       betDesc,
       `**Mise totale :** ${chipDisplay(totalMise, coin)}`,
+      `**Mode :** ${modeStats.name} (RTP: ${modeStats.rtp})`,
       '',
-      renderWheelArc(frameIdx, true),
+      renderWheelArc(frameIdx, WHEEL_ORDER, true),
       '',
       '🎡 *La roue est lancée...*',
     ].join('\n'));
@@ -306,7 +367,7 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
   if (isInteraction) msg = await source.editReply({ embeds: [startEmbed] });
   else               msg = await source.reply({ embeds: [startEmbed] });
 
-  // ── Animation bille ───────────────────────────────────────────
+  // ── Animation bille PREMIUM ───────────────────────────────────
   for (const phase of BALL_PHASES) {
     for (let f = 0; f < phase.steps; f++) {
       frameIdx = (frameIdx + 1) % WHEEL_ORDER.length;
@@ -314,7 +375,7 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
         header(mode),
         `**${phase.label}**`,
         '',
-        renderWheelArc(frameIdx, true),
+        renderWheelArc(frameIdx, WHEEL_ORDER, true),
         '',
         `**Paris :** ${betLabels}  |  **Mise :** ${chipDisplay(totalMise, coin)}`,
       ].join('\n');
@@ -324,16 +385,24 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
   }
 
   // ── Résultat ──────────────────────────────────────────────────
-  const maxResult = mode === 'american' ? 38 : 37; // 0-36 en EU, 0-00-36 en US
-  const result    = Math.floor(Math.random() * maxResult);
-  const col       = numColor(result);
+  const maxResult = mode === 'american' ? 38 : 37;
+  let result = Math.floor(Math.random() * maxResult);
+
+  // Mode Français: La Partage
+  let laPartageApplied = false;
+  if (mode === 'french' && result === 0) {
+    laPartageApplied = true;
+  }
+
+  const col = numColor(result);
   addToHistory(guildId, result);
 
   const resultIdx = WHEEL_ORDER.indexOf(result);
 
   // Pré-évaluation pour flash
   const betPreview = bets.map(bet => ({
-    bet, won: bet.numbers.includes(result),
+    bet,
+    won: bet.numbers.includes(result),
     gain: bet.numbers.includes(result) ? mise * (bet.payout + 1) : 0,
   }));
   const anyWon   = betPreview.some(r => r.won);
@@ -342,9 +411,10 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
 
   // ── Flash révélation ─────────────────────────────────────────
   const resultDisplay = mode === 'american' && result === 37 ? '00' : String(result);
+  const resultColor = result === 0 ? '#27AE60' : RED_NUMS.includes(result) ? '#C0392B' : '#2C3E50';
   const flashSeq = [
     { color:'#FFFFFF',   title:`🎡 💫 LA BILLE S'IMMOBILISE ! 💫 🎡` },
-    { color: anyWon ? '#F1C40F' : '#1a1a2e', title:`🎡 ${col}${col} NUMÉRO **${resultDisplay}** ! ${col}${col} 🎡` },
+    { color: resultColor, title:`🎡 ${col}${col} NUMÉRO **${resultDisplay}** ! ${col}${col} 🎡` },
     { color: anyWon ? '#27AE60' : '#C0392B', title: anyWon ? `🎉✨ GAGNANT ! ✨🎉` : `💸 PERDU 💸` },
   ];
   for (const { color, title } of flashSeq) {
@@ -352,7 +422,7 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
       .setColor(color).setTitle(title)
       .setDescription([
         header(mode), '',
-        renderWheelArc(resultIdx, false, true),
+        renderWheelArc(resultIdx, WHEEL_ORDER, false, true),
         '', `**Paris :** ${betLabels}  |  **Mise :** ${chipDisplay(totalMise, coin)}`,
       ].join('\n'))
     ] }).catch(() => {});
@@ -370,13 +440,13 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
   // ── Croupier ──────────────────────────────────────────────────
   let colWord;
   if (result === 0) {
-    colWord = '🟩 Zéro !';
+    colWord = laPartageApplied ? '🟩 Zéro ! (La Partage — moitié rendu)' : '🟩 Zéro !';
   } else if (mode === 'american' && result === 37) {
     colWord = '🟩 Zéro double (00) !';
   } else {
     colWord = `${col === '🔴' ? 'Rouge' : 'Noir'}, numéro ${result} !`;
   }
-  const croupier  = `🎩 *"${colWord}"*`;
+  const croupier = `🎩 *"${colWord}"*`;
 
   // Informations sur le numéro
   const isRed    = RED_NUMS.includes(result);
@@ -427,28 +497,50 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
     ? `\n🔥 **Chauds :** ${hc.hot.map(n=>`${numColor(n)}${n}`).join(' ')}  |  🧊 **Froids :** ${hc.cold.map(n=>`${numColor(n)}${n}`).join(' ')}`
     : '';
 
+  // STATS SESSION
+  const sessionStats = getSessionStats(guildId);
+  let statsLine = '';
+  if (sessionStats) {
+    const streakEmoji = sessionStats.redStreak > 0 ? '🔴' : '⚫';
+    const currentStreak = sessionStats.redStreak || sessionStats.blackStreak;
+    statsLine = `\n📊 **Série :** ${streakEmoji}×${currentStreak} | **Taux victoire:** ${sessionStats.winRate}%`;
+  }
+
+  // RECOMMANDATION STRATÉGIE MARTINGALE
+  let martingaleAdvice = '';
+  if (sessionStats && sessionStats.blackStreak >= 3) {
+    martingaleAdvice = '\n💡 **Martingale:** Après 3 noirs d\'affilée, vous pouvez suivre le rouge ×2';
+  } else if (sessionStats && sessionStats.redStreak >= 3) {
+    martingaleAdvice = '\n💡 **Martingale:** Après 3 rouges d\'affilée, vous pouvez suivre le noir ×2';
+  }
+
   const newBal = db.getUser(userId, guildId)?.balance || 0;
+  const recentSpinsDisplay = getRecentSpinsDisplay(guildId);
 
   const finalDesc = [
     header(mode),
     croupier,
     '',
-    renderWheelArc(resultIdx, false, true),
+    renderWheelArc(resultIdx, WHEEL_ORDER, false, true),
     '',
     resultBox,
     '',
+    '**Détails des paris:**',
     betDetail,
     '',
-    `**Mise :** ${chipDisplay(totalMise, coin)}  |  **Solde :** ${newBal.toLocaleString('fr-FR')} ${coin}`,
-    `📊 ${parity}  ·  ${range}  ·  ${dozaine}  ·  ${section}`,
+    `**Mise:** ${chipDisplay(totalMise, coin)} | **Solde:** ${newBal.toLocaleString('fr-FR')} ${coin}`,
+    `📊 ${parity} · ${range} · ${dozaine} · ${section}`,
     hotColdLine,
+    recentSpinsDisplay,
+    statsLine,
+    martingaleAdvice,
   ].join('\n');
 
-  const modeStr = mode === 'american' ? '🇺🇸' : '🇪🇺';
-  const finalColor = anyWon ? (netDiff >= 0 ? '#27AE60' : '#F39C12') : (result === 0 || result === 37 ? '#2ECC71' : '#E74C3C');
+  const modeStr = mode === 'american' ? '🇺🇸' : mode === 'french' ? '🇫🇷' : '🇪🇺';
+  const finalColor = result === 0 || (mode === 'american' && result === 37) ? '#27AE60' : RED_NUMS.includes(result) ? '#C0392B' : '#2C3E50';
   const finalTitle = anyWon
-    ? (netDiff > 0 ? `🎡 🎉 VICTOIRE ! 🎉 ${modeStr} Roulette` : `🎡 ⚠️ GAIN PARTIEL — ${modeStr} Roulette`)
-    : `🎡 💸 PERDU — ${modeStr} Roulette`;
+    ? (netDiff > 0 ? `🎡 🎉 VICTOIRE ! 🎉 ${modeStr}` : `🎡 ⚠️ GAIN PARTIEL ${modeStr}`)
+    : `🎡 💸 PERDU ${modeStr}`;
 
   const encodedBets = bets.map(b => b.key).join('~');
   const row = makeGameRow('rl', userId, mise, encodedBets);
@@ -456,13 +548,15 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
   const quickRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`rl_quickbet_${userId}_${mise}_rouge`).setLabel('🔴 Rouge ×2').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId(`rl_quickbet_${userId}_${mise}_noir`).setLabel('⚫ Noir ×2').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`rl_quickbet_${userId}_${mise}_pairimpair`).setLabel('🔢 Pair/Impair').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`rl_table_${userId}`).setLabel('📋 Table').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`rl_table_${userId}`).setLabel('📋 Table').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`rl_stats_${userId}`).setLabel('📊 Stats').setStyle(ButtonStyle.Secondary),
   );
 
   const footerText = mode === 'american'
-    ? 'Jouez responsable · Mise min : 5/pari · Max 3 paris · Roue Américaine 0/00-36'
-    : 'Jouez responsable · Mise min : 5/pari · Max 3 paris · Roue Européenne 0-36';
+    ? `Jouez responsable · Mise min : 5/pari · RTP: ${modeStats.rtp}`
+    : mode === 'french'
+    ? `Jouez responsable · Mise min : 5/pari · La Partage: moitié rendu sur 0`
+    : `Jouez responsable · Mise min : 5/pari · RTP: ${modeStats.rtp}`;
 
   await msg.edit({
     embeds: [new EmbedBuilder()
@@ -479,13 +573,14 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('roulette')
-    .setDescription('🎡 Roulette Royale — Européenne ou Américaine, multi-paris, sections !')
+    .setDescription('🎡 Roulette Royale — TABLE COMPLÈTE, MODES CASINO, VOISINS, STATS SESSION')
     .addIntegerOption(o => o.setName('mise').setDescription('Mise par pari (min 5)').setRequired(true).setMinValue(5))
-    .addStringOption(o => o.setName('pari').setDescription('Ex: rouge | d1,rouge | voisins | 17,noir,c2 (max 3)').setRequired(true))
+    .addStringOption(o => o.setName('pari').setDescription('Ex: rouge | d1,rouge | voisins:14 | 17,noir,c2 (max 3)').setRequired(true))
     .addStringOption(o => o.setName('mode').setDescription('Mode de jeu').setRequired(false)
       .addChoices(
-        { name: 'Européenne (0-36)', value: 'european' },
-        { name: 'Américaine (0/00-36)', value: 'american' },
+        { name: 'Européen (0-36, RTP 97.3%)', value: 'european' },
+        { name: 'Américain (0/00-36, RTP 94.7%)', value: 'american' },
+        { name: 'Français (La Partage)', value: 'french' },
       )),
 
   async execute(interaction) {
@@ -501,7 +596,7 @@ module.exports = {
   aliases: ['rl', 'wheel', 'casino-roulette'],
   async run(message, args) {
     const rawMise = (args[0] || '').toLowerCase().trim();
-    if (!rawMise) return message.reply('❌ Usage : `&roulette <mise> <pari> [mode]`\nEx: `&roulette 100 rouge` ou `&roulette 100 rouge american`');
+    if (!rawMise) return message.reply('❌ Usage : `&roulette <mise> <pari> [mode]`\nEx: `&roulette 100 rouge` ou `&roulette 100 voisins:14 american`');
     const u   = db.getUser(message.author.id, message.guildId);
     const bal = u?.balance || 0;
     let mise;
@@ -511,7 +606,7 @@ module.exports = {
     if (!mise || mise < 5) return message.reply('❌ Usage : `&roulette <mise> <pari>`');
     const betType = args.slice(1).join(' ');
     if (!betType) return message.reply(`❌ Précise ton pari.\n\n${BET_HELP}`);
-    const mode = args[args.length - 1] === 'american' ? 'american' : 'european';
+    const mode = args[args.length - 1] === 'american' ? 'american' : args[args.length - 1] === 'french' ? 'french' : 'european';
     await playRoulette(message, message.author.id, message.guildId, mise, betType, mode);
   },
 
@@ -542,10 +637,30 @@ module.exports = {
       await interaction.deferUpdate();
       const tableEmbed = new EmbedBuilder()
         .setColor('#1A5276')
-        .setTitle('📋 Table des mises — Roulette Royale')
-        .setDescription(header() + '\n' + BET_HELP)
+        .setTitle('📋 TABLE DE ROULETTE COMPLÈTE')
+        .setDescription('```\n' + renderCompleteTable() + '\n```\n' + BET_HELP)
         .setFooter({ text: 'Utilise /roulette mise pari pour jouer' });
       await interaction.editReply({ embeds: [tableEmbed], components: [] });
+      return true;
+    }
+
+    if (cid.startsWith('rl_stats_')) {
+      const userId = cid.split('_')[2];
+      if (interaction.user.id !== userId) {
+        await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
+        return true;
+      }
+      await interaction.deferUpdate();
+      const stats = getSessionStats(interaction.guildId);
+      let statsText = stats
+        ? `🔴 **Rouges (derniers 50):** ${stats.redCount}\n⚫ **Noirs (derniers 50):** ${stats.blackCount}\n📊 **Taux rouge:** ${stats.winRate}%\n🔥 **Plus long série rouge:** ${stats.maxRedStreak}\n🧊 **Plus long série noir:** ${stats.maxBlackStreak}`
+        : 'Pas assez de données.';
+      const statsEmbed = new EmbedBuilder()
+        .setColor('#F39C12')
+        .setTitle('📊 STATISTIQUES SESSION')
+        .setDescription(statsText)
+        .setFooter({ text: 'Historique des 50 derniers tours' });
+      await interaction.editReply({ embeds: [statsEmbed], components: [] });
       return true;
     }
 
