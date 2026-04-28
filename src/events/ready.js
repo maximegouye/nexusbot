@@ -35,7 +35,13 @@ const {
   autoInit:             casinoMusicAutoInit,
   startBackgroundRetry: casinoMusicBackgroundRetry,
   onShardResume:        casinoMusicOnShardResume,
-} = require('../utils/casinoMusicManager');
+} = (() => {
+  try { return require('../utils/casinoMusicManager'); }
+  catch (e) {
+    console.warn('[CasinoMusic] Non disponible (modules audio optionnels manquants):', e.message);
+    return { autoInit: async () => {}, startBackgroundRetry: () => {}, onShardResume: async () => {} };
+  }
+})();
 
 // ── Workers automatiques ───────────────────────────────────
 const birthdayCheck        = require('../utils/birthdayCheck');
