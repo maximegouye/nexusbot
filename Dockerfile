@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Copier package.json en premier pour utiliser le cache Docker
 COPY package*.json ./
-RUN npm install --omit=optional --prefer-offline 2>&1 || npm install --omit=optional
+RUN npm install --omit=optional
 
 # Copier le reste du code
 COPY . .

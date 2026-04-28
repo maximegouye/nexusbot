@@ -126,31 +126,49 @@ if (!token) {
   process.exit(1);
 }
 
-async function connectWithRetry(maxRetries = 10) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+async function connectWithRetry() {
+  let attempt = 0;
+  while (true) {
+    attempt++;
     try {
       await client.login(token);
       console.log(`✅ NexusBot connecté en tant que ${client.user?.username}`);
-      return;
+      return; // Connexion réussie — sort de la boucle
     } catch (err) {
-      console.error(`❌ Erreur connexion Discord (tentative ${attempt}/${maxRetries}): ${err.message}`);
+      const msg = err.message || String(err);
 
-      // Session Discord épuisée → attendre jusqu'au reset
-      const resetMatch = err.message && err.message.match(/resets at (.+)/);
+      // Token invalide → log critique + attente longue (pas de crash)
+      if (msg.includes('TOKEN_INVALID') || msg.includes('Incorrect login') || msg.includes('disallowed intents')) {
+        console.error('');
+        console.error('🚨 ======================================================');
+        console.error('🚨  TOKEN DISCORD INVALIDE OU INTENTS MANQUANTS !');
+        console.error('🚨  → Va sur https://discord.com/developers/applications');
+        console.error('🚨  → Régénère le token du bot NexusBot');
+        console.error('🚨  → Mets à jour la variable TOKEN dans Railway > Variables');
+        console.error('🚨  → Ou vérifie que les Privileged Intents sont activés');
+        console.error('🚨 ======================================================');
+        console.error('');
+        console.error(`   Erreur: ${msg}`);
+        console.log('⏳ Nouvelle tentative dans 10 minutes...');
+        await new Promise(r => setTimeout(r, 600_000));
+        continue;
+      }
+
+      // Sessions épuisées → attendre jusqu'au reset
+      const resetMatch = msg.match(/resets at (.+)/);
       if (resetMatch) {
         const resetTime = new Date(resetMatch[1]).getTime();
-        const waitMs = Math.max(resetTime - Date.now() + 10000, 60000);
+        const waitMs = Math.max(resetTime - Date.now() + 10_000, 60_000);
         console.log(`⏳ Sessions Discord épuisées. Attente ${Math.ceil(waitMs / 1000)}s jusqu'au reset (${resetMatch[1]})...`);
         await new Promise(r => setTimeout(r, waitMs));
-      } else if (attempt < maxRetries) {
-        // Autre erreur : backoff exponentiel (30s, 60s, 120s…)
-        const delay = Math.min(30000 * Math.pow(2, attempt - 1), 600000);
-        console.log(`⏳ Nouvelle tentative dans ${Math.ceil(delay / 1000)}s...`);
-        await new Promise(r => setTimeout(r, delay));
-      } else {
-        console.error('❌ Nombre maximum de tentatives atteint. Arrêt.');
-        process.exit(1);
+        continue;
       }
+
+      // Erreur réseau ou autre → backoff exponentiel, max 10min, jamais d'exit
+      const delay = Math.min(30_000 * Math.pow(2, Math.min(attempt - 1, 5)), 600_000);
+      console.error(`❌ Erreur connexion Discord (tentative ${attempt}): ${msg}`);
+      console.log(`⏳ Nouvelle tentative dans ${Math.ceil(delay / 1000)}s...`);
+      await new Promise(r => setTimeout(r, delay));
     }
   }
 }
