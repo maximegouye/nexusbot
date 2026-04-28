@@ -5,8 +5,9 @@
 // Mise minimum: 50€, pas de limite max
 // ============================================================
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const db = require('../../database/db');
+const wheelImage = require('../../utils/wheelImage');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -128,10 +129,26 @@ async function playRoueFortune(source, userId, guildId, mise) {
 
   // ── Identifiant joueur (interaction OU message prefix) ───────
   const playerName = (source.user && source.user.username) || (source.author && source.author.username) || 'Joueur';
-
-  // ── Phase 0 : Compte à rebours dramatique 3·2·1 ────────────────
   const N = SEGMENTS.length;
   let startPos = Math.floor(Math.random() * N);
+
+  // ── MODE GIF : génère une vraie roue qui tourne (image animée Discord) ──
+  // Lance la génération en parallèle de l'embed initial pour gagner du temps.
+  let gifPromise = null;
+  if (wheelImage.isAvailable()) {
+    // Mappe SEGMENTS → format wheelImage (label court, color)
+    const drawSegs = SEGMENTS.map(s => ({
+      label: s.label,
+      shortLabel: s.label.replace(/×/g, 'x').slice(0, 12),
+      color: s.color,
+    }));
+    gifPromise = wheelImage.generateWheelGif(drawSegs, finalIdx, {
+      size: 380,
+      frames: 26,
+      rotations: 4,
+      holdFrames: 7,
+    }).catch(err => { console.error('[roue-fortune] GIF gen error:', err.message); return null; });
+  }
 
   const introEmbed = new EmbedBuilder()
     .setColor('#F39C12')
@@ -149,82 +166,91 @@ async function playRoueFortune(source, userId, guildId, mise) {
   if (isInteraction) msg = await source.editReply({ embeds: [introEmbed] });
   else               msg = await source.reply({ embeds: [introEmbed] });
 
-  for (const [cnt, col] of [['3️⃣','#FF4500'],['2️⃣','#FF8C00'],['1️⃣','#FFD700']]) {
-    await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor(col)
-      .setTitle(`🎡 LANCEMENT ${cnt}`)
+  // ── BRANCH GIF : envoie l'image animée et attend la fin ──
+  const gifBuffer = gifPromise ? await gifPromise : null;
+  if (gifBuffer) {
+    const file = new AttachmentBuilder(gifBuffer, { name: 'wheel.gif' });
+    const spinEmbed = new EmbedBuilder()
+      .setColor('#F39C12')
+      .setTitle('🎡 LA ROUE TOURNE...')
       .setDescription([
-        renderWheelFrame(startPos, false),
+        `**${playerName}** mise **${mise.toLocaleString()} ${coin}**`,
         '',
-        `## ${cnt}`,
-        `**${playerName}** · Mise : **${mise.toLocaleString()} ${coin}**`,
+        '🎬 *La grande roue est lancée — fixe le pointeur en haut !*',
       ].join('\n'))
-    ]}).catch(() => {});
-    await sleep(380);
-  }
+      .setImage('attachment://wheel.gif')
+      .setFooter({ text: 'Grande Roue Almosni Premium · Image animée' });
 
-  // ── PHASE PRINCIPALE : décélération ease-out qui CONVERGE PILE sur finalIdx ──
-  // distance = 4 tours complets + le delta jusqu'au segment final → ~52 crans
-  const totalRotations = 4;
-  const distance = totalRotations * N + ((finalIdx - startPos + N) % N);
-  const FRAMES = 16; // 16 frames d'animation lisses
-  let pos = startPos;
+    await msg.edit({ embeds: [spinEmbed], files: [file] }).catch(() => {});
 
-  for (let f = 1; f <= FRAMES; f++) {
-    const t = f / FRAMES;
-    const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
-    pos = (startPos + Math.round(distance * ease)) % N;
-    const isLast = (f === FRAMES);
-
-    // Phases visuelles selon t
-    let title, hint, color, barFill;
-    if (isLast) {
-      title = '🛑 ✨ ARRÊT ! ✨ 🛑';
-      hint = '🔔 **CLIC ! La roue s\'immobilise sur le segment !**';
-      color = '#FFD700';
-      barFill = 14;
-    } else if (t < 0.30) {
-      title = '🎡 ⚡ PLEINE VITESSE ⚡ 🎡';
-      hint = '🌀 **La roue tourne à toute allure !**';
-      color = '#E74C3C';
-      barFill = Math.round(t * 14);
-    } else if (t < 0.65) {
-      title = '🎡 💨 RALENTISSEMENT 💨 🎡';
-      hint = '⏳ **Le frottement ralentit la roue...**';
-      color = '#E67E22';
-      barFill = Math.round(t * 14);
-    } else if (t < 0.90) {
-      title = '🎡 🎯 DERNIERS CRANS 🎯 🎡';
-      hint = '😬 *Plus que quelques segments...*';
-      color = '#F39C12';
-      barFill = Math.round(t * 14);
-    } else {
-      title = '🎡 🤫 SUSPENSE ABSOLU 🤫 🎡';
-      hint = '🔇 *La roue hésite... va-t-elle s\'arrêter ici ?*';
-      color = '#2ECC71';
-      barFill = Math.round(t * 14);
+    // Durée du GIF: 26 frames + 7 hold ≈ ~5.5 sec d'animation + flash
+    // Délais : ease-out 40-260ms + hold 220ms × 7 = ~5.4s total
+    await sleep(5800);
+  } else {
+    // ── FALLBACK ASCII : ancienne animation textuelle ──
+    for (const [cnt, col] of [['3️⃣','#FF4500'],['2️⃣','#FF8C00'],['1️⃣','#FFD700']]) {
+      await msg.edit({ embeds: [new EmbedBuilder()
+        .setColor(col)
+        .setTitle(`🎡 LANCEMENT ${cnt}`)
+        .setDescription([
+          renderWheelFrame(startPos, false),
+          '',
+          `## ${cnt}`,
+          `**${playerName}** · Mise : **${mise.toLocaleString()} ${coin}**`,
+        ].join('\n'))
+      ]}).catch(() => {});
+      await sleep(380);
     }
 
-    const bar = '▓'.repeat(barFill) + '░'.repeat(14 - barFill);
+    const totalRotations = 4;
+    const distance = totalRotations * N + ((finalIdx - startPos + N) % N);
+    const FRAMES = 16;
+    let pos = startPos;
 
-    await msg.edit({ embeds: [new EmbedBuilder()
-      .setColor(color)
-      .setTitle(title)
-      .setDescription([
-        renderWheelFrame(pos, isLast),
-        '',
-        hint,
-        `\`${bar}\` ${Math.round(t * 100)}%`,
-      ].join('\n'))
-    ]}).catch(() => {});
+    for (let f = 1; f <= FRAMES; f++) {
+      const t = f / FRAMES;
+      const ease = 1 - Math.pow(1 - t, 3);
+      pos = (startPos + Math.round(distance * ease)) % N;
+      const isLast = (f === FRAMES);
 
-    // Délai ease-out aussi : court → long (créé la sensation de freinage)
-    const delay = Math.round(70 + 1100 * Math.pow(t, 1.6));
-    await sleep(delay);
+      let title, hint, color, barFill;
+      if (isLast) {
+        title = '🛑 ✨ ARRÊT ! ✨ 🛑';
+        hint = '🔔 **CLIC ! La roue s\'immobilise sur le segment !**';
+        color = '#FFD700'; barFill = 14;
+      } else if (t < 0.30) {
+        title = '🎡 ⚡ PLEINE VITESSE ⚡ 🎡';
+        hint = '🌀 **La roue tourne à toute allure !**';
+        color = '#E74C3C'; barFill = Math.round(t * 14);
+      } else if (t < 0.65) {
+        title = '🎡 💨 RALENTISSEMENT 💨 🎡';
+        hint = '⏳ **Le frottement ralentit la roue...**';
+        color = '#E67E22'; barFill = Math.round(t * 14);
+      } else if (t < 0.90) {
+        title = '🎡 🎯 DERNIERS CRANS 🎯 🎡';
+        hint = '😬 *Plus que quelques segments...*';
+        color = '#F39C12'; barFill = Math.round(t * 14);
+      } else {
+        title = '🎡 🤫 SUSPENSE ABSOLU 🤫 🎡';
+        hint = '🔇 *La roue hésite... va-t-elle s\'arrêter ici ?*';
+        color = '#2ECC71'; barFill = Math.round(t * 14);
+      }
+
+      const bar = '▓'.repeat(barFill) + '░'.repeat(14 - barFill);
+
+      await msg.edit({ embeds: [new EmbedBuilder()
+        .setColor(color).setTitle(title)
+        .setDescription([
+          renderWheelFrame(pos, isLast), '',
+          hint,
+          `\`${bar}\` ${Math.round(t * 100)}%`,
+        ].join('\n'))
+      ]}).catch(() => {});
+      const delay = Math.round(70 + 1100 * Math.pow(t, 1.6));
+      await sleep(delay);
+    }
+    await sleep(450);
   }
-  // À ce stade : pos === finalIdx (math garantie : ease(1)=1, distance ≡ Δ mod N)
-
-  await sleep(450);
 
   // ── Calcul du gain ──────────────────────────────────────────
   let gain = 0;
