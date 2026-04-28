@@ -113,14 +113,16 @@ async function showSolde(interaction, targetUser) {
 // ── Deposit / Withdraw helpers ─────────────────────────────────────────────
 
 async function doDeposit(interaction, amountRaw) {
-  await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  }
   const cfg  = db.getConfig(interaction.guildId);
   const sym  = cfg.currency_emoji || '€';
   const user = db.getUser(interaction.user.id, interaction.guildId);
 
-  let amount = amountRaw === 'tout' || amountRaw === 'all'
+  let amount = (amountRaw === 'tout' || amountRaw === 'all')
     ? user.balance
-    : parseInt(amountRaw);
+    : (typeof amountRaw === 'number' ? amountRaw : parseInt(amountRaw));
 
   if (isNaN(amount) || amount <= 0)
     return interaction.editReply({ content: '❌ Montant invalide.' }).catch(() => {});
@@ -145,14 +147,16 @@ async function doDeposit(interaction, amountRaw) {
 }
 
 async function doWithdraw(interaction, amountRaw) {
-  await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  }
   const cfg  = db.getConfig(interaction.guildId);
   const sym  = cfg.currency_emoji || '€';
   const user = db.getUser(interaction.user.id, interaction.guildId);
 
-  let amount = amountRaw === 'tout' || amountRaw === 'all'
+  let amount = (amountRaw === 'tout' || amountRaw === 'all')
     ? user.bank
-    : parseInt(amountRaw);
+    : (typeof amountRaw === 'number' ? amountRaw : parseInt(amountRaw));
 
   if (isNaN(amount) || amount <= 0)
     return interaction.editReply({ content: '❌ Montant invalide.' }).catch(() => {});
@@ -177,7 +181,9 @@ async function doWithdraw(interaction, amountRaw) {
 }
 
 async function doLoan(interaction, amountRaw) {
-  await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  }
   const cfg  = db.getConfig(interaction.guildId);
   const sym  = cfg.currency_emoji || '€';
   const user = db.getUser(interaction.user.id, interaction.guildId);
@@ -238,7 +244,9 @@ async function doLoan(interaction, amountRaw) {
 }
 
 async function doRepay(interaction) {
-  await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+  }
   const cfg  = db.getConfig(interaction.guildId);
   const sym  = cfg.currency_emoji || '€';
 
@@ -402,11 +410,11 @@ module.exports = {
     .addSubcommand(sub => sub
       .setName('deposer')
       .setDescription('Déposer des coins en banque (protégés du vol)')
-      .addStringOption(o => o.setName('montant').setDescription('Montant ou "tout"').setRequired(true)))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à déposer').setRequired(true).setMinValue(1)))
     .addSubcommand(sub => sub
       .setName('retirer')
       .setDescription('Retirer des coins de ta banque')
-      .addStringOption(o => o.setName('montant').setDescription('Montant ou "tout"').setRequired(true)))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant à retirer').setRequired(true).setMinValue(1)))
     .addSubcommand(sub => sub
       .setName('pret')
       .setDescription('Emprunter des coins (15% d\'intérêts, 48h max)')
@@ -431,11 +439,11 @@ module.exports = {
       }
 
       if (sub === 'deposer') {
-        return doDeposit(interaction, interaction.options.getString('montant').toLowerCase());
+        return doDeposit(interaction, interaction.options.getInteger('montant'));
       }
 
       if (sub === 'retirer') {
-        return doWithdraw(interaction, interaction.options.getString('montant').toLowerCase());
+        return doWithdraw(interaction, interaction.options.getInteger('montant'));
       }
 
       if (sub === 'pret') {
