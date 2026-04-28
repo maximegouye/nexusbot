@@ -2,11 +2,14 @@
 // ═══════════════════════════════════════════════
 // src/index.js — Point d'entrée NexusBot v2
 // ═══════════════════════════════════════════════
+console.log(`🚀 [${new Date().toISOString()}] src/index.js démarré (PID ${process.pid})`);
 require('dotenv').config();
+console.log(`✓ dotenv chargé`);
 
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
+console.log(`✓ discord.js chargé (version: ${require('discord.js').version || '?'})`);
 
 // ── Client Discord ──────────────────────────────
 const client = new Client({
@@ -131,6 +134,7 @@ async function connectWithRetry() {
   while (true) {
     attempt++;
     try {
+      console.log(`🔐 [${new Date().toISOString()}] Tentative ${attempt} de connexion à Discord...`);
       await client.login(token);
       console.log(`✅ NexusBot connecté en tant que ${client.user?.username}`);
       return; // Connexion réussie — sort de la boucle
