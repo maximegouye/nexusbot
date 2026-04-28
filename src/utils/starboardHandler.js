@@ -53,7 +53,7 @@ async function handleStarReaction(reaction, user, added) {
       // Mettre à jour
       try {
         const sm = await starCh.messages.fetch(existing.star_msg_id);
-        await sm.edit({ embeds: [embed] });
+        await sm.edit({ embeds: [embed] }).catch(() => {});
         db.db.prepare('UPDATE starboard_messages SET stars=? WHERE id=?').run(count, existing.id);
       } catch {}
     } else {

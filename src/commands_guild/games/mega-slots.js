@@ -521,7 +521,7 @@ async function handleComponent(interaction, cid) {
     const ownerId = parts[2]; const mise = parseInt(parts[3]);
     if (ownerId !== userId) { await interaction.editReply({ content: '❌ Pas ton jeu.', ephemeral: true }).catch(() => {}); return true; }
     await interaction.deferUpdate().catch(() => {});
-    const src = { editReply: d => interaction.message.edit(d), deferred: true };
+    const src = { editReply: d => interaction.message.edit(d).catch(() => {}), deferred: true };
     await playMegaSlots(src, userId, guildId, mise);
     return true;
   }
@@ -532,7 +532,7 @@ async function handleComponent(interaction, cid) {
     const ownerId = parts[2]; const mise = parseInt(parts[3]); const left = parseInt(parts[4]);
     if (ownerId !== userId) { await interaction.editReply({ content: '❌ Pas ton jeu.', ephemeral: true }).catch(() => {}); return true; }
     await interaction.deferUpdate().catch(() => {});
-    const src = { editReply: d => interaction.message.edit(d), deferred: true };
+    const src = { editReply: d => interaction.message.edit(d).catch(() => {}), deferred: true };
     await playMegaSlots(src, userId, guildId, mise, left);
     return true;
   }
@@ -564,7 +564,7 @@ async function handleComponent(interaction, cid) {
     const held = sess ? sess.heldCols.map(c => sess.reels[c]) : undefined;
     const heldMap = sess?.heldCols.reduce((m, c) => { m[c] = sess.reels[c]; return m; }, {});
     holdSessions.delete(key);
-    const src = { editReply: d => interaction.message.edit(d), deferred: true };
+    const src = { editReply: d => interaction.message.edit(d).catch(() => {}), deferred: true };
     await playMegaSlots(src, userId, guildId, mise, 0, heldMap, sess?.multiplierTrail || 1);
     return true;
   }

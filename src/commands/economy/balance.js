@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
 // -- Adaptateur prefixe->interaction
@@ -104,7 +104,31 @@ module.exports = {
     embed.setFooter({ text: `💡 /daily · /work · /crime · /crypto · /casino pour jouer !` })
       .setTimestamp();
 
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    // Boutons d'action rapide (uniquement si l'utilisateur consulte son propre profil)
+    const components = [];
+    if (target.id === interaction.user.id) {
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`banque_dep_${interaction.user.id}`)
+          .setLabel('📥 Déposer')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`banque_wit_${interaction.user.id}`)
+          .setLabel('📤 Retirer')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`banque_pret_${interaction.user.id}`)
+          .setLabel('💳 Prêt')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId(`banque_ref_${interaction.user.id}`)
+          .setLabel('🔄 Actualiser')
+          .setStyle(ButtonStyle.Secondary),
+      );
+      components.push(row);
+    }
+
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components });
   },
   name: 'balance',
   aliases: ["bal", "solde", "wallet", "argent", "portefeuille"],

@@ -600,7 +600,7 @@ async function handleComponent(interaction) {
 
   } else if (action === 'double') {
     const u2 = db.getUser(userId, guildId);
-    if (u2.balance < st.mise) return msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
+    if (!u2 || u2.balance < st.mise) return msg.edit({ embeds: [buildEmbed(st, '')], components: buildButtons(st) });
     db.addCoins(userId, guildId, -st.mise);
     st.mise *= 2;
     st.player.push(st.deck.pop());
@@ -610,7 +610,7 @@ async function handleComponent(interaction) {
 
   } else if (action === 'split') {
     const u2 = db.getUser(userId, guildId);
-    if (u2.balance < st.mise) return;
+    if (!u2 || u2.balance < st.mise) return;
     db.addCoins(userId, guildId, -st.mise);
     st.split  = [st.player.pop(), st.deck.pop()];
     st.player.push(st.deck.pop());
@@ -619,7 +619,7 @@ async function handleComponent(interaction) {
   } else if (action === 'insure') {
     const insureCost = Math.floor(st.mise / 2);
     const u2 = db.getUser(userId, guildId);
-    if (u2.balance < insureCost) return;
+    if (!u2 || u2.balance < insureCost) return;
     db.addCoins(userId, guildId, -insureCost);
     st.insurance = true;
     if (isBlackjack(st.dealer)) {

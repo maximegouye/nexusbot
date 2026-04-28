@@ -804,7 +804,7 @@ async function handleComponent(interaction) {
     const u = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 5) {
-      await interaction.reply({ content: '❌ Mise invalide (min 5 par ligne).', ephemeral: true });
+      await interaction.reply({ content: '❌ Mise invalide (min 5 par ligne).', ephemeral: true }).catch(() => {});
       return true;
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });

@@ -794,6 +794,19 @@ db.exec(`
     UNIQUE(guild_id, name)
   );
 
+  -- Prêts bancaires
+  CREATE TABLE IF NOT EXISTS loans (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id    TEXT NOT NULL,
+    user_id     TEXT NOT NULL,
+    amount      INTEGER NOT NULL,
+    interest    INTEGER NOT NULL,
+    total_due   INTEGER NOT NULL,
+    due_at      INTEGER NOT NULL,
+    paid        INTEGER DEFAULT 0,
+    created_at  INTEGER DEFAULT (strftime('%s','now'))
+  );
+
   -- AutoMod config (créée aussi dans automod.js, CREATE IF NOT EXISTS = safe)
   CREATE TABLE IF NOT EXISTS automod_config (
     guild_id        TEXT PRIMARY KEY,

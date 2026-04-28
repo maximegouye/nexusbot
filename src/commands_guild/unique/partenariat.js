@@ -206,7 +206,7 @@ module.exports = {
       'admin-demandes','admin-valider','admin-refuser','admin-ajouter','admin-retirer','admin-liste',
     ];
     if (ADMIN_SUBS.includes(sub) && !isAdmin(interaction.member)) {
-      return await interaction.editReply({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
     }
 
     // ── /partenariat liste ────────────────────────────────────

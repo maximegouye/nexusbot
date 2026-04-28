@@ -49,7 +49,7 @@ module.exports = {
       const vers = interaction.options.getString('vers');
       const depuis = interaction.options.getString('depuis') || 'auto';
 
-      if (texte.length > 1000) return interaction.editReply({ content: '❌ Texte trop long (1000 caractères max).', ephemeral: true });
+      if (texte.length > 1000) return interaction.reply({ content: '❌ Texte trop long (1000 caractères max).', ephemeral: true }).catch(() => {});
       await interaction.deferReply();
 
       try {

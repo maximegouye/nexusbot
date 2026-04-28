@@ -191,8 +191,6 @@ async function execute(interaction) {
       });
     }
 
-    await interaction.deferReply();
-
     // Deduct the bet from balance
     db.addCoins(userId, guildId, -mise);
 
@@ -310,8 +308,6 @@ async function handleComponent(interaction, customId) {
             ephemeral: true,
           });
         }
-
-        await interaction.deferReply();
 
         // Refund previous session if exists and collect/reset
         const gameId = customId.includes('_modal_') ? null : parts[3];
@@ -439,7 +435,7 @@ async function handleComponent(interaction, customId) {
               .setStyle(ButtonStyle.Secondary),
           ),
         ],
-      });
+      }).catch(() => {});
 
       db.addGameStat(userId, session.guildId, 'hilo', {
         won: true,
@@ -460,7 +456,7 @@ async function handleComponent(interaction, customId) {
           .setTitle('⚠️ Limite atteinte')
           .setDescription('Maximum 5 manches. Encaisse tes gains !');
 
-        await interaction.message.edit({ embeds: [embed] });
+        await interaction.message.edit({ embeds: [embed] }).catch(() => {})
         return true;
       }
 
@@ -517,7 +513,7 @@ async function handleComponent(interaction, customId) {
         await interaction.message.edit({
           embeds: [embed],
           components: [row],
-        });
+        }).catch(() => {});
 
         saveSession(userId, gameId, session);
       } else {
@@ -553,7 +549,7 @@ async function handleComponent(interaction, customId) {
                 .setStyle(ButtonStyle.Secondary),
             ),
           ],
-        });
+        }).catch(() => {});
 
         db.addGameStat(userId, session.guildId, 'hilo', {
           won: false,

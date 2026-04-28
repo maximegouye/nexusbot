@@ -439,7 +439,7 @@ module.exports = {
         roles:  cfg.roles,
         status: cfg.status,
       });
-      return interaction.editReply({
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [
           new EmbedBuilder()
             .setColor('#2ECC71')
@@ -458,7 +458,7 @@ module.exports = {
     if (sub === 'panel') {
       const cfg = getConfig(guildId);
       if (!cfg.log_channel) {
-        return interaction.editReply({ content: '❌ Configure d\'abord avec `/recrutement setup`.', ephemeral: true });
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Configure d\'abord avec `/recrutement setup`.', ephemeral: true });
       }
       await interaction.deferReply({ ephemeral: true });
 

@@ -28,13 +28,14 @@ const COMPONENT_ROUTES = {
   'reward_':      'recompenses',
   'pendu_':       'pendu',
   'poll_':        'poll',
+  // ── Banque (dépôt/retrait/prêt boutons + modals) ──────────
+  'banque_':      'banque',
   // ── Mega Slots VIP ─────────────────────────────────────────
   'ms_':          'mega-slots',
   // ── Jeux de casino (replay persistent) ─────────────────────
   'grattage_':    'grattage',
-  'tour_':        'tour',
+  // 'tour_' et 'des_' supprimés (fichiers .disabled)
   'plinko_':      'plinko',
-  'des_':         'des',
   'rf_':          'roue-fortune',
   'baccarat_':    'baccarat',
   'vp_':          'videopoker',
@@ -224,15 +225,16 @@ module.exports = {
             } catch (hcErr) {
               console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
               if (!interaction.replied && !interaction.deferred) {
-                await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
-              } else if (interaction.deferred) {
+                await interaction.reply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
+              } else {
                 await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}` }).catch(() => {});
               }
               return;
             }
           } else if (!interaction.isModalSubmit()) {
             // Bouton/menu sans handleComponent → collector expiré ou bouton orphelin
-            await interaction.editReply({ content: '⏱️ Cette interaction a expiré. Relancez la commande.', ephemeral: true }).catch(() => {});
+            const _respondExp = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+            await _respondExp({ content: '⏱️ Cette interaction a expiré. Relancez la commande.', ephemeral: true }).catch(() => {});
             return;
           }
           // Modal sans handleComponent → laisser passer vers execute()
@@ -240,6 +242,8 @@ module.exports = {
         } catch (e) {
           console.error(`[COMPONENT ${cid}] Erreur:`, e?.message || e);
           if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
+          } else {
             await interaction.editReply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
           }
         }

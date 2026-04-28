@@ -369,7 +369,7 @@ module.exports = {
       const u = db.getUser(userId, interaction.guildId);
       const newMise = parseMise(rawMise, u?.balance || 0);
       if (!newMise || newMise < 10) {
-        return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+        return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true }).catch(() => {});
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
       await playPlinko(interaction, userId, interaction.guildId, newMise, riskKey);

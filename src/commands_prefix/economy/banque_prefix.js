@@ -43,13 +43,14 @@ module.exports = {
   cooldown: 3,
 
   async run(message, args) {
-    const sub = args[0] || 'solde';
-    const montant = parseInt(args[1]) || 0;
+    const sub    = (args[0] || 'solde').toLowerCase();
+    const rawAmt = args[1] || null;
     const target = message.mentions.users.first() || null;
     const fake = mkFake(message, {
       getSubcommand: () => sub,
-      getInteger: (k) => k === 'montant' ? montant : null,
-      getUser: (k) => k === 'membre' ? target : null,
+      getString:  (k) => k === 'montant' ? rawAmt : null,
+      getInteger: (k) => k === 'montant' ? (parseInt(rawAmt) || 0) : null,
+      getUser:    (k) => k === 'membre' ? target : null,
     });
     await banqueCmd.execute(fake);
   },

@@ -17,10 +17,12 @@ async function updateStatsChannels(client) {
         const guild = await client.guilds.fetch(config.guild_id).catch(() => null);
         if (!guild) continue;
 
-        // Récupérer les infos du serveur
-        const memberCount = (await guild.members.fetch()).size;
-        const botCount = (await guild.members.fetch()).filter(m => m.user.bot).size;
-        const onlineCount = (await guild.members.fetch()).filter(
+        // Récupérer les infos du serveur (une seule fois)
+        const allMembers = await guild.members.fetch().catch(() => null);
+        if (!allMembers) continue;
+        const memberCount = allMembers.size;
+        const botCount = allMembers.filter(m => m.user.bot).size;
+        const onlineCount = allMembers.filter(
           m => m.presence && m.presence.status !== 'offline'
         ).size;
         const boostCount = guild.premiumSubscriptionCount || 0;

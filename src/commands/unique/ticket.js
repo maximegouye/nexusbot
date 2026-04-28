@@ -967,7 +967,7 @@ module.exports = {
       (cfg.ticket_staff_role && interaction.member.roles.cache.has(String(cfg.ticket_staff_role)));
     const reply = (opts) => {
       if (interaction.deferred || interaction.replied) return interaction.editReply(opts);
-      return interaction.editReply(opts);
+      return interaction.reply(opts);
     };
 
     // ══ SETUP ══════════════════════════════════════════════════════════════════

@@ -79,7 +79,7 @@ module.exports = {
     if (starEntry.starboard_msg_id) {
       try {
         const existing = await starChannel.messages.fetch(starEntry.starboard_msg_id);
-        await existing.edit({ content: starLabel, embeds: [embed] });
+        await existing.edit({ content: starLabel, embeds: [embed] }).catch(() => {});
       } catch {
         const sent = await starChannel.send({ content: starLabel, embeds: [embed] });
         db.db.prepare('UPDATE starboard SET starboard_msg_id = ? WHERE id = ?').run(sent.id, starEntry.id);
