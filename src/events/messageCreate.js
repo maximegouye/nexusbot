@@ -55,12 +55,21 @@ async function handleMessageXP(message) {
         ? message.guild.channels.cache.get(lvlCfg.level_channel)
         : message.channel;
       if (lvlChannel) {
+        // Vérifier si un palier de récompense est débloqué
+        let rewardAlert = '';
+        try {
+          const recompensesCmd = require('../commands_guild/economy/recompenses');
+          if (recompensesCmd.checkMilestones && recompensesCmd.checkMilestones(message.author.id, message.guild.id)) {
+            rewardAlert = '\n\n🎁 **Tu as des récompenses à réclamer !** → `/recompenses`';
+          }
+        } catch {}
+
         const embed = new EmbedBuilder()
           .setColor('#f1c40f')
           .setTitle('⬆️ Level Up !')
           .setDescription(
             `Félicitations <@${message.author.id}> ! Tu passes au **niveau ${newLevel}** 🎉\n\n` +
-            `Continue comme ça pour débloquer des récompenses !`
+            `Continue comme ça pour débloquer des récompenses !` + rewardAlert
           )
           .setThumbnail(message.author.displayAvatarURL({ size: 128 }))
           .setTimestamp();

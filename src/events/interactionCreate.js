@@ -25,6 +25,7 @@ const COMPONENT_ROUTES = {
   // ── Autres composants avec handleComponent ─────────────────
   'apply_':       'candidature',
   'rec_':         'recrutement',
+  'reward_':      'recompenses',
   'pendu_':       'pendu',
   'poll_':        'poll',
   // ── Jeux de casino (replay persistent) ─────────────────────
