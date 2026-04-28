@@ -11,8 +11,8 @@ module.exports = {
     try {
       await interaction.deferReply({ ephemeral: true });
       const target = interaction.targetMember || await interaction.guild.members.fetch(interaction.targetId).catch(() => null);
-      if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Membre introuvable.');
-      if (!target.moderatable) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Je ne peux pas mettre ce membre en timeout.');
+      if (!target) return await interaction.editReply('❌ Membre introuvable.');
+      if (!target.moderatable) return await interaction.editReply('❌ Je ne peux pas mettre ce membre en timeout.');
 
       try {
         const duration = 10 * 60 * 1000; // 10 minutes
@@ -20,11 +20,11 @@ module.exports = {
 
         // Log dans la DB
         try {
-          db.db.prepare('INSERT INTO warnings (guild_id, user_id, mod_id, reason, type) VALUES (?,?,?,?,?)')
-            .run(interaction.guildId, target.id, interaction.user.id, 'Timeout rapide 10min (menu contextuel)', 'timeout');
+          db.db.prepare('INSERT INTO warnings (guild_id, user_id, mod_id, reason) VALUES (?,?,?,?)')
+            .run(interaction.guildId, target.id, interaction.user.id, 'Timeout rapide 10min (menu contextuel)');
         } catch {}
 
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+        return await interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('Orange')
             .setTitle('🔇 Timeout appliqué')
             .setDescription(`<@${target.id}> est en timeout pour **10 minutes**.`)
@@ -32,7 +32,7 @@ module.exports = {
             .setTimestamp()
         ]});
       } catch (e) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(`❌ Erreur : ${e.message}`);
+        return await interaction.editReply(`❌ Erreur : ${e.message}`);
       }
     } catch (err) {
       console.error('[muter_user.js] execute error:', err?.message || err);

@@ -40,8 +40,8 @@ module.exports = {
 
     try {
     const opponent = interaction.options.getUser('adversaire');
-    if (opponent?.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
-    if (opponent?.bot && opponent.id !== interaction.client.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
+    if (opponent?.id === interaction.user.id) return await (interaction.deferred||interaction.replied ? interaction.editReply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true }) : interaction.reply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true }));
+    if (opponent?.bot && opponent.id !== interaction.client.user.id) return await (interaction.deferred||interaction.replied ? interaction.editReply({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true }) : interaction.reply({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true }));
 
     const isVsBot = !opponent;
     const p1 = interaction.user;
@@ -56,7 +56,7 @@ module.exports = {
       .setTitle('❌⭕ Morpion / Tic-Tac-Toe')
       .setDescription(`**❌ ${p1.username}** vs **⭕ ${p2.username}**\n\nC'est le tour de **${p1.username}** (❌)`);
 
-    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: buildComponents(board), fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied ? interaction.editReply({ embeds: [embed], components: buildComponents(board), fetchReply: true }) : interaction.reply({ embeds: [embed], components: buildComponents(board), fetchReply: true }));
 
     // Collecteur de boutons
     const collector = msg.createMessageComponentCollector({ time: 120000 });

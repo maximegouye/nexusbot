@@ -20,7 +20,11 @@ module.exports = {
 
     const panel = buildMainMenu(cfg, interaction.guild, interaction.user.id);
 
-    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true });
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply({ ...panel, ephemeral: true });
+    } else {
+      return interaction.reply({ ...panel, ephemeral: true });
+    }
   },
 };
 

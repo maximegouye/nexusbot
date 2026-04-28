@@ -131,7 +131,7 @@ function updateScoreboard(userId, winner, payout, mise) {
 async function playBaccaratGame(source, userId, guildId, mise, betOn) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   const betMap = { joueur: 'player', player: 'player', banquier: 'banker', banker: 'banker', egalite: 'tie', tie: 'tie', egal: 'tie' };
   const betKey = betMap[betOn.toLowerCase()];
@@ -302,7 +302,7 @@ async function handleComponent(interaction) {
         { name: '🏦 Banquier gagnées', value: sb.bankerWins.toString(), inline: true },
         { name: '🤝 Égalités', value: sb.ties.toString(), inline: true },
         { name: '📈 Taux de gain', value: `${winRate}%`, inline: true },
-        { name: '💰 Gain/Perte net', value: `${sb.netGain >= 0 ? '+' : ''}${sb.netGain} coins`, inline: true }
+        { name: '💰 Gain/Perte net', value: `${sb.netGain >= 0 ? '+' : ''}${sb.netGain} €`, inline: true }
       )
       .setFooter({ text: 'Stats en mémoire (session seulement)' });
     return interaction.reply({ embeds: [statsEmbed], ephemeral: true }).catch(() => {});
@@ -348,7 +348,7 @@ async function handleComponent(interaction) {
     const u = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 €).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     const betLabels = { player: 'joueur', banker: 'banquier', tie: 'egalite' };

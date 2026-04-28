@@ -103,10 +103,10 @@ module.exports = {
       .addUserOption(o => o.setName('joueur').setDescription('Destinataire').setRequired(true))
       .addStringOption(o => o.setName('item').setDescription('ID de l\'item à donner').setRequired(true))
       .addIntegerOption(o => o.setName('quantite').setDescription('Quantité à donner').setMinValue(1)))
-    .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre un item contre des coins')
+    .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre un item contre des €')
       .addStringOption(o => o.setName('item').setDescription('ID de l\'item à vendre').setRequired(true))
       .addIntegerOption(o => o.setName('prix').setDescription('Prix de vente').setRequired(true).setMinValue(1)))
-    .addSubcommand(s => s.setName('lootbox').setDescription('📦 Ouvrir une lootbox (50 coins)')
+    .addSubcommand(s => s.setName('lootbox').setDescription('📦 Ouvrir une lootbox (50 €)')
       .addIntegerOption(o => o.setName('quantite').setDescription('Nombre de lootbox à ouvrir').setMinValue(1))),
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
@@ -117,7 +117,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
 
     if (sub === 'voir') {
       const target = interaction.options.getUser('joueur') || interaction.user;

@@ -85,7 +85,7 @@ module.exports = {
         .setTitle(`${mood.emoji} Humeur enregistrée !`)
         .addFields(
           { name: 'Humeur',  value: `${mood.emoji} **${mood.label}** (${moodVal}/6)`, inline: true },
-          { name: '🪙 Bonus', value: existing ? '(Déjà enregistrée aujourd\'hui)' : '+25 coins !',          inline: true },
+          { name: '€ Bonus', value: existing ? '(Déjà enregistrée aujourd\'hui)' : '+25 € !',          inline: true },
         );
       if (note) embed.addFields({ name: '📝 Ta note', value: note, inline: false });
       embed.setFooter({ text: msg });

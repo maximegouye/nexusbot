@@ -68,7 +68,7 @@ module.exports = async (client) => {
           .setColor('#FF73FA')
           .setTitle('🎂 Joyeux Anniversaire !')
           .setDescription(`🎉 Toute l'équipe de **${guild.name}** souhaite un joyeux anniversaire à <@${b.user_id}> !${age ? ` **${age} ans** 🎈` : ''}`)
-          .addFields({ name: '🎁 Cadeau', value: `**+${gift} ${cfg.currency_name || 'Coins'}** ${cfg.currency_emoji || '🪙'}` })
+          .addFields({ name: '🎁 Cadeau', value: `**+${gift} ${cfg.currency_name || '€'}** ${cfg.currency_emoji || '€'}` })
           .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
           .setFooter({ text: 'NexusBot 🎂 — Bonne journée !' })
         ]

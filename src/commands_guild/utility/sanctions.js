@@ -137,7 +137,13 @@ module.exports = {
     if (sub === 'historique') {
       const target = interaction.options.getUser('membre');
       const cases  = db.db.prepare('SELECT * FROM sanctions WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 20').all(guildId, target.id);
-      if (!cases.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ **${target.username}** n\'a aucune sanction.`, ephemeral: true });
+      if (!cases.length) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: `✅ **${target.username}** n\'a aucune sanction.`, ephemeral: true });
+        } else {
+          return interaction.reply({ content: `✅ **${target.username}** n\'a aucune sanction.`, ephemeral: true });
+        }
+      }
 
       const typeEmoji = { warn:'⚠️', mute:'🔇', kick:'👢', ban:'🔨', note:'📝' };
       const lines = cases.map(c => {
@@ -147,40 +153,64 @@ module.exports = {
       });
 
       const warnActive = getWarnCount(guildId, target.id);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`📋 Sanctions de ${target.username}`)
         .setDescription(lines.join('\n\n'))
         .setThumbnail(target.displayAvatarURL())
         .setFooter({ text: `${cases.length} sanction(s) | ${warnActive} warn(s) actif(s)` })], ephemeral: true });
+      }
     }
 
     if (sub === 'supprimer') {
       const casId = parseInt(interaction.options.getString('cas_id'));
       const raison = interaction.options.getString('raison') || 'Suppression manuelle';
       const cas = db.db.prepare('SELECT * FROM sanctions WHERE id=? AND guild_id=?').get(casId, guildId);
-      if (!cas) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
+      if (!cas) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
+        } else {
+          return interaction.reply({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
+        }
+      }
       db.db.prepare('UPDATE sanctions SET active=0 WHERE id=?').run(casId);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`✅ Cas **#${casId}** (${cas.type} sur <@${cas.user_id}>) marqué comme inactif.\n📝 Raison : ${raison}`)
         .setFooter({ text: `Action par ${interaction.user.username}` })] });
+      }
     }
 
     if (sub === 'effacer_tout') {
-      if (interaction.options.getString('confirmation') !== 'CONFIRMER')
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
+      if (interaction.options.getString('confirmation') !== 'CONFIRMER') {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Tapez exactement **CONFIRMER**.', ephemeral: true });
+        }
+      }
       const target = interaction.options.getUser('membre');
       const count  = db.db.prepare('SELECT COUNT(*) as c FROM sanctions WHERE guild_id=? AND user_id=?').get(guildId, target.id);
       db.db.prepare('DELETE FROM sanctions WHERE guild_id=? AND user_id=?').run(guildId, target.id);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`🗑️ **${count.c}** sanction(s) de <@${target.id}> supprimées.`)] });
+      }
     }
 
     if (sub === 'cas') {
       const casId = parseInt(interaction.options.getString('cas_id'));
       const cas = db.db.prepare('SELECT * FROM sanctions WHERE id=? AND guild_id=?').get(casId, guildId);
-      if (!cas) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
+      if (!cas) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
+        } else {
+          return interaction.reply({ content: `❌ Cas #${casId} introuvable.`, ephemeral: true });
+        }
+      }
       const typeEmoji = { warn:'⚠️', mute:'🔇', kick:'👢', ban:'🔨', note:'📝' };
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle(`${typeEmoji[cas.type]||'📌'} Cas #${casId} — ${cas.type.toUpperCase()}`)
         .addFields(
           { name: '👤 Membre',     value: `<@${cas.user_id}>`, inline: true },
@@ -189,6 +219,7 @@ module.exports = {
           { name: '📅 Date',       value: `<t:${cas.created_at}:F>`, inline: true },
           { name: '📝 Raison',     value: cas.reason, inline: false },
         )], ephemeral: true });
+      }
     }
 
     if (sub === 'serveur') {
@@ -198,7 +229,8 @@ module.exports = {
       const kicks   = db.db.prepare("SELECT COUNT(*) as c FROM sanctions WHERE guild_id=? AND type='kick'").get(guildId);
       const bans    = db.db.prepare("SELECT COUNT(*) as c FROM sanctions WHERE guild_id=? AND type='ban'").get(guildId);
       const top5    = db.db.prepare("SELECT user_id, COUNT(*) as c FROM sanctions WHERE guild_id=? GROUP BY user_id ORDER BY c DESC LIMIT 5").all(guildId);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#E74C3C')
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C')
         .setTitle('📊 Statistiques des sanctions')
         .addFields(
           { name: '📈 Total',          value: `${total.c}`, inline: true },
@@ -209,6 +241,7 @@ module.exports = {
           { name: '🏆 Membres les + sanctionnés',
             value: top5.map((r,i) => `**${i+1}.** <@${r.user_id}> — ${r.c} cas`).join('\n') || 'Aucun', inline: false },
         )], ephemeral: true });
+      }
     }
 
     if (sub === 'seuils') {

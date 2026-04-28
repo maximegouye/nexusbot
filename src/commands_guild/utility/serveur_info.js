@@ -41,7 +41,11 @@ module.exports = {
         );
 
       if (guild.bannerURL()) embed.setImage(guild.bannerURL({ size: 1024 }));
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [embed] });
+      } else {
+        return interaction.reply({ embeds: [embed] });
+      }
     }
 
     if (sub === 'stats') {
@@ -52,43 +56,58 @@ module.exports = {
       const offline = guild.memberCount - online - idle - dnd;
 
       const cfg = db.getConfig(guild.id);
-      const coin = cfg.currency_emoji || '🪙';
+      const coin = cfg.currency_emoji || '€';
 
       // Stats de la base de données
       const dbStats = db.db.prepare('SELECT COUNT(*) as users, SUM(messages) as msgs, SUM(balance) as coins FROM users WHERE guild_id=?').get(guild.id);
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#7B2FBE').setTitle(`📊 Stats — ${guild.name}`)
-          .addFields(
-            { name: '🟢 En ligne', value: `**${online}**`, inline: true },
-            { name: '🟡 Absent', value: `**${idle}**`, inline: true },
-            { name: '🔴 Ne pas déranger', value: `**${dnd}**`, inline: true },
-            { name: '⚫ Hors ligne', value: `**${offline}**`, inline: true },
-            { name: '👤 Total membres', value: `**${guild.memberCount}**`, inline: true },
-            { name: '💬 Messages (DB)', value: `**${dbStats.msgs || 0}**`, inline: true },
-            { name: `${coin} Coins en circulation`, value: `**${dbStats.coins || 0}**`, inline: true },
-          )
-      ]});
+      const embed60 = new EmbedBuilder().setColor('#7B2FBE').setTitle(`📊 Stats — ${guild.name}`)
+        .addFields(
+          { name: '🟢 En ligne', value: `**${online}**`, inline: true },
+          { name: '🟡 Absent', value: `**${idle}**`, inline: true },
+          { name: '🔴 Ne pas déranger', value: `**${dnd}**`, inline: true },
+          { name: '⚫ Hors ligne', value: `**${offline}**`, inline: true },
+          { name: '👤 Total membres', value: `**${guild.memberCount}**`, inline: true },
+          { name: '💬 Messages (DB)', value: `**${dbStats.msgs || 0}**`, inline: true },
+          { name: `${coin} € en circulation`, value: `**${dbStats.coins || 0}**`, inline: true },
+        );
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [embed60] });
+      } else {
+        return interaction.reply({ embeds: [embed60] });
+      }
     }
 
     if (sub === 'roles') {
       const roles = guild.roles.cache.filter(r => r.id !== guild.id).sort((a, b) => b.position - a.position);
       const lines = roles.map(r => `${r} — ${r.members.size} membre(s)`).slice(0, 25).join('\n');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#7B2FBE').setTitle(`🎭 Rôles de ${guild.name} (${roles.size})`)
-          .setDescription(lines || 'Aucun rôle')
-          .setFooter({ text: roles.size > 25 ? `Affichage des 25 premiers sur ${roles.size}` : '' })
-      ], ephemeral: true });
+      const embed74 = new EmbedBuilder().setColor('#7B2FBE').setTitle(`🎭 Rôles de ${guild.name} (${roles.size})`)
+        .setDescription(lines || 'Aucun rôle')
+        .setFooter({ text: roles.size > 25 ? `Affichage des 25 premiers sur ${roles.size}` : '' });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [embed74], ephemeral: true });
+      } else {
+        return interaction.reply({ embeds: [embed74], ephemeral: true });
+      }
     }
 
     if (sub === 'emojis') {
       const emojis = guild.emojis.cache;
-      if (!emojis.size) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun emoji personnalisé.', ephemeral: true });
+      if (!emojis.size) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Aucun emoji personnalisé.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Aucun emoji personnalisé.', ephemeral: true });
+        }
+      }
       const lines = emojis.map(e => `${e} \`${e.name}\``).slice(0, 40).join(' ');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#F1C40F').setTitle(`😀 Emojis de ${guild.name} (${emojis.size})`)
-          .setDescription(lines)
-      ], ephemeral: true });
+      const embed84 = new EmbedBuilder().setColor('#F1C40F').setTitle(`😀 Emojis de ${guild.name} (${emojis.size})`)
+        .setDescription(lines);
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [embed84], ephemeral: true });
+      } else {
+        return interaction.reply({ embeds: [embed84], ephemeral: true });
+      }
     }
 
     if (sub === 'boosts') {
@@ -101,14 +120,17 @@ module.exports = {
       const level = guild.premiumTier;
       const info = boostLevels[level] || boostLevels[0];
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#FF73FA').setTitle(`💎 Boosts Nitro — ${guild.name}`)
-          .addFields(
-            { name: '🏆 Niveau', value: `${info.emoji} **${info.label}**`, inline: true },
-            { name: '💎 Boosts', value: `**${guild.premiumSubscriptionCount || 0}** / ${[0,2,7,14][level]} requis pour niveau suivant`, inline: true },
-            { name: '🎁 Avantages', value: info.perks, inline: false },
-          )
-      ]});
+      const embed94 = new EmbedBuilder().setColor('#FF73FA').setTitle(`💎 Boosts Nitro — ${guild.name}`)
+        .addFields(
+          { name: '🏆 Niveau', value: `${info.emoji} **${info.label}**`, inline: true },
+          { name: '💎 Boosts', value: `**${guild.premiumSubscriptionCount || 0}** / ${[0,2,7,14][level]} requis pour niveau suivant`, inline: true },
+          { name: '🎁 Avantages', value: info.perks, inline: false },
+        );
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [embed94] });
+      } else {
+        return interaction.reply({ embeds: [embed94] });
+      }
     }
     } catch (err) {
     console.error('[CMD] Erreur execute:', err?.message || err);

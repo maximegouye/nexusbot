@@ -7,7 +7,7 @@ module.exports = {
     .setDescription('🛒 Ajouter un article à la boutique')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true).setMaxLength(50))
-    .addIntegerOption(o => o.setName('prix').setDescription('Prix en coins').setRequired(true).setMinValue(1))
+    .addIntegerOption(o => o.setName('prix').setDescription('Prix en €').setRequired(true).setMinValue(1))
     .addStringOption(o => o.setName('description').setDescription('Description').setRequired(false).setMaxLength(200))
     .addStringOption(o => o.setName('emoji').setDescription('Emoji').setRequired(false).setMaxLength(10))
     .addRoleOption(o => o.setName('role').setDescription('Rôle Discord à donner').setRequired(false))
@@ -42,7 +42,7 @@ module.exports = {
         .setTitle(`✅ Article ajouté — ${emoji || '📦'} ${nom}`)
         .addFields(
           { name: '🆔 ID',           value: `**#${result.lastInsertRowid}**`,                       inline: true },
-          { name: '💰 Prix',         value: `**${prix.toLocaleString('fr-FR')}** ${cfg.currency_name || 'Coins'}`, inline: true },
+          { name: '💰 Prix',         value: `**${prix.toLocaleString('fr-FR')}** €`, inline: true },
           ...(role ? [{ name: '🎭 Rôle', value: `<@&${role.id}>`, inline: true }] : []),
           ...(duree ? [{ name: '⏱️ Durée', value: `${duree}h`, inline: true }] : []),
         )

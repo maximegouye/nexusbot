@@ -108,7 +108,7 @@ function buildGridComponents(state) {
     const cashRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`mines_cashout_${state.userId}`)
-        .setLabel(`💰 Cash-Out (×${calcMult(TOTAL_CELLS, state.minesCount, state.safeRevealed).toFixed(2)})`)
+        .setLabel(`€ Cash-Out (×${calcMult(TOTAL_CELLS, state.minesCount, state.safeRevealed).toFixed(2)})`)
         .setStyle(ButtonStyle.Primary)
         .setDisabled(state.safeRevealed === 0),
     );
@@ -131,7 +131,7 @@ function buildGridComponents(state) {
 }
 
 function buildEmbed(state, status = '') {
-  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '€';
   const mult  = calcMult(TOTAL_CELLS, state.minesCount, state.safeRevealed);
   const color = status === 'win'  ? '#2ECC71'
               : status === 'lose' ? '#E74C3C'
@@ -153,7 +153,7 @@ function buildEmbed(state, status = '') {
       { name: '💣 Mines cachees', value: `${state.minesCount} / ${TOTAL_CELLS}`, inline: true },
       { name: '💎 Cases sures revelees', value: `${state.safeRevealed}`, inline: true },
       { name: '📈 Multiplicateur', value: `×${mult.toFixed(2)}`, inline: true },
-      { name: '💰 Mise', value: `${state.mise} ${coin}`, inline: true },
+      { name: '€ Mise', value: `${state.mise} ${coin}`, inline: true },
     );
 
   // Ajouter les stats en temps réel si la partie est en cours
@@ -221,7 +221,7 @@ async function animateSafeReveal(msg, state) {
 async function playMines(source, userId, guildId, mise, minesCount) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (!u || u.balance < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
@@ -234,7 +234,7 @@ async function playMines(source, userId, guildId, mise, minesCount) {
     return source.reply(err);
   }
   if (mise < 10) {
-    const err = '❌ Mise minimale : **10 coins**.';
+    const err = '❌ Mise minimale : **10 €**.';
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -262,7 +262,7 @@ async function playMines(source, userId, guildId, mise, minesCount) {
     .setColor('#2C3E50')
     .setTitle('💣 Mines')
     .setDescription('⚙️ *Placement des mines...*\n\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜\n⬜ ⬜ ⬜ ⬜ ⬜')
-    .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true});
+    .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'€ Mise',value:`${mise} ${coin}`,inline:true});
 
   let msg;
   if (isInteraction) {
@@ -282,7 +282,7 @@ async function playMines(source, userId, guildId, mise, minesCount) {
   for (const { desc, color, delay } of introFrames) {
     await sleep(delay);
     await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle('💣 Mines').setDescription(desc)
-      .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'💰 Mise',value:`${mise} ${coin}`,inline:true})] });
+      .addFields({name:'💣 Mines',value:`${minesCount}`,inline:true},{name:'€ Mise',value:`${mise} ${coin}`,inline:true})] });
   }
   await sleep(300);
 
@@ -397,7 +397,7 @@ async function playMines(source, userId, guildId, mise, minesCount) {
 }
 
 // ─── Handle Component ──────────────────────────────────────
-async function handleComponent(interaction) {
+async function handleComponentMines(interaction) {
   const userId = interaction.user.id;
   const guildId = interaction.guildId;
 
@@ -454,7 +454,7 @@ async function handleComponent(interaction) {
     const u = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true }).catch(() => {});
+      return interaction.reply({ content: '❌ Mise invalide (min 10 €).', ephemeral: true }).catch(() => {});
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playMines(interaction, userId, guildId, newMise, minesCount);
@@ -501,5 +501,5 @@ module.exports = {
     await playMines(message, message.author.id, message.guildId, mise, mines);
   },
 
-  handleComponent,
+  handleComponent: handleComponentMines,
 };

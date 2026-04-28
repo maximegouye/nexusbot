@@ -50,7 +50,7 @@ module.exports = {
     const loadingEmbed = new EmbedBuilder()
       .setColor('#5865F2')
       .setTitle('📅 Récupération en cours...')
-      .setDescription('```\n🪙  ·  ·  ·  ·  ·  ·  ·  ·  ·\n```\n*Comptage des euros...*');
+      .setDescription('```\n€  ·  ·  ·  ·  ·  ·  ·  ·  ·\n```\n*Comptage des euros...*');
     let msg;
     try {
       msg = await replyFn({ embeds: [loadingEmbed] });

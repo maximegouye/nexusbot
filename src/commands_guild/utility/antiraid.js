@@ -91,12 +91,20 @@ module.exports = {
 
     if (sub === 'activer') {
       db.db.prepare('UPDATE antiraid_config SET enabled=1 WHERE guild_id=?').run(guildId);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('✅ Protection anti-raid **activée** !')] });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('✅ Protection anti-raid **activée** !')] });
+      } else {
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('✅ Protection anti-raid **activée** !')] });
+      }
     }
 
     if (sub === 'desactiver') {
       db.db.prepare('UPDATE antiraid_config SET enabled=0 WHERE guild_id=?').run(guildId);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('❌ Protection anti-raid **désactivée**.')] });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('❌ Protection anti-raid **désactivée**.')] });
+      } else {
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription('❌ Protection anti-raid **désactivée**.')] });
+      }
     }
 
     if (sub === 'configurer') {
@@ -110,7 +118,11 @@ module.exports = {
       if (action)  db.db.prepare('UPDATE antiraid_config SET action=? WHERE guild_id=?').run(action, guildId);
       if (age !== null) db.db.prepare('UPDATE antiraid_config SET account_age_min=? WHERE guild_id=?').run(age, guildId);
       if (log)     db.db.prepare('UPDATE antiraid_config SET log_channel=? WHERE guild_id=?').run(log.id, guildId);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('✅ Configuration anti-raid mise à jour !')] });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('✅ Configuration anti-raid mise à jour !')] });
+      } else {
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription('✅ Configuration anti-raid mise à jour !')] });
+      }
     }
 
     if (sub === 'lockdown') {
@@ -135,7 +147,11 @@ module.exports = {
           .setDescription(`Le serveur est en **lockdown d'urgence**.\n\n**Raison :** ${raison}\n**Salons verrouillés :** ${locked}\n\nUtilise \`/antiraid lockdown activer:false\` pour lever le lockdown.`)
           .setFooter({ text: `Activé par ${interaction.user.username}` })
           .setTimestamp();
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [embed] });
+        } else {
+          return interaction.reply({ embeds: [embed] });
+        }
       } else {
         // Déverrouiller
         let unlocked = 0;
@@ -147,13 +163,23 @@ module.exports = {
             } catch {}
           }
         }
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Lockdown levé ! ${unlocked} salons déverrouillés.`)] });
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Lockdown levé ! ${unlocked} salons déverrouillés.`)] });
+        } else {
+          return interaction.reply({ embeds: [new EmbedBuilder().setColor('#2ecc71').setDescription(`✅ Lockdown levé ! ${unlocked} salons déverrouillés.`)] });
+        }
       }
     }
 
     if (sub === 'historique') {
       const logs = db.db.prepare('SELECT * FROM antiraid_log WHERE guild_id=? ORDER BY created_at DESC LIMIT 20').all(guildId);
-      if (!logs.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune action anti-raid enregistrée.')] });
+      if (!logs.length) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune action anti-raid enregistrée.')] });
+        } else {
+          return interaction.reply({ embeds: [new EmbedBuilder().setColor('#95a5a6').setDescription('Aucune action anti-raid enregistrée.')] });
+        }
+      }
       const embed = new EmbedBuilder()
         .setColor('#e74c3c')
         .setTitle('📜 Historique Anti-Raid')
@@ -162,7 +188,11 @@ module.exports = {
           return `• <@${l.user_id}> — **${l.action}** — ${l.reason} *(${date})*`;
         }).join('\n'))
         .setTimestamp();
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [embed] });
+      } else {
+        return interaction.reply({ embeds: [embed] });
+      }
     }
 
     if (sub === 'test') {
@@ -171,7 +201,11 @@ module.exports = {
         .setTitle('🧪 Test Anti-Raid')
         .setDescription(`**Simulation de détection de raid :**\n\n✅ Système anti-raid : **${cfg.enabled ? 'Actif' : 'Inactif'}**\n✅ Seuil configuré : **${cfg.join_threshold} joins en ${cfg.join_window}s**\n✅ Action : **${cfg.action}**\n✅ Filtre age compte : **${cfg.account_age_min} jours**\n\n*Aucune action réelle prise — simulation uniquement.*`)
         .setTimestamp();
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [embed] });
+      } else {
+        return interaction.reply({ embeds: [embed] });
+      }
     }
   }
 };

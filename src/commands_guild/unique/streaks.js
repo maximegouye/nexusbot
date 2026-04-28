@@ -41,7 +41,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
     const today = getTodayStr();
     const yesterday = getYesterdayStr();
 

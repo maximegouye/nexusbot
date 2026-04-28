@@ -11,8 +11,8 @@ module.exports = {
       const msg = interaction.targetMessage;
       const text = msg.content;
 
-      if (!text) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Ce message ne contient pas de texte à traduire.');
-      if (text.length > 500) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Texte trop long (500 caractères max).');
+      if (!text) return await interaction.editReply('❌ Ce message ne contient pas de texte à traduire.');
+      if (text.length > 500) return await interaction.editReply('❌ Texte trop long (500 caractères max).');
 
       try {
         const https = require('https');
@@ -34,7 +34,7 @@ module.exports = {
           }).on('error', reject);
         });
 
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+        return await interaction.editReply({ embeds: [
           new EmbedBuilder()
             .setColor('#4285F4')
             .setTitle('🌍 Traduction')
@@ -45,7 +45,7 @@ module.exports = {
             .setFooter({ text: 'Traduction via Google Translate' })
         ]});
       } catch (e) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Erreur lors de la traduction. Réessaie dans un moment.');
+        return await interaction.editReply('❌ Erreur lors de la traduction. Réessaie dans un moment.');
       }
     } catch (err) {
       console.error('[traduire_message.js] execute error:', err?.message || err);

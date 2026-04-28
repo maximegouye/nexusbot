@@ -46,7 +46,7 @@ const activeQuizzes = new Map();
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('quiz')
-    .setDescription('🧠 Testez vos connaissances et gagnez des coins !')
+    .setDescription('🧠 Testez vos connaissances et gagnez des € !')
     .addSubcommand(s => s.setName('jouer').setDescription('🧠 Répondre à une question aléatoire')
       .addStringOption(o => o.setName('categorie').setDescription('Catégorie (optionnel)')
         .addChoices(
@@ -68,7 +68,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
 
     if (sub === 'jouer') {
       if (activeQuizzes.has(`${guildId}_${userId}`)) {
@@ -133,7 +133,7 @@ module.exports = {
           db.db.prepare('UPDATE quiz_stats SET wrong=wrong+1 WHERE guild_id=? AND user_id=?').run(guildId, userId);
         }
 
-        const answerDisplay = shuffled.map((c, idx) => {
+        const answerDisplay = game.shuffled.map((c, idx) => {
           const l = letters[idx];
           if (c === game.q.a) return `✅ **${l}. ${c}** ← Bonne réponse`;
           if (idx === answerIndex && !isCorrect) return `❌ ~~${l}. ${c}~~`;
@@ -147,7 +147,7 @@ module.exports = {
             .setDescription(answerDisplay)
             .addFields(
               { name: '⏱️ Temps', value: `${timeTaken}s`, inline: true },
-              { name: '💰 Gain', value: isCorrect ? `+${REWARD} ${coin}` : `0 ${coin}`, inline: true },
+              { name: '€ Gain', value: isCorrect ? `+${REWARD} ${coin}` : `0 ${coin}`, inline: true },
             )
         ], components: [] });
       });
@@ -176,7 +176,7 @@ module.exports = {
             { name: '✅ Bonnes réponses', value: `**${stats.correct}**`, inline: true },
             { name: '❌ Mauvaises', value: `**${stats.wrong}**`, inline: true },
             { name: '📊 Précision', value: `**${pct}%**`, inline: true },
-            { name: '💰 Total gagné', value: `**${stats.total_earned} ${coin}**`, inline: true },
+            { name: '€ Total gagné', value: `**${stats.total_earned} ${coin}**`, inline: true },
           )
       ], ephemeral: true });
     }
@@ -189,7 +189,7 @@ module.exports = {
       const medals = ['🥇', '🥈', '🥉'];
       const lines = top.map((s, i) => {
         const pct = Math.round(s.correct / (s.correct + s.wrong) * 100);
-        return `${medals[i] || `**${i+1}.**`} <@${s.user_id}> — ✅ ${s.correct} | 📊 ${pct}% | 💰 ${s.total_earned} ${coin}`;
+        return `${medals[i] || `**${i+1}.**`} <@${s.user_id}> — ✅ ${s.correct} | 📊 ${pct}% | € ${s.total_earned} ${coin}`;
       }).join('\n');
       return await interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#7B2FBE').setTitle('🏆 Champions du Quiz').setDescription(lines)

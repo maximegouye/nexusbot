@@ -84,7 +84,7 @@ module.exports = {
       fetchReply: true,
     });
 
-    db.db.prepare('UPDATE polls SET message_id = ? WHERE id = ?').run(msg.id, pollId);
+    await db.db.prepare('UPDATE polls SET message_id = ? WHERE id = ?').run(msg.id, pollId);
 
   },
 
@@ -118,7 +118,7 @@ module.exports = {
       // Ajouter le vote (sans doublon)
       if (!votes[choiceIdx].includes(interaction.user.id)) {
         votes[choiceIdx].push(interaction.user.id);
-        db.db.prepare('UPDATE polls SET votes = ? WHERE id = ?').run(JSON.stringify(votes), pollId);
+        await db.db.prepare('UPDATE polls SET votes = ? WHERE id = ?').run(JSON.stringify(votes), pollId);
       }
 
       // Reconstruire l'embed

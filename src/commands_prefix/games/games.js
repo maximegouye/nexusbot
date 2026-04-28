@@ -27,7 +27,7 @@ const commands = [
       const coin = cfg.currency_emoji || '€';
 
       const embed = new EmbedBuilder().setColor('#9B59B6').setTitle('🧠 Trivia !').setDescription(`**${qq.q}**\n\n⏱️ Vous avez **30 secondes** pour répondre !`).setFooter({ text: 'Tapez votre réponse dans le chat' });
-      await message.channel.send({ embeds: [embed] });
+      await message.reply({ embeds: [embed] });
 
       const filter = m => m.author.id === message.author.id;
       try {
@@ -35,12 +35,12 @@ const commands = [
         const answer = collected.first().content.toLowerCase().trim();
         if (qq.a.some(a => answer.includes(a))) {
           db.addCoins(message.author.id, message.guild.id, 75);
-          message.channel.send({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Bonne réponse !').setDescription(`**${qq.a[0]}** était la bonne réponse ! +75 ${coin}`)] });
+          message.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Bonne réponse !').setDescription(`**${qq.a[0]}** était la bonne réponse ! +75 ${coin}`)] });
         } else {
-          message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Faux !').setDescription(`La bonne réponse était : **${qq.a[0]}**`)] });
+          message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Faux !').setDescription(`La bonne réponse était : **${qq.a[0]}**`)] });
         }
       } catch {
-        message.channel.send(`⏱️ Temps écoulé ! La réponse était : **${qq.a[0]}**`);
+        message.reply(`⏱️ Temps écoulé ! La réponse était : **${qq.a[0]}**`);
       }
     }
   },
@@ -63,10 +63,10 @@ const commands = [
 
       if (result) {
         db.removeCoins(message.author.id, message.guild.id, bet);
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('💥 BANG !').setDescription(`🔫 La balle était là ! <@${message.author.id}> perd **${bet} ${coin}** !`)] });
+        message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('💥 BANG !').setDescription(`🔫 La balle était là ! <@${message.author.id}> perd **${bet} ${coin}** !`)] });
       } else {
         db.addCoins(message.author.id, message.guild.id, Math.floor(bet * 0.2));
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('😅 *Click* — Vous survivez !').setDescription(`🔫 Chambre vide ! +**${Math.floor(bet*0.2)} ${coin}** !`)] });
+        message.reply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('😅 *Click* — Vous survivez !').setDescription(`🔫 Chambre vide ! +**${Math.floor(bet*0.2)} ${coin}** !`)] });
       }
     }
   },
@@ -105,7 +105,7 @@ const commands = [
         return valid[Math.floor(Math.random()*valid.length)];
       }
 
-      const m = await message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🔴 Puissance 4 vs Bot').setDescription(renderBoard(board)+'\nTapez le numéro de colonne (1-7)')] });
+      const m = await message.reply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🔴 Puissance 4 vs Bot').setDescription(renderBoard(board)+'\nTapez le numéro de colonne (1-7)')] });
       let turns = 0;
       const filter = msg => msg.author.id===message.author.id && /^[1-7]$/.test(msg.content.trim());
 
@@ -149,7 +149,7 @@ const commands = [
         db.db.prepare(`CREATE TABLE IF NOT EXISTS lottery_tickets (id INTEGER PRIMARY KEY, guild_id TEXT, user_id TEXT, numbers TEXT, draw_id INTEGER, created_at INTEGER DEFAULT (strftime('%s','now')))`).run();
         db.db.prepare('INSERT INTO lottery_tickets (guild_id,user_id,numbers) VALUES(?,?,?)').run(message.guild.id, message.author.id, nums.join(','));
       }
-      message.channel.send({ embeds:[new EmbedBuilder().setColor('#F1C40F').setTitle('🎫 Ticket de Loterie !').setDescription(`Vos numéros : **${nums.join(' - ')}**\nGros lot accumulé avec chaque ticket vendu !`).setFooter({text:`Prix: ${price} ${coin} • Tirage à la prochaine heure ronde`})] });
+      message.reply({ embeds:[new EmbedBuilder().setColor('#F1C40F').setTitle('🎫 Ticket de Loterie !').setDescription(`Vos numéros : **${nums.join(' - ')}**\nGros lot accumulé avec chaque ticket vendu !`).setFooter({text:`Prix: ${price} ${coin} • Tirage à la prochaine heure ronde`})] });
     }
   },
   {
@@ -165,7 +165,7 @@ const commands = [
       const u = db.getUser(message.author.id, message.guild.id);
       if ((u.balance||0) < bet) return message.reply('❌ Solde insuffisant.');
       const current = Math.floor(Math.random()*98)+1;
-      await message.channel.send({ embeds:[new EmbedBuilder().setColor('#3498DB').setTitle('📈 Plus Haut ou Plus Bas ?').setDescription(`Le nombre actuel est **${current}** (sur 100)\nTapez \`haut\` ou \`bas\` !`).addFields({name:'💰 Mise',value:`${bet} ${coin}`,inline:true})] });
+      await message.reply({ embeds:[new EmbedBuilder().setColor('#3498DB').setTitle('📈 Plus Haut ou Plus Bas ?').setDescription(`Le nombre actuel est **${current}** (sur 100)\nTapez \`haut\` ou \`bas\` !`).addFields({name:'💰 Mise',value:`${bet} ${coin}`,inline:true})] });
       const filter = m=>m.author.id===message.author.id&&['haut','bas','h','b'].includes(m.content.toLowerCase());
       try {
         const col = await message.channel.awaitMessages({filter,max:1,time:15000,errors:['time']});
@@ -174,7 +174,7 @@ const commands = [
         const correct = (choice==='haut' && next>current) || (choice==='bas' && next<current);
         if (correct) db.addCoins(message.author.id, message.guild.id, bet);
         else db.removeCoins(message.author.id, message.guild.id, bet);
-        message.channel.send({ embeds:[new EmbedBuilder().setColor(correct?'#2ECC71':'#E74C3C').setTitle(correct?'✅ Correct !':'❌ Faux !').setDescription(`Vous avez dit **${choice}**, le nombre suivant était **${next}**\n${correct?`+${bet} ${coin}`:`-${bet} ${coin}`}`)] });
+        message.reply({ embeds:[new EmbedBuilder().setColor(correct?'#2ECC71':'#E74C3C').setTitle(correct?'✅ Correct !':'❌ Faux !').setDescription(`Vous avez dit **${choice}**, le nombre suivant était **${next}**\n${correct?`+${bet} ${coin}`:`-${bet} ${coin}`}`)] });
       } catch { message.reply('⏱️ Temps écoulé !'); }
     }
   },
@@ -191,7 +191,7 @@ const commands = [
       const coin = cfg.currency_emoji || '€';
       const hints = [`Il peut être petit ou grand.`,`Il existe dans de nombreuses variétés.`,`Beaucoup de gens l'ont vu ou utilisé.`];
       let tries = 0;
-      await message.channel.send({ embeds:[new EmbedBuilder().setColor('#9B59B6').setTitle('🧞 Akinator !').setDescription(`Je pense à quelque chose...\nDevinez en 3 essais ! Tapez votre réponse.`).setFooter({text:`Récompense: 150 ${coin}`})] });
+      await message.reply({ embeds:[new EmbedBuilder().setColor('#9B59B6').setTitle('🧞 Akinator !').setDescription(`Je pense à quelque chose...\nDevinez en 3 essais ! Tapez votre réponse.`).setFooter({text:`Récompense: 150 ${coin}`})] });
       const filter = m=>m.author.id===message.author.id;
       while (tries < 3) {
         try {
@@ -199,13 +199,13 @@ const commands = [
           const guess = col.first().content.toLowerCase().trim();
           if (guess===thing || thing.includes(guess) || guess.includes(thing)) {
             db.addCoins(message.author.id, message.guild.id, 150);
-            return message.channel.send({ embeds:[new EmbedBuilder().setColor('#2ECC71').setTitle('🎉 Bravo !').setDescription(`C'était **${thing}** ! +150 ${coin}`)] });
+            return message.reply({ embeds:[new EmbedBuilder().setColor('#2ECC71').setTitle('🎉 Bravo !').setDescription(`C'était **${thing}** ! +150 ${coin}`)] });
           }
           tries++;
           if (tries < 3) message.channel.send(`❌ Non ! Indice ${tries}: *${hints[tries-1]}* (${3-tries} essai(s) restant)`);
         } catch { break; }
       }
-      message.channel.send({ embeds:[new EmbedBuilder().setColor('#E74C3C').setTitle('😈 Perdu !').setDescription(`C'était **${thing}** !`)] });
+      message.reply({ embeds:[new EmbedBuilder().setColor('#E74C3C').setTitle('😈 Perdu !').setDescription(`C'était **${thing}** !`)] });
     }
   },
   {
@@ -223,7 +223,7 @@ const commands = [
       let currentHolder = holder;
       let ticks = 0;
 
-      const m = await message.channel.send({ embeds:[new EmbedBuilder().setColor('#E74C3C').setTitle('💣 LA BOMBE !').setDescription(`<@${currentHolder.id}> tient la bombe !\nMentionnez quelqu'un pour la passer !`).addFields({name:'💰 Pénalité',value:`${bet} ${coin}`,inline:true},{name:'⏱️ Temps',value:`~${timer}s`,inline:true})] });
+      const m = await message.reply({ embeds:[new EmbedBuilder().setColor('#E74C3C').setTitle('💣 LA BOMBE !').setDescription(`<@${currentHolder.id}> tient la bombe !\nMentionnez quelqu'un pour la passer !`).addFields({name:'💰 Pénalité',value:`${bet} ${coin}`,inline:true},{name:'⏱️ Temps',value:`~${timer}s`,inline:true})] });
 
       let exploded = false;
       const timeout = setTimeout(async () => {
@@ -255,7 +255,7 @@ const commands = [
       const used = new Set([current]);
       let score = 0;
 
-      await message.channel.send({ embeds:[new EmbedBuilder().setColor('#3498DB').setTitle('🔤 Chaîne de Mots').setDescription(`Mot de départ : **${current}**\nTrouvez un mot commençant par **${current.slice(-1).toUpperCase()}** !`).setFooter({text:'30s par mot • +10 coins par mot valide'})] });
+      await message.reply({ embeds:[new EmbedBuilder().setColor('#3498DB').setTitle('🔤 Chaîne de Mots').setDescription(`Mot de départ : **${current}**\nTrouvez un mot commençant par **${current.slice(-1).toUpperCase()}** !`).setFooter({text:'30s par mot • +10 € par mot valide'})] });
       const filter = m=>m.author.id===message.author.id&&m.content.length>2&&/^[a-zA-ZÀ-ÿ]+$/.test(m.content.trim());
       while (true) {
         try {
@@ -267,12 +267,12 @@ const commands = [
           db.addCoins(message.author.id, message.guild.id, 10);
           if (score >= 10) {
             db.addCoins(message.author.id, message.guild.id, 100);
-            return message.channel.send({ embeds:[new EmbedBuilder().setColor('#2ECC71').setTitle(`🏆 Score parfait ! ${score} mots`).setDescription(`+${score*10+100} ${coin} total !`)] });
+            return message.reply({ embeds:[new EmbedBuilder().setColor('#2ECC71').setTitle(`🏆 Score parfait ! ${score} mots`).setDescription(`+${score*10+100} ${coin} total !`)] });
           }
           await message.channel.send(`✅ **${word}** — Prochain : lettre **${word.slice(-1).toUpperCase()}** (${score} mots, +10 ${coin})`);
         } catch { break; }
       }
-      message.channel.send({ embeds:[new EmbedBuilder().setColor('#F39C12').setTitle(`🎮 Fin ! Score: ${score} mots`).setDescription(`+${score*10} ${coin} gagnés !`)] });
+      message.reply({ embeds:[new EmbedBuilder().setColor('#F39C12').setTitle(`🎮 Fin ! Score: ${score} mots`).setDescription(`+${score*10} ${coin} gagnés !`)] });
     }
   },
 ];

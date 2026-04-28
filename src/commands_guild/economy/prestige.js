@@ -6,11 +6,11 @@ const PRESTIGE_LEVELS = [
   { level: 1, required_xp_level: 50, color: '#CD7F32', emoji: '🥉', bonus: '+15% XP permanent', multiplier: 1.15 },
   { level: 2, required_xp_level: 50, color: '#C0C0C0', emoji: '🥈', bonus: '+30% XP permanent', multiplier: 1.30 },
   { level: 3, required_xp_level: 50, color: '#FFD700', emoji: '🥇', bonus: '+50% XP permanent', multiplier: 1.50 },
-  { level: 4, required_xp_level: 75, color: '#9B59B6', emoji: '💜', bonus: '+75% XP + 10% coins', multiplier: 1.75 },
-  { level: 5, required_xp_level: 75, color: '#3498DB', emoji: '💎', bonus: '+100% XP + 20% coins', multiplier: 2.00 },
-  { level: 6, required_xp_level: 100, color: '#E74C3C', emoji: '🔴', bonus: '+150% XP + 30% coins', multiplier: 2.50 },
-  { level: 7, required_xp_level: 100, color: '#FF6B6B', emoji: '🌟', bonus: '+200% XP + 50% coins', multiplier: 3.00 },
-  { level: 8, required_xp_level: 150, color: '#FFD700', emoji: '👑', bonus: 'LÉGENDAIRE — +300% XP + 100% coins', multiplier: 4.00 },
+  { level: 4, required_xp_level: 75, color: '#9B59B6', emoji: '💜', bonus: '+75% XP + 10% €', multiplier: 1.75 },
+  { level: 5, required_xp_level: 75, color: '#3498DB', emoji: '💎', bonus: '+100% XP + 20% €', multiplier: 2.00 },
+  { level: 6, required_xp_level: 100, color: '#E74C3C', emoji: '🔴', bonus: '+150% XP + 30% €', multiplier: 2.50 },
+  { level: 7, required_xp_level: 100, color: '#FF6B6B', emoji: '🌟', bonus: '+200% XP + 50% €', multiplier: 3.00 },
+  { level: 8, required_xp_level: 150, color: '#FFD700', emoji: '👑', bonus: 'LÉGENDAIRE — +300% XP + 100% €', multiplier: 4.00 },
 ];
 
 try {

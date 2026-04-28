@@ -98,7 +98,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
     const key = `${guildId}_${userId}`;
 
     if (sub === 'jouer') {
@@ -152,7 +152,7 @@ async function handleComponent(interaction, customId) {
   const guildId = interaction.guildId;
   const userId = interaction.user.id;
   const cfg = db.getConfig(guildId);
-  const coin = cfg?.currency_emoji || '🪙';
+  const coin = cfg?.currency_emoji || '€';
   const key = `${guildId}_${userId}`;
 
   const game = activeGames.get(key);

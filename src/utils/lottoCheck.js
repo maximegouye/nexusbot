@@ -40,15 +40,15 @@ module.exports = async (client) => {
         const ch = guild.channels.cache.get(announceCh);
         if (ch) {
           const { EmbedBuilder } = require('discord.js');
-          ch.send({
+          await ch.send({
             embeds: [new EmbedBuilder()
               .setColor('#FFD700')
               .setTitle('🎰 RÉSULTATS DU LOTO HEBDOMADAIRE !')
               .setDescription(
                 `🏆 **Félicitations à <@${winnerId}> !**\n\n` +
-                `💰 Gain : **${prize.toLocaleString('fr-FR')} 🪙**\n` +
+                `💰 Gain : **${prize.toLocaleString('fr-FR')} €**\n` +
                 `🎟️ Participants : **${entries.length}**\n` +
-                `🏦 Cagnotte totale : **${total.toLocaleString('fr-FR')} 🪙**`
+                `🏦 Cagnotte totale : **${total.toLocaleString('fr-FR')} €**`
               )
               .setFooter({ text: `Semaine ${week} | Reviens la semaine prochaine !` })
             ]

@@ -215,7 +215,7 @@ const CHANNEL_TOPICS = {
   'économie':       '💰 Gère ton argent, travaille et fais-toi une fortune — /daily /work /aide',
   'classement':     '🏆 Top joueurs — meilleur XP, meilleur solde, meilleures stats — /classement',
   'récompenses':    '🎁 Tes missions, récompenses quotidiennes et cadeaux — /missions /daily',
-  'boutique':       '🛍️ Dépense tes coins — items exclusifs, rôles premium et avantages — /shop',
+  'boutique':       '🛍️ Dépense tes € — items exclusifs, rôles premium et avantages — /shop',
   'casino':         '🎰 Zone casino — 15+ jeux : /slots /blackjack /crash /hippodrome et bien plus !',
 };
 

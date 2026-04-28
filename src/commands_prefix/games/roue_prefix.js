@@ -5,7 +5,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 
 const CASES = [
   { emoji: '💀', mult: 0,    weight: 30, label: '💀 Banqueroute' },
-  { emoji: '🪙', mult: 0.5,  weight: 22, label: '🪙 Moitié remboursée' },
+  { emoji: '💸', mult: 0.5,  weight: 22, label: '💸 Moitié remboursée' },
   { emoji: '⚖️', mult: 1,    weight: 18, label: '⚖️ Mise récupérée' },
   { emoji: '💰', mult: 1.5,  weight: 12, label: '💰 Petit gain ×1.5' },
   { emoji: '💎', mult: 2,    weight:  8, label: '💎 Gain ×2' },

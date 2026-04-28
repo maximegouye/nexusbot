@@ -48,14 +48,14 @@ module.exports = {
         .setThumbnail(interaction.guild.iconURL())
         .addFields(
           { name: '🎨 Couleur',       value: cfg.color || '#7B2FBE',                      inline: true },
-          { name: '💰 Monnaie',       value: `${cfg.currency_emoji || '🪙'} ${cfg.currency_name || 'Coins'}`, inline: true },
+          { name: '💰 Monnaie',       value: `${cfg.currency_emoji || '€'} ${cfg.currency_name || 'Euros'}`, inline: true },
           { name: '👋 Bienvenue',     value: cfg.welcome_channel ? `<#${cfg.welcome_channel}>` : '*Non configuré*', inline: true },
           { name: '🚪 Départ',        value: cfg.leave_channel   ? `<#${cfg.leave_channel}>` : '*Non configuré*', inline: true },
           { name: '⭐ Level-up',      value: cfg.level_channel   ? `<#${cfg.level_channel}>` : '*Non configuré*', inline: true },
           { name: '🤖 Auto-rôle',     value: cfg.autorole        ? `<@&${cfg.autorole}>` : '*Non configuré*',     inline: true },
           { name: '⭐ XP actif',      value: cfg.xp_enabled !== false ? '✅ Oui' : '❌ Non',                       inline: true },
           { name: '✖️ Multiplicateur', value: `×${cfg.xp_multiplier || 1}`,                                       inline: true },
-          { name: '🎉 Daily coins',   value: `**${cfg.daily_amount || 200}** coins`,                              inline: true },
+          { name: '🎉 Daily €',   value: `**${cfg.daily_amount || 200}** €`,                              inline: true },
         )
         .setFooter({ text: 'Utilise /setup <sous-commande> pour modifier' });
 
@@ -74,7 +74,7 @@ module.exports = {
       const emoji = interaction.options.getString('emoji');
       if (nom)   db.setConfig(interaction.guildId, 'currency_name', nom);
       if (emoji) db.setConfig(interaction.guildId, 'currency_emoji', emoji);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Monnaie : **${emoji || cfg.currency_emoji || '🪙'} ${nom || cfg.currency_name || 'Coins'}**.`)], ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Monnaie : **${emoji || cfg.currency_emoji || '€'} ${nom || cfg.currency_name || 'Euros'}**.`)], ephemeral: true });
     }
 
     if (sub === 'welcome') {

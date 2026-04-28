@@ -17,7 +17,7 @@ const commands = [
       const pct = Math.min(Math.floor((xp % xpNeeded) / xpNeeded * 100), 100);
       const bar = '█'.repeat(Math.floor(pct/10)) + '░'.repeat(10 - Math.floor(pct/10));
       const rank = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=? AND (level > ? OR (level = ? AND xp >= ?))').get(message.guild.id, level, level, xp);
-      message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle(`⭐ Niveau de ${target.username}`).setThumbnail(target.displayAvatarURL()).addFields(
+      message.reply({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle(`⭐ Niveau de ${target.username}`).setThumbnail(target.displayAvatarURL()).addFields(
         { name: '⭐ Niveau', value: `**${level}**`, inline: true },
         { name: '✨ XP', value: `**${xp}** / ${xpNeeded}`, inline: true },
         { name: '🏆 Rang', value: `**#${(rank?.c||0)+1}**`, inline: true },
@@ -34,7 +34,7 @@ const commands = [
     async run(message, args, client, db) {
       const top = db.db.prepare('SELECT user_id, level, xp FROM users WHERE guild_id=? ORDER BY level DESC, xp DESC LIMIT 10').all(message.guild.id);
       const desc = top.map((u, i) => `${['🥇','🥈','🥉'][i]||`**${i+1}.**`} <@${u.user_id}> — Niveau **${u.level||1}** (${u.xp||0} XP)`).join('\n');
-      message.channel.send({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('🏆 Top Niveaux').setDescription(desc||'Aucune donnée.')] });
+      message.reply({ embeds: [new EmbedBuilder().setColor('#7B2FBE').setTitle('🏆 Top Niveaux').setDescription(desc||'Aucune donnée.')] });
     }
   },
   {
@@ -60,7 +60,7 @@ const commands = [
       db.addCoins(target.id, message.guild.id, 50);
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
-      message.channel.send({ embeds: [new EmbedBuilder().setColor('#F1C40F').setDescription(`⭐ <@${message.author.id}> a donné +1 réputation à <@${target.id}>${reason ? ` — *${reason}*` : ''} ! (+50 ${coin})`)] });
+      message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setDescription(`⭐ <@${message.author.id}> a donné +1 réputation à <@${target.id}>${reason ? ` — *${reason}*` : ''} ! (+50 ${coin})`)] });
     }
   },
   {
@@ -89,7 +89,7 @@ const commands = [
       const now = Math.floor(Date.now() / 1000);
       const isActive = now - lastDaily < 172800;
       const fire = '🔥'.repeat(Math.min(streak, 7));
-      message.channel.send({ embeds: [new EmbedBuilder().setColor(isActive ? '#E67E22' : '#95A5A6').setTitle('🔥 Streak Quotidien').addFields({ name: '🔥 Streak', value: `**${streak}** jours ${fire}`, inline: true }, { name: '📅 Statut', value: isActive ? '✅ Actif' : '❌ Perdu si pas réclamé', inline: true })] });
+      message.reply({ embeds: [new EmbedBuilder().setColor(isActive ? '#E67E22' : '#95A5A6').setTitle('🔥 Streak Quotidien').addFields({ name: '🔥 Streak', value: `**${streak}** jours ${fire}`, inline: true }, { name: '📅 Statut', value: isActive ? '✅ Actif' : '❌ Perdu si pas réclamé', inline: true })] });
     }
   },
   {
@@ -105,7 +105,7 @@ const commands = [
       try { badgesRows = db.db.prepare('SELECT * FROM user_badges WHERE guild_id=? AND user_id=?').all(message.guild.id, target.id); } catch { badgesRows = []; }
       if (!badgesRows.length) return message.reply(`❌ **${target.username}** n'a pas encore de badge.`);
       const desc = badgesRows.map(b => `${b.emoji || '🏅'} **${b.name}** — *${b.description || ''}*`).join('\n');
-      message.channel.send({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`🏅 Badges de ${target.username}`).setDescription(desc)] });
+      message.reply({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle(`🏅 Badges de ${target.username}`).setDescription(desc)] });
     }
   },
   {
@@ -121,7 +121,7 @@ const commands = [
       try { items = db.db.prepare('SELECT ui.quantity, si.name, si.emoji FROM user_inventory ui JOIN shop_items si ON ui.item_id=si.id WHERE ui.guild_id=? AND ui.user_id=?').all(message.guild.id, target.id); } catch { items = []; }
       if (!items.length) return message.reply(`❌ **${target.username}** n'a rien dans son inventaire.`);
       const desc = items.map(i => `${i.emoji||'📦'} **${i.name}** × ${i.quantity}`).join('\n');
-      message.channel.send({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle(`🎒 Inventaire de ${target.username}`).setDescription(desc)] });
+      message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle(`🎒 Inventaire de ${target.username}`).setDescription(desc)] });
     }
   },
   {
@@ -169,7 +169,7 @@ const commands = [
       if (statut?.bio) fields.push({ name: '📝 Bio', value: statut.bio, inline: false });
       const embed = new EmbedBuilder().setColor(statut?.color || '#7B2FBE').setTitle(`👤 ${target.username}`).setThumbnail(target.displayAvatarURL({ size: 256 })).addFields(...fields).setTimestamp();
       if (statut?.status_text) embed.setDescription(`*"${statut.status_text}"*`);
-      message.channel.send({ embeds: [embed] });
+      message.reply({ embeds: [embed] });
     }
   },
 ];

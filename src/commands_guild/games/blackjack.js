@@ -162,8 +162,8 @@ function buildEmbed(state, status = '') {
               : '#2C3E50';
 
   const headerAscii = '╔═══════════════════════════════╗\n║      ⚡ BLACKJACK TABLE ⚡    ║\n╚═══════════════════════════════╝';
-  const cfg  = db.getConfig ? db.getConfig(state.guildId) : { currency_emoji: '🪙' };
-  const coin = cfg?.currency_emoji || '🪙';
+  const cfg  = db.getConfig ? db.getConfig(state.guildId) : { currency_emoji: '€' };
+  const coin = cfg?.currency_emoji || '€';
 
   const embed = new EmbedBuilder()
     .setColor(color)
@@ -249,7 +249,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ─── Fin de partie ────────────────────────────────────────
 async function endGame(msg, state, status, winMult = 0) {
   state.revealed = true;
-  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '€';
   let payout = 0;
 
   // Streak courant avant la mise à jour
@@ -362,7 +362,7 @@ async function dealerPlay(msg, state) {
 async function startGame(source, userId, guildId, mise, sideBet = 0) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   const totalCost = mise + sideBet;
 
@@ -377,7 +377,7 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
     return source.reply(errMsg);
   }
   if (mise < 10) {
-    const errMsg = '❌ Mise minimale : **10 coins**.';
+    const errMsg = '❌ Mise minimale : **10 €**.';
     if (isInteraction) return source.editReply({ content: errMsg, ephemeral: true });
     return source.reply(errMsg);
   }
@@ -395,7 +395,7 @@ async function startGame(source, userId, guildId, mise, sideBet = 0) {
 
   // Animation distribution cartes
   function quickEmbed(pCards, dCards, msg_txt) {
-    const cn = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+    const cn = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
     const streakData = getStreak(userId, guildId);
     const sl = streakLabel(streakData.streak);
     const e  = new EmbedBuilder()
@@ -541,7 +541,7 @@ async function handleComponent(interaction) {
     const u       = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 €).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await startGame(interaction, userId, interaction.guildId, newMise);
@@ -584,7 +584,7 @@ async function handleComponent(interaction) {
   const action  = parts[1];
   const msg     = interaction.message;
   const guildId = interaction.guildId;
-  const coin    = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin    = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (action === 'hit') {
     st.player.push(st.deck.pop());

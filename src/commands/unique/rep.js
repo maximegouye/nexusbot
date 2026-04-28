@@ -129,7 +129,8 @@ async function handleDonner(interaction) {
     .setTimestamp();
 
   if (milestones[newRep]) {
-    embed.setFooter({ text: `${target.username} a atteint une réputation de ${newRep} ! Bonus: +${milestones[newRep]} coins` });
+    embed.addFields({ name: '🎁 Bonus Débloqué', value: `+${milestones[newRep]} €`, inline: true });
+    embed.setFooter({ text: `${target.username} a atteint une réputation de ${newRep} ! Bonus débloqué` });
   }
 
   return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });

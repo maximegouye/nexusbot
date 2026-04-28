@@ -16,7 +16,7 @@ const CATCHES = [
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('pecher')
-    .setDescription('🎣 Lance ta ligne pour attraper du poisson et gagner des coins ! (cooldown 20min)'),
+    .setDescription('🎣 Lance ta ligne pour attraper du poisson et gagner des € ! (cooldown 20min)'),
   cooldown: 3,
 
   async execute(interaction) {

@@ -469,7 +469,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS crypto_market (
     symbol     TEXT PRIMARY KEY,
     name       TEXT NOT NULL,
-    emoji      TEXT DEFAULT '🪙',
+    emoji      TEXT DEFAULT '€',
     price      REAL NOT NULL,
     prev_price REAL NOT NULL,
     volatility REAL DEFAULT 0.02,
@@ -2175,6 +2175,29 @@ const helpers = {
 
   getCryptoPrice(symbol) {
     return db.prepare('SELECT * FROM crypto_market WHERE symbol = ?').get(symbol.toUpperCase());
+  },
+
+  getCryptoBySymbol(symbol) {
+    // Alias pour getCryptoPrice pour la compatibilité avec les appels existants
+    return db.prepare('SELECT * FROM crypto_market WHERE symbol = ?').get(symbol.toUpperCase());
+  },
+
+  setCryptoPrices(prices) {
+    // Met à jour les prix des cryptos depuis un objet {BTC: {price, change}, ...}
+    const tx = db.transaction(() => {
+      for (const [symbol, data] of Object.entries(prices)) {
+        if (!data || typeof data.price !== 'number') continue;
+        const change = data.change !== undefined ? data.change : 0;
+        db.prepare(`UPDATE crypto_market
+                    SET prev_price = price,
+                        price = ?,
+                        change_24h = ?,
+                        updated_at = strftime('%s','now')
+                    WHERE symbol = ?`)
+          .run(data.price, change, symbol.toUpperCase());
+      }
+    });
+    tx();
   },
 
   /**

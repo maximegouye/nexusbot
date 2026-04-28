@@ -117,7 +117,7 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('🏦 BRAQUAGE RÉUSSI ! 🎉')
-          .setDescription(`L'équipe a réussi à voler **${target.toLocaleString('fr-FR')} ${name}** !\n\n💰 Chaque membre reçoit **${perPerson.toLocaleString('fr-FR')} ${name}** ${emoji}`)
+          .setDescription(`L'équipe a réussi à voler **${target.toLocaleString('fr-FR')} ${emoji}** !\n\n💰 Chaque membre reçoit **${perPerson.toLocaleString('fr-FR')} ${emoji}**`)
           .addFields({ name: '👥 Équipe', value: [...participants.keys()].map(id => `<@${id}>`).join(', ') });
 
         if (i) await i.update({ embeds: [embed], components: [] });

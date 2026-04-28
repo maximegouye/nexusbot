@@ -76,7 +76,7 @@ module.exports = {
       const targetPerso = db.db.prepare('SELECT * FROM statuts_perso WHERE guild_id=? AND user_id=?').get(guildId, target.id);
       const u = db.getUser(target.id, guildId);
       const cfg = db.getConfig(guildId);
-      const coin = cfg.currency_emoji || '🪙';
+      const coin = cfg.currency_emoji || '€';
 
       const embed = new EmbedBuilder()
         .setColor(targetPerso?.color || '#7B2FBE')
@@ -86,7 +86,7 @@ module.exports = {
       if (targetPerso?.status_text) embed.setDescription(`*"${targetPerso.status_text}"*`);
       if (targetPerso?.bio) embed.addFields({ name: '📝 Bio', value: targetPerso.bio });
       if (!targetPerso || targetPerso.show_level) embed.addFields({ name: '⭐ Niveau', value: `**${u.level || 1}** (${u.xp || 0} XP)`, inline: true });
-      if (!targetPerso || targetPerso.show_balance) embed.addFields({ name: `💰 Solde`, value: `**${u.balance || 0} ${coin}**`, inline: true });
+      if (!targetPerso || targetPerso.show_balance) embed.addFields({ name: `€ Solde`, value: `**${u.balance || 0} €**`, inline: true });
 
       embed.addFields({ name: '📅 Sur Discord depuis', value: `<t:${Math.floor(target.createdAt.getTime()/1000)}:R>`, inline: true });
 

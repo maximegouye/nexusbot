@@ -194,7 +194,7 @@ async function buildCard(target, userData, rank, theme, W = 934, H = 282) {
     { label: 'XP TOTAL',   val: xp.toLocaleString('fr-FR') },
     { label: 'MESSAGES',   val: (userData.message_count || 0).toLocaleString('fr-FR') },
     { label: 'VOCAL (MIN)', val: (userData.voice_minutes || 0).toLocaleString('fr-FR') },
-    { label: 'MONNAIE',    val: `${(userData.balance || 0).toLocaleString('fr-FR')} 🪙` },
+    { label: 'MONNAIE',    val: `${(userData.balance || 0).toLocaleString('fr-FR')} €` },
   ];
 
   const statW = bw / stats.length;
@@ -283,14 +283,16 @@ module.exports = {
     if (createCanvas) {
       try {
         const buffer = await buildCard(target, userData, rank + 1, theme);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        return await (interaction.deferred||interaction.replied ? interaction.editReply({
           files: [new AttachmentBuilder(buffer, { name: `rank-${theme}.png` })]
-        });
+        }) : interaction.reply({
+          files: [new AttachmentBuilder(buffer, { name: `rank-${theme}.png` })]
+        }));
       } catch (err) {
         console.error('[RANK] Erreur canvas:', err.message);
         // fallback embed ci-dessous
         if (interaction.isRepliable() && !interaction.replied) {
-          (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
+          await (interaction.deferred||interaction.replied ? interaction.editReply({ content: '❌ Une erreur est survenue. Ressaie.', }) : interaction.reply({ content: '❌ Une erreur est survenue. Ressaie.', })).catch(() => {});
         }
       }
     }
@@ -316,10 +318,10 @@ module.exports = {
           value: `\`${bar}\`\n${Math.max(0, xp - xpStart).toLocaleString('fr-FR')} / ${Math.max(1, xpNeeded - xpStart).toLocaleString('fr-FR')} XP` },
         { name: '💬 Messages', value: `${(userData.message_count || 0).toLocaleString('fr-FR')}`, inline: true },
         { name: '🎙️ Vocal',   value: `${(userData.voice_minutes || 0)} min`, inline: true },
-        { name: '🪙 Monnaie', value: `${(userData.balance || 0).toLocaleString('fr-FR')}`, inline: true },
+        { name: '💶 Monnaie', value: `${(userData.balance || 0).toLocaleString('fr-FR')}`, inline: true },
       )
       .setFooter({ text: 'NexusBot v2 • Installe canvas pour les cartes visuelles' });
 
-    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    return await (interaction.deferred||interaction.replied ? interaction.editReply({ embeds: [embed] }) : interaction.reply({ embeds: [embed] }));
   }
 };

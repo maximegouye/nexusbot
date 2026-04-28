@@ -118,7 +118,7 @@ module.exports = {
     }
 
     if (sub === 'limite') {
-      const nb = interaction.options.getInteger('nombre');
+      const nb = interaction.options.getInteger('limite');
       await voiceChannel.setUserLimit(nb).catch(() => {});
       return interaction.editReply({ content: `✅ Limite mise à **${nb === 0 ? 'illimité' : nb}**.`, ephemeral: true });
     }

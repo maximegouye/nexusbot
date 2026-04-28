@@ -4,7 +4,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('lotto')
-    .setDescription('🎟️ Participe à la loterie hebdomadaire du serveur !'),
+    .setDescription('🎟️ Participe à la loterie hebdomadaire du serveur !')
+    .addIntegerOption(o => o.setName('tickets').setDescription('Nombre de tickets (1-100)').setMinValue(1).setMaxValue(100).setRequired(false)),
   cooldown: 5,
 
   async execute(interaction) {
@@ -14,10 +15,10 @@ module.exports = {
 
     try {
     const cfg    = db.getConfig(interaction.guildId);
-    const emoji  = cfg.currency_emoji || '🪙';
-    const name   = cfg.currency_name  || 'Coins';
+    const emoji  = cfg.currency_emoji || '€';
+    const name   = cfg.currency_name  || 'Euros';
     const qty    = interaction.options.getInteger('tickets') || 1;
-    const price  = 100; // 100 coins par ticket
+    const price  = 100; // 100 € par ticket
     const total  = qty * price;
     const user   = db.getUser(interaction.user.id, interaction.guildId);
 
@@ -37,7 +38,7 @@ module.exports = {
           { name: '🎟️ Tickets vendus',   value: `**${count}**`, inline: true },
           { name: '🎫 Tes tickets',       value: `**${myTickets}**`, inline: true },
         )
-        .setFooter({ text: `Ticket = ${price} ${name} • Tirage lundi 00:00` });
+        .setFooter({ text: `Ticket = ${price}€ • Tirage lundi 00:00` });
       return interaction.editReply({ embeds: [embed] });
     }
 

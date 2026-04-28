@@ -25,8 +25,8 @@ module.exports = {
     try {
     const sub   = interaction.options.getSubcommand();
     const cfg   = db.getConfig(interaction.guildId);
-    const emoji = cfg.currency_emoji || '🪙';
-    const name  = cfg.currency_name  || 'Coins';
+    const emoji = cfg.currency_emoji || '€';
+    const name  = cfg.currency_name  || 'Euros';
 
     // ── VOIR ──
     if (sub === 'voir') {
@@ -58,9 +58,11 @@ module.exports = {
 
     // ── VENDRE ──
     if (sub === 'vendre') {
-      const itemId = interaction.options.getInteger('item_id');
-      const price  = interaction.options.getInteger('prix');
+      const itemId = interaction.options.getInteger('item_id') || null;
+      const price  = interaction.options.getInteger('prix') || null;
       const qty    = interaction.options.getInteger('quantite') || 1;
+
+      if (!itemId || !price) return interaction.editReply({ content: '❌ Paramètres manquants.', ephemeral: true });
 
       const invItem = db.db.prepare(`
         SELECT i.*, s.name, s.emoji FROM inventory i
@@ -91,7 +93,8 @@ module.exports = {
 
     // ── ACHETER ──
     if (sub === 'acheter') {
-      const listingId = interaction.options.getInteger('annonce_id');
+      const listingId = interaction.options.getInteger('annonce_id') || null;
+      if (!listingId) return interaction.editReply({ content: '❌ ID annonce manquant.', ephemeral: true });
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id
@@ -132,7 +135,8 @@ module.exports = {
 
     // ── RETIRER ──
     if (sub === 'retirer') {
-      const listingId = interaction.options.getInteger('annonce_id');
+      const listingId = interaction.options.getInteger('annonce_id') || null;
+      if (!listingId) return interaction.editReply({ content: '❌ ID annonce manquant.', ephemeral: true });
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id

@@ -84,7 +84,7 @@ function addMegaStats(userId, guildId, won, amount, jackpot) {
 // ─── Symboles VIP ────────────────────────────────────────
 const MEGA_SYMBOLS = [
   // id,       emoji,  name,         weight, value (× mise)
-  ['coin',     '🪙',  'Pièce',       30,     1.5  ],
+  ['coin',     '💰',  'Pièce',       30,     1.5  ],
   ['gem',      '💠',  'Gemme',       22,     2    ],
   ['ruby',     '❤️',  'Rubis',       16,     3    ],
   ['emerald',  '💚',  'Émeraude',    12,     4    ],

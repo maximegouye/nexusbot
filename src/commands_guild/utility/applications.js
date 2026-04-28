@@ -55,7 +55,13 @@ module.exports = {
     const isAdmin = interaction.member.permissions.has(0x20n);
 
     if (sub === 'creer') {
-      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
+      if (!isAdmin) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+        }
+      }
       const nom = interaction.options.getString('nom').toLowerCase().replace(/\s+/g, '-');
       const salon = interaction.options.getChannel('salon');
       const logs = interaction.options.getChannel('logs');
@@ -65,7 +71,11 @@ module.exports = {
         db.db.prepare('INSERT INTO app_forms (guild_id, name, channel_id, log_channel, role_id) VALUES (?,?,?,?,?)')
           .run(guildId, nom, salon.id, logs.id, role?.id || null);
       } catch {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Un formulaire avec ce nom existe déjà.', ephemeral: true });
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Un formulaire avec ce nom existe déjà.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Un formulaire avec ce nom existe déjà.', ephemeral: true });
+        }
       }
 
       // Envoyer le panneau dans le salon
@@ -81,24 +91,49 @@ module.exports = {
 
       await salon.send({ embeds: [embed], components: [row] }).catch(() => {});
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Formulaire créé !')
-          .addFields(
-            { name: '📋 Nom', value: nom, inline: true },
-            { name: '📌 Salon', value: `${salon}`, inline: true },
-            { name: '📋 Logs', value: `${logs}`, inline: true },
-            { name: '🎭 Rôle si accepté', value: role ? `${role}` : 'Aucun', inline: true },
-          )
-          .setDescription('Ajoutez des questions avec `/candidature question`.')
-      ], ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [
+          new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Formulaire créé !')
+            .addFields(
+              { name: '📋 Nom', value: nom, inline: true },
+              { name: '📌 Salon', value: `${salon}`, inline: true },
+              { name: '📋 Logs', value: `${logs}`, inline: true },
+              { name: '🎭 Rôle si accepté', value: role ? `${role}` : 'Aucun', inline: true },
+            )
+            .setDescription('Ajoutez des questions avec `/candidature question`.')
+        ], ephemeral: true });
+      } else {
+        return interaction.reply({ embeds: [
+          new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Formulaire créé !')
+            .addFields(
+              { name: '📋 Nom', value: nom, inline: true },
+              { name: '📌 Salon', value: `${salon}`, inline: true },
+              { name: '📋 Logs', value: `${logs}`, inline: true },
+              { name: '🎭 Rôle si accepté', value: role ? `${role}` : 'Aucun', inline: true },
+            )
+            .setDescription('Ajoutez des questions avec `/candidature question`.')
+        ], ephemeral: true });
+      }
     }
 
     if (sub === 'question') {
-      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
+      if (!isAdmin) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+        }
+      }
       const nom = interaction.options.getString('formulaire').toLowerCase();
       const texte = interaction.options.getString('texte');
       const form = db.db.prepare('SELECT * FROM app_forms WHERE guild_id=? AND name=?').get(guildId, nom);
-      if (!form) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Formulaire \`${nom}\` introuvable.`, ephemeral: true });
+      if (!form) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: `❌ Formulaire \`${nom}\` introuvable.`, ephemeral: true });
+        } else {
+          return interaction.reply({ content: `❌ Formulaire \`${nom}\` introuvable.`, ephemeral: true });
+        }
+      }
 
       const questions = JSON.parse(form.questions || '[]');
 
@@ -106,31 +141,71 @@ module.exports = {
         const desc = questions.length
           ? questions.map((q, i) => `**${i+1}.** ${q}`).join('\n')
           : '*Aucune question pour l\'instant.*';
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          new EmbedBuilder().setColor('#7B2FBE').setTitle(`❓ Questions — ${nom}`)
-            .setDescription(desc)
-            .setFooter({ text: `${questions.length}/5 questions` })
-        ], ephemeral: true });
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            new EmbedBuilder().setColor('#7B2FBE').setTitle(`❓ Questions — ${nom}`)
+              .setDescription(desc)
+              .setFooter({ text: `${questions.length}/5 questions` })
+          ], ephemeral: true });
+        } else {
+          return interaction.reply({ embeds: [
+            new EmbedBuilder().setColor('#7B2FBE').setTitle(`❓ Questions — ${nom}`)
+              .setDescription(desc)
+              .setFooter({ text: `${questions.length}/5 questions` })
+          ], ephemeral: true });
+        }
       }
 
-      if (questions.length >= 5) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 5 questions par formulaire.', ephemeral: true });
+      if (questions.length >= 5) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Maximum 5 questions par formulaire.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Maximum 5 questions par formulaire.', ephemeral: true });
+        }
+      }
       questions.push(texte);
       db.db.prepare('UPDATE app_forms SET questions=? WHERE guild_id=? AND name=?').run(JSON.stringify(questions), guildId, nom);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Question **${questions.length}** ajoutée : *${texte}*`, ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ content: `✅ Question **${questions.length}** ajoutée : *${texte}*`, ephemeral: true });
+      } else {
+        return interaction.reply({ content: `✅ Question **${questions.length}** ajoutée : *${texte}*`, ephemeral: true });
+      }
     }
 
     if (sub === 'supprimer_question') {
-      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
+      if (!isAdmin) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+        }
+      }
       const nom = interaction.options.getString('formulaire').toLowerCase();
       const num = interaction.options.getInteger('numero') - 1;
       const form = db.db.prepare('SELECT * FROM app_forms WHERE guild_id=? AND name=?').get(guildId, nom);
-      if (!form) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Formulaire introuvable.', ephemeral: true });
+      if (!form) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Formulaire introuvable.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Formulaire introuvable.', ephemeral: true });
+        }
+      }
 
       const questions = JSON.parse(form.questions || '[]');
-      if (num < 0 || num >= questions.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Numéro invalide.', ephemeral: true });
+      if (num < 0 || num >= questions.length) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Numéro invalide.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Numéro invalide.', ephemeral: true });
+        }
+      }
       questions.splice(num, 1);
       db.db.prepare('UPDATE app_forms SET questions=? WHERE guild_id=? AND name=?').run(JSON.stringify(questions), guildId, nom);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Question supprimée. (${questions.length} restantes)`, ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ content: `✅ Question supprimée. (${questions.length} restantes)`, ephemeral: true });
+      } else {
+        return interaction.reply({ content: `✅ Question supprimée. (${questions.length} restantes)`, ephemeral: true });
+      }
     }
 
     if (sub === 'postuler') {
@@ -140,21 +215,39 @@ module.exports = {
 
     if (sub === 'liste') {
       const forms = db.db.prepare('SELECT * FROM app_forms WHERE guild_id=?').all(guildId);
-      if (!forms.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun formulaire sur ce serveur.', ephemeral: true });
+      if (!forms.length) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Aucun formulaire sur ce serveur.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Aucun formulaire sur ce serveur.', ephemeral: true });
+        }
+      }
 
       const desc = forms.map(f => {
         const qs = JSON.parse(f.questions || '[]').length;
         return `**${f.name}** — ${f.status === 'open' ? '🟢 Ouvert' : '🔴 Fermé'} • ${qs} question(s)`;
       }).join('\n');
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#7B2FBE').setTitle('📋 Formulaires disponibles').setDescription(desc)
-      ], ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [
+          new EmbedBuilder().setColor('#7B2FBE').setTitle('📋 Formulaires disponibles').setDescription(desc)
+        ], ephemeral: true });
+      } else {
+        return interaction.reply({ embeds: [
+          new EmbedBuilder().setColor('#7B2FBE').setTitle('📋 Formulaires disponibles').setDescription(desc)
+        ], ephemeral: true });
+      }
     }
 
     if (sub === 'voir') {
       const subs = db.db.prepare('SELECT * FROM app_submissions WHERE guild_id=? AND user_id=? ORDER BY submitted_at DESC LIMIT 10').all(guildId, userId);
-      if (!subs.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous n\'avez aucune candidature.', ephemeral: true });
+      if (!subs.length) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Vous n\'avez aucune candidature.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Vous n\'avez aucune candidature.', ephemeral: true });
+        }
+      }
 
       const desc = subs.map(s => {
         const emoji = s.status === 'accepted' ? '✅' : s.status === 'rejected' ? '❌' : '⏳';
@@ -162,20 +255,42 @@ module.exports = {
         return `${emoji} **${s.form_name}** — ${s.status} • ${date}`;
       }).join('\n');
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#7B2FBE').setTitle('📋 Mes candidatures').setDescription(desc)
-      ], ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [
+          new EmbedBuilder().setColor('#7B2FBE').setTitle('📋 Mes candidatures').setDescription(desc)
+        ], ephemeral: true });
+      } else {
+        return interaction.reply({ embeds: [
+          new EmbedBuilder().setColor('#7B2FBE').setTitle('📋 Mes candidatures').setDescription(desc)
+        ], ephemeral: true });
+      }
     }
 
     if (sub === 'fermer') {
-      if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
+      if (!isAdmin) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Admin uniquement.', ephemeral: true });
+        }
+      }
       const nom = interaction.options.getString('formulaire').toLowerCase();
       const form = db.db.prepare('SELECT * FROM app_forms WHERE guild_id=? AND name=?').get(guildId, nom);
-      if (!form) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Formulaire introuvable.', ephemeral: true });
+      if (!form) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Formulaire introuvable.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Formulaire introuvable.', ephemeral: true });
+        }
+      }
 
       const newStatus = form.status === 'open' ? 'closed' : 'open';
       db.db.prepare('UPDATE app_forms SET status=? WHERE guild_id=? AND name=?').run(newStatus, guildId, nom);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Formulaire **${nom}** : ${newStatus === 'open' ? '🟢 Ouvert' : '🔴 Fermé'}.`, ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ content: `✅ Formulaire **${nom}** : ${newStatus === 'open' ? '🟢 Ouvert' : '🔴 Fermé'}.`, ephemeral: true });
+      } else {
+        return interaction.reply({ content: `✅ Formulaire **${nom}** : ${newStatus === 'open' ? '🟢 Ouvert' : '🔴 Fermé'}.`, ephemeral: true });
+      }
     }
   }
 };
@@ -183,15 +298,39 @@ module.exports = {
 async function handleApplication(interaction, guildId, userId, nom) {
   const db = require('../../database/db');
   const form = db.db.prepare('SELECT * FROM app_forms WHERE guild_id=? AND name=?').get(guildId, nom);
-  if (!form) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Formulaire \`${nom}\` introuvable.`, ephemeral: true });
-  if (form.status === 'closed') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce formulaire est actuellement fermé.', ephemeral: true });
+  if (!form) {
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply({ content: `❌ Formulaire \`${nom}\` introuvable.`, ephemeral: true });
+    } else {
+      return interaction.reply({ content: `❌ Formulaire \`${nom}\` introuvable.`, ephemeral: true });
+    }
+  }
+  if (form.status === 'closed') {
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply({ content: '❌ Ce formulaire est actuellement fermé.', ephemeral: true });
+    } else {
+      return interaction.reply({ content: '❌ Ce formulaire est actuellement fermé.', ephemeral: true });
+    }
+  }
 
   const questions = JSON.parse(form.questions || '[]');
-  if (!questions.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce formulaire n\'a pas encore de questions.', ephemeral: true });
+  if (!questions.length) {
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply({ content: '❌ Ce formulaire n\'a pas encore de questions.', ephemeral: true });
+    } else {
+      return interaction.reply({ content: '❌ Ce formulaire n\'a pas encore de questions.', ephemeral: true });
+    }
+  }
 
   // Vérifier si déjà une candidature en attente
   const existing = db.db.prepare("SELECT * FROM app_submissions WHERE guild_id=? AND form_name=? AND user_id=? AND status='pending'").get(guildId, nom, userId);
-  if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà une candidature en attente pour ce formulaire.', ephemeral: true });
+  if (existing) {
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply({ content: '❌ Vous avez déjà une candidature en attente pour ce formulaire.', ephemeral: true });
+    } else {
+      return interaction.reply({ content: '❌ Vous avez déjà une candidature en attente pour ce formulaire.', ephemeral: true });
+    }
+  }
 
   // Créer un modal avec jusqu'à 5 questions
   const modal = new ModalBuilder().setCustomId(`appmodal_${nom}`).setTitle(`Candidature : ${nom}`);

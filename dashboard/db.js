@@ -109,12 +109,15 @@ module.exports = {
 
   // Transactions récentes (si table existe)
   getRecentTransactions(guildId = null, limit = 100) {
-    const where = guildId ? 'WHERE guild_id = ?' : '';
-    const params = guildId ? [guildId, limit] : [limit];
-    return safeAll(
-      `SELECT * FROM transactions ${where} ORDER BY created_at DESC LIMIT ?`,
-      params,
-    );
+    let sql, params;
+    if (guildId) {
+      sql = 'SELECT * FROM transactions WHERE guild_id = ? ORDER BY created_at DESC LIMIT ?';
+      params = [guildId, limit];
+    } else {
+      sql = 'SELECT * FROM transactions ORDER BY created_at DESC LIMIT ?';
+      params = [limit];
+    }
+    return safeAll(sql, params);
   },
 
   // Distribution des richesses (pour graphiques)

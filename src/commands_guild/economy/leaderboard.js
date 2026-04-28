@@ -33,7 +33,7 @@ module.exports = {
       .setName('categorie')
       .setDescription('Catégorie du classement')
       .addChoices(
-        { name: '💰 Richesse (coins)',   value: 'coins' },
+        { name: '💰 Richesse (€)',   value: 'coins' },
         { name: '⭐ Expérience (XP)',    value: 'xp' },
         { name: '🏆 Niveau',            value: 'niveau' },
         { name: '❤️ Réputation',        value: 'reputation' },
@@ -45,7 +45,7 @@ module.exports = {
     const cat    = interaction.options.getString('categorie') || 'coins';
     const guildId = interaction.guildId;
     const cfg    = db.getConfig ? db.getConfig(guildId) : null;
-    const coin   = cfg?.currency_emoji || '🪙';
+    const coin   = cfg?.currency_emoji || '€';
     const info   = CATEGORIES[cat];
 
     let rows, valueGetter, valueSuffix;
@@ -217,7 +217,7 @@ module.exports = {
     const cat    = catMap[args[0]?.toLowerCase()] || 'coins';
     const guildId = message.guildId;
     const cfg    = db.getConfig ? db.getConfig(guildId) : null;
-    const coin   = cfg?.currency_emoji || '🪙';
+    const coin   = cfg?.currency_emoji || '€';
     const info   = CATEGORIES[cat];
 
     let rows, valueGetter, valueSuffix;

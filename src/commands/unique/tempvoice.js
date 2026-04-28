@@ -228,7 +228,8 @@ async function handleRename(interaction, guildId, userId) {
 }
 
 async function handleLimit(interaction, guildId, userId) {
-  const limit = parseInt(interaction.options.getString('nombre'));
+  const limitStr = interaction.options.getString('nombre');
+  const limit = limitStr ? parseInt(limitStr) : 0;
 
   const tempChannel = db.db.prepare('SELECT channel_id FROM temp_channels WHERE guild_id = ? AND owner_id = ?')
     .get(guildId, userId);

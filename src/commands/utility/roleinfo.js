@@ -79,7 +79,7 @@ module.exports = {
       embed.addFields({ name: '🔑 Permissions notables', value: perms.slice(0, 10).join('\n') });
     }
 
-    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (err) {
     console.error('[CMD] Erreur execute:', err?.message || err);
     const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
@@ -87,7 +87,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }},

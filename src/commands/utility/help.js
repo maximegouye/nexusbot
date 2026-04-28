@@ -114,7 +114,7 @@ module.exports = {
 
     const cfg = db.getConfig(interaction.guildId);
     const color = cfg.color || '#7B2FBE';
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+    return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
       embeds: [buildHomeEmbed(interaction, color)],
       components: buildComponents(interaction.user.id, 'accueil'),
     });

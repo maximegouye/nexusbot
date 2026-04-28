@@ -10,12 +10,12 @@ module.exports = {
     try {
       await interaction.deferReply({ ephemeral: true });
       const target = interaction.targetMember || await interaction.guild.members.fetch(interaction.targetId).catch(() => null);
-      if (!target) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Membre introuvable.');
+      if (!target) return await interaction.editReply('❌ Membre introuvable.');
 
       const u = db.getUser(target.id, interaction.guildId);
       const cfg = db.getConfig(interaction.guildId);
-      const currency = cfg.currency_name || 'Coins';
-      const emoji = cfg.currency_emoji || '🪙';
+      const currency = cfg.currency_name || '€';
+      const emoji = cfg.currency_emoji || '€';
 
       const rank = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=? AND (balance + bank) > ?').get(interaction.guildId, u.balance + u.bank)?.c ?? 0;
 
@@ -32,7 +32,7 @@ module.exports = {
         .setFooter({ text: `Monnaie: ${currency}` })
         .setTimestamp();
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+      return await interaction.editReply({ embeds: [embed] });
     } catch (err) {
       console.error('[economie_user.js] execute error:', err?.message || err);
       try {

@@ -2,7 +2,7 @@
  * &crypto [action] [args...] — Trading crypto.
  *   &crypto                     → marché
  *   &crypto portefeuille        → mon portefeuille
- *   &crypto acheter BTC 500     → acheter 500 coins de BTC
+ *   &crypto acheter BTC 500     → acheter 500 € de BTC
  *   &crypto vendre BTC 0.01     → vendre 0.01 BTC (ou all)
  */
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');

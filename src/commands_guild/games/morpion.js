@@ -91,12 +91,12 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg?.currency_emoji || '€';
 
     if (sub === 'defier') {
       const opponent = interaction.options.getUser('adversaire');
-      if (opponent.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous défier vous-même.', ephemeral: true });
-      if (opponent.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas défier un bot.', ephemeral: true });
+      if (opponent.id === userId) return interaction.editReply({ content: '❌ Vous ne pouvez pas vous défier vous-même.', ephemeral: true });
+      if (opponent.bot) return interaction.editReply({ content: '❌ Vous ne pouvez pas défier un bot.', ephemeral: true });
 
       const gameId = `${guildId}_${userId}_${Date.now()}`;
       const game = {
@@ -139,7 +139,7 @@ module.exports = {
   async handleComponent(interaction) {
     const db = require('../../database/db');
     const cfg = db.getConfig(interaction.guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg?.currency_emoji || '€';
     const parts = interaction.customId.split('_');
 
     // Accept/Decline

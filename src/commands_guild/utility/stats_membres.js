@@ -58,8 +58,8 @@ module.exports = {
         .setThumbnail(target.displayAvatarURL({ size: 256 }))
         .addFields(
           { name: '⭐ Niveau',         value: `**${user.level}** (${user.xp}/${xpForNext} XP)\n\`${xpBar}\` ${xpPct}%`, inline: false },
-          { name: '🪙 Coins',          value: `**${user.coins.toLocaleString()}** 🪙 (#${xpRank || '?'} serveur)`,  inline: true },
-          { name: '🏆 Rang XP',        value: `#${lbRank || '?'} sur le serveur`,                                    inline: true },
+          { name: '💶 €',          value: `**${(user.balance + user.bank).toLocaleString()}** € (#${lbRank || '?'} serveur)`,  inline: true },
+          { name: '🏆 Rang XP',        value: `#${xpRank || '?'} sur le serveur`,                                    inline: true },
           { name: '🔥 Streak check-in', value: `${checkinStreak} jour(s)`,                                            inline: true },
           { name: '🎖️ Succès',         value: `${achCount} débloqué(s)`,                                             inline: true },
           { name: '📅 Sur le serveur',  value: `${daysOnServer} jour(s)`,                                            inline: true },
@@ -84,7 +84,7 @@ module.exports = {
       const humans = members - bots;
       const online = guild.members.cache.filter(m => m.presence?.status === 'online').size;
 
-      const totalCoins = db.db.prepare('SELECT SUM(coins) as t FROM users WHERE guild_id=?').get(guildId)?.t || 0;
+      const totalCoins = db.db.prepare('SELECT SUM(balance) as t FROM users WHERE guild_id=?').get(guildId)?.t || 0;
       const totalXP    = db.db.prepare('SELECT SUM(xp) as t FROM users WHERE guild_id=?').get(guildId)?.t || 0;
       const userCount  = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=?').get(guildId)?.c || 0;
 
@@ -107,7 +107,7 @@ module.exports = {
           { name: '👥 Membres',      value: `${humans} humains\n${bots} bots\n${online} en ligne`,         inline: true },
           { name: '💬 Salons',       value: `${textCh} texte\n${voiceCh} vocal\n${categories} catégories`, inline: true },
           { name: '⚡ Boosts',       value: `${boosts} boosts (Tier ${boostTier})`,                        inline: true },
-          { name: '🪙 Coins total',  value: `${totalCoins.toLocaleString()}`,                              inline: true },
+          { name: '💶 € total',  value: `${totalCoins.toLocaleString()}`,                              inline: true },
           { name: '⭐ XP total',     value: `${totalXP.toLocaleString()}`,                                 inline: true },
           { name: '👤 Utilisateurs', value: `${userCount} enregistrés`,                                    inline: true },
           { name: '📅 Créé le',      value: `${createdAt.toLocaleDateString('fr-FR')} (${ageDays} jours)`, inline: false },
@@ -116,7 +116,7 @@ module.exports = {
       // Top 3 coins
       const top3 = db.getLeaderboard(guildId, 'coins', 3);
       if (top3.length) {
-        embed.addFields({ name: '🏆 Top 3 Coins', value: top3.map((u,i) => `${['🥇','🥈','🥉'][i]} <@${u.user_id}> — ${u.coins.toLocaleString()} 🪙`).join('\n'), inline: false });
+        embed.addFields({ name: '🏆 Top 3 Coins', value: top3.map((u,i) => `${['🥇','🥈','🥉'][i]} <@${u.user_id}> — ${(u.balance + u.bank).toLocaleString()} €`).join('\n'), inline: false });
       }
 
       return interaction.editReply({ embeds: [embed] });

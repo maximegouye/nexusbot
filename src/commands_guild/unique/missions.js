@@ -25,8 +25,8 @@ try {
 // POOL DE MISSIONS
 // ─────────────────────────────────────────────────────────────────
 const MISSION_POOL = [
-  { id: 'earn_coins',  label: '💰 Gagnant',       desc: 'Gagne 500 coins (travail, pêche, etc.)',      type: 'earn_coins',  target: 500,   reward: 150 },
-  { id: 'earn_coins2', label: '💸 Investisseur',   desc: 'Gagne 1 000 coins en tout',                   type: 'earn_coins',  target: 1000,  reward: 300 },
+  { id: 'earn_coins',  label: '💰 Gagnant',       desc: 'Gagne 500 € (travail, pêche, etc.)',      type: 'earn_coins',  target: 500,   reward: 150 },
+  { id: 'earn_coins2', label: '💸 Investisseur',   desc: 'Gagne 1 000 € en tout',                   type: 'earn_coins',  target: 1000,  reward: 300 },
   { id: 'messages',   label: '💬 Bavard',           desc: 'Envoie 10 messages dans le serveur',          type: 'messages',    target: 10,    reward: 100 },
   { id: 'messages2',  label: '🗣️ Verbeux',         desc: 'Envoie 25 messages dans le serveur',          type: 'messages',    target: 25,    reward: 200 },
   { id: 'use_cmd',    label: '⚡ Joueur',           desc: 'Utilise 5 commandes différentes',              type: 'use_cmd',     target: 5,     reward: 120 },
@@ -139,12 +139,14 @@ module.exports.data = new SlashCommandBuilder()
 module.exports.cooldown = 3;
 
 module.exports.execute = async function execute(interaction) {
-  await interaction.deferReply({ ephemeral: false });
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: false });
+  }
   const sub    = interaction.options.getSubcommand();
   const userId  = interaction.user.id;
   const guildId = interaction.guildId;
   const cfg     = db.getConfig(guildId);
-  const coin    = cfg.currency_emoji || '🪙';
+  const coin    = cfg.currency_emoji || '€';
 
   if (sub === 'voir') {
     const row      = getDayMissions(userId, guildId);

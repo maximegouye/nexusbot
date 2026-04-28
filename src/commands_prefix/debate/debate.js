@@ -118,7 +118,7 @@ const commands = [
     async run(message, args) {
       if (!args.length) return message.reply('❌ Usage : `n!opinion <question>`');
       const question = args.join(' ');
-      const msg = await message.channel.send({ embeds: [new EmbedBuilder().setColor('#9B59B6')
+      const msg = await message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6')
         .setTitle('🗣️ Question posée au serveur')
         .setDescription(`**${question}**`)
         .setAuthor({ name: message.author.username, iconURL: message.author.displayAvatarURL() })

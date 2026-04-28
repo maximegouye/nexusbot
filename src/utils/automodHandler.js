@@ -39,7 +39,7 @@ async function applyAction(message, cfg, reason) {
 
     if (cfg.action === 'mute') {
       await member.timeout(5 * 60 * 1000, `AutoMod: ${reason}`).catch(() => {});
-      message.channel.send({
+      await message.channel.send({
         embeds: [new EmbedBuilder().setColor('Orange')
           .setDescription(`🔇 <@${message.author.id}> a été muté 5 minutes — **${reason}**`)
         ]
@@ -54,7 +54,7 @@ async function applyAction(message, cfg, reason) {
     if (cfg.log_channel) {
       const logCh = message.guild.channels.cache.get(cfg.log_channel);
       if (logCh) {
-        logCh.send({ embeds: [new EmbedBuilder()
+        await logCh.send({ embeds: [new EmbedBuilder()
           .setColor('Red')
           .setTitle('🛡️ AutoMod — Violation détectée')
           .addFields(

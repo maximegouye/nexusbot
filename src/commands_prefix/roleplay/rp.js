@@ -61,7 +61,7 @@ const commands = [
       const actor = message.member?.displayName || message.author.username;
       const action = args.join(' ');
       await message.delete().catch(() => {});
-      return message.channel.send({ embeds: [new EmbedBuilder().setColor('#FF69B4').setDescription(`*${actor} ${action}*`)] });
+      return message.reply({ embeds: [new EmbedBuilder().setColor('#FF69B4').setDescription(`*${actor} ${action}*`)] });
     }
   },
 
@@ -77,7 +77,7 @@ const commands = [
       const actor = message.member?.displayName || message.author.username;
       const text = args.join(' ');
       await message.delete().catch(() => {});
-      return message.channel.send({ embeds: [new EmbedBuilder().setColor('#9B59B6').setDescription(`💬 **${actor}** : *"${text}"*`)] });
+      return message.reply({ embeds: [new EmbedBuilder().setColor('#9B59B6').setDescription(`💬 **${actor}** : *"${text}"*`)] });
     }
   },
 
@@ -161,7 +161,7 @@ const commands = [
       const text = args.slice(1).join(' ');
       const actor = message.member?.displayName || message.author.username;
       await message.delete().catch(() => {});
-      return message.channel.send({ embeds: [new EmbedBuilder().setColor('#95A5A6')
+      return message.reply({ embeds: [new EmbedBuilder().setColor('#95A5A6')
         .setDescription(`🤫 *${actor} chuchote à ${target.username} : "**${text}**"*`)
       ]});
     }

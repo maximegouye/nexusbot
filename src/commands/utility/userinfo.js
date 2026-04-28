@@ -75,7 +75,7 @@ module.exports = {
         { name: '📅 Inscrit le',    value: `<t:${Math.floor(target.user.createdTimestamp / 1000)}:D>`, inline: true },
         { name: '📥 A rejoint le',  value: `<t:${Math.floor(target.joinedTimestamp / 1000)}:D>`,        inline: true },
         { name: '⭐ Niveau',        value: `**${user.level}** (${(user.xp || 0).toLocaleString('fr-FR')} XP)`, inline: true },
-        { name: '💰 Solde',         value: `**${user.balance.toLocaleString('fr-FR')}** coins`,               inline: true },
+        { name: '💰 Solde',         value: `**${user.balance.toLocaleString('fr-FR')}** €`,               inline: true },
         { name: '⚠️ Avertissements', value: `**${warns}**`,                              inline: true },
         { name: '💬 Messages',      value: `**${(user.message_count || 0).toLocaleString('fr-FR')}**`,        inline: true },
         { name: '🎤 Vocal',         value: `**${(user.voice_minutes || 0)}min**`,                          inline: true },
@@ -86,7 +86,7 @@ module.exports = {
       .setFooter({ text: `NexusBot` })
       .setTimestamp();
 
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (err) {
     console.error('[CMD] Erreur execute:', err?.message || err);
     const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
@@ -94,7 +94,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }},

@@ -197,7 +197,9 @@ module.exports = {
 
   // ============================================================
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false });
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false });
+    }
     const sub = interaction.options.getSubcommand();
     const g   = getGuild(interaction.guildId);
 
@@ -295,7 +297,7 @@ module.exports = {
               .setPlaceholder('Ex: 500'),
           ),
         );
-      return interaction.showModal(modal);
+      return await interaction.showModal(modal);
     }
 
     // ── /partenariat statut ───────────────────────────────────
@@ -368,7 +370,7 @@ module.exports = {
               .setPlaceholder('Parlez de vos événements, nouveautés, offres spéciales...'),
           ),
         );
-      return interaction.showModal(modal);
+      return await interaction.showModal(modal);
     }
 
     // ── Config : salons & rôle ────────────────────────────────
@@ -409,7 +411,7 @@ module.exports = {
               .setPlaceholder('Rédigez ici la pub que les partenaires acceptés recevront par DM pour la poster sur leur serveur...'),
           ),
         );
-      return interaction.showModal(modal);
+      return await interaction.showModal(modal);
     }
 
     if (sub === 'config-voir') {
@@ -437,7 +439,9 @@ module.exports = {
       if (!pending.length) {
         return await interaction.editReply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('📨 Demandes').setDescription('✅ Aucune demande en attente !').setTimestamp()], ephemeral: true });
       }
-      await interaction.deferReply({ ephemeral: true });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
+      }
       for (const req of pending.slice(0, 5)) {
         await interaction.followUp({ embeds: [buildRequestEmbed(req)], components: [buildReviewButtons(req.id)], ephemeral: true });
       }
@@ -475,7 +479,7 @@ module.exports = {
             new TextInputBuilder().setCustomId('representant_id').setLabel('ID Discord du représentant (optionnel)').setStyle(TextInputStyle.Short).setRequired(false),
           ),
         );
-      return interaction.showModal(modal);
+      return await interaction.showModal(modal);
     }
 
     if (sub === 'admin-retirer') {

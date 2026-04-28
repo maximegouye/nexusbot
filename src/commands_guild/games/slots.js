@@ -304,7 +304,7 @@ async function animateJackpot(msg, amount, coin) {
 }
 
 async function animateCoinRain(msg, color, title) {
-  const frames = ['💰 💸 💶 🪙', '🪙 💰 💸 💶 💰', '💸 💶 🪙 💰 💸 💶'];
+  const frames = ['💰 💸 💶 €', '€ 💰 💸 💶 💰', '💸 💶 € 💰 💸 💶'];
   const texts  = ['*🌧️ Les euros pleuvent !*', '*💨 TEMPÊTE DE GAINS !!*', '*💰 FORTUNE DÉVERSÉE !!*'];
   for (let i = 0; i < 3; i++) {
     await msg.edit({ embeds: [new EmbedBuilder().setColor(color).setTitle(title)
@@ -1063,7 +1063,7 @@ module.exports = {
     else if (rawMise === 'moitie' || rawMise === 'half' || rawMise === '50%') mise = Math.floor(bal / 2);
     else if (rawMise.endsWith('%')) mise = Math.floor(bal * Math.min(100, parseFloat(rawMise)) / 100);
     else mise = parseInt(rawMise);
-    if (!mise || mise < 5) return message.reply('❌ Mise min 5 coins. Ex: `&slots 100 3`');
+    if (!mise || mise < 5) return message.reply('❌ Mise min 5 €. Ex: `&slots 100 3`');
     await playSlots(message, message.author.id, message.guildId, mise, lignes);
   },
 

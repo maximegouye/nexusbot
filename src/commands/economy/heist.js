@@ -4,7 +4,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('braquage')
-    .setDescription('🏦 Organise un braquage de banque avec d\'autres membres !'),
+    .setDescription('🏦 Organise un braquage de banque avec d\'autres membres !')
+    .addIntegerOption(o => o.setName('cible').setDescription('Montant cible à braquer').setMinValue(100).setRequired(true)),
   cooldown: 5,
 
   async execute(interaction) {
@@ -14,8 +15,8 @@ module.exports = {
 
     try {
     const cfg    = db.getConfig(interaction.guildId);
-    const emoji  = cfg.currency_emoji || '🪙';
-    const name   = cfg.currency_name  || 'Coins';
+    const emoji  = cfg.currency_emoji || '€';
+    const name   = cfg.currency_name  || 'Euros';
     const target = interaction.options.getInteger('cible');
     const joinCost = Math.floor(target * 0.1); // 10% de la cible pour rejoindre
     const participants = new Map();

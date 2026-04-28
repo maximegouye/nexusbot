@@ -79,9 +79,9 @@ module.exports = {
     .addSubcommand(s => s.setName('ouvrir').setDescription('📦 Ouvrir un pack de cartes')
       .addStringOption(o => o.setName('pack').setDescription('Type de pack').setRequired(true)
         .addChoices(
-          { name: `📦 Normal (${PACK_PRICE.normal}🪙 — ${PACK_SIZE.normal} cartes)`, value: 'normal' },
-          { name: `💎 Premium (${PACK_PRICE.premium}🪙 — ${PACK_SIZE.premium} cartes, meilleures chances)`, value: 'premium' },
-          { name: `✨ Mythique (${PACK_PRICE.mythique}🪙 — ${PACK_SIZE.mythique} cartes, chances maximales)`, value: 'mythique' },
+          { name: `📦 Normal (${PACK_PRICE.normal}€ — ${PACK_SIZE.normal} cartes)`, value: 'normal' },
+          { name: `💎 Premium (${PACK_PRICE.premium}€ — ${PACK_SIZE.premium} cartes, meilleures chances)`, value: 'premium' },
+          { name: `✨ Mythique (${PACK_PRICE.mythique}€ — ${PACK_SIZE.mythique} cartes, chances maximales)`, value: 'mythique' },
         )))
     .addSubcommand(s => s.setName('collection').setDescription('📚 Voir votre collection')
       .addUserOption(o => o.setName('membre').setDescription('Voir la collection d\'un autre')))
@@ -104,7 +104,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
 
     if (sub === 'ouvrir') {
       const packType = interaction.options.getString('pack');
@@ -156,7 +156,7 @@ module.exports = {
 
     if (sub === 'vendre') {
       const cardId = interaction.options.getString('carte_id');
-      const prix = parseInt(interaction.options.getString('prix'));
+      const prix = interaction.options.getInteger('prix');
       const owned = db.db.prepare('SELECT * FROM user_cards WHERE guild_id=? AND user_id=? AND card_id=?').get(guildId, userId, cardId);
       if (!owned || owned.quantity < 1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous ne possédez pas la carte \`${cardId}\`.`, ephemeral: true });
 

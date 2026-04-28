@@ -258,7 +258,7 @@ async function handleAdmin(cmd, args, message) {
     try {
       db.db.prepare('INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?,?)').run(mention.id, guildId);
       db.db.prepare('UPDATE users SET balance = balance + ? WHERE user_id = ? AND guild_id = ?').run(amount, mention.id, guildId);
-      await message.reply('**' + mention.username + '** a recu **' + amount.toLocaleString('fr-FR') + '** coins.');
+      await message.reply('**' + mention.username + '** a recu **' + amount.toLocaleString('fr-FR') + '** €.');
     } catch(e) { await message.reply('Erreur DB: ' + e.message); }
     return true;
   }
@@ -290,7 +290,7 @@ async function handleAdmin(cmd, args, message) {
     try {
       db.db.prepare('INSERT OR IGNORE INTO users (user_id, guild_id) VALUES (?,?)').run(mention.id, guildId);
       db.db.prepare('UPDATE users SET balance = MAX(0, balance - ?) WHERE user_id = ? AND guild_id = ?').run(amount, mention.id, guildId);
-      await message.reply('**' + amount.toLocaleString('fr-FR') + '** coins retires a **' + mention.username + '**.');
+      await message.reply('**' + amount.toLocaleString('fr-FR') + '** € retirés à **' + mention.username + '**.');
     } catch(e) { await message.reply('Erreur DB: ' + e.message); }
     return true;
   }
@@ -340,7 +340,7 @@ async function handleAdmin(cmd, args, message) {
         const row = db.db.prepare('SELECT balance, bank FROM users WHERE user_id = ? AND guild_id = ?').get(mention.id, guildId);
         const bal  = (row?.balance) || 0;
         const bank = (row?.bank)    || 0;
-        await message.reply(`💶 **${mention.username}** — Portefeuille : **${bal.toLocaleString('fr-FR')}** | Banque : **${bank.toLocaleString('fr-FR')}** coins`);
+        await message.reply(`💶 **${mention.username}** — Portefeuille : **${bal.toLocaleString('fr-FR')}** | Banque : **${bank.toLocaleString('fr-FR')}** €`);
       }
     } catch(e) { await message.reply('❌ Erreur : ' + e.message).catch(() => {}); }
     return true;
@@ -378,8 +378,8 @@ async function handleAdmin(cmd, args, message) {
       .setTitle('Commandes administrateurs &')
       .setColor(0x5865F2)
       .setDescription([
-        '`&donner @membre montant` - Donner des coins',
-        '`&retirer @membre montant` - Retirer des coins',
+        '`&donner @membre montant` - Donner des €',
+        '`&retirer @membre montant` - Retirer des €',
         '`&reset @membre` - Remettre le compte a zero',
         '`&solde @membre` - Voir le solde',
         '`&cooldown @membre` - Reinitialiser les cooldowns',
@@ -402,7 +402,7 @@ module.exports = {
     if (!message.guild) return;
 
     // ── XP par message (tous les messages, pas seulement les commandes) ──
-    handleMessageXP(message);
+    handleMessageXP(message).catch(() => {});
 
     // ── Commandes préfixe & ──────────────────────────────────────────
     if (!message.content.startsWith(PREFIX)) return;

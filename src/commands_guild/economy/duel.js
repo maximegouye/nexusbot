@@ -10,9 +10,9 @@ const WEAPONS = [
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('duel-argent')
-    .setDescription('⚔️ Défie un membre en duel pour voler ses coins !')
+    .setDescription('⚔️ Défie un membre en duel pour voler ses € !')
     .addUserOption(o => o.setName('adversaire').setDescription('Ton adversaire').setRequired(true))
-    .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)),
+    .addStringOption(o => o.setName('mise').setDescription('Mise en € (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)),
   cooldown: 10,
 
   async execute(interaction) {
@@ -37,7 +37,6 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide. Minimum **50**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
     const emoji    = cfg.currency_emoji || '€';
-    const name     = cfg.currency_name  || 'Euros';
 
     if (opponent.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
     if (opponent.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te battre contre toi-même.', ephemeral: true });
@@ -45,8 +44,8 @@ module.exports = {
     const challenger = db.getUser(interaction.user.id, interaction.guildId);
     const defender   = db.getUser(opponent.id, interaction.guildId);
 
-    if (challenger.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr-FR')} ${name}**.`, ephemeral: true });
-    if (defender.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr-FR')} ${name}**. Mise trop élevée.`, ephemeral: true });
+    if (challenger.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr-FR')} ${emoji}**.`, ephemeral: true });
+    if (defender.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr-FR')} ${emoji}**. Mise trop élevée.`, ephemeral: true });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('duel_accept').setLabel('⚔️ Accepter le duel').setStyle(ButtonStyle.Danger),
@@ -58,7 +57,7 @@ module.exports = {
       embeds: [new EmbedBuilder()
         .setColor('#E74C3C')
         .setTitle('⚔️ Duel lancé !')
-        .setDescription(`**${interaction.user.username}** défie **${opponent.username}** en combat !\n\n💰 Mise : **${mise.toLocaleString('fr-FR')} ${name}** chacun\n🏆 Le gagnant emporte **${(mise * 2).toLocaleString('fr-FR')} ${name}**`)
+        .setDescription(`**${interaction.user.username}** défie **${opponent.username}** en combat !\n\n💰 Mise : **${mise.toLocaleString('fr-FR')} ${emoji}** chacun\n🏆 Le gagnant emporte **${(mise * 2).toLocaleString('fr-FR')} ${emoji}**`)
         .setFooter({ text: `${opponent.username} a 60 secondes pour accepter` })
       ],
       components: [row],
@@ -111,7 +110,7 @@ module.exports = {
           .addFields(
             { name: `❤️ PV ${interaction.user.username}`, value: `${Math.max(0, cHP)}`, inline: true },
             { name: `❤️ PV ${opponent.username}`,         value: `${Math.max(0, dHP)}`, inline: true },
-            { name: '💰 Gains',                            value: `+**${(mise * 2).toLocaleString('fr-FR')} ${name}**`, inline: true },
+            { name: '💰 Gains',                            value: `+**${(mise * 2).toLocaleString('fr-FR')} ${emoji}**`, inline: true },
           )
           .setFooter({ text: `${loser.username} perd sa mise !` })
         ],

@@ -16,7 +16,7 @@ const GAMES = [
   { name: 'Video Poker',  cmd: '/videopoker',   prefix: '&videopoker',  emoji: '🎴', desc: 'Jacks or Better · Gardez vos meilleures cartes',   payout: 'Royal Flush: ×800' },
   { name: 'Baccarat',     cmd: '/baccarat',     prefix: '&baccarat',    emoji: '🎲', desc: 'Joueur / Banquier / Égalité · Règles authentiques', payout: 'Égalité: ×9' },
   { name: 'Dés',          cmd: '/des',          prefix: '&des',         emoji: '🎲', desc: 'Pariez sur le résultat · 1 ou 2 dés · Somme exacte', payout: 'Exact: ×5.5' },
-  { name: 'Pile ou Face', cmd: '/pile-ou-face', prefix: '&pile-ou-face',emoji: '🪙', desc: '50/50 · Choisissez votre côté ou laissez le hasard', payout: '×2' },
+  { name: 'Pile ou Face', cmd: '/pile-ou-face', prefix: '&pile-ou-face',emoji: '💰', desc: '50/50 · Choisissez votre côté ou laissez le hasard', payout: '×2' },
 ];
 
 module.exports = {
@@ -45,7 +45,7 @@ module.exports = {
 
 async function handleCasino(source, userId, guildId, sub) {
   const isInteraction = !!source.editReply;
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (sub === 'jeux' || sub === 'list' || sub === 'aide') {
     const gameList = GAMES.map(g =>
@@ -76,7 +76,7 @@ async function handleCasino(source, userId, guildId, sub) {
       .setTitle('🏆 ・ Jackpot Progressif ・')
       .setDescription(`# 🏆 ${jackpot.toLocaleString()} ${coin}`)
       .addFields({ name: '🎰 Comment le gagner', value: 'Faites **5 💎 Diamants** sur la ligne centrale des Slots !\nChaque mise sur les Slots alimente le jackpot.', inline: false })
-      .setFooter({ text: 'Le jackpot repart de 5 000 coins après chaque victoire' })
+      .setFooter({ text: 'Le jackpot repart de 5 000 € après chaque victoire' })
       .setTimestamp();
 
     if (isInteraction) return source.editReply({ embeds: [embed] });

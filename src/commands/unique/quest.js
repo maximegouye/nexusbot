@@ -12,7 +12,7 @@ module.exports = {
     .addSubcommand(s => s.setName('creer').setDescription('➕ Créer une quête (Admin)')
       .addStringOption(o => o.setName('titre').setDescription('Titre').setRequired(true).setMaxLength(100))
       .addStringOption(o => o.setName('description').setDescription('Description').setRequired(true).setMaxLength(500))
-      .addIntegerOption(o => o.setName('objectif').setDescription('Objectif en coins').setRequired(true).setMinValue(1))
+      .addIntegerOption(o => o.setName('objectif').setDescription('Objectif en €').setRequired(true).setMinValue(1))
       .addStringOption(o => o.setName('recompense').setDescription('Récompense à distribuer').setRequired(true))
       .addIntegerOption(o => o.setName('jours').setDescription('Durée en jours').setMinValue(1).setRequired(false))),
   cooldown: 5,
@@ -24,7 +24,7 @@ module.exports = {
 
     const sub = interaction.options.getSubcommand();
     const cfg = db.getConfig(interaction.guildId);
-    const emoji = cfg.currency_emoji || '🪙';
+    const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Coins';
 
     // ── VOIR ──
@@ -133,7 +133,7 @@ module.exports = {
           .setTitle('✅ Quête créée !')
           .addFields(
             { name: '🗺️ Titre',       value: titre,                                      inline: true },
-            { name: `${emoji} Objectif`, value: `${objectif.toLocaleString('fr-FR')} ${name}`, inline: true },
+            { name: `€ Objectif`, value: `${objectif.toLocaleString('fr-FR')} €`, inline: true },
             { name: '🏆 Récompense',   value: reward,                                    inline: false },
             ...(endsAt ? [{ name: '⏰ Fin', value: `<t:${endsAt}:D>`, inline: true }] : []),
           )

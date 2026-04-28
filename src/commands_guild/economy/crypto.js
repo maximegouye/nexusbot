@@ -38,7 +38,7 @@ module.exports = {
       .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).addChoices(
         ...CRYPTOS.map(s => ({ name: s, value: s }))
       ))
-      .addIntegerOption(o => o.setName('montant').setDescription('Montant en coins').setRequired(true).setMinValue(1)))
+      .addIntegerOption(o => o.setName('montant').setDescription('Montant en €').setRequired(true).setMinValue(1)))
     .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre une crypto')
       .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).addChoices(
         ...CRYPTOS.map(s => ({ name: s, value: s }))

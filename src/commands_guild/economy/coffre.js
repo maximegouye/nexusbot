@@ -40,7 +40,7 @@ module.exports = {
       .setThumbnail(interaction.user.displayAvatarURL())
       .setDescription(streak>=2?`🔥 **Streak x${streak}** — bonus **+${Math.round((mult-1)*100)}%** !`:'🆕 Premier coffre du jour !')
       .addFields(
-        {name:`${coin} Pièces`,value:`**+${coins.toLocaleString('fr-FR')} ${coin}**`,inline:true},
+        {name:`${coin} Devises`,value:`**+${coins.toLocaleString('fr-FR')} ${coin}**`,inline:true},
         {name:'⭐ XP',value:`**+${xp} XP**`,inline:true},
         {name:'📅 Streak',value:`**${streak} jour${streak>1?'s':''}**`,inline:true}
       )

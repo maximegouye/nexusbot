@@ -4,7 +4,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('withdraw')
-    .setDescription('💸 Retire des coins de ta banque')
+    .setDescription('💸 Retire des € de ta banque')
     .addStringOption(o => o.setName('montant').setDescription('Montant à retirer (ou "tout")').setRequired(true)),
   cooldown: 5,
 
@@ -31,7 +31,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setDescription(`❌ Tu n'as que **${user.bank.toLocaleString('fr-FR')} ${name}** en banque.`)
+          .setDescription(`❌ Tu n'as que **${user.bank.toLocaleString('fr-FR')} ${emoji}** en banque.`)
         ], ephemeral: true
       });
     }
@@ -45,19 +45,21 @@ module.exports = {
       .setColor('#3498DB')
       .setTitle(`💸 Retrait bancaire`)
       .addFields(
-        { name: `${emoji} Retiré`,       value: `**${amount.toLocaleString('fr-FR')}** ${name}`, inline: true },
-        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr-FR')}** ${name}`, inline: true },
-        { name: '🏦 Banque',             value: `**${updated.bank.toLocaleString('fr-FR')}** ${name}`, inline: true },
+        { name: `${emoji} Retiré`,       value: `**${amount.toLocaleString('fr-FR')} ${emoji}**`, inline: true },
+        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr-FR')} ${emoji}**`, inline: true },
+        { name: '🏦 Banque',             value: `**${updated.bank.toLocaleString('fr-FR')} ${emoji}**`, inline: true },
       );
+
+    embed.setFooter({ text: 'Retrait effectué avec succès !' }).setTimestamp();
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (err) {
-    console.error('[CMD] Erreur:', err?.message || err);
-    const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
-    try {
-      if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.reply(_em).catch(() => {});
-    } catch {}
-  }
+      console.error('[CMD] Erreur:', err?.message || err);
+      const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
+      try {
+        if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
+        else await interaction.reply(_em).catch(() => {});
+      } catch {}
+    }
   }
 };

@@ -83,7 +83,7 @@ module.exports = {
 
     let data;
     try { data = await fetchWeather(ville); }
-    catch (e) { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(`❌ Ville introuvable : **${ville}**. Vérifie l'orthographe.`); }
+    catch (e) { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Ville introuvable : **${ville}**. Vérifie l'orthographe.` }); }
 
     const current = data.current_condition?.[0];
     const area = data.nearest_area?.[0];
@@ -103,7 +103,7 @@ module.exports = {
       const tempNum = parseInt(temp);
       const color = tempNum < 10 ? '#4FC3F7' : tempNum < 25 ? '#66BB6A' : '#FF7043';
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor(color)
           .setTitle(`${condition} — ${cityName}`)
@@ -116,7 +116,7 @@ module.exports = {
           )
           .setFooter({ text: 'Données météo via wttr.in' })
           .setTimestamp()
-      ]});
+      ] });
     }
 
     if (sub === 'previsions') {
@@ -132,14 +132,14 @@ module.exports = {
         };
       });
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor('#64B5F6')
           .setTitle(`📅 Prévisions 3 jours — ${cityName}`)
           .addFields(...fields)
           .setFooter({ text: 'Données météo via wttr.in' })
           .setTimestamp()
-      ]});
+      ] });
     }
   },
   name: 'meteo2',

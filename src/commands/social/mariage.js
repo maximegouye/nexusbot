@@ -89,13 +89,13 @@ module.exports = {
 
       // Frais de divorce (coût symbolique)
       const fee = 500;
-      db.removeCoins(interaction.user.id, interaction.guildId, fee);
+      await db.removeCoins(interaction.user.id, interaction.guildId, fee);
 
       await interaction.editReply({
         embeds: [new EmbedBuilder()
           .setColor('#888888')
           .setTitle('💔 Divorce prononcé')
-          .setDescription(`Tu as divorcé de <@${partnerId}>.\n*Frais de divorce : ${fee} coins. C'est le prix à payer.*`)
+          .setDescription(`Tu as divorcé de <@${partnerId}>.\n*Frais de divorce : ${fee} €. C'est le prix à payer.*`)
         ]
       });
     }

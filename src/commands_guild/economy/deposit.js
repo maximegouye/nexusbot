@@ -4,7 +4,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('deposit')
-    .setDescription('🏦 Dépose des coins en banque (protégés du vol)')
+    .setDescription('🏦 Dépose des € en banque (protégés du vol)')
     .addStringOption(o => o.setName('montant').setDescription('Montant à déposer (ou "tout")').setRequired(true)),
   cooldown: 5,
 
@@ -31,7 +31,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setDescription(`❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${name}** en portefeuille.`)
+          .setDescription(`❌ Tu n'as que **${user.balance.toLocaleString('fr-FR')} ${emoji}** en portefeuille.`)
         ], ephemeral: true
       });
     }
@@ -45,11 +45,11 @@ module.exports = {
       .setColor('#2ECC71')
       .setTitle(`🏦 Dépôt bancaire`)
       .addFields(
-        { name: `${emoji} Déposé`,     value: `**+${amount.toLocaleString('fr-FR')}** ${name}`, inline: true },
-        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr-FR')}** ${name}`, inline: true },
-        { name: '🏦 Banque',           value: `**${updated.bank.toLocaleString('fr-FR')}** ${name}`, inline: true },
+        { name: `${emoji} Déposé`,     value: `**+${amount.toLocaleString('fr-FR')} ${emoji}**`, inline: true },
+        { name: `${emoji} Portefeuille`, value: `**${updated.balance.toLocaleString('fr-FR')} ${emoji}**`, inline: true },
+        { name: '🏦 Banque',           value: `**${updated.bank.toLocaleString('fr-FR')} ${emoji}**`, inline: true },
       )
-      .setFooter({ text: 'Les coins en banque sont protégés du vol !' });
+      .setFooter({ text: 'Les devises en banque sont protégées du vol !' });
 
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     } catch (err) {

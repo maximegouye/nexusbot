@@ -82,7 +82,7 @@ module.exports = {
       const vers = interaction.options.getString('vers');
       const depuis = interaction.options.getString('depuis') || 'auto';
 
-      if (texte.length > 1000) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Texte trop long (1000 caractères max).', ephemeral: true });
+      if (texte.length > 1000) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Texte trop long (1000 caractères max).', ephemeral: true });
       await interaction.deferReply();
 
       try {
@@ -90,7 +90,7 @@ module.exports = {
         const langSource = LANGUES.find(l => l.value === result.detected)?.name || result.detected;
         const langTarget = LANGUES.find(l => l.value === vers)?.name || vers;
 
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           new EmbedBuilder()
             .setColor('#4285F4')
             .setTitle('🌍 Traduction')
@@ -99,9 +99,9 @@ module.exports = {
               { name: `✅ Traduction en ${langTarget}`, value: `\`\`\`${result.text.slice(0, 500)}\`\`\`` },
             )
             .setFooter({ text: 'Traduction via Google Translate' })
-        ]});
+        ] });
       } catch (e) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(`❌ Erreur de traduction : ${e.message}`);
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur de traduction : ${e.message}` });
       }
     }
 
@@ -112,18 +112,18 @@ module.exports = {
       try {
         const result = await translate(texte.slice(0, 100), 'fr', 'auto');
         const langName = LANGUES.find(l => l.value === result.detected)?.name || `Code: ${result.detected}`;
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           new EmbedBuilder().setColor('#4285F4')
             .setDescription(`🔍 Langue détectée : **${langName}**`)
-        ]});
+        ] });
       } catch {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)('❌ Impossible de détecter la langue.');
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible de détecter la langue.' });
       }
     }
 
     if (sub === 'langues') {
       const list = LANGUES.map(l => l.name).join('\n');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#4285F4').setTitle('🌍 Langues disponibles').setDescription(list)
       ], ephemeral: true });
     }

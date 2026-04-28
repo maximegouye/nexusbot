@@ -21,7 +21,7 @@ const STAT_TYPES = {
   membres_bots:   { label: '🤖 Bots',              default: '🤖 Bots : {value}' },
   salons_total:   { label: '💬 Salons',            default: '💬 Salons : {value}' },
   boosts:         { label: '💎 Boosts',            default: '💎 Boosts : {value}' },
-  coins_total:    { label: '💰 Coins en circ.',    default: '💰 {value} coins' },
+  coins_total:    { label: '💰 Coins en circ.',    default: '💰 {value} €' },
   joueurs_eco:    { label: '🎮 Joueurs (éco)',      default: '🎮 Joueurs : {value}' },
   niveau_max:     { label: '🏆 Niveau max',         default: '🏆 Nv. max : {value}' },
 };

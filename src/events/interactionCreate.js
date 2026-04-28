@@ -23,7 +23,6 @@ const COMPONENT_ROUTES = {
   'rr_':          'reactionroles',
   'rolemenu_':    'rolemenu',
   // ── Autres composants avec handleComponent ─────────────────
-  'apply_':       'candidature',
   'rec_':         'recrutement',
   'reward_':      'recompenses',
   'pendu_':       'pendu',
@@ -51,6 +50,11 @@ const COMPONENT_ROUTES = {
   'sondagev_':    'sondage-avance',
   // ── Jeux supplémentaires ──────────────────────────────────
   'morpion_':     'morpion',
+  'ttt_':         'tictactoe',
+  'c4_':          'connect4',
+  // ── Candidatures ──────────────────────────────────────────
+  'apply_':       'candidature',
+  'app_':         'candidature',
 };
 
 // ── Préfixes du panneau /config ───────────────────────────

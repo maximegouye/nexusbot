@@ -9,7 +9,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('transfert')
-    .setDescription('💸 Envoyer des coins à un autre membre du serveur')
+    .setDescription('💸 Envoyer des € à un autre membre du serveur')
     .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true))
     .addIntegerOption(o => o.setName('montant').setDescription('Montant à envoyer').setRequired(true).setMinValue(1))
     .addStringOption(o => o.setName('raison').setDescription('Raison (optionnel)').setRequired(false)),
@@ -24,13 +24,13 @@ module.exports = {
     const userId  = interaction.user.id;
     const guildId = interaction.guildId;
     const cfg     = db.getConfig ? db.getConfig(guildId) : null;
-    const coin    = cfg?.currency_emoji || '🪙';
+    const coin    = cfg?.currency_emoji || '€';
 
     if (target.id === userId) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'envoyer des coins à toi-même.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'te transférer des €.', ephemeral: true });
     }
     if (target.bot) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer des coins à un bot.', ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer des € à un bot.', ephemeral: true });
     }
 
     const sender = db.getUser(userId, guildId);
@@ -81,13 +81,13 @@ module.exports = {
     const userId  = message.author.id;
     const guildId = message.guildId;
     const cfg     = db.getConfig ? db.getConfig(guildId) : null;
-    const coin    = cfg?.currency_emoji || '🪙';
+    const coin    = cfg?.currency_emoji || '€';
 
     if (!mention || !montant || montant < 1) {
       return message.reply('❌ Usage : `&transfert @membre <montant> [raison]`\nEx: `&transfert @Bob 500 remboursement`');
     }
-    if (mention.id === userId) return message.reply('❌ Tu ne peux pas t\'envoyer des coins.');
-    if (mention.bot)           return message.reply('❌ Impossible d\'envoyer des coins à un bot.');
+    if (mention.id === userId) return message.reply('❌ Tu ne peux pas t\'envoyer des €.');
+    if (mention.bot)           return message.reply('❌ Impossible d\'envoyer des € à un bot.');
 
     const sender = db.getUser(userId, guildId);
     if (!sender || sender.balance < montant) {

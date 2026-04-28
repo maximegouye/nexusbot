@@ -43,7 +43,7 @@ async function checkReminders(client) {
         ]});
       }
     } catch {}
-    db.db.prepare('UPDATE rappels SET done=1 WHERE id=?').run(r.id);
+    await db.db.prepare('UPDATE rappels SET done=1 WHERE id=?').run(r.id);
   }
 }
 
@@ -78,16 +78,16 @@ module.exports = {
       const message = interaction.options.getString('message');
       const seconds = parseDuration(dureeStr);
 
-      if (seconds < 10) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Durée trop courte (minimum 10 secondes). Exemples : `30m`, `2h`, `1j`, `1semaine`.', ephemeral: true });
-      if (seconds > 2592000) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Durée trop longue (maximum 30 jours).', ephemeral: true });
+      if (seconds < 10) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Durée trop courte (minimum 10 secondes). Exemples : `30m`, `2h`, `1j`, `1semaine`.', ephemeral: true });
+      if (seconds > 2592000) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Durée trop longue (maximum 30 jours).', ephemeral: true });
 
       const activeCount = db.db.prepare('SELECT COUNT(*) as c FROM rappels WHERE guild_id=? AND user_id=? AND done=0').get(guildId, userId);
-      if (activeCount.c >= 10) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 10 rappels actifs.', ephemeral: true });
+      if (activeCount.c >= 10) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 10 rappels actifs.', ephemeral: true });
 
       const remindAt = now + seconds;
-      db.db.prepare('INSERT INTO rappels (guild_id, user_id, channel_id, message, remind_at) VALUES (?,?,?,?,?)').run(guildId, userId, interaction.channelId, message, remindAt);
+      await db.db.prepare('INSERT INTO rappels (guild_id, user_id, channel_id, message, remind_at) VALUES (?,?,?,?,?)').run(guildId, userId, interaction.channelId, message, remindAt);
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('⏰ Rappel créé !')
           .setDescription(`Je vous rappellerai ici : **${message}**`)
           .addFields({ name: '📅 Dans', value: `<t:${remindAt}:R> (<t:${remindAt}:F>)`, inline: false })
@@ -96,10 +96,10 @@ module.exports = {
 
     if (sub === 'liste') {
       const rappels = db.db.prepare('SELECT * FROM rappels WHERE guild_id=? AND user_id=? AND done=0 ORDER BY remind_at ASC').all(guildId, userId);
-      if (!rappels.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Aucun rappel actif.', ephemeral: true });
+      if (!rappels.length) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Aucun rappel actif.', ephemeral: true });
 
       const lines = rappels.map(r => `**#${r.id}** — <t:${r.remind_at}:R>\n> ${r.message}`).join('\n\n');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('⏰ Vos rappels actifs').setDescription(lines)
       ], ephemeral: true });
     }
@@ -107,10 +107,10 @@ module.exports = {
     if (sub === 'supprimer') {
       const id = interaction.options.getInteger('id');
       const r = db.db.prepare('SELECT * FROM rappels WHERE id=? AND guild_id=? AND user_id=? AND done=0').get(id, guildId, userId);
-      if (!r) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Rappel #${id} introuvable.`, ephemeral: true });
+      if (!r) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Rappel #${id} introuvable.`, ephemeral: true });
 
-      db.db.prepare('DELETE FROM rappels WHERE id=?').run(id);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Rappel #${id} supprimé.`, ephemeral: true });
+      await db.db.prepare('DELETE FROM rappels WHERE id=?').run(id);
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Rappel #${id} supprimé.`, ephemeral: true });
     }
   }
 };

@@ -141,7 +141,7 @@ async function doDeposit(interaction, amountRaw) {
       { name: 'Portefeuille',  value: `**${upd.balance.toLocaleString('fr-FR')} ${sym}**`,   inline: true },
       { name: 'Banque',        value: `**${upd.bank.toLocaleString('fr-FR')} ${sym}**`,       inline: true },
     )
-    .setFooter({ text: 'Les coins en banque sont protégés du vol !' })
+    .setFooter({ text: 'Les € en banque sont protégés du vol !' })
     .setTimestamp();
   await interaction.editReply({ embeds: [embed] }).catch(() => {});
 }
@@ -409,15 +409,15 @@ module.exports = {
       .addUserOption(o => o.setName('membre').setDescription('Voir le solde d\'un autre').setRequired(false)))
     .addSubcommand(sub => sub
       .setName('deposer')
-      .setDescription('Déposer des coins en banque (protégés du vol)')
+      .setDescription('Déposer des € en banque (protégés du vol)')
       .addIntegerOption(o => o.setName('montant').setDescription('Montant à déposer').setRequired(true).setMinValue(1)))
     .addSubcommand(sub => sub
       .setName('retirer')
-      .setDescription('Retirer des coins de ta banque')
+      .setDescription('Retirer des € de ta banque')
       .addIntegerOption(o => o.setName('montant').setDescription('Montant à retirer').setRequired(true).setMinValue(1)))
     .addSubcommand(sub => sub
       .setName('pret')
-      .setDescription('Emprunter des coins (15% d\'intérêts, 48h max)')
+      .setDescription('Emprunter des € (15% d\'intérêts, 48h max)')
       .addStringOption(o => o.setName('montant').setDescription('Montant ou "max"').setRequired(true)))
     .addSubcommand(sub => sub
       .setName('rembourser')

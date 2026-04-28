@@ -102,7 +102,7 @@ module.exports = {
           inviteCount = row?.cnt || 0;
         } catch {}
 
-        // Récompense en coins : 50 coins par invitation
+        // Récompense en coins : 50 € par invitation
         const coinsReward = 50;
         try { db.addCoins(inviterId, guildId, coinsReward); } catch {}
 

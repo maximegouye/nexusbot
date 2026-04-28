@@ -66,7 +66,9 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false });
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false });
+    }
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId  = interaction.user.id;
@@ -87,7 +89,7 @@ module.exports = {
         .addFields(
           { name: '🅰️ Option A', value: optA, inline: true },
           { name: '🅱️ Option B', value: optB, inline: true },
-          { name: '💰 Cagnotte', value: '0 coins', inline: true },
+          { name: '💰 Cagnotte', value: '0 €', inline: true },
         )
         .setFooter({ text: `Misez avec /parier miser ${id} — Créé par ${interaction.user.username}` });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
@@ -103,7 +105,7 @@ module.exports = {
       if (pari.status !== 'open') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce pari est fermé.' });
 
       const user = db.getUser(userId, guildId);
-      if (user.balance < amount) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${(user.balance || 0).toLocaleString('fr-FR')}** coins.` });
+      if (user.balance < amount) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${(user.balance || 0).toLocaleString('fr-FR')}** €.` });
 
       const existing = db.db.prepare('SELECT * FROM paris_bets WHERE pari_id=? AND user_id=?').get(id, userId);
       if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu as déjà misé sur ce pari !' });
@@ -119,9 +121,9 @@ module.exports = {
         .setTitle(`✅ Pari placé — #${id}`)
         .setDescription(`**${pari.question}**`)
         .addFields(
-          { name: `Ton choix : ${choix === 'a' ? '🅰️ ' + pari.option_a : '🅱️ ' + pari.option_b}`, value: `**${amount}** coins`, inline: true },
-          { name: '🅰️ Cagnotte A', value: `${totalA} coins`, inline: true },
-          { name: '🅱️ Cagnotte B', value: `${totalB} coins`, inline: true },
+          { name: `Ton choix : ${choix === 'a' ? '🅰️ ' + pari.option_a : '🅱️ ' + pari.option_b}`, value: `**${amount}** €`, inline: true },
+          { name: '🅰️ Cagnotte A', value: `${totalA} €`, inline: true },
+          { name: '🅱️ Cagnotte B', value: `${totalB} €`, inline: true },
         );
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
@@ -147,12 +149,12 @@ module.exports = {
         .setTitle(`🎲 Pari #${id}`)
         .setDescription(`**${pari.question}**`)
         .addFields(
-          { name: `🅰️ ${pari.option_a}`, value: `${potTotA} coins (${totalA?.c || 0} miseurs) — Cote ×${oddsA}`, inline: true },
-          { name: `🅱️ ${pari.option_b}`, value: `${potTotB} coins (${totalB?.c || 0} miseurs) — Cote ×${oddsB}`, inline: true },
-          { name: '💰 Cagnotte totale', value: `${totalPot} coins`, inline: true },
+          { name: `🅰️ ${pari.option_a}`, value: `${potTotA} € (${totalA?.c || 0} miseurs) — Cote ×${oddsA}`, inline: true },
+          { name: `🅱️ ${pari.option_b}`, value: `${potTotB} € (${totalB?.c || 0} miseurs) — Cote ×${oddsB}`, inline: true },
+          { name: '💰 Cagnotte totale', value: `${totalPot} €`, inline: true },
           { name: '📊 Statut', value: statusEmoji, inline: true },
         );
-      if (myBet) embed.addFields({ name: '🎯 Ta mise', value: `${myBet.choix === 'a' ? pari.option_a : pari.option_b} — ${myBet.amount} coins`, inline: true });
+      if (myBet) embed.addFields({ name: '🎯 Ta mise', value: `${myBet.choix === 'a' ? pari.option_a : pari.option_b} — ${myBet.amount} €`, inline: true });
       if (pari.winner) embed.addFields({ name: '🏆 Gagnant', value: pari.winner === 'draw' ? '🤝 Match nul' : pari.winner === 'a' ? `🅰️ ${pari.option_a}` : `🅱️ ${pari.option_b}`, inline: true });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
@@ -199,7 +201,7 @@ module.exports = {
         .setTitle(`🏆 Pari #${id} Résolu !`)
         .setDescription(`**${pari.question}**\n\nRésultat : **${winLabel}**`)
         .addFields(
-          { name: '💰 Cagnotte distribuée', value: `${payouts} coins à ${winBets.length} gagnant(s)`, inline: true },
+          { name: '💰 Cagnotte distribuée', value: `${payouts} € à ${winBets.length} gagnant(s)`, inline: true },
           { name: '👥 Total participants',  value: `${bets.length}`, inline: true },
         );
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });

@@ -41,7 +41,7 @@ function mkFake(message, opts = {}) {
 
 const CASES = [
   { emoji: '💀', mult: 0,    weight: 30, label: '💀 Banqueroute',       color: '#000000' },
-  { emoji: '🪙', mult: 0.5,  weight: 22, label: '🪙 Moitié remboursée', color: '#95A5A6' },
+  { emoji: '💸', mult: 0.5,  weight: 22, label: '💸 Moitié remboursée', color: '#95A5A6' },
   { emoji: '⚖️', mult: 1,    weight: 18, label: '⚖️ Mise récupérée',    color: '#3498DB' },
   { emoji: '💰', mult: 1.5,  weight: 12, label: '💰 Petit gain ×1.5',   color: '#F39C12' },
   { emoji: '💎', mult: 2,    weight:  8, label: '💎 Gain ×2',            color: '#2ECC71' },
@@ -101,7 +101,7 @@ module.exports = {
         .setDescription([
           '```',
           `        ⬆️        `,
-          `   💀  🪙  ⚖️    `,
+          `   💀  💶  ⚖️    `,
           `  💫   ${fakePick}   💰  `,
           `   ⭐       💎    `,
           `      🏆         `,

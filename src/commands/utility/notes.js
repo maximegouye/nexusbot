@@ -82,7 +82,7 @@ module.exports = {
     }
 
     if (sub === 'modifier') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const content = interaction.options.getString('contenu');
       const r = db.db.prepare('UPDATE notes SET content=?, updated_at=? WHERE id=? AND guild_id=? AND user_id=?').run(content, now, id, guildId, userId);
       if (!r.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
@@ -90,14 +90,14 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const r = db.db.prepare('DELETE FROM notes WHERE id=? AND guild_id=? AND user_id=?').run(id, guildId, userId);
       if (!r.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Note **#${id}** supprimée.`, ephemeral: true });
     }
 
     if (sub === 'epingler') {
-      const id = parseInt(interaction.options.getString('id'));
+      const id = interaction.options.getInteger('id');
       const note = db.db.prepare('SELECT * FROM notes WHERE id=? AND guild_id=? AND user_id=?').get(id, guildId, userId);
       if (!note) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Note #${id} introuvable.`, ephemeral: true });
       db.db.prepare('UPDATE notes SET pinned=? WHERE id=?').run(note.pinned ? 0 : 1, id);

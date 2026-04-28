@@ -23,12 +23,17 @@ module.exports = {
     db.db.prepare('UPDATE users SET level = ?, xp = ? WHERE user_id = ? AND guild_id = ?')
       .run(level, xp, target.id, interaction.guildId);
 
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+    await (interaction.deferred||interaction.replied ? interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setDescription(`✅ **${target.username}** est maintenant niveau **${level}** (${xp.toLocaleString('fr-FR')} XP).`)
       ]
-    });
+    }) : interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor('#2ECC71')
+        .setDescription(`✅ **${target.username}** est maintenant niveau **${level}** (${xp.toLocaleString('fr-FR')} XP).`)
+      ]
+    }));
     } catch (err) {
     console.error('[CMD] Erreur execute:', err?.message || err);
     const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };

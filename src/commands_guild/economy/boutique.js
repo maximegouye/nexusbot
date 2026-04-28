@@ -37,7 +37,7 @@ function fmt(n) { return n.toLocaleString('fr-FR'); }
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('boutique')
-    .setDescription('🏪 Boutique du serveur — Dépense tes coins pour des récompenses !')
+    .setDescription('🏪 Boutique du serveur — Dépense tes € pour des récompenses !')
     .addSubcommand(s => s
       .setName('voir')
       .setDescription('🛍️ Voir tous les articles disponibles'))
@@ -52,7 +52,7 @@ module.exports = {
       .setName('admin-ajouter')
       .setDescription('⚙️ [Admin] Ajouter un article à la boutique')
       .addStringOption(o => o.setName('nom').setDescription('Nom de l\'article').setRequired(true))
-      .addIntegerOption(o => o.setName('prix').setDescription('Prix en coins').setRequired(true))
+      .addIntegerOption(o => o.setName('prix').setDescription('Prix en €').setRequired(true))
       .addStringOption(o => o.setName('type').setDescription('Type: role / titre / item').setRequired(true)
         .addChoices(
           { name: '🎭 Rôle Discord', value: 'role' },
@@ -77,7 +77,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const member  = interaction.member;
     const cfg     = db.getConfig ? db.getConfig(guildId) : null;
-    const coin    = cfg?.currency_emoji || '🪙';
+    const coin    = cfg?.currency_emoji || '€';
 
     // ── VOIR ────────────────────────────────────────────────
     if (sub === 'voir') {
@@ -130,7 +130,7 @@ module.exports = {
       const coins = u?.balance || 0;
       if (coins < item.prix) {
         return interaction.editReply({
-          content: `❌ Pas assez de coins. Tu as **${fmt(coins)} ${coin}** mais l'article coûte **${fmt(item.prix)} ${coin}**.`,
+          content: `❌ Pas assez de €. Tu as **${fmt(coins)} ${coin}** mais l'article coûte **${fmt(item.prix)} ${coin}**.`,
           ephemeral: true,
         });
       }

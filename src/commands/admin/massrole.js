@@ -20,6 +20,10 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+    }
+
     const sub = interaction.options.getSubcommand();
     const role = interaction.options.getRole('role');
     const filterRole = interaction.options.getRole('filtre_role');
@@ -39,7 +43,7 @@ module.exports = {
         .setTitle('📊 Info Rôle')
         .setDescription(`Le rôle <@&${role.id}> est attribué à **${count}** membre(s).`)
         .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
+      return await interaction.editReply({ embeds: [embed] });
     }
 
     if (sub === 'ajouter' || sub === 'retirer') {

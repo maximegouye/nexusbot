@@ -96,14 +96,14 @@ module.exports = {
         .setThumbnail(interaction.user.displayAvatarURL())
         .addFields(
           { name: '🔥 Streak',       value: `${getStreakBar(streak)} (${streak} jour(s))`, inline: false },
-          { name: '🪙 Coins gagnés', value: `+**${coins}** coins`,                         inline: true  },
+          { name: '€ gagnés', value: `+**${coins}** €`,                         inline: true  },
           { name: '⭐ XP gagnée',    value: `+**${xp}** XP`,                               inline: true  },
           { name: '📊 Total jours',  value: `${total}`,                                    inline: true  },
         )
         .setFooter({ text: 'Revenez demain pour continuer votre streak !' });
 
       if (milestone) {
-        embed.addFields({ name: `${milestone.emoji} MILESTONE DÉBLOQUÉ !`, value: `**${milestone.label}** — Bonus : +${milestone.coins} coins & +${milestone.xp} XP !`, inline: false });
+        embed.addFields({ name: `${milestone.emoji} MILESTONE DÉBLOQUÉ !`, value: `**${milestone.label}** — Bonus : +${milestone.coins} € & +${milestone.xp} XP !`, inline: false });
         db.addCoins(userId, guildId, milestone.coins);
         db.addXP(userId, guildId, milestone.xp);
         embed.setColor('#f39c12');
@@ -133,7 +133,7 @@ module.exports = {
         .addFields(
           { name: '🔥 Streak actuel',   value: `${logs.streak} jour(s) ${isActive ? '✅' : '❌ Perdu !'}`, inline: true },
           { name: '📅 Total check-ins', value: `${logs.total}`,                                              inline: true },
-          { name: '🪙 Coins gagnés',    value: `${totalCoins.toLocaleString()}`,                             inline: true },
+          { name: '€ gagnés',    value: `${totalCoins.toLocaleString()} €`,                             inline: true },
           { name: '🎯 Prochain milestone', value: nextMilestone ? `Streak de ${nextMilestone} (${nextMilestone - logs.streak} restants)` : '🏆 Tous les milestones débloqués !', inline: false },
         )
         .setFooter({ text: `Dernier check-in : ${new Date(logs.checked_at * 1000).toLocaleDateString('fr-FR')}` });

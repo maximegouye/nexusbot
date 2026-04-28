@@ -992,7 +992,7 @@ function buildKvPanel(cfg, guild, userId, db, page = 0, source = 'kv') {
 // ═══════════════════════════════════════════════════════════════
 function buildShopPanel(cfg, guild, userId, db, page = 0) {
   const items = db.getShopItems ? db.getShopItems(guild.id) : [];
-  const coin = cfg.currency_emoji || '🪙';
+  const coin = cfg.currency_emoji || '€';
   const perPage = 10;
   const maxPage = Math.max(0, Math.ceil(items.length / perPage) - 1);
   const p       = Math.min(Math.max(0, page), maxPage);
@@ -1431,7 +1431,7 @@ function buildPollsPanel(cfg, guild, userId, db) {
 // ═══════════════════════════════════════════════════════════════
 function buildEcoProPanel(cfg, guild, userId, db) {
   const c = db.getConfig(guild.id);
-  const coin = c.currency_emoji || '🪙';
+  const coin = c.currency_emoji || '€';
   const fmt = v => (v == null ? '*(non défini)*' : v === -1 ? '∞' : v.toLocaleString('fr-FR'));
 
   const embed = new EmbedBuilder()
@@ -1700,7 +1700,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'edit_start' && arg) {
         const tpl = db.getEmbedTemplate(interaction.guildId, arg);
-        if (!tpl) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Template introuvable.', ephemeral: true });
+        if (!tpl) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Template introuvable.', ephemeral: true }).catch(() => {});
         const d = safeJsonParse(tpl.data_json, {});
         const modal = buildSimpleModal(`adv_modal:embeds:update:${userId}:${encodeURIComponent(arg)}`, '✏️ Modifier l\'embed', [
           { id: 'title',       label: 'Titre',       value: d.title,       style: TextInputStyle.Short,     required: false, maxLength: 256 },
@@ -1713,7 +1713,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'send_start' && arg) {
         const tpl = db.getEmbedTemplate(interaction.guildId, arg);
-        if (!tpl) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Template introuvable.', ephemeral: true });
+        if (!tpl) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Template introuvable.', ephemeral: true }).catch(() => {});
         const sel = new ChannelSelectMenuBuilder()
           .setCustomId(`adv_chan:embeds_send:${userId}:${encodeURIComponent(arg)}`)
           .setPlaceholder(`📤 Salon où envoyer l\'embed "${arg}"`)
@@ -1812,7 +1812,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'edit_resp' && arg) {
         const c = db.getCustomCommand(interaction.guildId, arg);
-        if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
+        if (!c) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true }).catch(() => {});
         const modal = buildSimpleModal(`adv_modal:cmds_adv:save_resp:${userId}:${encodeURIComponent(arg)}`, '✏️ Modifier la réponse', [
           { id: 'response', label: 'Nouvelle réponse (texte)', value: c.response, style: TextInputStyle.Paragraph, maxLength: 2000 },
         ]);
@@ -2026,7 +2026,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 📋 LOGS PRO ──────────────────────────────────────────
     if (section === 'logs_pro' && action === 'toggle') {
       const key = arg; // ex: log_message_delete
-      if (!LOG_EVENTS.find(e => e.key === key)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Event inconnu.', ephemeral: true });
+      if (!LOG_EVENTS.find(e => e.key === key)) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Event inconnu.', ephemeral: true }).catch(() => {});
       const c = db.getConfig(interaction.guildId);
       db.setConfig(interaction.guildId, key, (c[key] ?? 1) ? 0 : 1);
       return interaction.update(buildLogsProPanel(cfg, interaction.guild, userId, db));
@@ -2215,7 +2215,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         const modal = buildSimpleModal(`adv_modal:shop:create:${userId}`, '➕ Nouvel item', [
           { id: 'name',        label: 'Nom',                 style: TextInputStyle.Short,     maxLength: 100 },
           { id: 'description', label: 'Description',          style: TextInputStyle.Paragraph, required: false, maxLength: 500 },
-          { id: 'price',       label: 'Prix (en coins)',      style: TextInputStyle.Short,     maxLength: 10, placeholder: '100' },
+          { id: 'price',       label: 'Prix (en €)',      style: TextInputStyle.Short,     maxLength: 10, placeholder: '100' },
           { id: 'emoji',       label: 'Emoji',                style: TextInputStyle.Short,     required: false, maxLength: 10, placeholder: '📦' },
           { id: 'stock',       label: 'Stock (-1 = illimité)', style: TextInputStyle.Short,     required: false, maxLength: 10, placeholder: '-1' },
         ]);
@@ -2363,7 +2363,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     // ── 🧠 IA ─────────────────────────────────────────────────
     if (section === 'ai') {
       const aiMod = _getAiModule();
-      if (!aiMod) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Module IA non chargé.', ephemeral: true });
+      if (!aiMod) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Module IA non chargé.', ephemeral: true }).catch(() => {});
       if (action === 'toggle') {
         const current = aiMod.getAIConfig(interaction.guildId, db);
         aiMod.setAIConfig(interaction.guildId, db, { enabled: current.enabled ? 0 : 1 });
@@ -2413,20 +2413,20 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (action === 'test') {
         const current = aiMod.getAIConfig(interaction.guildId, db);
-        if (!aiMod.isAvailable()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA configurée côté Railway.', ephemeral: true });
+        if (!aiMod.isAvailable()) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA configurée côté Railway.', ephemeral: true }).catch(() => {});
         await interaction.deferReply({ ephemeral: true });
         try {
           const res = await aiMod.askAI({
             prompt: 'En UNE seule phrase, présente-toi et dis que tu es prêt à aider.',
             guildId: interaction.guildId, userId: interaction.user.id, cfg: current,
           });
-          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+          return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
             embeds: [new EmbedBuilder().setColor(cfg.color || '#7B2FBE').setTitle('🧪 Test IA')
               .setDescription(res.text || '*(vide)*')
               .setFooter({ text: `${res.provider} • ${res.model} • ${res.usage?.output_tokens || res.usage?.completion_tokens || '?'} tokens` })],
           });
         } catch (e) {
-          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}` });
+          return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ ${e.message}` }).catch(() => {});
         }
       }
     }
@@ -2559,11 +2559,11 @@ async function handleAdvancedInteraction(interaction, db, client) {
         // Limite Discord 25 MB pour attachements ; le JSON reste petit
         const buf = Buffer.from(json, 'utf8');
         if (buf.length > 8_000_000) {
-          return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Config trop volumineuse pour être envoyée (>8 MB).', ephemeral: true });
+          return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Config trop volumineuse pour être envoyée (>8 MB).', ephemeral: true }).catch(() => {});
         }
         const { AttachmentBuilder } = require('discord.js');
         const file = new AttachmentBuilder(buf, { name: `nexusbot_config_${interaction.guild.name.replace(/[^a-z0-9_\-]/gi, '_')}.json` });
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '✅ Voici ta sauvegarde complète. Garde-la précieusement — tu pourras la ré-importer plus tard.',
           files: [file],
           ephemeral: true,
@@ -2603,7 +2603,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const which = parts[1];
     const uid   = parts[2];
     if (interaction.user.id !== uid) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
     }
     const val = interaction.values[0];
     if (which === 'embeds_pick') {
@@ -2630,7 +2630,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const which = parts[1];
     const uid   = parts[2];
     if (interaction.user.id !== uid) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
     }
     const channelId = interaction.values[0] || null;
 
@@ -2645,7 +2645,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
         channel_id: channelId,
       });
       await interaction.deferUpdate();
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey));
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildSysMsgDetailPanel(cfg, interaction.guild, uid, db, eventKey)).catch(() => {});
     }
 
     if (which === 'ai_channels') {
@@ -2653,7 +2653,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       const ids = Array.isArray(interaction.values) ? interaction.values : [];
       if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { allowed_channels: ids });
       await interaction.deferUpdate();
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAIPanel(cfg, interaction.guild, uid, db));
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAIPanel(cfg, interaction.guild, uid, db)).catch(() => {});
     }
 
     if (which === 'cmds_chans') {
@@ -2718,7 +2718,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const which = parts[1];
     const uid   = parts[2];
     if (interaction.user.id !== uid) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
     }
     const roleId = interaction.values[0] || null;
 
@@ -2751,7 +2751,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       const aiMod = _getAiModule();
       if (aiMod) aiMod.setAIConfig(interaction.guildId, db, { required_role: roleId });
       await interaction.deferUpdate();
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAIPanel(cfg, interaction.guild, uid, db));
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(buildAIPanel(cfg, interaction.guild, uid, db)).catch(() => {});
     }
 
     if (which === 'autoresp_role') {
@@ -2777,7 +2777,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
     const act  = parts[2];
     const uid  = parts[3];
     if (interaction.user.id !== uid) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
     }
     const extra = parts[4] ? decodeURIComponent(parts[4]) : null;
     const field = (id, def = '') => { try { return interaction.fields.getTextInputValue(id); } catch { return def; } };
@@ -2880,7 +2880,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (act === 'save_resp' && extra) {
         const c = db.getCustomCommand(interaction.guildId, extra);
-        if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
+        if (!c) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true }).catch(() => {});
         const response = field('response').trim();
         db.upsertCustomCommand(interaction.guildId, extra, {
           ...c, allowed_channels: safeJsonParse(c.allowed_channels, []),
@@ -2890,7 +2890,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       }
       if (act === 'save_cd' && extra) {
         const c = db.getCustomCommand(interaction.guildId, extra);
-        if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true });
+        if (!c) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Introuvable.', ephemeral: true }).catch(() => {});
         const cd = Math.max(0, parseInt(field('seconds', '0'), 10) || 0);
         db.upsertCustomCommand(interaction.guildId, extra, {
           ...c, allowed_channels: safeJsonParse(c.allowed_channels, []),

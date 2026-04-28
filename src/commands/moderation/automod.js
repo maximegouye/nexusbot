@@ -64,7 +64,7 @@ module.exports = {
       .setName('anticaps')
       .setDescription('Bloquer les messages en MAJUSCULES')
       .addBooleanOption(o => o.setName('actif').setDescription('Activer').setRequired(true))
-      .addIntegerOption(o => o.setName('pourcentage').setDescription('Pourcentage minimum de majuscules').setMinValue(1).setMaxValue(100).setRequired(false))
+      .addIntegerOption(o => o.setName('pourcentage').setDescription('% minimum de majuscules').setMinValue(1).setMaxValue(100).setRequired(false))
     )
     .addSubcommand(s => s
       .setName('antimentions')

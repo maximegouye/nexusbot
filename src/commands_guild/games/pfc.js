@@ -21,7 +21,7 @@ const COIN_FRAMES = [
 async function playCoinFlip(source, userId, guildId, mise, choix) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (!u || u.balance < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
@@ -42,7 +42,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
   // Animation
   const animEmbed = new EmbedBuilder()
     .setColor('#F39C12')
-    .setTitle('🪙 ・ Pile ou Face ・')
+    .setTitle('💶 ・ Pile ou Face ・')
     .setDescription('**La pièce tourne dans les airs...**\n\n🌀')
     .addFields({ name: '🎯 Ton choix', value: chosen ? (chosen === 'pile' ? '🟡 Pile' : '⚪ Face') : '🎲 Aléatoire', inline: true });
 
@@ -61,7 +61,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
     const progress = '▓'.repeat(i+1) + '░'.repeat(COIN_FRAMES.length-i-1);
     const e = new EmbedBuilder()
       .setColor(color)
-      .setTitle('🪙 ・ Pile ou Face ・')
+      .setTitle('💶 ・ Pile ou Face ・')
       .setDescription(`# ${emoji}  ${label}\n\n` + '`' + `[${progress}]` + '`')
       .addFields({name:'🎯 Ton choix',value:chosen ? (chosen==='pile'?'🟡 Pile':'⚪ Face'):'🎲 Aléatoire',inline:true});
     await msg.edit({ embeds: [e] });
@@ -89,10 +89,10 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
 
   const finalEmbed = new EmbedBuilder()
     .setColor(color)
-    .setTitle('🪙 ・ Pile ou Face — Résultat ・')
+    .setTitle('💶 ・ Pile ou Face — Résultat ・')
     .setDescription(`# ${emoji}\n\n${desc}`)
     .addFields(
-      { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
+      { name: '€ Mise', value: `${mise} ${coin}`, inline: true },
       { name: '🏦 Solde', value: `${db.getUser(userId, guildId)?.balance || 0} ${coin}`, inline: true },
     )
     .setTimestamp();
@@ -109,8 +109,9 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
     const parts  = i.customId.split('_');
     const newChoix = parts[1] === 'random' ? null : parts[1];
     const newMise  = parseInt(parts[3]);
+    const newSource = isInteraction ? source : { ...source, reply: (d) => source.channel.send(d), editReply: (d) => msg.edit(d) };
     await playCoinFlip(
-      source.channel ? { ...source, reply: (d) => source.channel.send(d), editReply: null } : source,
+      newSource,
       userId, guildId, newMise, newChoix
     );
   });
@@ -120,7 +121,7 @@ async function playCoinFlip(source, userId, guildId, mise, choix) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('pile-ou-face')
-    .setDescription('🪙 Pile ou Face — 50/50, ×2 si tu gagnes !')
+    .setDescription('💶 Pile ou Face — 50/50, ×2 si tu gagnes !')
     .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser').setRequired(true).setMinValue(1))
     .addStringOption(o => o.setName('choix').setDescription('pile ou face (optionnel)').addChoices(
       { name: '🟡 Pile', value: 'pile' },

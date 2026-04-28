@@ -16,7 +16,7 @@ module.exports = {
     try {
     const key = `${interaction.user.id}:${interaction.guildId}`;
     if (activeGames.has(key)) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '⏳ Tu as déjà une partie en cours ! Termine-la d\'abord.', ephemeral: true });
+      return await (interaction.deferred||interaction.replied ? interaction.editReply({ content: '⏳ Tu as déjà une partie en cours ! Termine-la d\'abord.', ephemeral: true }) : interaction.reply({ content: '⏳ Tu as déjà une partie en cours ! Termine-la d\'abord.', ephemeral: true }));
     }
 
     const secret  = Math.floor(Math.random() * 100) + 1;
@@ -30,7 +30,7 @@ module.exports = {
       .setDescription(`J'ai choisi un nombre entre **1** et **100**.\nTu as **${maxTries} essais** pour le trouver !\n\n**Réponds avec un nombre dans ce salon.**`)
       .setFooter({ text: `Essais : 0/${maxTries}` });
 
-    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied ? interaction.editReply({ embeds: [embed] }) : interaction.reply({ embeds: [embed] }));
 
     // Collector de messages
     const filter  = m => m.author.id === interaction.user.id && !isNaN(parseInt(m.content.trim()));

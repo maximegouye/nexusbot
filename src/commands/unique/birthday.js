@@ -5,7 +5,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('birthday')
     .setDescription('🎂 Gérer les anniversaires')
-    .addSubcommand(s => s.setName('set').setDescription('🎂 Enregistrer ton anniversaire'))
+    .addSubcommand(s => s.setName('set').setDescription('🎂 Enregistrer ton anniversaire')
+      .addStringOption(o => o.setName('jour').setDescription('Jour (1-31)').setRequired(true))
+      .addStringOption(o => o.setName('mois').setDescription('Mois (1-12)').setRequired(true))
+      .addStringOption(o => o.setName('annee').setDescription('Année (optionnel)').setRequired(false)))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir les prochains anniversaires'))
     .addSubcommand(s => s.setName('setup').setDescription('⚙️ Configurer le canal anniversaires (Admin)')
       .addChannelOption(o => o.setName('canal').setDescription('Canal pour les annonces').setRequired(true))
@@ -22,8 +25,8 @@ module.exports = {
 
     // ── SET ──
     if (sub === 'set') {
-      const jour  = parseInt(interaction.options.getString('jour'));
-      const mois  = parseInt(interaction.options.getString('mois'));
+      const jour  = interaction.options.getString('jour') ? parseInt(interaction.options.getString('jour')) : null;
+      const mois  = interaction.options.getString('mois') ? parseInt(interaction.options.getString('mois')) : null;
       const annee = interaction.options.getString('annee') ? parseInt(interaction.options.getString('annee')) : null;
 
       // Vérifier la date

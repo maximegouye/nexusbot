@@ -139,7 +139,7 @@ async function autoCloseInactiveTickets(client) {
         // ── DM créateur avec transcript ──
         const creator = await guild.members.fetch(ticket.user_id).catch(() => null);
         if (creator) {
-          creator.send({
+          await creator.send({
             embeds: [new EmbedBuilder()
               .setColor('#FF9900')
               .setTitle('⏰ Ton ticket a été fermé automatiquement')

@@ -48,6 +48,7 @@ function multiplier(k, M) {
   // Gain attendu = 1 / P × (1 - house_edge). On prend house_edge = 3%.
   let p = 1;
   for (let i = 0; i < k; i++) {
+    if (safes - i <= 0 || 25 - i <= 0) return 1; // Éviter division par zéro/NaN
     p *= (safes - i) / (25 - i);
   }
   if (p <= 0) return 1;
@@ -211,7 +212,10 @@ module.exports = {
   multiplier: (k, M) => {
     let p = 1;
     const safes = 20 - M;
-    for (let i = 0; i < k; i++) p *= (safes - i) / (20 - i);
+    for (let i = 0; i < k; i++) {
+      if (safes - i <= 0 || 20 - i <= 0) return 1; // Éviter division par zéro/NaN
+      p *= (safes - i) / (20 - i);
+    }
     if (p <= 0) return 1;
     return (1 / p) * 0.97;
   },
@@ -227,7 +231,10 @@ module.exports = {
       const k = game.revealed.length;
       let p = 1;
       const safes = 20 - game.mines;
-      for (let i = 0; i < k; i++) p *= (safes - i) / (20 - i);
+      for (let i = 0; i < k; i++) {
+        if (safes - i <= 0 || 20 - i <= 0) { p = 0; break; } // Éviter division par zéro/NaN
+        p *= (safes - i) / (20 - i);
+      }
       const m = p > 0 ? (1 / p) * 0.97 : 1;
       const bet = BigInt(game.bet);
       game.payout = BigInt(Math.floor(Number(bet) * m)).toString();
@@ -244,7 +251,10 @@ module.exports = {
     } else {
       let p = 1;
       const safes = 20 - game.mines;
-      for (let i = 0; i < k; i++) p *= (safes - i) / (20 - i);
+      for (let i = 0; i < k; i++) {
+        if (safes - i <= 0 || 20 - i <= 0) { p = 0; break; } // Éviter division par zéro/NaN
+        p *= (safes - i) / (20 - i);
+      }
       const m = p > 0 ? (1 / p) * 0.97 : 1;
       const bet = BigInt(game.bet);
       game.payout = BigInt(Math.floor(Number(bet) * m)).toString();
@@ -257,7 +267,10 @@ module.exports = {
     const k = game.revealed.length;
     let p = 1;
     const safes = 20 - game.mines;
-    for (let i = 0; i < k; i++) p *= (safes - i) / (20 - i);
+    for (let i = 0; i < k; i++) {
+      if (safes - i <= 0 || 20 - i <= 0) { p = 0; break; } // Éviter division par zéro/NaN
+      p *= (safes - i) / (20 - i);
+    }
     const mult = p > 0 ? (1 / p) * 0.97 : 1;
     const bet = BigInt(game.bet);
     const current = game.over ? BigInt(game.payout) : BigInt(Math.floor(Number(bet) * mult));

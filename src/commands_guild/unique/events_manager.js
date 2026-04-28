@@ -57,7 +57,7 @@ module.exports = {
       .addStringOption(o => o.setName('lieu').setDescription('Lieu ou lien vocal').setMaxLength(200))
       .addStringOption(o => o.setName('fin').setDescription('Date/heure de fin (JJ/MM/AAAA HH:MM)'))
       .addIntegerOption(o => o.setName('max_joueurs').setDescription('Nombre max de joueurs (0 = illimité)').setMinValue(0))
-      .addIntegerOption(o => o.setName('recompense').setDescription('Récompense en coins').setMinValue(0)))
+      .addIntegerOption(o => o.setName('recompense').setDescription('Récompense en €').setMinValue(0)))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Voir les prochains événements'))
     .addSubcommand(s => s.setName('info')
       .setDescription('🔍 Voir les détails d\'un événement')
@@ -79,9 +79,12 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
-    await interaction.deferReply();
+    if (!interaction.deferred && !interaction.replied) {
+      try { await interaction.deferReply(); } catch (e) { /* already ack'd */ }
+    }
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
+    const coin = db.getConfig(guildId)?.currency_emoji || '€';
     const userId  = interaction.user.id;
     const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.ManageEvents) || interaction.member.permissions.has(PermissionFlagsBits.ManageGuild);
 
@@ -107,7 +110,7 @@ module.exports = {
           { name: '📅 Début', value: formatDate(debut), inline: true },
           { name: '📍 Lieu',  value: lieu || 'Non précisé', inline: true },
           { name: '👥 Max',   value: max === 0 ? 'Illimité' : `${max} joueurs`, inline: true },
-          { name: '🎁 Récompense', value: `${reward} 🪙`, inline: true },
+          { name: '🎁 Récompense', value: `${reward} ${coin}`, inline: true },
         )
         .setFooter({ text: `Les membres peuvent s'inscrire avec /event participer ${result.lastInsertRowid}` });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
@@ -131,7 +134,7 @@ module.exports = {
             `📅 ${formatDate(ev.starts_at)}`,
             ev.location ? `📍 ${ev.location}` : '',
             `👥 ${rsvpCount}${ev.max_players > 0 ? `/${ev.max_players}` : ''} inscrits`,
-            ev.reward_coins > 0 ? `🎁 +${ev.reward_coins} 🪙` : '',
+            ev.reward_coins > 0 ? `🎁 +${ev.reward_coins} ${coin}` : '',
           ].filter(Boolean).join(' • '),
           inline: false,
         });
@@ -153,7 +156,7 @@ module.exports = {
           { name: '🏁 Fin',       value: ev.ends_at ? formatDate(ev.ends_at) : 'Non défini', inline: true },
           { name: '📍 Lieu',      value: ev.location || 'Non précisé',                        inline: true },
           { name: '👥 Inscrits',  value: `${rsvps.length}${ev.max_players > 0 ? `/${ev.max_players}` : ''}`, inline: true },
-          { name: '🎁 Récompense',value: ev.reward_coins > 0 ? `${ev.reward_coins} 🪙` : 'Aucune', inline: true },
+          { name: '🎁 Récompense',value: ev.reward_coins > 0 ? `${ev.reward_coins} ${coin}` : 'Aucune', inline: true },
           { name: '📌 Statut',    value: ev.status, inline: true },
         );
       if (ev.description) embed.setDescription(ev.description);
@@ -178,7 +181,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`✅ Inscrit à "${ev.title}"`)
-        .setDescription(`📅 ${formatDate(ev.starts_at)}${ev.location ? `\n📍 ${ev.location}` : ''}${ev.reward_coins > 0 ? `\n🎁 Tu recevras **${ev.reward_coins} 🪙** à la fin !` : ''}`)
+        .setDescription(`📅 ${formatDate(ev.starts_at)}${ev.location ? `\n📍 ${ev.location}` : ''}${ev.reward_coins > 0 ? `\n🎁 Tu recevras **${ev.reward_coins} ${coin}** à la fin !` : ''}`)
         .setFooter({ text: `${count + 1}${ev.max_players > 0 ? `/${ev.max_players}` : ''} inscrits` });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
@@ -221,7 +224,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle(`🏁 Événement terminé — ${ev.title}`)
-        .setDescription(`${rsvps.length} participants${rewarded > 0 ? `\n💰 ${rewarded} membres ont reçu **${ev.reward_coins} 🪙** chacun` : ''}`);
+        .setDescription(`${rsvps.length} participants${rewarded > 0 ? `\n💰 ${rewarded} membres ont reçu **${ev.reward_coins} ${coin}** chacun` : ''}`);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 

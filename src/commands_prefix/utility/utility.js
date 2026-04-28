@@ -28,7 +28,7 @@ const commands = [
             { name: '💡 Usage', value: `\`${prefix}${cmd.name} ${cmd.usage || ''}\`` }
           )
           .setFooter({ text: 'NexusBot v2 — Meilleur bot Discord' });
-        return message.channel.send({ embeds: [embed] });
+        return message.reply({ embeds: [embed] });
       }
 
       const categories = new Map();
@@ -51,7 +51,7 @@ const commands = [
       }
 
       embed.setFooter({ text: 'NexusBot v2 — Meilleur bot Discord' });
-      message.channel.send({ embeds: [embed] });
+      message.reply({ embeds: [embed] });
     }
   },
   {
@@ -83,7 +83,7 @@ const commands = [
       const desc = parts[1] || '';
       const color = parts[2] || '#7B2FBE';
       await message.delete().catch(() => {});
-      message.channel.send({ embeds: [new EmbedBuilder().setColor(color).setTitle(title).setDescription(desc).setTimestamp()] });
+      message.reply({ embeds: [new EmbedBuilder().setColor(color).setTitle(title).setDescription(desc).setTimestamp()] });
     }
   },
   {
@@ -101,11 +101,11 @@ const commands = [
       const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
       await message.delete().catch(() => {});
       if (!options.length) {
-        const m = await message.channel.send({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('📊 Sondage').setDescription(question).setFooter({ text: `Sondage par ${message.author.username}` })] });
+        const m = await message.reply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('📊 Sondage').setDescription(question).setFooter({ text: `Sondage par ${message.author.username}` })] });
         await m.react('👍'); await m.react('👎'); await m.react('🤷');
       } else {
         const desc = options.map((o, i) => `${emojis[i]} ${o}`).join('\n');
-        const m = await message.channel.send({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('📊 Sondage').setDescription(`**${question}**\n\n${desc}`).setFooter({ text: `Sondage par ${message.author.username}` })] });
+        const m = await message.reply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('📊 Sondage').setDescription(`**${question}**\n\n${desc}`).setFooter({ text: `Sondage par ${message.author.username}` })] });
         for (let i = 0; i < options.length; i++) await m.react(emojis[i]).catch(() => {});
       }
     }
@@ -151,7 +151,7 @@ const commands = [
         // Évaluation sécurisée (pas d'exec)
         const result = Function('"use strict"; return (' + expr + ')')();
         if (typeof result !== 'number' || !isFinite(result)) throw new Error('Résultat invalide');
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🧮 Calculatrice').addFields({ name: '📝 Expression', value: `\`${expr}\``, inline: true }, { name: '✅ Résultat', value: `**${result}**`, inline: true })] });
+        message.reply({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🧮 Calculatrice').addFields({ name: '📝 Expression', value: `\`${expr}\``, inline: true }, { name: '✅ Résultat', value: `**${result}**`, inline: true })] });
       } catch { message.reply('❌ Expression invalide.'); }
     }
   },
@@ -170,7 +170,7 @@ const commands = [
         const data = await res.json();
         if (!data.list?.length) return message.reply(`❌ Aucune définition pour **${term}**.`);
         const def = data.list[0];
-        message.channel.send({ embeds: [new EmbedBuilder().setColor('#FFD700').setTitle(`📖 ${def.word}`).setDescription(def.definition?.slice(0, 1024) || 'Pas de définition.').addFields({ name: '💡 Exemple', value: def.example?.slice(0, 512) || 'Aucun exemple.' }).setURL(def.permalink)] });
+        message.reply({ embeds: [new EmbedBuilder().setColor('#FFD700').setTitle(`📖 ${def.word}`).setDescription(def.definition?.slice(0, 1024) || 'Pas de définition.').addFields({ name: '💡 Exemple', value: def.example?.slice(0, 512) || 'Aucun exemple.' }).setURL(def.permalink)] });
       } catch { message.reply('❌ Erreur lors de la recherche.'); }
     }
   },
@@ -188,7 +188,7 @@ const commands = [
       else return message.reply('❌ Usage : `n!color #FF6B6B` ou `n!color 255 107 107`');
       if (!/^[0-9A-Fa-f]{6}$/.test(hex)) return message.reply('❌ Couleur HEX invalide.');
       const r = parseInt(hex.slice(0,2), 16), g = parseInt(hex.slice(2,4), 16), b = parseInt(hex.slice(4,6), 16);
-      message.channel.send({ embeds: [new EmbedBuilder().setColor(`#${hex.toUpperCase()}`).setTitle(`🎨 Couleur #${hex.toUpperCase()}`).addFields({ name: '🔴 R', value: `${r}`, inline: true }, { name: '🟢 G', value: `${g}`, inline: true }, { name: '🔵 B', value: `${b}`, inline: true }).setDescription(`HEX: **#${hex.toUpperCase()}** | RGB: **${r}, ${g}, ${b}**`)] });
+      message.reply({ embeds: [new EmbedBuilder().setColor(`#${hex.toUpperCase()}`).setTitle(`🎨 Couleur #${hex.toUpperCase()}`).addFields({ name: '🔴 R', value: `${r}`, inline: true }, { name: '🟢 G', value: `${g}`, inline: true }, { name: '🔵 B', value: `${b}`, inline: true }).setDescription(`HEX: **#${hex.toUpperCase()}** | RGB: **${r}, ${g}, ${b}**`)] });
     }
   },
   {
@@ -212,7 +212,7 @@ const commands = [
       const role = message.mentions.roles.first() || message.guild.roles.cache.get(args[0]);
       if (!role) return message.reply('❌ Mentionnez un rôle valide.');
       const members = role.members.map(m => `<@${m.id}>`).join(', ') || 'Aucun membre.';
-      message.channel.send({ embeds: [new EmbedBuilder().setColor(role.hexColor || '#7B2FBE').setTitle(`👥 Membres avec @${role.name}`).setDescription(members.slice(0, 2048)).setFooter({ text: `${role.members.size} membre(s)` })] });
+      message.reply({ embeds: [new EmbedBuilder().setColor(role.hexColor || '#7B2FBE').setTitle(`👥 Membres avec @${role.name}`).setDescription(members.slice(0, 2048)).setFooter({ text: `${role.members.size} membre(s)` })] });
     }
   },
   {
@@ -238,7 +238,7 @@ const commands = [
       const endsAt = Math.floor(Date.now() / 1000) + secs;
       await message.delete().catch(() => {});
       const embed = new EmbedBuilder().setColor('#FFD700').setTitle('🎉 GIVEAWAY !').setDescription(`**Prix :** ${prize}\n\nRéagissez avec 🎉 pour participer !\n\n**Fin :** <t:${endsAt}:R>`).setFooter({ text: `Organisé par ${message.author.username}` }).setTimestamp(new Date(endsAt * 1000));
-      const m = await message.channel.send({ embeds: [embed] });
+      const m = await message.reply({ embeds: [embed] });
       await m.react('🎉');
       try { db.db.prepare('INSERT INTO giveaways (guild_id, channel_id, message_id, prize, winners, ends_at, host_id) VALUES(?,?,?,?,?,?,?)').run(message.guild.id, message.channel.id, m.id, prize, 1, endsAt, message.author.id); } catch {}
     }

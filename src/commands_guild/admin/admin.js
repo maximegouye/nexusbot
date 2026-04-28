@@ -7,10 +7,10 @@ module.exports = {
     .setName('admin')
     .setDescription('Commandes réservées aux administrateurs')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand(sub => sub.setName('donner').setDescription('Donner des coins à un membre')
+    .addSubcommand(sub => sub.setName('donner').setDescription('Donner des € à un membre')
       .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
       .addIntegerOption(o => o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(1)))
-    .addSubcommand(sub => sub.setName('retirer').setDescription('Retirer des coins à un membre')
+    .addSubcommand(sub => sub.setName('retirer').setDescription('Retirer des € à un membre')
       .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
       .addIntegerOption(o => o.setName('montant').setDescription('Montant').setRequired(true).setMinValue(1)))
     .addSubcommand(sub => sub.setName('reset').setDescription('Remettre le solde à zéro')
@@ -63,7 +63,7 @@ module.exports = {
       const u = db.getUser(membre.id, guildId);
       return reply({ embeds: [new EmbedBuilder()
         .setColor(0x2ECC71).setTitle('💰 Coins ajoutés')
-        .setDescription(`**${membre.username}** a reçu **+${montant.toLocaleString('fr-FR')} coins**.\nSolde : **${(u?.balance || 0).toLocaleString('fr-FR')} coins**`)
+        .setDescription(`**${membre.username}** a reçu **+${montant.toLocaleString('fr-FR')} €**.\nSolde : **${(u?.balance || 0).toLocaleString('fr-FR')} €**`)
         .setFooter({ text: `Action par ${interaction.user.username}` }).setTimestamp()] });
     }
 
@@ -77,7 +77,7 @@ module.exports = {
       const u = db.getUser(membre.id, guildId);
       return reply({ embeds: [new EmbedBuilder()
         .setColor(COLOR).setTitle('➖ Coins retirés')
-        .setDescription(`**${membre.username}** a perdu **${toRemove.toLocaleString('fr-FR')} coins**.\nSolde : **${(u?.balance || 0).toLocaleString('fr-FR')} coins**`)
+        .setDescription(`**${membre.username}** a perdu **${toRemove.toLocaleString('fr-FR')} €**.\nSolde : **${(u?.balance || 0).toLocaleString('fr-FR')} €**`)
         .setFooter({ text: `Action par ${interaction.user.username}` }).setTimestamp()] });
     }
 
@@ -89,7 +89,7 @@ module.exports = {
       } catch {}
       return reply({ embeds: [new EmbedBuilder()
         .setColor(COLOR).setTitle('🔄 Solde remis à zéro')
-        .setDescription(`Solde de **${membre.username}** → **0 coins**`)
+        .setDescription(`Solde de **${membre.username}** → **0 €**`)
         .setFooter({ text: `Action par ${interaction.user.username}` }).setTimestamp()] });
     }
 
@@ -112,7 +112,7 @@ module.exports = {
       const membre = interaction.options.getUser('membre');
       const u      = db.getUser(membre.id, guildId);
       const cfg    = db.getConfig ? db.getConfig(guildId) : null;
-      const coin   = cfg?.currency_emoji || '🪙';
+      const coin   = cfg?.currency_emoji || '€';
       return reply({ embeds: [new EmbedBuilder()
         .setColor(0xF39C12).setTitle('👁️ Solde membre')
         .addFields(
@@ -133,8 +133,8 @@ module.exports = {
         .addFields(
           { name: '🆔 Guild ID',    value: guild.id,                                                  inline: true },
           { name: '👥 Membres',     value: `${guild.memberCount}`,                                    inline: true },
-          { name: '💱 Monnaie',     value: `${cfg?.currency_emoji || '🪙'} ${cfg?.currency_name || 'Coins'}`, inline: true },
-          { name: '📅 Daily',       value: `${cfg?.daily_amount || 25} coins`,                        inline: true },
+          { name: '💱 Monnaie',     value: `${cfg?.currency_emoji || '€'} ${cfg?.currency_name || '€'}`, inline: true },
+          { name: '📅 Daily',       value: `${cfg?.daily_amount || 25} €`,                        inline: true },
           { name: '🌟 XP activé',   value: cfg?.xp_enabled ? '✅' : '❌',                            inline: true },
           { name: '💰 Éco activée', value: cfg?.eco_enabled ? '✅' : '❌',                           inline: true },
           { name: '📊 DB',          value: 'SQLite ✅',                                               inline: true },
@@ -191,7 +191,7 @@ module.exports = {
         .setDescription(
           `Suite à un bug qui a pu empêcher certains gains d'être crédités, ` +
           `**${success} membre(s)** viennent d'être remboursés automatiquement.\n\n` +
-          `Les coins ont été ajoutés directement sur leur compte. Un DM de confirmation leur a été envoyé.\n\n` +
+          `Les € ont été ajoutés directement sur leur compte. Un DM de confirmation leur a été envoyé.\n\n` +
           `**Merci pour votre patience. 🙏**`
         )
         .addFields({ name: '📊 Récapitulatif', value: lines.slice(0, 20).join('\n') || '—' })

@@ -22,16 +22,27 @@ module.exports = {
     try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
-        content: '❌ Tu dois avoir la permission **Gérer le serveur** pour accéder à la configuration.',
-        ephemeral: true,
-      });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({
+          content: '❌ Tu dois avoir la permission **Gérer le serveur** pour accéder à la configuration.',
+          ephemeral: true,
+        });
+      } else {
+        return interaction.reply({
+          content: '❌ Tu dois avoir la permission **Gérer le serveur** pour accéder à la configuration.',
+          ephemeral: true,
+        });
+      }
     }
 
     const cfg   = db.getConfig(interaction.guildId);
     const panel = buildMainMenu(cfg, interaction.guild, interaction.user.id);
 
-    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true });
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply({ ...panel, ephemeral: true });
+    } else {
+      return interaction.reply({ ...panel, ephemeral: true });
+    }
     } catch (err) {
     console.error('[CMD] Erreur execute:', err?.message || err);
     const errMsg = { content: `❌ Une erreur est survenue : ${err?.message || 'Erreur inconnue'}`, ephemeral: true };

@@ -54,7 +54,7 @@ module.exports = {
       const msg = await channel.send({ embeds: [embed], components: [row] });
 
       // Sauvegarder en DB
-      db.db.prepare('INSERT INTO suggestions (guild_id, channel_id, message_id, user_id, content, status, upvotes, downvotes, created_at) VALUES (?, ?, ?, ?, ?, "pending", 0, 0, ?)')
+      await db.db.prepare('INSERT INTO suggestions (guild_id, channel_id, message_id, user_id, content, status, upvotes, downvotes, created_at) VALUES (?, ?, ?, ?, ?, "pending", 0, 0, ?)')
         .run(interaction.guildId, channel.id, msg.id, interaction.user.id, idee, Math.floor(Date.now() / 1000));
 
       return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Ta suggestion a été envoyée dans ${channel} ! Merci pour ta contribution.`)], ephemeral: true });

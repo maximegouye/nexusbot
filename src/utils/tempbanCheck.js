@@ -19,7 +19,7 @@ module.exports = async (client) => {
         const logCh = guild.channels.cache.get(cfg.mod_log_channel);
         if (logCh) {
           const { EmbedBuilder } = require('discord.js');
-          logCh.send({
+          await logCh.send({
             embeds: [new EmbedBuilder()
               .setColor('#2ECC71')
               .setTitle('🔓 Débannissement Automatique (TempBan)')

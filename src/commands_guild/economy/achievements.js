@@ -31,11 +31,11 @@ const ALL_ACHIEVEMENTS = [
   { key: 'lvl_50',   emoji: '✨', name: 'Maître',               desc: 'Atteins le niveau 50',           condition: u => u.level >= 50,  reward: 5000, rarity: 'Épique' },
   { key: 'lvl_100',  emoji: '🌌', name: 'Légende',              desc: 'Atteins le niveau 100',          condition: u => u.level >= 100, reward: 15000,rarity: 'Légendaire' },
   // ─── Économie ────────────────────────────────────────────────────────────
-  { key: 'eco_1k',   emoji: '🪙', name: 'Premiers sous',        desc: 'Accumule 1 000€',           condition: u => (u.balance+u.bank) >= 1000,   reward: 100,  rarity: 'Commun' },
-  { key: 'eco_10k',  emoji: '💵', name: 'Petit épargnant',      desc: 'Accumule 10 000 coins',          condition: u => (u.balance+u.bank) >= 10000,  reward: 500,  rarity: 'Commun' },
-  { key: 'eco_100k', emoji: '💰', name: 'Riche',                desc: 'Accumule 100 000 coins',         condition: u => (u.balance+u.bank) >= 100000, reward: 2000, rarity: 'Rare' },
-  { key: 'eco_1m',   emoji: '💎', name: 'Millionnaire',         desc: 'Accumule 1 000 000 coins',       condition: u => (u.balance+u.bank) >= 1000000,reward: 10000,rarity: 'Légendaire' },
-  { key: 'earned_100k', emoji: '📈', name: 'Travailleur',       desc: 'Gagne 100 000 coins au total',   condition: u => u.total_earned >= 100000,     reward: 3000, rarity: 'Rare' },
+  { key: 'eco_1k',   emoji: '💰', name: 'Premiers sous',        desc: 'Accumule 1 000 €',           condition: u => (u.balance+u.bank) >= 1000,   reward: 100,  rarity: 'Commun' },
+  { key: 'eco_10k',  emoji: '💵', name: 'Petit épargnant',      desc: 'Accumule 10 000 €',          condition: u => (u.balance+u.bank) >= 10000,  reward: 500,  rarity: 'Commun' },
+  { key: 'eco_100k', emoji: '💰', name: 'Riche',                desc: 'Accumule 100 000 €',         condition: u => (u.balance+u.bank) >= 100000, reward: 2000, rarity: 'Rare' },
+  { key: 'eco_1m',   emoji: '💎', name: 'Millionnaire',         desc: 'Accumule 1 000 000 €',       condition: u => (u.balance+u.bank) >= 1000000,reward: 10000,rarity: 'Légendaire' },
+  { key: 'earned_100k', emoji: '📈', name: 'Travailleur',       desc: 'Gagne 100 000 € au total',   condition: u => u.total_earned >= 100000,     reward: 3000, rarity: 'Rare' },
   // ─── Streaks ─────────────────────────────────────────────────────────────
   { key: 'streak_3', emoji: '🔥', name: 'En feu',               desc: 'Streak daily de 3 jours',        condition: u => u.streak >= 3,  reward: 200,  rarity: 'Commun' },
   { key: 'streak_7', emoji: '🔥', name: 'Une semaine',          desc: 'Streak daily de 7 jours',        condition: u => u.streak >= 7,  reward: 500,  rarity: 'Rare' },
@@ -101,7 +101,7 @@ module.exports = {
         .setColor('#f39c12')
         .setTitle(`🏆 Trophées de ${targetUser.username}`)
         .setThumbnail(targetUser.displayAvatarURL())
-        .setDescription(list.map(a => `${a.emoji} **${a.name}** — *${a.desc}*\n┗ \`${a.rarity}\` • +${a.reward} 🪙`).join('\n\n'))
+        .setDescription(list.map(a => `${a.emoji} **${a.name}** — *${a.desc}*\n┗ \`${a.rarity}\` • +${a.reward} €`).join('\n\n'))
         .setFooter({ text: `${unlocked.length}/${ALL_ACHIEVEMENTS.length} trophées débloqués` });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
@@ -139,8 +139,8 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor('#2ecc71')
           .setTitle(`🎉 ${newOnes.length} nouveau(x) trophée(s) débloqué(s) !`)
-          .setDescription(newOnes.map(a => `${a.emoji} **${a.name}**\n┗ ${a.desc} • +${a.reward} 🪙`).join('\n\n'))
-          .setFooter({ text: `+${totalReward} 🪙 de récompense au total !` })
+          .setDescription(newOnes.map(a => `${a.emoji} **${a.name}**\n┗ ${a.desc} • +${a.reward} €`).join('\n\n'))
+          .setFooter({ text: `+${totalReward} € de récompense au total !` })
           .setTimestamp();
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
       }

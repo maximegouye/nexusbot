@@ -74,7 +74,7 @@ const commands = [
       const total = (u.balance || 0) + (u.bank || 0);
       const top10 = db.db.prepare('SELECT user_id FROM users WHERE guild_id=? ORDER BY balance+COALESCE(bank,0) DESC LIMIT 10').all(message.guild.id);
       const rank  = db.db.prepare('SELECT COUNT(*)+1 as r FROM users WHERE guild_id=? AND balance+COALESCE(bank,0) > ?').get(message.guild.id, total)?.r || '?';
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle(`💰 Solde de ${target.username}`)
         .setThumbnail(target.displayAvatarURL())
@@ -101,7 +101,7 @@ const commands = [
       const u = db.getUser(message.author.id, message.guild.id);
       const cfg = db.getConfig(message.guild.id);
       const coin = cfg.currency_emoji || '€';
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#3498DB')
         .setTitle('🏦 Ma Banque')
         .addFields(
@@ -138,7 +138,7 @@ const commands = [
       db.removeCoins(message.author.id, message.guild.id, amount);
       db.db.prepare('UPDATE users SET bank = bank + ? WHERE user_id=? AND guild_id=?').run(amount, message.author.id, message.guild.id);
       const now = db.getUser(message.author.id, message.guild.id);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setTitle('🏦 Dépôt effectué !')
         .addFields(
@@ -173,7 +173,7 @@ const commands = [
       db.db.prepare('UPDATE users SET bank = MAX(0, bank - ?) WHERE user_id=? AND guild_id=?').run(amount, message.author.id, message.guild.id);
       db.addCoins(message.author.id, message.guild.id, amount);
       const now = db.getUser(message.author.id, message.guild.id);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#E67E22')
         .setTitle('💸 Retrait effectué !')
         .addFields(
@@ -278,7 +278,7 @@ const commands = [
       } catch {
         db.db.prepare('UPDATE users SET last_work=? WHERE user_id=? AND guild_id=?').run(now, message.author.id, message.guild.id);
       }
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setTitle(`${emoji} Travail — ${job}`)
         .setDescription(`Vous avez travaillé comme **${job}** et gagné **+${fmt(earned)} ${coin}** !${newWorkStreak >= 3 ? `\n🔥 Bonus assiduité +20% !` : ''}`)
@@ -326,7 +326,7 @@ const commands = [
       }
       const earned = Math.floor(Math.random() * (c.max - c.min)) + c.min;
       db.addCoins(message.author.id, message.guild.id, earned);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#9B59B6')
         .setTitle(`${c.emoji} Crime réussi !`)
         .setDescription(`Vous avez **${c.name}** et empoché **+${fmt(earned)} ${coin}** !`)
@@ -415,7 +415,7 @@ const commands = [
       const fee = Math.min(Math.floor(amount * 0.02), 100);
       db.removeCoins(message.author.id, message.guild.id, amount + fee);
       db.addCoins(target.id, message.guild.id, amount);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setTitle('💸 Transfert effectué !')
         .addFields(
@@ -445,7 +445,7 @@ const commands = [
         const medal = medals[i] || `**${i+1}.**`;
         return `${medal} <@${u.user_id}> — **${fmt(u.total)} ${coin}**`;
       }))).join('\n');
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle('💰 Top Richesse du Serveur')
         .setDescription(desc || 'Aucune donnée.')
@@ -479,7 +479,7 @@ const commands = [
       if (gain > 0) db.addCoins(message.author.id, message.guild.id, gain);
       else db.removeCoins(message.author.id, message.guild.id, bet);
       const title = mult >= 15 ? '💎 MEGA JACKPOT !!' : mult >= 8 ? '🎰 SUPER JACKPOT !' : mult >= 5 ? '⭐ JACKPOT !' : mult >= 3 ? '🎉 TRIPLE !' : mult > 0 ? '✅ Petite victoire !' : '❌ Perdu';
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(gain > 0 ? '#2ECC71' : '#E74C3C')
         .setTitle(title)
         .setDescription(`[ ${reels.join(' | ')} ]\n${gain > 0 ? `**+${fmt(gain)} ${coin}** 🎉` : `**${fmt(bet)} ${coin}** perdus`}`)
@@ -510,9 +510,9 @@ const commands = [
       const win    = result === norm;
       if (win) db.addCoins(message.author.id, message.guild.id, bet);
       else     db.removeCoins(message.author.id, message.guild.id, bet);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(win ? '#2ECC71' : '#E74C3C')
-        .setTitle(`${win ? '✅ Gagné !' : '❌ Perdu !'} — ${result === 'pile' ? '🪙 Pile' : '🖼️ Face'}`)
+        .setTitle(`${win ? '✅ Gagné !' : '❌ Perdu !'} — ${result === 'pile' ? '💶 Pile' : '🖼️ Face'}`)
         .setDescription(`${win ? `**+${fmt(bet)} ${coin}** !` : `-${fmt(bet)} ${coin}`}`)
         .addFields({ name: '👛 Nouveau solde', value: `**${fmt(db.getUser(message.author.id, message.guild.id).balance)} ${coin}**`, inline: true })
       ]});
@@ -543,7 +543,7 @@ const commands = [
         if (win) db.addCoins(message.author.id, message.guild.id, bet);
         else     db.removeCoins(message.author.id, message.guild.id, bet);
       }
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(win ? '#2ECC71' : tie ? '#F39C12' : '#E74C3C')
         .setTitle(`🎲 Dés (1-${faces})`)
         .addFields(
@@ -765,7 +765,7 @@ const commands = [
       const win = Math.random() < 0.48; // 48% légèrement favorable
       if (win) db.addCoins(message.author.id, message.guild.id, bet);
       else     db.removeCoins(message.author.id, message.guild.id, bet);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(win ? '#2ECC71' : '#E74C3C')
         .setTitle(win ? '🎰 Gagné !' : '🎰 Perdu !')
         .setDescription(`Vous avez ${win ? `gagné` : 'perdu'} **${fmt(bet)} ${coin}** !`)
@@ -802,7 +802,7 @@ const commands = [
       }
       if (win) db.addCoins(message.author.id, message.guild.id, bet);
       else     db.removeCoins(message.author.id, message.guild.id, bet);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(win ? '#2ECC71' : '#E74C3C')
         .setTitle(`🃏 Haute ou Basse — ${win ? 'Gagné !' : 'Perdu !'}`)
         .addFields(
@@ -854,7 +854,7 @@ const commands = [
       if (win) db.addCoins(message.author.id, message.guild.id, gain);
       else     db.removeCoins(message.author.id, message.guild.id, bet);
       const numStr = `**${num}** ${num === 0 ? '🟩' : rouge.includes(num) ? '🔴' : '⚫'}`;
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(win ? '#2ECC71' : '#E74C3C')
         .setTitle(`🎡 Roulette — ${win ? 'Gagné !' : 'Perdu !'}`)
         .setDescription(`La bille s'arrête sur ${numStr}`)
@@ -889,7 +889,7 @@ const commands = [
         ? ['⭐','⭐','⭐'] : prize >= 500
         ? ['🎰','🎰','🎰'] : prize >= 100
         ? ['🍀','🍀','🍀'] : ['🍒','🍒','💫'];
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(prize > cost ? '#2ECC71' : prize > 0 ? '#F1C40F' : '#E74C3C')
         .setTitle(`🎟️ Ticket à Gratter${prize >= 5000 ? ' — JACKPOT !!!' : prize > 0 ? ' — Gagné !' : ' — Perdu'}`)
         .setDescription(`[ ${symbols.join(' | ')} ]\n${prize > 0 ? `🎉 Vous gagnez **${fmt(prize)} ${coin}** !` : `Pas de chance cette fois... Coût : **-${cost} ${coin}**`}`)
@@ -940,7 +940,7 @@ const commands = [
       }
       db.db.prepare('UPDATE users SET last_fish=? WHERE user_id=? AND guild_id=?').run(now, message.author.id, message.guild.id);
       if (chosen.value > 0) db.addCoins(message.author.id, message.guild.id, chosen.value);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(chosen.value >= 800 ? '#F1C40F' : chosen.value > 0 ? '#2ECC71' : '#95A5A6')
         .setTitle(`🎣 Pêche${hasBait ? ' (Appât Légendaire ✨)' : ''}`)
         .setDescription(`Vous avez pêché : ${chosen.emoji} **${chosen.name}**${chosen.value > 0 ? ` → **+${fmt(chosen.value)} ${coin}**` : ' → Rien !'}`)
@@ -981,7 +981,7 @@ const commands = [
       }
       db.db.prepare('UPDATE users SET last_hunt=? WHERE user_id=? AND guild_id=?').run(now, message.author.id, message.guild.id);
       if (chosen.value > 0) db.addCoins(message.author.id, message.guild.id, chosen.value);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(chosen.value >= 600 ? '#F1C40F' : chosen.value > 0 ? '#2ECC71' : '#95A5A6')
         .setTitle('🏹 Chasse')
         .setDescription(`Vous avez chassé : ${chosen.emoji} **${chosen.name}**${chosen.value > 0 ? ` → **+${fmt(chosen.value)} ${coin}**` : ' → Rentrez bredouille !'}`)
@@ -1028,7 +1028,7 @@ const commands = [
       }
       db.db.prepare('UPDATE users SET last_mine=? WHERE user_id=? AND guild_id=?').run(now, message.author.id, message.guild.id);
       db.addCoins(message.author.id, message.guild.id, earned);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(earned >= 1000 ? '#F1C40F' : '#7B2FBE')
         .setTitle(`⛏️ Mine${hasTNT ? ' — TNT x6 💣' : ''}`)
         .setDescription(`Vous avez trouvé : ${chosen.emoji} **${chosen.name}** → **+${fmt(earned)} ${coin}**`)
@@ -1064,7 +1064,7 @@ const commands = [
       const giver  = givers[Math.floor(Math.random() * givers.length)];
       const amount = Math.floor(Math.random() * 60) + 10;
       db.addCoins(message.author.id, message.guild.id, amount);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#E67E22')
         .setTitle('🙏 Quelqu\'un a été généreux !')
         .setDescription(`**${giver}** vous a donné **+${fmt(amount)} ${coin}** !`)
@@ -1105,7 +1105,7 @@ const commands = [
       }
       const fine = Math.min(Math.floor((u.balance || 0) * 0.30) + 500, u.balance || 0);
       db.removeCoins(message.author.id, message.guild.id, fine);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#E74C3C')
         .setTitle('🚨 Braquage raté !')
         .setDescription(`La police a intercepté votre équipe à la **${bank}**. Amende : **-${fmt(fine)} ${coin}**`)
@@ -1139,7 +1139,7 @@ const commands = [
         db.addCoins(message.author.id, message.guild.id, profit);
       }
       const pct = (change * 100).toFixed(1);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(profit > 0 ? '#2ECC71' : '#E74C3C')
         .setTitle(`📈 Investissement — ${stock}`)
         .setDescription(`**${pct > 0 ? '+' : ''}${pct}%** — ${profit > 0 ? `Gain de **+${fmt(profit)} ${coin}**` : `Perte de **-${fmt(Math.abs(profit))} ${coin}**`}`)
@@ -1166,7 +1166,7 @@ const commands = [
         const stock = item.stock === -1 ? '∞' : item.stock;
         return `**${i+1}.** ${item.emoji} **${item.name}** — **${fmt(item.price)} ${coin}** (stock: ${stock})\n> ${item.description || 'Pas de description'}`;
       }).join('\n\n');
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#3498DB')
         .setTitle('🛒 Boutique')
         .setDescription(desc)
@@ -1201,7 +1201,7 @@ const commands = [
         const member = message.guild.members.cache.get(message.author.id) || await message.guild.members.fetch(message.author.id).catch(() => null);
         if (member) member.roles.add(item.role_id).catch(() => {});
       }
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
         .setTitle(`✅ Achat réussi — ${item.emoji} ${item.name}`)
         .addFields(
@@ -1237,7 +1237,7 @@ const commands = [
         fields.push({ name: `${item.emoji} ${item.name}`, value: `Qté: **${item.quantity}**`, inline: true });
       }
       if (!fields.length) return message.reply(`❌ **${target.username}** n'a rien dans son inventaire.`);
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle(`🎒 Inventaire de ${target.username}`)
         .addFields(...fields)
@@ -1263,7 +1263,7 @@ const commands = [
       const total = (u.balance || 0) + (u.bank || 0);
       const rank  = db.db.prepare('SELECT COUNT(*)+1 as r FROM users WHERE guild_id=? AND balance+COALESCE(bank,0) > ?').get(message.guild.id, total)?.r || '?';
       const xpRank = db.db.prepare('SELECT COUNT(*)+1 as r FROM users WHERE guild_id=? AND xp > ?').get(message.guild.id, u.xp || 0)?.r || '?';
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor(cfg.color || '#7B2FBE')
         .setTitle(`👤 Profil de ${target.username}`)
         .setThumbnail(target.displayAvatarURL())
@@ -1294,7 +1294,7 @@ const commands = [
       const coin = cfg.currency_emoji || '€';
       const nextBonus = u.streak >= 100 ? 5000 : u.streak >= 30 ? 1000 : u.streak >= 14 ? 400 : u.streak >= 7 ? 200 : 0;
       const nextMilestone = u.streak < 7 ? 7 : u.streak < 14 ? 14 : u.streak < 30 ? 30 : u.streak < 100 ? 100 : null;
-      message.channel.send({ embeds: [new EmbedBuilder()
+      message.reply({ embeds: [new EmbedBuilder()
         .setColor('#F39C12')
         .setTitle('🔥 Streak Quotidien')
         .addFields(

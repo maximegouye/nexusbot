@@ -30,12 +30,12 @@ function chipEmoji(amount) {
 }
 
 // ── Mise formatée avec jeton ─────────────────────────────────────────────────
-function chipStr(amount, coin = '🪙') {
+function chipStr(amount, coin = '€') {
   return `${chipEmoji(amount)} **${Number(amount).toLocaleString('fr-FR')} ${coin}**`;
 }
 
 // ── Affichage bilan (solde + diff en couleur) ────────────────────────────────
-function balanceLine(newBal, diff, coin = '🪙') {
+function balanceLine(newBal, diff, coin = '€') {
   const sign = diff >= 0 ? '+' : '';
   const icon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➖';
   return `${icon} **${Number(newBal).toLocaleString('fr-FR')} ${coin}** \`(${sign}${Number(diff).toLocaleString('fr-FR')})\``;
@@ -71,7 +71,7 @@ function changeMiseModal(prefix, userId, extra = '') {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('newmise')
-          .setLabel('Nouvelle mise en coins (min 5)')
+          .setLabel('Nouvelle mise en € (min 5)')
           .setPlaceholder('Ex : 500 — ou "all" pour tout miser')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)

@@ -18,7 +18,7 @@ const TEMPLATE = [
     { name: '・💰・économie', topic: 'Commandes économiques.' },
     { name: '・🏦・banque', topic: '/banque solde /banque interets' },
     { name: '・📊・marché', topic: '/meteo_marche' },
-    { name: '・🏆・classement', topic: '/top coins /top xp' },
+    { name: '・🏆・classement', topic: '/top € /top xp' },
   ]},
   { category: '┈ ・ JEUX ・ ┈', channels: [
     { name: '・🎮・jeux', topic: 'Mini-jeux.' },
@@ -58,13 +58,16 @@ module.exports = {
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
   async execute(interaction) {
-    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator))
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🔒 Réservé aux administrateurs.', ephemeral: true });
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      const errFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return errFn({ content: '🔒 Réservé aux administrateurs.', ephemeral: true });
+    }
     const sub = interaction.options.getSubcommand(), guild = interaction.guild;
 
     if (sub === 'apercu') {
       const lines = TEMPLATE.flatMap(t => [`\n**${t.category}**`, ...t.channels.map(ch => `　${ch.name}`)]).join('\n');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle('✨ ・ Modèle de serveur ・').setDescription(lines.slice(0,4090)).setFooter({ text: '/setup-serveur creer pour appliquer' })], ephemeral: true });
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle('✨ ・ Modèle de serveur ・').setDescription(lines.slice(0,4090)).setFooter({ text: '/setup-serveur creer pour appliquer' })], ephemeral: true });
     }
 
     if (sub === 'renommer') {
@@ -75,7 +78,8 @@ module.exports = {
           if (pat.test(ch.name)) { try { await ch.setName(newName); renamed++; } catch {} break; }
         }
       }
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🏷️ ・ Renommage terminé ・')
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor('#3498DB').setTitle('🏷️ ・ Renommage terminé ・')
         .setDescription(renamed === 0 ? '⚠️ Aucun salon ne correspond.' : `**${renamed}** salon(s) renommé(s) avec le style ・.`).setTimestamp()] });
     }
 
@@ -91,7 +95,8 @@ module.exports = {
           } else { existed++; }
         }
       }
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✨ ・ Configuration terminée ・')
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✨ ・ Configuration terminée ・')
         .addFields({ name: '・ ✅ Créés', value: `**${created}**`, inline: true }, { name: '・ ✓ Existants', value: `**${existed}**`, inline: true }).setTimestamp()] });
     }
 
@@ -100,8 +105,12 @@ module.exports = {
       try {
         const sep = await guild.channels.create({ name: nom, type: ChannelType.GuildText,
           permissionOverwrites: [{ id: guild.roles.everyone.id, deny: ['SendMessages','AddReactions'], allow: ['ViewChannel'] }] });
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('➖ ・ Séparateur créé').setDescription(`**${sep.name}** ・ Déplacez-le où vous voulez.`)], ephemeral: true });
-      } catch (e) { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur : ${e.message}`, ephemeral: true }); }
+        const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+        return respFn({ embeds: [new EmbedBuilder().setColor('#95A5A6').setTitle('➖ ・ Séparateur créé').setDescription(`**${sep.name}** ・ Déplacez-le où vous voulez.`)], ephemeral: true });
+      } catch (e) {
+        const errFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+        return errFn({ content: `❌ Erreur : ${e.message}`, ephemeral: true });
+      }
     }
   }
 };

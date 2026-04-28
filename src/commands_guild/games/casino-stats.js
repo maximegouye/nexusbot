@@ -270,7 +270,7 @@ async function showStats(source, userId, targetUser, guildId, showServer, client
   const isInteraction = !!source.editReply;
   const guild  = source.guild || source.channel?.guild;
   const cfg    = db.getConfig ? db.getConfig(guildId) : db.db.prepare('SELECT currency_emoji FROM guild_config WHERE guild_id=?').get(guildId);
-  const coin   = cfg?.currency_emoji || '🪙';
+  const coin   = cfg?.currency_emoji || '€';
 
   const personalEmbed = await buildPersonalEmbed(source, targetUser, guildId, coin);
 
@@ -314,7 +314,7 @@ async function handleComponent(interaction, cid) {
 
   const guildId = interaction.guildId;
   const cfg     = db.getConfig ? db.getConfig(guildId) : db.db.prepare('SELECT currency_emoji FROM guild_config WHERE guild_id=?').get(guildId);
-  const coin    = cfg?.currency_emoji || '🪙';
+  const coin    = cfg?.currency_emoji || '€';
   const guild   = interaction.guild;
 
   await interaction.deferUpdate().catch(() => {});

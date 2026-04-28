@@ -67,11 +67,11 @@ module.exports = {
       .setName('eco')
       .setDescription('💰 Gestion économique complète')
 
-      .addSubcommand(s => s.setName('donner').setDescription('Donner des coins à un membre')
+      .addSubcommand(s => s.setName('donner').setDescription('Donner des € à un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
         .addStringOption(o => o.setName('montant').setDescription('Montant à donner').setRequired(true).setMaxLength(30)))
 
-      .addSubcommand(s => s.setName('retirer').setDescription('Retirer des coins à un membre')
+      .addSubcommand(s => s.setName('retirer').setDescription('Retirer des € à un membre')
         .addUserOption(o => o.setName('membre').setDescription('Membre cible').setRequired(true))
         .addStringOption(o => o.setName('montant').setDescription('Montant à retirer').setRequired(true).setMaxLength(30)))
 
@@ -113,8 +113,8 @@ module.exports = {
       .addSubcommand(s => s.setName('xp-multiplicateur').setDescription('Configurer le multiplicateur d\'XP')
         .addNumberOption(o => o.setName('valeur').setDescription('Multiplicateur (ex: 1.5)').setRequired(true).setMinValue(0.1)))
 
-      .addSubcommand(s => s.setName('coins-par-message').setDescription('Définir les coins gagnés par message')
-        .addIntegerOption(o => o.setName('montant').setDescription('Coins par message').setRequired(true).setMinValue(0)))
+      .addSubcommand(s => s.setName('coins-par-message').setDescription('Définir les € gagnés par message')
+        .addIntegerOption(o => o.setName('montant').setDescription('€ par message').setRequired(true).setMinValue(0)))
 
       .addSubcommand(s => s.setName('bienvenue').setDescription('Configurer le canal et message de bienvenue')
         .addChannelOption(o => o.setName('canal').setDescription('Canal de bienvenue').setRequired(true))
@@ -286,11 +286,19 @@ module.exports = {
   async execute(interaction) {
     // ── Vérification propriétaire ──────────────────────────────────────────
     if (!isOwner(interaction)) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
-        embeds: [baseEmbed('🔐 Accès refusé', '#E74C3C')
-          .setDescription('Cette commande est réservée exclusivement au propriétaire du serveur.')],
-        ephemeral: true
-      });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({
+          embeds: [baseEmbed('🔐 Accès refusé', '#E74C3C')
+            .setDescription('Cette commande est réservée exclusivement au propriétaire du serveur.')],
+          ephemeral: true
+        });
+      } else {
+        return interaction.reply({
+          embeds: [baseEmbed('🔐 Accès refusé', '#E74C3C')
+            .setDescription('Cette commande est réservée exclusivement au propriétaire du serveur.')],
+          ephemeral: true
+        });
+      }
     }
 
     const sub   = interaction.options.getSubcommand();
@@ -298,7 +306,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId  = interaction.user.id;
     const cfg     = db.getConfig(guildId);
-    const coin    = cfg.currency_emoji || '🪙';
+    const coin    = cfg.currency_emoji || '€';
     const now     = Math.floor(Date.now() / 1000);
 
     await interaction.deferReply({ ephemeral: true });
@@ -312,28 +320,48 @@ module.exports = {
         const target  = interaction.options.getUser('membre');
         const montant = parseInt(interaction.options.getString('montant'));
         db.addCoins(target.id, guildId, montant);
-        auditLog(guildId, userId, 'ECO_DONNER', target.id, `+${montant} coins`);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('✅ Coins ajoutés', '#2ECC71')
-            .addFields(
-              { name: 'Membre', value: `<@${target.id}>`, inline: true },
-              { name: 'Montant ajouté', value: `**+${montant.toLocaleString()} ${coin}**`, inline: true }
-            )
-        ]});
+        auditLog(guildId, userId, 'ECO_DONNER', target.id, `+${montant} €`);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('✅ Coins ajoutés', '#2ECC71')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Montant ajouté', value: `**+${montant.toLocaleString()} ${coin}**`, inline: true }
+              )
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('✅ Coins ajoutés', '#2ECC71')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Montant ajouté', value: `**+${montant.toLocaleString()} ${coin}**`, inline: true }
+              )
+          ]});
+        }
       }
 
       if (sub === 'retirer') {
         const target  = interaction.options.getUser('membre');
         const montant = parseInt(interaction.options.getString('montant'));
         db.addCoins(target.id, guildId, -montant);
-        auditLog(guildId, userId, 'ECO_RETIRER', target.id, `-${montant} coins`);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('✅ Coins retirés', '#E67E22')
-            .addFields(
-              { name: 'Membre', value: `<@${target.id}>`, inline: true },
-              { name: 'Montant retiré', value: `**-${montant.toLocaleString()} ${coin}**`, inline: true }
-            )
-        ]});
+        auditLog(guildId, userId, 'ECO_RETIRER', target.id, `-${montant} €`);
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('✅ Coins retirés', '#E67E22')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Montant retiré', value: `**-${montant.toLocaleString()} ${coin}**`, inline: true }
+              )
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('✅ Coins retirés', '#E67E22')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Montant retiré', value: `**-${montant.toLocaleString()} ${coin}**`, inline: true }
+              )
+          ]});
+        }
       }
 
       if (sub === 'definir-solde') {
@@ -341,13 +369,23 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE users SET balance=? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DEFINIR_SOLDE', target.id, `solde → ${montant}`);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('✅ Solde défini', '#3498DB')
-            .addFields(
-              { name: 'Membre', value: `<@${target.id}>`, inline: true },
-              { name: 'Nouveau solde', value: `**${montant.toLocaleString()} ${coin}**`, inline: true }
-            )
-        ]});
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('✅ Solde défini', '#3498DB')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Nouveau solde', value: `**${montant.toLocaleString()} ${coin}**`, inline: true }
+              )
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('✅ Solde défini', '#3498DB')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Nouveau solde', value: `**${montant.toLocaleString()} ${coin}**`, inline: true }
+              )
+          ]});
+        }
       }
 
       if (sub === 'donner-xp') {
@@ -355,13 +393,23 @@ module.exports = {
         const montant = parseInt(interaction.options.getString('montant'));
         db.db.prepare('UPDATE users SET xp=xp+? WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DONNER_XP', target.id, `+${montant} XP`);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('✅ XP ajouté', '#9B59B6')
-            .addFields(
-              { name: 'Membre', value: `<@${target.id}>`, inline: true },
-              { name: 'XP ajouté', value: `**+${montant.toLocaleString()} XP**`, inline: true }
-            )
-        ]});
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('✅ XP ajouté', '#9B59B6')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'XP ajouté', value: `**+${montant.toLocaleString()} XP**`, inline: true }
+              )
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('✅ XP ajouté', '#9B59B6')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'XP ajouté', value: `**+${montant.toLocaleString()} XP**`, inline: true }
+              )
+          ]});
+        }
       }
 
       if (sub === 'definir-niveau') {
@@ -369,65 +417,125 @@ module.exports = {
         const niveau = parseInt(interaction.options.getString('niveau'));
         db.db.prepare('UPDATE users SET level=?, xp=0 WHERE user_id=? AND guild_id=?').run(niveau, target.id, guildId);
         auditLog(guildId, userId, 'ECO_DEFINIR_NIVEAU', target.id, `niveau → ${niveau}`);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('✅ Niveau défini', '#1ABC9C')
-            .addFields(
-              { name: 'Membre', value: `<@${target.id}>`, inline: true },
-              { name: 'Nouveau niveau', value: `**Niveau ${niveau}**`, inline: true }
-            )
-        ]});
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('✅ Niveau défini', '#1ABC9C')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Nouveau niveau', value: `**Niveau ${niveau}**`, inline: true }
+              )
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('✅ Niveau défini', '#1ABC9C')
+              .addFields(
+                { name: 'Membre', value: `<@${target.id}>`, inline: true },
+                { name: 'Nouveau niveau', value: `**Niveau ${niveau}**`, inline: true }
+              )
+          ]});
+        }
       }
 
       if (sub === 'reset-user') {
         const target = interaction.options.getUser('membre');
         db.db.prepare('UPDATE users SET balance=0, bank=0, xp=0, level=1, total_earned=0, streak=0 WHERE user_id=? AND guild_id=?').run(target.id, guildId);
         auditLog(guildId, userId, 'ECO_RESET_USER', target.id, 'réinitialisation complète');
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('✅ Profil réinitialisé', '#E74C3C')
-            .setDescription(`Le profil économique de <@${target.id}> a été remis à zéro.`)
-        ]});
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('✅ Profil réinitialisé', '#E74C3C')
+              .setDescription(`Le profil économique de <@${target.id}> a été remis à zéro.`)
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('✅ Profil réinitialisé', '#E74C3C')
+              .setDescription(`Le profil économique de <@${target.id}> a été remis à zéro.`)
+          ]});
+        }
       }
 
       if (sub === 'reset-serveur') {
         db.db.prepare('UPDATE users SET balance=0, bank=0, xp=0, level=1, total_earned=0, streak=0 WHERE guild_id=?').run(guildId);
         auditLog(guildId, userId, 'ECO_RESET_SERVEUR', null, 'réinitialisation globale');
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('⚠️ Économie réinitialisée', '#E74C3C')
-            .setDescription('L\'intégralité de l\'économie du serveur a été remise à zéro.')
-        ]});
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('⚠️ Économie réinitialisée', '#E74C3C')
+              .setDescription('L\'intégralité de l\'économie du serveur a été remise à zéro.')
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('⚠️ Économie réinitialisée', '#E74C3C')
+              .setDescription('L\'intégralité de l\'économie du serveur a été remise à zéro.')
+          ]});
+        }
       }
 
       if (sub === 'info-user') {
         const target = interaction.options.getUser('membre');
         const u = db.db.prepare('SELECT * FROM users WHERE user_id=? AND guild_id=?').get(target.id, guildId);
-        if (!u) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce membre n\'a pas encore de données.' });
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed(`📋 Données — ${target.username}`)
-            .addFields(
-              { name: `${coin} Solde`, value: `${(u.balance||0).toLocaleString()}`, inline: true },
-              { name: '🏦 Banque', value: `${(u.bank||0).toLocaleString()}`, inline: true },
-              { name: '📊 Total gagné', value: `${(u.total_earned||0).toLocaleString()}`, inline: true },
-              { name: '⚡ XP', value: `${(u.xp||0).toLocaleString()}`, inline: true },
-              { name: '🏆 Niveau', value: `${u.level||1}`, inline: true },
-              { name: '🔥 Streak', value: `${u.streak||0} jour(s)`, inline: true },
-              { name: '💬 Messages', value: `${(u.message_count||0).toLocaleString()}`, inline: true },
-              { name: '⭐ Réputation', value: `${u.reputation||0}`, inline: true },
-              { name: '🎂 Anniversaire', value: u.birthday || 'Non défini', inline: true },
-            )
-            .setThumbnail(target.displayAvatarURL())
-        ]});
+        if (!u) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: '❌ Ce membre n\'a pas encore de données.' });
+          } else {
+            return interaction.reply({ content: '❌ Ce membre n\'a pas encore de données.' });
+          }
+        }
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed(`📋 Données — ${target.username}`)
+              .addFields(
+                { name: `${coin} Solde`, value: `${(u.balance||0).toLocaleString()}`, inline: true },
+                { name: '🏦 Banque', value: `${(u.bank||0).toLocaleString()}`, inline: true },
+                { name: '📊 Total gagné', value: `${(u.total_earned||0).toLocaleString()}`, inline: true },
+                { name: '⚡ XP', value: `${(u.xp||0).toLocaleString()}`, inline: true },
+                { name: '🏆 Niveau', value: `${u.level||1}`, inline: true },
+                { name: '🔥 Streak', value: `${u.streak||0} jour(s)`, inline: true },
+                { name: '💬 Messages', value: `${(u.message_count||0).toLocaleString()}`, inline: true },
+                { name: '⭐ Réputation', value: `${u.reputation||0}`, inline: true },
+                { name: '🎂 Anniversaire', value: u.birthday || 'Non défini', inline: true },
+              )
+              .setThumbnail(target.displayAvatarURL())
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed(`📋 Données — ${target.username}`)
+              .addFields(
+                { name: `${coin} Solde`, value: `${(u.balance||0).toLocaleString()}`, inline: true },
+                { name: '🏦 Banque', value: `${(u.bank||0).toLocaleString()}`, inline: true },
+                { name: '📊 Total gagné', value: `${(u.total_earned||0).toLocaleString()}`, inline: true },
+                { name: '⚡ XP', value: `${(u.xp||0).toLocaleString()}`, inline: true },
+                { name: '🏆 Niveau', value: `${u.level||1}`, inline: true },
+                { name: '🔥 Streak', value: `${u.streak||0} jour(s)`, inline: true },
+                { name: '💬 Messages', value: `${(u.message_count||0).toLocaleString()}`, inline: true },
+                { name: '⭐ Réputation', value: `${u.reputation||0}`, inline: true },
+                { name: '🎂 Anniversaire', value: u.birthday || 'Non défini', inline: true },
+              )
+              .setThumbnail(target.displayAvatarURL())
+          ]});
+        }
       }
 
       if (sub === 'top-richesse') {
         const top = db.db.prepare('SELECT * FROM users WHERE guild_id=? ORDER BY balance+bank DESC LIMIT 15').all(guildId);
-        if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun membre enregistré.' });
+        if (!top.length) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: '❌ Aucun membre enregistré.' });
+          } else {
+            return interaction.reply({ content: '❌ Aucun membre enregistré.' });
+          }
+        }
         const medals = ['🥇', '🥈', '🥉'];
         const lines = top.map((u, i) =>
           `${medals[i] || `**${i+1}.**`} <@${u.user_id}> — **${(u.balance+u.bank).toLocaleString()} ${coin}**`
         ).join('\n');
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('💰 Classement des richesses').setDescription(lines)
-        ]});
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('💰 Classement des richesses').setDescription(lines)
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('💰 Classement des richesses').setDescription(lines)
+          ]});
+        }
       }
     }
 
@@ -439,17 +547,33 @@ module.exports = {
       if (sub === 'monnaie') {
         const nom   = interaction.options.getString('nom');
         const emoji = interaction.options.getString('emoji');
-        if (!nom && !emoji) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Indiquez au moins un paramètre (nom ou emoji).' });
+        if (!nom && !emoji) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: '❌ Indiquez au moins un paramètre (nom ou emoji).' });
+          } else {
+            return interaction.reply({ content: '❌ Indiquez au moins un paramètre (nom ou emoji).' });
+          }
+        }
         if (nom)   db.db.prepare('UPDATE guild_config SET currency_name=? WHERE guild_id=?').run(nom, guildId);
         if (emoji) db.db.prepare('UPDATE guild_config SET currency_emoji=? WHERE guild_id=?').run(emoji, guildId);
         auditLog(guildId, userId, 'CONFIG_MONNAIE', null, `nom=${nom} emoji=${emoji}`);
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-          baseEmbed('✅ Monnaie mise à jour')
-            .addFields(
-              { name: 'Nom', value: nom || cfg.currency_name || 'Coins', inline: true },
-              { name: 'Emoji', value: emoji || cfg.currency_emoji || '🪙', inline: true }
-            )
-        ]});
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ embeds: [
+            baseEmbed('✅ Monnaie mise à jour')
+              .addFields(
+                { name: 'Nom', value: nom || cfg.currency_name || '€', inline: true },
+                { name: 'Emoji', value: emoji || cfg.currency_emoji || '€', inline: true }
+              )
+          ]});
+        } else {
+          return interaction.reply({ embeds: [
+            baseEmbed('✅ Monnaie mise à jour')
+              .addFields(
+                { name: 'Nom', value: nom || cfg.currency_name || '€', inline: true },
+                { name: 'Emoji', value: emoji || cfg.currency_emoji || '€', inline: true }
+              )
+          ]});
+        }
       }
 
       if (sub === 'daily') {
@@ -596,8 +720,8 @@ module.exports = {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
           baseEmbed('⚙️ Configuration du serveur')
             .addFields(
-              { name: '💰 Monnaie', value: `${freshCfg.currency_emoji || '🪙'} ${freshCfg.currency_name || 'Coins'}`, inline: true },
-              { name: '📅 Daily', value: `${(freshCfg.daily_amount||200).toLocaleString()} ${freshCfg.currency_emoji||'🪙'}`, inline: true },
+              { name: '💰 Monnaie', value: `${freshCfg.currency_emoji || '€'} ${freshCfg.currency_name || '€'}`, inline: true },
+              { name: '📅 Daily', value: `${(freshCfg.daily_amount||200).toLocaleString()} ${freshCfg.currency_emoji||'€'}`, inline: true },
               { name: '⚡ Multiplicateur XP', value: `×${freshCfg.xp_multiplier || 1}`, inline: true },
               { name: '💬 Coins/message', value: `${freshCfg.coins_per_msg || 5}`, inline: true },
               { name: '👋 Bienvenue', value: freshCfg.welcome_channel ? `<#${freshCfg.welcome_channel}>` : 'Non configuré', inline: true },
@@ -645,7 +769,13 @@ module.exports = {
       if (sub === 'supprimer') {
         const id = parseInt(interaction.options.getString('id'));
         const item = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
+        if (!item) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+          } else {
+            return interaction.reply({ content: `❌ Article #${id} introuvable.` });
+          }
+        }
         db.db.prepare('DELETE FROM shop_items WHERE id=?').run(id);
         auditLog(guildId, userId, 'BOUTIQUE_SUPPRIMER', String(id), item.name);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
@@ -658,7 +788,13 @@ module.exports = {
         const id   = parseInt(interaction.options.getString('id'));
         const prix = interaction.options.getInteger('prix');
         const item = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
+        if (!item) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+          } else {
+            return interaction.reply({ content: `❌ Article #${id} introuvable.` });
+          }
+        }
         db.db.prepare('UPDATE shop_items SET price=? WHERE id=?').run(prix, id);
         auditLog(guildId, userId, 'BOUTIQUE_PRIX', String(id), `${item.price} → ${prix}`);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
@@ -674,7 +810,13 @@ module.exports = {
         const id    = parseInt(interaction.options.getString('id'));
         const stock = interaction.options.getInteger('stock');
         const item  = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
+        if (!item) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+          } else {
+            return interaction.reply({ content: `❌ Article #${id} introuvable.` });
+          }
+        }
         db.db.prepare('UPDATE shop_items SET stock=? WHERE id=?').run(stock, id);
         auditLog(guildId, userId, 'BOUTIQUE_STOCK', String(id), `stock → ${stock}`);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
@@ -690,7 +832,13 @@ module.exports = {
         const id    = parseInt(interaction.options.getString('id'));
         const actif = interaction.options.getBoolean('actif');
         const item  = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
-        if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
+        if (!item) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: `❌ Article #${id} introuvable.` });
+          } else {
+            return interaction.reply({ content: `❌ Article #${id} introuvable.` });
+          }
+        }
         db.db.prepare('UPDATE shop_items SET active=? WHERE id=?').run(actif ? 1 : 0, id);
         auditLog(guildId, userId, 'BOUTIQUE_ACTIVER', String(id), `actif=${actif}`);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
@@ -701,7 +849,13 @@ module.exports = {
 
       if (sub === 'liste') {
         const items = db.db.prepare('SELECT * FROM shop_items WHERE guild_id=? ORDER BY active DESC, price ASC').all(guildId);
-        if (!items.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ La boutique est vide.' });
+        if (!items.length) {
+          if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: '❌ La boutique est vide.' });
+          } else {
+            return interaction.reply({ content: '❌ La boutique est vide.' });
+          }
+        }
         const lines = items.map(i =>
           `${i.active ? '✅' : '❌'} **#${i.id}** ${i.emoji} ${i.name} — **${i.price.toLocaleString()} ${coin}** ${i.stock === -1 ? '' : `(stock: ${i.stock})`}`
         ).join('\n');
@@ -772,7 +926,13 @@ module.exports = {
         const id = parseInt(interaction.options.getString('id'));
         try {
           const ev = db.db.prepare('SELECT * FROM eco_events WHERE id=? AND guild_id=?').get(id, guildId);
-          if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable.` });
+          if (!ev) {
+            if (interaction.deferred || interaction.replied) {
+              return interaction.editReply({ content: `❌ Événement #${id} introuvable.` });
+            } else {
+              return interaction.reply({ content: `❌ Événement #${id} introuvable.` });
+            }
+          }
           db.db.prepare('UPDATE eco_events SET active=0 WHERE id=?').run(id);
           auditLog(guildId, userId, 'EVENT_TERMINER', String(id), ev.name);
           return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [

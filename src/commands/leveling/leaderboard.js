@@ -11,7 +11,7 @@ module.exports = {
     .addStringOption(o => o.setName('type').setDescription('Type de classement').setRequired(false)
       .addChoices(
         { name: '⭐ XP / Niveau', value: 'xp' },
-        { name: '💰 Coins', value: 'coins' },
+        { name: '💶 €', value: 'coins' },
         { name: '🎤 Temps vocal', value: 'voice' },
         { name: '💬 Messages', value: 'messages' },
         { name: '⭐ Réputation', value: 'rep' },
@@ -24,7 +24,7 @@ module.exports = {
     }
 
     const cfg  = db.getConfig(interaction.guildId);
-    const emoji = cfg.currency_emoji || '🪙';
+    const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Coins';
     const type  = interaction.options.getString('type') || 'xp';
 
@@ -37,8 +37,8 @@ module.exports = {
         valueFn = (u) => `Niv. **${u.level}** — **${(u.xp || 0).toLocaleString('fr-FR')} XP**`;
       } else if (t === 'coins') {
         rows    = getLeaderboard(interaction.guildId, 'coins', 10);
-        title   = `${emoji} Classement Richesse`;
-        valueFn = (u) => `**${((u.balance || 0) + (u.bank || 0)).toLocaleString('fr-FR')} ${name}**`;
+        title   = '💶 Classement Richesse';
+        valueFn = (u) => `**${((u.balance || 0) + (u.bank || 0)).toLocaleString('fr-FR')} €**`;
       } else if (t === 'voice') {
         rows    = getLeaderboard(interaction.guildId, 'voice', 10);
         title   = '🎤 Classement Vocal';
@@ -94,14 +94,14 @@ module.exports = {
         .setPlaceholder('Changer de classement')
         .addOptions([
           { label: '⭐ XP / Niveau',  value: 'xp',       default: type === 'xp' },
-          { label: '💰 Coins',        value: 'coins',    default: type === 'coins' },
+          { label: '💶 €',             value: 'coins',    default: type === 'coins' },
           { label: '🎤 Temps vocal',  value: 'voice',    default: type === 'voice' },
           { label: '💬 Messages',     value: 'messages', default: type === 'messages' },
           { label: '⭐ Réputation',   value: 'rep',      default: type === 'rep' },
         ])
     );
 
-    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: [menu], fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied ? interaction.editReply({ embeds: [embed], components: [menu], fetchReply: true }) : interaction.reply({ embeds: [embed], components: [menu], fetchReply: true }));
 
     const collector = msg.createMessageComponentCollector({ time: 120000 });
     collector.on('collect', async i => {

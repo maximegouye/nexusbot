@@ -1,13 +1,15 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../../database/db');
 
-db.db.prepare(`CREATE TABLE IF NOT EXISTS autoresponder (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  guild_id TEXT, trigger TEXT, response TEXT,
-  exact_match INTEGER DEFAULT 0, wildcard INTEGER DEFAULT 0,
-  cooldown INTEGER DEFAULT 0, last_used INTEGER DEFAULT 0,
-  uses INTEGER DEFAULT 0
-)`).run();
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS autoresponder (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT, trigger TEXT, response TEXT,
+    exact_match INTEGER DEFAULT 0, wildcard INTEGER DEFAULT 0,
+    cooldown INTEGER DEFAULT 0, last_used INTEGER DEFAULT 0,
+    uses INTEGER DEFAULT 0
+  )`).run();
+} catch {}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -43,7 +45,7 @@ module.exports = {
       const premiumHint = max === 25 ? ' | Premium = 100' : '';
       if (count >= max) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Maximum ${max} réponses auto${premiumHint}.`, ephemeral: true });
 
-      db.db.prepare('INSERT INTO autoresponder (guild_id,trigger,response,exact_match,cooldown) VALUES (?,?,?,?,?)')
+      await db.db.prepare('INSERT INTO autoresponder (guild_id,trigger,response,exact_match,cooldown) VALUES (?,?,?,?,?)')
         .run(interaction.guildId, trigger, response, exact ? 1 : 0, cooldown);
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green')
@@ -57,7 +59,7 @@ module.exports = {
 
     if (sub === 'supprimer') {
       const id = parseInt(interaction.options.getString('id'));
-      const r  = db.db.prepare('DELETE FROM autoresponder WHERE id=? AND guild_id=?').run(id, interaction.guildId);
+      const r  = await db.db.prepare('DELETE FROM autoresponder WHERE id=? AND guild_id=?').run(id, interaction.guildId);
       if (!r.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réponse introuvable.', ephemeral: true });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Réponse #${id} supprimée.`)], ephemeral: true });
     }
@@ -90,7 +92,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }}

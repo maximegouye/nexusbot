@@ -47,7 +47,11 @@ module.exports = {
     const guildId = interaction.guildId;
 
     if (!interaction.member.permissions.has(0x10000000n)) // ManageGuild
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante (Gérer le serveur).', ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ content: '❌ Permission insuffisante (Gérer le serveur).', ephemeral: true });
+      } else {
+        return interaction.reply({ content: '❌ Permission insuffisante (Gérer le serveur).', ephemeral: true });
+      }
 
     if (sub === 'creer') {
       const channel = interaction.options.getChannel('salon');
@@ -65,14 +69,25 @@ module.exports = {
       db.db.prepare('INSERT INTO reaction_role_panels (guild_id, channel_id, message_id, title, description) VALUES (?,?,?,?,?)')
         .run(guildId, channel.id, msg.id, titre, desc);
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Panel créé !')
-          .addFields(
-            { name: '📍 Salon', value: `${channel}`, inline: true },
-            { name: '🆔 Message ID', value: `\`${msg.id}\``, inline: true },
-          )
-          .setDescription('Ajoutez des rôles avec `/reactionroles ajouter`')
-      ], ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [
+          new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Panel créé !')
+            .addFields(
+              { name: '📍 Salon', value: `${channel}`, inline: true },
+              { name: '🆔 Message ID', value: `\`${msg.id}\``, inline: true },
+            )
+            .setDescription('Ajoutez des rôles avec `/reactionroles ajouter`')
+        ], ephemeral: true });
+      } else {
+        return interaction.reply({ embeds: [
+          new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Panel créé !')
+            .addFields(
+              { name: '📍 Salon', value: `${channel}`, inline: true },
+              { name: '🆔 Message ID', value: `\`${msg.id}\``, inline: true },
+            )
+            .setDescription('Ajoutez des rôles avec `/reactionroles ajouter`')
+        ], ephemeral: true });
+      }
     }
 
     if (sub === 'ajouter') {
@@ -83,16 +98,32 @@ module.exports = {
       const style = interaction.options.getString('style') || 'Primary';
 
       const panel = db.db.prepare('SELECT * FROM reaction_role_panels WHERE guild_id=? AND message_id=?').get(guildId, msgId);
-      if (!panel) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Panel introuvable. Vérifiez l\'ID du message.', ephemeral: true });
+      if (!panel) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Panel introuvable. Vérifiez l\'ID du message.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Panel introuvable. Vérifiez l\'ID du message.', ephemeral: true });
+        }
+      }
 
       const existing = db.db.prepare('SELECT COUNT(*) as c FROM reaction_roles WHERE guild_id=? AND message_id=?').get(guildId, msgId);
-      if (existing.c >= 20) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Maximum 20 rôles par panel.', ephemeral: true });
+      if (existing.c >= 20) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Maximum 20 rôles par panel.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Maximum 20 rôles par panel.', ephemeral: true });
+        }
+      }
 
       try {
         db.db.prepare('INSERT INTO reaction_roles (guild_id, channel_id, message_id, role_id, emoji, label, style) VALUES (?,?,?,?,?,?,?)')
           .run(guildId, panel.channel_id, msgId, role.id, emoji || null, label, style);
       } catch {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce rôle est déjà dans ce panel.', ephemeral: true });
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Ce rôle est déjà dans ce panel.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Ce rôle est déjà dans ce panel.', ephemeral: true });
+        }
       }
 
       // Reconstruire le message
@@ -117,26 +148,52 @@ module.exports = {
         const msg = await ch.messages.fetch(msgId);
         await msg.edit({ components: rows });
       } catch (e) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Impossible de modifier le message : ${e.message}`, ephemeral: true });
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: `❌ Impossible de modifier le message : ${e.message}`, ephemeral: true });
+        } else {
+          return interaction.reply({ content: `❌ Impossible de modifier le message : ${e.message}`, ephemeral: true });
+        }
       }
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Rôle **${role.name}** ajouté au panel !`, ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ content: `✅ Rôle **${role.name}** ajouté au panel !`, ephemeral: true });
+      } else {
+        return interaction.reply({ content: `✅ Rôle **${role.name}** ajouté au panel !`, ephemeral: true });
+      }
     }
 
     if (sub === 'liste') {
       const panels = db.db.prepare('SELECT p.*, COUNT(r.id) as role_count FROM reaction_role_panels p LEFT JOIN reaction_roles r ON p.message_id=r.message_id WHERE p.guild_id=? GROUP BY p.message_id').all(guildId);
-      if (!panels.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun panel. Créez-en un avec `/reactionroles creer`.', ephemeral: true });
+      if (!panels.length) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Aucun panel. Créez-en un avec `/reactionroles creer`.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Aucun panel. Créez-en un avec `/reactionroles creer`.', ephemeral: true });
+        }
+      }
 
       const lines = panels.map(p => `**${p.title}** — <#${p.channel_id}> | 🎭 ${p.role_count} rôle(s)\n> ID: \`${p.message_id}\``).join('\n\n');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
-        new EmbedBuilder().setColor('#7B2FBE').setTitle('🎭 Panels de Rôles').setDescription(lines)
-      ], ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ embeds: [
+          new EmbedBuilder().setColor('#7B2FBE').setTitle('🎭 Panels de Rôles').setDescription(lines)
+        ], ephemeral: true });
+      } else {
+        return interaction.reply({ embeds: [
+          new EmbedBuilder().setColor('#7B2FBE').setTitle('🎭 Panels de Rôles').setDescription(lines)
+        ], ephemeral: true });
+      }
     }
 
     if (sub === 'supprimer') {
       const msgId = interaction.options.getString('message_id');
       const panel = db.db.prepare('SELECT * FROM reaction_role_panels WHERE guild_id=? AND message_id=?').get(guildId, msgId);
-      if (!panel) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Panel introuvable.', ephemeral: true });
+      if (!panel) {
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: '❌ Panel introuvable.', ephemeral: true });
+        } else {
+          return interaction.reply({ content: '❌ Panel introuvable.', ephemeral: true });
+        }
+      }
 
       db.db.prepare('DELETE FROM reaction_roles WHERE guild_id=? AND message_id=?').run(guildId, msgId);
       db.db.prepare('DELETE FROM reaction_role_panels WHERE guild_id=? AND message_id=?').run(guildId, msgId);
@@ -147,7 +204,11 @@ module.exports = {
         await msg.delete();
       } catch {}
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '✅ Panel supprimé !', ephemeral: true });
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ content: '✅ Panel supprimé !', ephemeral: true });
+      } else {
+        return interaction.reply({ content: '✅ Panel supprimé !', ephemeral: true });
+      }
     }
   }
 };

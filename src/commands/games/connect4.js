@@ -64,7 +64,7 @@ module.exports = {
 
     try {
     const opponent = interaction.options.getUser('adversaire');
-    if (opponent?.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true });
+    if (opponent?.id === interaction.user.id) return await (interaction.deferred||interaction.replied ? interaction.editReply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true }) : interaction.reply({ content: '❌ Tu ne peux pas jouer contre toi-même.', ephemeral: true }));
 
     const p1 = interaction.user;
     const p2 = opponent && !opponent.bot ? opponent : interaction.client.user;
@@ -78,7 +78,7 @@ module.exports = {
       .setTitle('🔴🟡 Puissance 4')
       .setDescription(`${P1} **${p1.username}** vs ${P2} **${p2.username}**\n\nC'est le tour de ${P1} **${p1.username}**\n\n${renderGrid(game.grid)}`);
 
-    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: buildButtons(game), fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied ? interaction.editReply({ embeds: [embed], components: buildButtons(game), fetchReply: true }) : interaction.reply({ embeds: [embed], components: buildButtons(game), fetchReply: true }));
 
     const collector = msg.createMessageComponentCollector({ time: 300000 });
     collector.on('collect', async i => {

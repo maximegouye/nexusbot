@@ -117,7 +117,7 @@ async function animateCrash(msg) {
 async function playCrash(source, userId, guildId, mise, autoCashout = null) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (!u || u.balance < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
@@ -130,7 +130,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     return source.reply(err);
   }
   if (mise < 10) {
-    const err = '❌ Mise minimale : **10 coins**.';
+    const err = '❌ Mise minimale : **10 €**.';
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -428,7 +428,7 @@ async function handleComponent(interaction) {
     const u = db.getUser(userId, guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 €).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await playCrash(interaction, userId, guildId, newMise, null);

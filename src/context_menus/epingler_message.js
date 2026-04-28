@@ -12,12 +12,12 @@ module.exports = {
       const msg = interaction.targetMessage;
       try {
         await msg.pin();
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+        return await interaction.editReply({ embeds: [
           new EmbedBuilder().setColor('Green')
             .setDescription(`✅ Message de <@${msg.author.id}> épinglé avec succès dans <#${msg.channelId}> !`)
         ]});
       } catch (e) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(`❌ Impossible d'épingler : ${e.message}`);
+        return await interaction.editReply(`❌ Impossible d'épingler : ${e.message}`);
       }
     } catch (err) {
       console.error('[epingler_message.js] execute error:', err?.message || err);

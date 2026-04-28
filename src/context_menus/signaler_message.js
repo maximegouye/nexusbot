@@ -30,8 +30,11 @@ module.exports = {
       console.error('[signaler_message.js] execute error:', err?.message || err);
       try {
         const msg = { content: `❌ Erreur: ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
-        if (interaction.deferred || interaction.replied) await interaction.editReply(msg);
-        else await interaction.reply(msg);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(msg);
+        } else {
+          await interaction.reply(msg);
+        }
       } catch {}
     }
   }

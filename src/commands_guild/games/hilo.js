@@ -80,7 +80,7 @@ function buildGameEmbed(session, status = 'playing') {
   const user = db.getUser(session.userId, session.guildId);
   if (!user) return null;
 
-  const coin = (db.getConfig ? db.getConfig(session.guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(session.guildId) : null)?.currency_emoji || '€';
   const embed = new EmbedBuilder()
     .setTitle('🃏 Hi-Lo — Prédis si la prochaine carte sera plus haute ou plus basse !')
     .setColor(status === 'win' ? C.WIN : status === 'loss' ? C.LOSS : status === 'push' ? C.PUSH : C.NEUTRAL);
@@ -167,28 +167,31 @@ async function execute(interaction) {
     const userId = interaction.user.id;
     const guildId = interaction.guildId;
     const mise = interaction.options.getInteger('mise');
-    const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+    const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
     const user = db.getUser(userId, guildId);
     if (!user) {
-      return interaction.editReply({
+      await interaction.editReply({
         content: '❌ Profil non trouvé. Utilise `/daily` d\'abord.',
         ephemeral: true,
-      });
+      }).catch(() => {});
+      return;
     }
 
     if (mise < 1 || mise > 1000000) {
-      return interaction.editReply({
+      await interaction.editReply({
         content: `❌ Mise invalide. Entre 1 et 1 000 000 ${coin}.`,
         ephemeral: true,
-      });
+      }).catch(() => {});
+      return;
     }
 
     if (user.balance < mise) {
-      return interaction.editReply({
+      await interaction.editReply({
         content: `❌ Solde insuffisant.\nTu as **${user.balance} ${coin}** mais tu essaies de miser **${mise} ${coin}**.`,
         ephemeral: true,
-      });
+      }).catch(() => {});
+      return;
     }
 
     // Deduct the bet from balance
@@ -260,7 +263,7 @@ async function handleComponent(interaction, customId) {
       });
     }
 
-    const coin = (db.getConfig ? db.getConfig(interaction.guildId) : null)?.currency_emoji || '🪙';
+    const coin = (db.getConfig ? db.getConfig(interaction.guildId) : null)?.currency_emoji || '€';
 
     // ───── Rules button ─────
     if (action === 'rules') {
@@ -278,7 +281,7 @@ async function handleComponent(interaction, customId) {
           { name: '📊 Probabilités', value: 'Les cartes basses (2-6) ont plus de chances d\'être suivies par une carte plus haute (~67%)', inline: false },
         )
         .setFooter({ text: 'Hi-Lo · Maximum 5 manches par partie' });
-      return interaction.editReply({ embeds: [rulesEmbed], ephemeral: true });
+      return await interaction.editReply({ embeds: [rulesEmbed], ephemeral: true }).catch(() => {});
     }
 
     // ───── Modal for changing bet ─────
@@ -288,25 +291,28 @@ async function handleComponent(interaction, customId) {
         const newMiseRaw = interaction.fields.getTextInputValue('newmise');
         const user = db.getUser(userId, interaction.guildId);
         if (!user) {
-          return interaction.editReply({
+          await interaction.editReply({
             content: '❌ Profil non trouvé.',
             ephemeral: true,
-          });
+          }).catch(() => {});
+          return;
         }
 
         const newMise = parseMise(newMiseRaw, user.balance);
         if (!newMise || newMise < 1) {
-          return interaction.editReply({
+          await interaction.editReply({
             content: `❌ Mise invalide. Entre 1 et ${user.balance} ${coin}.`,
             ephemeral: true,
-          });
+          }).catch(() => {});
+          return;
         }
 
         if (user.balance < newMise) {
-          return interaction.editReply({
+          await interaction.editReply({
             content: `❌ Solde insuffisant. Tu as **${user.balance} ${coin}** mais tu essaies de miser **${newMise} ${coin}**.`,
             ephemeral: true,
-          });
+          }).catch(() => {});
+          return;
         }
 
         // Refund previous session if exists and collect/reset
@@ -371,10 +377,14 @@ async function handleComponent(interaction, customId) {
     // Get session for other actions
     const session = getSession(userId, gameId);
     if (!session) {
-      return interaction.editReply({
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferUpdate().catch(() => {});
+      }
+      await interaction.editReply({
         content: '❌ Partie expirée. Recommence avec `/hilo`.',
         ephemeral: true,
-      });
+      }).catch(() => {});
+      return;
     }
 
     await interaction.deferUpdate();
@@ -584,7 +594,7 @@ module.exports = {
   },
   async run(message, args) {
     const mise = parseInt(args[0]) || 50;
-    if (mise < 5) return message.reply('❌ Mise minimale : 5 coins. Usage : `&hilo <mise>`');
+    if (mise < 5) return message.reply('❌ Mise minimale : 5 €. Usage : `&hilo <mise>`');
     const fake = {
       user: message.author, member: message.member,
       guild: message.guild, guildId: message.guildId,

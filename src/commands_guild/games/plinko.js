@@ -108,7 +108,7 @@ function buildBoardEmbed(path, step, mults, mise, coin, riskKey, finalSlot = nul
 async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   const riskKey = risk.toLowerCase();
   if (!MULTIPLIERS[riskKey]) {
@@ -122,7 +122,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     return source.reply(err);
   }
   if (mise < 10) {
-    const err = '❌ Mise minimale : **10 coins**.';
+    const err = '❌ Mise minimale : **10 €**.';
     if (isInteraction) return source.editReply({ content: err, ephemeral: true });
     return source.reply(err);
   }
@@ -367,7 +367,7 @@ module.exports = {
       const u = db.getUser(userId, interaction.guildId);
       const newMise = parseMise(rawMise, u?.balance || 0);
       if (!newMise || newMise < 10) {
-        return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true }).catch(() => {});
+        return interaction.reply({ content: '❌ Mise invalide (min 10 €).', ephemeral: true }).catch(() => {});
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false }).catch(() => {});
       await playPlinko(interaction, userId, interaction.guildId, newMise, riskKey);

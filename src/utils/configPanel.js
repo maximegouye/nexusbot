@@ -71,7 +71,7 @@ function backBtn(userId) {
 // MENU PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 function buildMainMenu(cfg, guild, userId) {
-  const coin = cfg.currency_emoji || '🪙';
+  const coin = cfg.currency_emoji || '€';
 
   const embed = new EmbedBuilder()
     .setColor(cfg.color || '#7B2FBE')
@@ -153,14 +153,14 @@ function buildGeneralPanel(cfg, guild, userId) {
 
 // ─── ÉCONOMIE ───────────────────────────────────────────────────
 function buildEcoPanel(cfg, guild, userId) {
-  const coin = cfg.currency_emoji || '🪙';
+  const coin = cfg.currency_emoji || '€';
 
   const embed = new EmbedBuilder()
     .setColor(cfg.color || '#7B2FBE')
     .setTitle('💰 Économie')
     .addFields(
       { name: '⚡ Statut',          value: onOff(cfg.eco_enabled),                              inline: true },
-      { name: '💰 Monnaie',         value: `${coin} **${cfg.currency_name || 'Coins'}**`,       inline: true },
+      { name: '💰 Monnaie',         value: `${coin} **${cfg.currency_name || '€'}**`,       inline: true },
       { name: '📅 Daily',           value: `**${valOr(cfg.daily_amount, 25)}** ${coin}`,        inline: true },
       { name: '💬 Par message',     value: `**${valOr(cfg.coins_per_msg, 1)}** ${coin}`,        inline: true },
       { name: '💸 Frais transfert', value: `**${valOr(cfg.transfer_fee, 5)}%**`,                inline: true },
@@ -639,7 +639,7 @@ function buildStarboardPanel(cfg, guild, userId) {
 
 // ─── JEUX ────────────────────────────────────────────────────────
 function buildJeuxPanel(cfg, guild, userId) {
-  const coin = cfg.currency_emoji || '🪙';
+  const coin = cfg.currency_emoji || '€';
   const enabled = cfg.game_enabled ?? 1;
 
   const embed = new EmbedBuilder()
@@ -855,7 +855,7 @@ const MODAL_CONFIGS = {
   },
   currency_emoji: {
     title: '😀 Emoji de la monnaie',
-    label: 'Emoji (ex: 🪙 ou €)',
+    label: 'Emoji (ex: € ou 💰)',
     placeholder: '€',
     style: TextInputStyle.Short,
     minLength: 1,
@@ -1111,6 +1111,7 @@ function getCategoryForKey(key) {
 // GESTIONNAIRE PRINCIPAL DES INTERACTIONS CFG
 // ═══════════════════════════════════════════════════════════════
 async function handleConfigInteraction(interaction, db, client) {
+  // ─────────────────────────────────────────────────────────────
   const customId = interaction.customId || '';
   if (!customId.startsWith('cfg')) return false;
 
@@ -1120,10 +1121,10 @@ async function handleConfigInteraction(interaction, db, client) {
     return parts[parts.length - 1];
   }
 
-  function checkOwner() {
+  async function checkOwner() {
     const uid = getUserId();
     if (interaction.user.id !== uid) {
-      (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau de configuration ne t\'appartient pas.', ephemeral: true });
+      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau de configuration ne t\'appartient pas.', ephemeral: true }).catch(() => {});
       return false;
     }
     return true;
@@ -1131,7 +1132,7 @@ async function handleConfigInteraction(interaction, db, client) {
 
   // ── cfg:menu:userId — Menu principal ──────────────────────────
   if (customId.startsWith('cfg:menu:')) {
-    if (!checkOwner()) return true;
+    if (!(await checkOwner())) return true;
     const userId = customId.split(':')[2];
     const cfg = db.getConfig(interaction.guildId);
     return interaction.update(buildMainMenu(cfg, interaction.guild, userId));
@@ -1139,7 +1140,7 @@ async function handleConfigInteraction(interaction, db, client) {
 
   // ── cfg:cat:userId / cfg:cat2:userId — Sélection de catégorie ───
   if (interaction.isStringSelectMenu() && (customId.startsWith('cfg:cat:') || customId.startsWith('cfg:cat2:'))) {
-    if (!checkOwner()) return true;
+    if (!(await checkOwner())) return true;
     const userId   = customId.split(':')[2];
     const category = interaction.values[0];
     const cfg      = db.getConfig(interaction.guildId);
@@ -1148,7 +1149,7 @@ async function handleConfigInteraction(interaction, db, client) {
 
   // ── cfg:toggle:key:userId — Basculer un booléen ───────────────
   if (customId.startsWith('cfg:toggle:')) {
-    if (!checkOwner()) return true;
+    if (!(await checkOwner())) return true;
     const parts  = customId.split(':');
     const key    = parts[2];
     const userId = parts[3];
@@ -1165,7 +1166,7 @@ async function handleConfigInteraction(interaction, db, client) {
 
   // ── cfg:modal:key:userId — Ouvrir un modal ────────────────────
   if (customId.startsWith('cfg:modal:')) {
-    if (!checkOwner()) return true;
+    if (!(await checkOwner())) return true;
     const parts  = customId.split(':');
     const key    = parts[2];
     const userId = parts[3];
@@ -1175,7 +1176,7 @@ async function handleConfigInteraction(interaction, db, client) {
 
   // ── cfg:clear:key:userId — Effacer une valeur ─────────────────
   if (customId.startsWith('cfg:clear:')) {
-    if (!checkOwner()) return true;
+    if (!(await checkOwner())) return true;
     const parts  = customId.split(':');
     const key    = parts[2];
     const userId = parts[3];
@@ -1190,7 +1191,7 @@ async function handleConfigInteraction(interaction, db, client) {
 
   // ── cfg_chan:key:userId — Sélection de salon ──────────────────
   if (interaction.isChannelSelectMenu() && customId.startsWith('cfg_chan:')) {
-    if (!checkOwner()) return true;
+    if (!(await checkOwner())) return true;
     const parts     = customId.split(':');
     const key       = parts[1];
     const userId    = parts[2];
@@ -1202,12 +1203,12 @@ async function handleConfigInteraction(interaction, db, client) {
     const panel = category
       ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
-    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(panel);
+    return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(panel).catch(() => {});
   }
 
   // ── cfg_role:key:userId — Sélection de rôle ──────────────────
   if (interaction.isRoleSelectMenu() && customId.startsWith('cfg_role:')) {
-    if (!checkOwner()) return true;
+    if (!(await checkOwner())) return true;
     const parts  = customId.split(':');
     const key    = parts[1];
     const userId = parts[2];
@@ -1219,7 +1220,7 @@ async function handleConfigInteraction(interaction, db, client) {
     const panel = category
       ? buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client)
       : buildMainMenu(newCfg, interaction.guild, userId);
-    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(panel);
+    return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)(panel).catch(() => {});
   }
 
   // ── cfg_modal:key:userId — Soumission de modal ────────────────
@@ -1228,7 +1229,7 @@ async function handleConfigInteraction(interaction, db, client) {
     const key    = parts[1];
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true });
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce panneau ne t\'appartient pas.', ephemeral: true }).catch(() => {});
     }
 
     const cfg = db.getConfig(interaction.guildId);
@@ -1238,7 +1239,7 @@ async function handleConfigInteraction(interaction, db, client) {
       const trigger  = interaction.fields.getTextInputValue('trigger').toLowerCase().trim().replace(/\s+/g, '_');
       const response = interaction.fields.getTextInputValue('response').trim();
       if (!trigger || !response) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Déclencheur ou réponse vide.', ephemeral: true });
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Déclencheur ou réponse vide.', ephemeral: true }).catch(() => {});
       }
       db.db.prepare(
         `INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, created_by, created_at)
@@ -1262,7 +1263,7 @@ async function handleConfigInteraction(interaction, db, client) {
           await interaction.followUp({ content: `❌ Commande \`&${trigger}\` introuvable.`, ephemeral: true }).catch(() => {});
         }
       } catch {
-        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {});
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {}); return;
       }
       return;
     }
@@ -1276,7 +1277,7 @@ async function handleConfigInteraction(interaction, db, client) {
       const category = getCategoryForKey(key);
       const panel    = buildCategoryPanel(category, newCfg, interaction.guild, userId, db, client);
       try { return await interaction.update(panel); }
-      catch { return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {}); }
+      catch { return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ ...panel, ephemeral: true }).catch(() => {}); }
     }
 
     // Clés numériques entières
@@ -1286,23 +1287,23 @@ async function handleConfigInteraction(interaction, db, client) {
     if (INTEGER_KEYS.includes(key)) {
       const num = parseInt(value, 10);
       if (isNaN(num) || num < 0) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur invalide. Entre un nombre entier positif.', ephemeral: true });
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur invalide. Entre un nombre entier positif.', ephemeral: true }).catch(() => {});
       }
       value = num;
     } else if (key === 'xp_multiplier') {
       const num = parseFloat(value.replace(',', '.'));
       if (isNaN(num) || num <= 0) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur invalide. Entre un nombre positif (ex: 1.5).', ephemeral: true });
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Valeur invalide. Entre un nombre positif (ex: 1.5).', ephemeral: true }).catch(() => {});
       }
       value = num;
     } else if (key === 'color') {
       if (!value.startsWith('#')) value = '#' + value;
       if (!/^#[0-9A-Fa-f]{6}$/.test(value)) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format invalide. Utilise `#RRGGBB` (ex: `#7B2FBE`).', ephemeral: true });
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Format invalide. Utilise `#RRGGBB` (ex: `#7B2FBE`).', ephemeral: true }).catch(() => {});
       }
     } else if (key === 'prefix') {
       if (!value || value.length > 3) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le préfixe doit faire entre 1 et 3 caractères.', ephemeral: true });
+        return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le préfixe doit faire entre 1 et 3 caractères.', ephemeral: true }).catch(() => {});
       }
     }
 

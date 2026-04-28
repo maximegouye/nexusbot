@@ -95,7 +95,7 @@ module.exports = {
     .setName('gamble')
     .setDescription('🎰 Joue à des jeux d\'argent')
     .addSubcommand(s => s.setName('slots').setDescription('🎰 Machine à sous').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%/nombre) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
-    .addSubcommand(s => s.setName('coinflip').setDescription('🪙 Pile ou face').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)).addStringOption(o => o.setName('choix').setDescription('pile ou face').setRequired(true).addChoices({ name: '🪙 Pile', value: 'pile' }, { name: '🎖️ Face', value: 'face' })))
+    .addSubcommand(s => s.setName('coinflip').setDescription('€ Pile ou face').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)).addStringOption(o => o.setName('choix').setDescription('pile ou face').setRequired(true).addChoices({ name: '💶 Pile', value: 'pile' }, { name: '🎖️ Face', value: 'face' })))
     .addSubcommand(s => s.setName('blackjack').setDescription('🃏 Joue au Blackjack').addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
     .addSubcommand(s => s.setName('des').setDescription('🎲 Jeu de dés — choisir pair/impair/bas/haut/sept/numéro')
       .addStringOption(o => o.setName('mise').setDescription('Mise (all/tout/50%/nombre) — ILLIMITÉ').setRequired(true).setMaxLength(30))
@@ -199,10 +199,10 @@ module.exports = {
       const userAfter = db.getUser(interaction.user.id, interaction.guildId);
       const embed = new EmbedBuilder()
         .setColor(won ? '#2ECC71' : '#FF6B6B')
-        .setTitle(`🪙 Pile ou Face — ${won ? 'Gagné !' : 'Perdu !'}`)
+        .setTitle(`💶 Pile ou Face — ${won ? 'Gagné !' : 'Perdu !'}`)
         .addFields(
-          { name: 'Résultat',   value: result === 'pile' ? '🪙 Pile' : '🎖️ Face',                              inline: true },
-          { name: 'Ton choix',  value: choix === 'pile' ? '🪙 Pile' : '🎖️ Face',                              inline: true },
+          { name: 'Résultat',   value: result === 'pile' ? '💶 Pile' : '🎖️ Face',                              inline: true },
+          { name: 'Ton choix',  value: choix === 'pile' ? '💶 Pile' : '🎖️ Face',                              inline: true },
           { name: won ? '🤑 Gain' : '💸 Perte', value: `**${mise.toLocaleString('fr-FR')}** ${name}`,        inline: true },
           { name: '👛 Solde',   value: `**${userAfter.balance.toLocaleString('fr-FR')}** ${name}`,            inline: true },
         );

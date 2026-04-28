@@ -253,7 +253,7 @@ async function showPreRace(source, userId, guildId, mise, asReply = false) {
   const horses    = getDayHorses();
   const condition = getDayCondition();
   const cfg       = (db.getConfig ? db.getConfig(guildId) : null) || {};
-  const coin      = cfg.currency_emoji || '🪙';
+  const coin      = cfg.currency_emoji || '€';
 
   const horseLines = horses.map((h, i) => {
     const adj    = getAdjustedOdds(h, condition);
@@ -343,7 +343,7 @@ async function showHorsePicker(source, userId, guildId, mise, betType, excludeHo
 // ── Course principale ─────────────────────────────────────
 async function runRace(source, userId, guildId, mise, betType, horse1Id, horse2Id) {
   const cfg       = (db.getConfig ? db.getConfig(guildId) : null) || {};
-  const coin      = cfg.currency_emoji || '🪙';
+  const coin      = cfg.currency_emoji || '€';
   const u         = db.getUser(userId, guildId);
   const horses    = getDayHorses();
   const condition = getDayCondition();
@@ -352,14 +352,26 @@ async function runRace(source, userId, guildId, mise, betType, horse1Id, horse2I
   const horse2 = horse2Id ? horses.find(h => h.id === horse2Id) : null;
 
   // Validations
-  if (!u)      return source.editReply({ content: '❌ Profil introuvable.', components: [] }).catch(() => {});
-  if (!horse1) return source.editReply({ content: '❌ Cheval introuvable.', components: [] }).catch(() => {});
-  if (betType === 'couple' && !horse2)
-    return source.editReply({ content: '❌ Sélectionne un 2ème cheval pour le couplé.', components: [] }).catch(() => {});
-  if (mise < 5)
-    return source.editReply({ content: '❌ Mise minimale : **5 coins**.', components: [] }).catch(() => {});
-  if (mise > u.balance)
-    return source.editReply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, components: [] }).catch(() => {});
+  if (!u) {
+    await source.editReply({ content: '❌ Profil introuvable.', components: [] }).catch(() => {});
+    return;
+  }
+  if (!horse1) {
+    await source.editReply({ content: '❌ Cheval introuvable.', components: [] }).catch(() => {});
+    return;
+  }
+  if (betType === 'couple' && !horse2) {
+    await source.editReply({ content: '❌ Sélectionne un 2ème cheval pour le couplé.', components: [] }).catch(() => {});
+    return;
+  }
+  if (mise < 5) {
+    await source.editReply({ content: '❌ Mise minimale : **5 €**.', components: [] }).catch(() => {});
+    return;
+  }
+  if (mise > u.balance) {
+    await source.editReply({ content: `❌ Solde insuffisant — tu as **${u.balance.toLocaleString('fr-FR')} ${coin}**.`, components: [] }).catch(() => {});
+    return;
+  }
 
   // Déduire la mise & sauvegarder session
   db.addCoins(userId, guildId, -mise);
@@ -571,7 +583,7 @@ async function handleComponent(interaction, customId) {
   if (customId.startsWith(`hippo_modal_${userId}`)) {
     const u    = db.getUser(userId, guildId);
     const cfg  = (db.getConfig ? db.getConfig(guildId) : null) || {};
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
     if (!u) { await interaction.editReply({ content: '❌ Profil introuvable.', ephemeral: true }).catch(() => {}); return true; }
     const raw     = interaction.fields.getTextInputValue('newmise');
     const newMise = parseMise(raw, u.balance);
@@ -591,7 +603,7 @@ async function handleComponent(interaction, customId) {
   if (customId === `hippo_stats_${userId}`) {
     const stat    = getStat(userId);
     const cfg     = (db.getConfig ? db.getConfig(guildId) : null) || {};
-    const coin    = cfg.currency_emoji || '🪙';
+    const coin    = cfg.currency_emoji || '€';
     const net     = stat.won - stat.wagered;
     const winRate = stat.gamesPlayed > 0 ? Math.round(stat.wins / stat.gamesPlayed * 100) : 0;
     await interaction.editReply({
@@ -619,7 +631,7 @@ async function handleComponent(interaction, customId) {
     const horses    = getDayHorses();
     const condition = getDayCondition();
     const cfg       = (db.getConfig ? db.getConfig(guildId) : null) || {};
-    const coin      = cfg.currency_emoji || '🪙';
+    const coin      = cfg.currency_emoji || '€';
 
     const lines = horses.map((h, i) => {
       const adj    = getAdjustedOdds(h, condition);
@@ -667,12 +679,12 @@ async function execute(interaction) {
   if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply().catch(() => {});
   }
-  await showPreRace(interaction, userId, guildId, mise);
+  return await showPreRace(interaction, userId, guildId, mise);
 }
 
 async function run(message, args) {
   const mise = parseInt(args[0]);
-  if (!mise || mise < 5) return message.reply('❌ Usage : `&hippodrome <mise>` — Mise minimale : 5 coins.');
+  if (!mise || mise < 5) return message.reply('❌ Usage : `&hippodrome <mise>` — Mise minimale : 5 €.');
 
   let sentMsg = null;
   const fake = {

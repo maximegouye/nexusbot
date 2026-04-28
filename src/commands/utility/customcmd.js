@@ -29,7 +29,7 @@ module.exports = {
       const declencheur = interaction.options.getString('declencheur').toLowerCase().trim();
       const reponse     = interaction.options.getString('reponse');
 
-      db.db.prepare(`
+      await db.db.prepare(`
         INSERT INTO custom_commands (guild_id, trigger, response, created_by) VALUES (?, ?, ?, ?)
         ON CONFLICT(guild_id, trigger) DO UPDATE SET response = ?, created_by = ?
       `).run(interaction.guildId, declencheur, reponse, interaction.user.id, reponse, interaction.user.id);
@@ -51,7 +51,7 @@ module.exports = {
       const declencheur = interaction.options.getString('declencheur').toLowerCase().trim();
       const cmd = db.getCustomCommand(interaction.guildId, declencheur);
       if (!cmd) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Aucune commande pour \`${declencheur}\`.`, ephemeral: true });
-      db.db.prepare('DELETE FROM custom_commands WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').run(interaction.guildId, declencheur);
+      await db.db.prepare('DELETE FROM custom_commands WHERE guild_id = ? AND LOWER(trigger) = LOWER(?)').run(interaction.guildId, declencheur);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription(`🗑️ Commande \`${declencheur}\` supprimée.`)], ephemeral: true
       });
@@ -78,7 +78,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }}

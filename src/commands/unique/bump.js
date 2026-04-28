@@ -252,7 +252,7 @@ module.exports = {
           .setDescription('Il est temps de bumper le serveur sur Disboard!')
           .addFields(
             { name: '📝 Comment?', value: 'Allez sur https://disboard.org/server/bump et cliquez sur "Bump"' },
-            { name: '🎁 Récompense', value: 'Confirmez avec `/bump fait` pour recevoir 50 coins!' }
+            { name: '🎁 Récompense', value: 'Confirmez avec `/bump fait` pour recevoir 50 €!' }
           )
           .setTimestamp()
           .setFooter({ text: 'Boost boost boost!' });
@@ -364,10 +364,11 @@ module.exports = {
         // Update last bump time
         setLastBumpTime(guildId, Math.floor(Date.now() / 1000));
 
+        const bumpReward = 50;
         const embed = new EmbedBuilder()
           .setColor('#2ECC71')
           .setTitle('✨ Merci d\'avoir bumpé !')
-          .setDescription(`${interaction.user.username}, tu as reçu **50 coins** pour ton bump !`)
+          .setDescription(`${interaction.user.username}, tu as reçu **${bumpReward} €** pour ton bump !`)
           .addFields(
             { name: '⭐ Prochaine confirmation', value: `Disponible dans 2 heures` }
           )

@@ -37,7 +37,7 @@ function mkFake(message, opts = {}) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('transfer')
-    .setDescription('💸 Envoie des coins à un autre membre')
+    .setDescription('💸 Envoie des € à un autre membre')
     .addUserOption(o => o.setName('membre').setDescription('Destinataire').setRequired(true))
     .addIntegerOption(o => o.setName('montant').setDescription('Montant à transférer').setMinValue(1).setRequired(true)),
   cooldown: 10,
@@ -54,8 +54,8 @@ module.exports = {
     const target = interaction.options.getUser('membre');
     const amount = interaction.options.getInteger('montant');
 
-    if (target.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas envoyer de coins à un bot.', ephemeral: true });
-    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'envoyer des coins à toi-même.', ephemeral: true });
+    if (target.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas envoyer des € à un bot.', ephemeral: true });
+    if (target.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas t\'te transférer des €.', ephemeral: true });
 
     const sender = db.getUser(interaction.user.id, interaction.guildId);
 

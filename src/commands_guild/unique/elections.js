@@ -45,6 +45,7 @@ module.exports = {
 
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
+    const coin = db.getConfig(guildId)?.currency_emoji || '€';
     const userId = interaction.user.id;
     const now = Math.floor(Date.now() / 1000);
 
@@ -99,7 +100,7 @@ module.exports = {
       // Récompense participation
       db.addCoins(userId, guildId, 10);
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Vote enregistré pour **${candidat}** dans l\'élection "${elec.title}" ! (+10 🪙)`, ephemeral: true });
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Vote enregistré pour **${candidat}** dans l\'élection "${elec.title}" ! (+10 €)`, ephemeral: true });
     }
 
     if (sub === 'resultats') {

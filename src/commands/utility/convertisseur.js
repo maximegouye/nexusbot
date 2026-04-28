@@ -161,20 +161,20 @@ module.exports = {
     if (sub === 'unites') {
       const cat = CONVERSIONS[interaction.options.getString('categorie')];
       const lines = Object.entries(cat.units).map(([k, v]) => `\`${k}\` — ${v.name}`).join('\n');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#3498DB').setTitle(`${cat.label} — Unités disponibles`).setDescription(lines)
       ], ephemeral: true });
     }
 
     if (sub === 'calculer') {
       const cat = interaction.options.getString('categorie');
-      const valeur = parseFloat(interaction.options.getString('valeur'));
+      const valeur = interaction.options.getNumber('valeur');
       const de = interaction.options.getString('de').toLowerCase();
       const vers = interaction.options.getString('vers').toLowerCase();
       const conv = CONVERSIONS[cat];
 
-      if (!conv.units[de]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Unité **${de}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
-      if (!conv.units[vers]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Unité **${vers}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
+      if (!conv.units[de]) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Unité **${de}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
+      if (!conv.units[vers]) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Unité **${vers}** inconnue. Voir \`/convertir unites\`.`, ephemeral: true });
 
       let result;
       if (cat === 'temperature') {
@@ -186,14 +186,14 @@ module.exports = {
 
       const rounded = Math.round(result * 10000) / 10000;
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#2ECC71').setTitle(`${conv.label} — Conversion`)
           .setDescription(`**${valeur} ${conv.units[de].name}** = **${rounded} ${conv.units[vers].name}**`)
           .addFields(
             { name: 'De', value: `${valeur} \`${de}\``, inline: true },
             { name: 'Vers', value: `${rounded} \`${vers}\``, inline: true },
           )
-      ]});
+      ] });
     }
     } catch (err) {
     console.error('[CMD] Erreur execute:', err?.message || err);
@@ -202,7 +202,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }},

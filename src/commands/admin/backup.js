@@ -143,49 +143,63 @@ module.exports = {
     }
 
     if (sub === 'liste') {
-      const backups = db.db.prepare(
-        'SELECT * FROM backups WHERE guild_id = ? ORDER BY created_at DESC LIMIT 10'
-      ).all(interaction.guildId);
+      await interaction.deferReply({ ephemeral: true });
 
-      const embed = new EmbedBuilder()
-        .setColor('#7B2FBE')
-        .setTitle('💾 Sauvegardes');
+      try {
+        const backups = db.db.prepare(
+          'SELECT * FROM backups WHERE guild_id = ? ORDER BY created_at DESC LIMIT 10'
+        ).all(interaction.guildId);
 
-      if (backups.length > 0) {
-        const fields = backups.map(b => {
-          const date = new Date(b.created_at * 1000).toLocaleDateString('fr-FR');
-          return {
-            name: `#${b.id} • ${b.name}`,
-            value: `📅 ${date}`,
-            inline: false
-          };
-        });
-        embed.addFields(...fields);
-      } else {
-        embed.setDescription('Aucune sauvegarde trouvée.');
+        const embed = new EmbedBuilder()
+          .setColor('#7B2FBE')
+          .setTitle('💾 Sauvegardes');
+
+        if (backups.length > 0) {
+          const fields = backups.map(b => {
+            const date = new Date(b.created_at * 1000).toLocaleDateString('fr-FR');
+            return {
+              name: `#${b.id} • ${b.name}`,
+              value: `📅 ${date}`,
+              inline: false
+            };
+          });
+          embed.addFields(...fields);
+        } else {
+          embed.setDescription('Aucune sauvegarde trouvée.');
+        }
+
+        return await interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        console.error('Erreur backup liste:', error);
+        return await interaction.editReply({ content: '❌ Erreur lors de la récupération des sauvegardes.' });
       }
-
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'supprimer') {
-      const backupId = interaction.options.getInteger('id');
-      const backup = db.db.prepare(
-        'SELECT * FROM backups WHERE id = ? AND guild_id = ?'
-      ).get(backupId, interaction.guildId);
+      await interaction.deferReply({ ephemeral: true });
 
-      if (!backup) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Sauvegarde non trouvée.', ephemeral: true });
+      try {
+        const backupId = interaction.options.getInteger('id');
+        const backup = db.db.prepare(
+          'SELECT * FROM backups WHERE id = ? AND guild_id = ?'
+        ).get(backupId, interaction.guildId);
+
+        if (!backup) {
+          return await interaction.editReply({ content: '❌ Sauvegarde non trouvée.' });
+        }
+
+        db.db.prepare('DELETE FROM backups WHERE id = ?').run(backupId);
+
+        const embed = new EmbedBuilder()
+          .setColor('#2ECC71')
+          .setTitle('✅ Sauvegarde Supprimée')
+          .setDescription(`**${backup.name}** a été supprimée.`);
+
+        return await interaction.editReply({ embeds: [embed] });
+      } catch (error) {
+        console.error('Erreur backup supprimer:', error);
+        return await interaction.editReply({ content: '❌ Erreur lors de la suppression.' });
       }
-
-      db.db.prepare('DELETE FROM backups WHERE id = ?').run(backupId);
-
-      const embed = new EmbedBuilder()
-        .setColor('#2ECC71')
-        .setTitle('✅ Sauvegarde Supprimée')
-        .setDescription(`**${backup.name}** a été supprimée.`);
-
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
   }
 };

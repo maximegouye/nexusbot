@@ -83,7 +83,7 @@ function deleteSession(userId) {
 async function playVideoPoker(source, userId, guildId, mise) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (!u || u.balance < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;
@@ -255,7 +255,7 @@ async function handleComponent(interaction) {
     const u = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true });
+      return interaction.reply({ content: '❌ Mise invalide (min 10 €).', ephemeral: true });
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
     await playVideoPoker(interaction, userId, interaction.guildId, newMise);
@@ -280,7 +280,7 @@ async function handleComponent(interaction) {
   const action = parts[1];
   const msg = interaction.message;
   const guildId = interaction.guildId;
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   function buildHoldEmbed() {
     const handStr = st.hand.map(cardStr).join(' ');

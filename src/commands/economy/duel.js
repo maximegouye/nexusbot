@@ -10,7 +10,7 @@ const WEAPONS = [
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('duel')
-    .setDescription('⚔️ Défie un membre en duel pour voler ses coins !')
+    .setDescription('⚔️ Défie un membre en duel pour voler ses € !')
     .addUserOption(o => o.setName('adversaire').setDescription('Ton adversaire').setRequired(true))
     .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser').setMinValue(1).setRequired(true)),
   cooldown: 10,
@@ -24,7 +24,7 @@ module.exports = {
     const opponent = interaction.options.getUser('adversaire');
     const mise     = interaction.options.getInteger('mise');
     const cfg      = db.getConfig(interaction.guildId);
-    const emoji    = cfg.currency_emoji || '🪙';
+    const emoji    = cfg.currency_emoji || '€';
     const name     = cfg.currency_name  || 'Coins';
 
     if (opponent.bot) return interaction.editReply({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });

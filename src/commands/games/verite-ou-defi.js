@@ -63,7 +63,7 @@ module.exports = {
       .setDescription(`<@${cible.id}> doit choisir : **Vérité** ou **Défi** ?`)
       .setFooter({ text: 'Clique sur un bouton ci-dessous !' });
 
-    const msg = await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [introEmbed], components: [row], fetchReply: true });
+    const msg = await (interaction.deferred||interaction.replied ? interaction.editReply({ embeds: [introEmbed], components: [row], fetchReply: true }) : interaction.reply({ embeds: [introEmbed], components: [row], fetchReply: true }));
 
     const filter  = i => i.user.id === cible.id || i.user.id === interaction.user.id;
     const collector = msg.createMessageComponentCollector({ filter, time: 30000, max: 1 });

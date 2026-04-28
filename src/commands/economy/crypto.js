@@ -53,7 +53,7 @@ function buildCryptoSelect(userId, mode /* 'buy' | 'sell' */) {
       label: `${c.symbol} · ${c.name}`,
       value: c.symbol,
       description: `${fmtPrice(c.price)} $ ${arrow} ${delta >= 0 ? '+' : ''}${delta.toFixed(2)} % (24 h)`,
-      emoji: c.emoji || '🪙',
+      emoji: c.emoji || '€',
     };
   });
   const placeholder = mode === 'buy' ? '🟢 Choisis la crypto à acheter' : '🔴 Choisis la crypto à vendre';
@@ -215,7 +215,7 @@ module.exports = {
       if (target.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer de la crypto à un bot.', ephemeral: true });
 
       // Vérifier que la crypto existe dans le marché
-      const marketItem = db.getCryptoBySymbol ? db.getCryptoBySymbol(sym) : db.db.prepare('SELECT * FROM crypto_market WHERE symbol = ?').get(sym);
+      const marketItem = db.getCryptoPrice(sym);
       if (!marketItem) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Crypto **${sym}** inconnue. Utilise un symbole valide : BTC, ETH, SOL, BNB, XRP, DOGE, ADA, LINK, AVAX, DOT, MATIC, SHIB.`, ephemeral: true });
 
       // Vérifier le solde de l'expéditeur
@@ -252,7 +252,7 @@ module.exports = {
           amount = amount + ?, avg_buy = ?, updated_at = strftime('%s','now')
       `).run(target.id, interaction.guildId, sym, qty, newTargetAvg, qty, newTargetAvg);
 
-      const emoji = marketItem.emoji || '🪙';
+      const emoji = marketItem.emoji || '€';
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#9B59B6')

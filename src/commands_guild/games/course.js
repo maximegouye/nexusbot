@@ -25,20 +25,23 @@ module.exports = {
     .addSubcommand(s => s.setName('parier').setDescription('🏇 Parier sur un cheval')
       .addStringOption(o => o.setName('cheval').setDescription('Cheval sur lequel parier').setRequired(true)
         .addChoices(...HORSES.map(h => ({ name: `${h.emoji} ${h.name} (x${h.odds})`, value: h.name }))))
-      .addStringOption(o => o.setName('mise').setDescription('Mise en coins (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
+      .addStringOption(o => o.setName('mise').setDescription('Mise en € (all/tout/50%) — ILLIMITÉ').setRequired(true).setMaxLength(30)))
     .addSubcommand(s => s.setName('cotes').setDescription('📊 Voir les cotes actuelles')),
 
   async execute(interaction) {
     try {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
 
     if (sub === 'cotes') {
       const lines = HORSES.map(h => `${h.emoji} **${h.name}** — Cote: **x${h.odds}** | Vitesse estimée: ${Math.round(h.speed * 100)}%`).join('\n');
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('🏇 Cotes des chevaux').setDescription(lines)
           .setFooter({ text: 'Cotes × mise = gain potentiel' })
       ]});
@@ -60,18 +63,17 @@ module.exports = {
       const miseRaw = interaction.options.getString('mise');
       const mise = parseBet(miseRaw, u.balance);
       if (!Number.isFinite(mise) || mise < 10) {
-        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
+        return interaction.editReply({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
       }
       const chosen = HORSES.find(h => h.name === chosenName);
 
-      if (u.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant.`, ephemeral: true });
+      if (u.balance < mise) return interaction.editReply({ content: `❌ Solde insuffisant.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -mise);
-      if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
 
       // Animation de course
       const lines = HORSES.map(h => `${h.emoji} **${h.name}** : ${'🟫'.repeat(3)}`);
-      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      await interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#8B4513').setTitle('🏇 DÉPART !').setDescription(lines.join('\n'))
       ]});
 
@@ -92,7 +94,7 @@ module.exports = {
         resultMsg = `😔 Votre cheval ${chosen.emoji} **${chosen.name}** est arrivé **${pos}ème**. Perdu **${mise} ${coin}**.`;
       }
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor(pos === 1 ? '#F1C40F' : '#E74C3C').setTitle('🏇 Résultat de la course !')
           .addFields(
             { name: '🏆 Podium', value: podium, inline: true },

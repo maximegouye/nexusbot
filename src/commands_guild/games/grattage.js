@@ -81,21 +81,21 @@ function buildEmbed(mise, grid, revealed, result, phase) {
 
   if (phase === 'start') {
     color = '#5865F2';
-    desc = `Mise : **${mise.toLocaleString()} 💰**\n\n${gridStr}\n\n> ⬛ cases cachées — Gratte pour révéler !`;
+    desc = `Mise : **${mise.toLocaleString()} €**\n\n${gridStr}\n\n> ⬛ cases cachées — Gratte pour révéler !`;
   } else if (!allRevealed) {
     color = '#F39C12';
-    desc = `Mise : **${mise.toLocaleString()} 💰**\n\n${gridStr}\n\n> Continue à gratter, ${9 - revealed.filter(Boolean).length} case(s) restante(s)`;
+    desc = `Mise : **${mise.toLocaleString()} €**\n\n${gridStr}\n\n> Continue à gratter, ${9 - revealed.filter(Boolean).length} case(s) restante(s)`;
   } else {
     if (result.gain > 0) {
       color = result.mult >= 10 ? '#FFD700' : result.mult >= 5 ? '#2ECC71' : '#27AE60';
       title = result.mult >= 10 ? '🎊 JACKPOT !!!' : result.mult >= 5 ? '🎉 GRANDE VICTOIRE !' : '✅ Tu as gagné !';
       const bonus = result.matched > 3 ? ` (×${result.matched} = **bonus ×${result.matched > 5 ? 3 : 2}** !)` : '';
       desc =
-        `Mise : **${mise.toLocaleString()} 💰**\n\n${gridStr}\n\n` +
+        `Mise : **${mise.toLocaleString()} €**\n\n${gridStr}\n\n` +
         `${'─'.repeat(28)}\n` +
         `${result.sym.emoji} **${result.sym.name}** × ${result.matched}${bonus}\n` +
         `Multiplicateur : **×${result.mult}**\n` +
-        `💰 **+${result.gain.toLocaleString()} coins**`;
+        `€ **+${result.gain.toLocaleString()} €**`;
     } else {
       color = '#E74C3C';
       title = '😔 Pas de chance !';
@@ -104,7 +104,7 @@ function buildEmbed(mise, grid, revealed, result, phase) {
         'Dommage, aucun match cette fois. La chance tourne !',
         'Ce n\'est pas ton jour, mais le prochain sera le bon !',
       ];
-      desc = `Mise : **${mise.toLocaleString()} 💰**\n\n${gridStr}\n\n${totalL[Math.floor(Math.random() * totalL.length)]}`;
+      desc = `Mise : **${mise.toLocaleString()} €**\n\n${gridStr}\n\n${totalL[Math.floor(Math.random() * totalL.length)]}`;
     }
   }
 
@@ -157,7 +157,7 @@ module.exports = {
     .setDescription('🎰 Achète une carte à gratter et tente ta chance !')
     .addIntegerOption(o => o
       .setName('mise')
-      .setDescription('Montant à parier (50–50 000 coins)')
+      .setDescription('Montant à parier (50–50 000 €)')
       .setRequired(true)
       .setMinValue(50)
       .setMaxValue(50000)
@@ -174,7 +174,7 @@ module.exports = {
   run(message, args) {
     const mise = parseInt(args[0]);
     if (!mise || mise < 50 || mise > 50000)
-      return message.reply('❌ Usage : `&grattage <mise>` (50–50 000 coins)');
+      return message.reply('❌ Usage : `&grattage <mise>` (50–50 000 €)');
     return runGame(message, mise, true);
   },
 
@@ -188,8 +188,14 @@ async function runGame(ctx, mise, isPrefix = false) {
   const userData = db.getUser(userId, guildId);
 
   if (!userData || userData.balance < mise) {
-    const reply = { content: `❌ Solde insuffisant ! Tu as **${(userData?.balance || 0).toLocaleString()} 💰** et tu mises **${mise.toLocaleString()} 💰**.`, ephemeral: true };
-    return isPrefix ? ctx.reply(reply.content) : ctx.editReply(reply);
+    const reply = { content: `❌ Solde insuffisant ! Tu as **${(userData?.balance || 0).toLocaleString()} €** et tu mises **${mise.toLocaleString()} €**.`, ephemeral: true };
+    if (isPrefix) {
+      await ctx.reply(reply.content);
+    } else {
+      if (!ctx.deferred && !ctx.replied) await ctx.deferReply().catch(() => {});
+      await ctx.editReply(reply).catch(() => {});
+    }
+    return;
   }
 
   // Débiter

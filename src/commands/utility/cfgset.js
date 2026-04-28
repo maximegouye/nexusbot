@@ -53,7 +53,7 @@ module.exports = {
           inline: false,
         })),
       });
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'columns') {

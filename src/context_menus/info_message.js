@@ -8,6 +8,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
+      await interaction.deferReply({ ephemeral: true });
       const msg = interaction.targetMessage;
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')
@@ -26,7 +27,7 @@ module.exports = {
         .setTimestamp();
 
       if (msg.content) embed.setDescription(`\`\`\`${msg.content.slice(0, 300)}\`\`\``);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], ephemeral: true });
+      return await interaction.editReply({ embeds: [embed] });
     } catch (err) {
       console.error('[info_message.js] execute error:', err?.message || err);
       try {

@@ -54,7 +54,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
     const now = Math.floor(Date.now() / 1000);
 
     let hero = db.db.prepare('SELECT * FROM donjon WHERE guild_id=? AND user_id=?').get(guildId, userId);
@@ -65,7 +65,7 @@ module.exports = {
 
     if (sub === 'personnage') {
       const hpBar = '█'.repeat(Math.floor(hero.hp / hero.max_hp * 10)) + '░'.repeat(10 - Math.floor(hero.hp / hero.max_hp * 10));
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#9B59B6').setTitle(`🧙 ${interaction.user.username}`)
           .addFields(
             { name: '❤️ PV', value: `${hpBar} ${hero.hp}/${hero.max_hp}`, inline: false },
@@ -79,9 +79,9 @@ module.exports = {
     }
 
     if (sub === 'explorer') {
-      if (hero.hp <= 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Votre héros est mort ! Utilisez `/donjon reset` pour recommencer.', ephemeral: true });
+      if (hero.hp <= 0) return interaction.editReply({ content: '❌ Votre héros est mort ! Utilisez `/donjon reset` pour recommencer.', ephemeral: true });
       const cd = COOLDOWN - (now - hero.last_run);
-      if (cd > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Récupération en cours ! Prêt dans **${cd}s**.`, ephemeral: true });
+      if (cd > 0) return interaction.editReply({ content: `⏳ Récupération en cours ! Prêt dans **${cd}s**.`, ephemeral: true });
 
       // Choisir un monstre selon l'étage
       const monsterLevel = Math.min(Math.ceil(hero.floor / 5), MONSTERS.length);

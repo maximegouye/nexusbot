@@ -34,7 +34,7 @@ module.exports = {
         {
           name: '📋 État de la Configuration',
           value: [
-            `${checkmark(cfg.welcome_channel)} Canal de bienvenue ${cfg.welcome_channel ? `<#${cfg.welcome_channel}>` : '— non configuré'}`,
+            `${checkmark(cfg.welcome_channel)} Bienvenue ${cfg.welcome_channel ? `<#${cfg.welcome_channel}>` : '— non configuré'}`,
             `${checkmark(cfg.leave_channel)} Canal de départ ${cfg.leave_channel ? `<#${cfg.leave_channel}>` : '— non configuré'}`,
             `${checkmark(cfg.log_channel)} Logs généraux ${cfg.log_channel ? `<#${cfg.log_channel}>` : '— non configuré'}`,
             `${checkmark(cfg.mod_log_channel)} Logs de modération ${cfg.mod_log_channel ? `<#${cfg.mod_log_channel}>` : '— non configuré'}`,
@@ -49,9 +49,9 @@ module.exports = {
           name: '⚙️ Paramètres',
           value: [
             `🎨 Couleur : **${cfg.color || '#7B2FBE'}**`,
-            `💰 Monnaie : **${cfg.currency_emoji || '🪙'} ${cfg.currency_name || 'Coins'}**`,
+            `💰 Monnaie : **${cfg.currency_emoji || '€'} ${cfg.currency_name || 'Euros'}**`,
             `⭐ XP : **${cfg.xp_enabled !== 0 ? 'Activé' : 'Désactivé'}** (×${cfg.xp_multiplier || 1})`,
-            `💵 Daily : **${cfg.daily_amount || 200} ${cfg.currency_emoji || '🪙'}**`,
+            `💵 Daily : **${cfg.daily_amount || 200}€**`,
             `🛡️ Automod : **${cfg.automod_enabled ? 'Activé' : 'Désactivé'}**`,
           ].join('\n'),
           inline: false
@@ -129,7 +129,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }}

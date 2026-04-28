@@ -1,20 +1,24 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../../database/db');
 
-db.db.prepare(`CREATE TABLE IF NOT EXISTS starboard_messages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  guild_id TEXT, original_msg_id TEXT, star_msg_id TEXT, channel_id TEXT, stars INTEGER DEFAULT 1,
-  author_id TEXT,
-  UNIQUE(guild_id, original_msg_id)
-)`).run();
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS starboard_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT, original_msg_id TEXT, star_msg_id TEXT, channel_id TEXT, stars INTEGER DEFAULT 1,
+    author_id TEXT,
+    UNIQUE(guild_id, original_msg_id)
+  )`).run();
+} catch {}
 
 // Migration : ajouter author_id si absent
 try { db.db.prepare('ALTER TABLE starboard_messages ADD COLUMN author_id TEXT').run(); } catch {}
 
-db.db.prepare(`CREATE TABLE IF NOT EXISTS starboard_config (
-  guild_id TEXT PRIMARY KEY, channel_id TEXT, threshold INTEGER DEFAULT 3,
-  emoji TEXT DEFAULT '⭐', self_star INTEGER DEFAULT 0
-)`).run();
+try {
+  db.db.prepare(`CREATE TABLE IF NOT EXISTS starboard_config (
+    guild_id TEXT PRIMARY KEY, channel_id TEXT, threshold INTEGER DEFAULT 3,
+    emoji TEXT DEFAULT '⭐', self_star INTEGER DEFAULT 0
+  )`).run();
+} catch {}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -48,10 +52,10 @@ module.exports = {
       const emoji    = interaction.options.getString('emoji') ?? '⭐';
       const selfstar = interaction.options.getBoolean('selfstar') ?? false;
 
-      db.db.prepare(`INSERT OR REPLACE INTO starboard_config VALUES (?,?,?,?,?)`).run(
+      await db.db.prepare(`INSERT OR REPLACE INTO starboard_config VALUES (?,?,?,?,?)`).run(
         guildId, ch.id, seuil, emoji, selfstar ? 1 : 0);
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor('#FFD700')
           .setTitle('⭐ Starboard configuré avec succès !')
@@ -69,7 +73,7 @@ module.exports = {
     // ── STATUT ────────────────────────────────────────────────
     if (sub === 'statut') {
       const cfg = db.db.prepare('SELECT * FROM starboard_config WHERE guild_id=?').get(guildId);
-      if (!cfg) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le starboard n\'est pas configuré. Utilise `/starboard setup` d\'abord.', ephemeral: true });
+      if (!cfg) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Le starboard n\'est pas configuré. Utilise `/starboard setup` d\'abord.', ephemeral: true });
 
       const total   = db.db.prepare('SELECT COUNT(*) as c FROM starboard_messages WHERE guild_id=?').get(guildId)?.c ?? 0;
       const maxMsg  = db.db.prepare('SELECT * FROM starboard_messages WHERE guild_id=? ORDER BY stars DESC LIMIT 1').get(guildId);
@@ -83,7 +87,7 @@ module.exports = {
         if (topRow?.author_id) topAuthor = `<@${topRow.author_id}> (${topRow.s} ⭐)`;
       } catch {}
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor('#FFD700')
           .setTitle('⭐ Statut du Starboard')
@@ -104,9 +108,7 @@ module.exports = {
       const limite = interaction.options.getInteger('limite') ?? 10;
       const top = db.db.prepare('SELECT * FROM starboard_messages WHERE guild_id=? ORDER BY stars DESC LIMIT ?').all(guildId, limite);
 
-      if (!top.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message dans le starboard pour l\'instant.', ephemeral: true });
-
-      await interaction.deferReply({ ephemeral: true });
+      if (!top.length) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message dans le starboard pour l\'instant.', ephemeral: true });
 
       const cfg = db.db.prepare('SELECT * FROM starboard_config WHERE guild_id=?').get(guildId);
       const emoji = cfg?.emoji ?? '⭐';
@@ -121,20 +123,20 @@ module.exports = {
         return `${medal} ${author} — **${m.stars} ${emoji}** ${link}`;
       }).join('\n');
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor('#FFD700')
           .setTitle(`🏆 Top ${limite} — Starboard`)
           .setDescription(lines)
           .setFooter({ text: `${top.length} messages affichés` })
           .setTimestamp()
-      ]});
+      ] });
     }
 
     // ── ALÉATOIRE ─────────────────────────────────────────────
     if (sub === 'aleatoire') {
       const all = db.db.prepare('SELECT * FROM starboard_messages WHERE guild_id=?').all(guildId);
-      if (!all.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message dans le starboard pour l\'instant.', ephemeral: true });
+      if (!all.length) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message dans le starboard pour l\'instant.', ephemeral: true });
 
       const random = all[Math.floor(Math.random() * all.length)];
       const cfg    = db.db.prepare('SELECT * FROM starboard_config WHERE guild_id=?').get(guildId);
@@ -154,7 +156,7 @@ module.exports = {
         }
       } catch {}
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder()
           .setColor('#FFD700')
           .setTitle('🎲 Message aléatoire du Starboard')
@@ -172,8 +174,8 @@ module.exports = {
 
     // ── DÉSACTIVER ────────────────────────────────────────────
     if (sub === 'desactiver') {
-      db.db.prepare('DELETE FROM starboard_config WHERE guild_id=?').run(guildId);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      await db.db.prepare('DELETE FROM starboard_config WHERE guild_id=?').run(guildId);
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Red').setTitle('❌ Starboard désactivé')
           .setDescription('Le starboard a été désactivé. Les anciens messages restent en base mais aucun nouveau ne sera ajouté.')
       ], ephemeral: true });
@@ -182,10 +184,10 @@ module.exports = {
     // ── RESET ─────────────────────────────────────────────────
     if (sub === 'reset') {
       const count = db.db.prepare('SELECT COUNT(*) as c FROM starboard_messages WHERE guild_id=?').get(guildId)?.c ?? 0;
-      if (!count) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message à supprimer.', ephemeral: true });
+      if (!count) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun message à supprimer.', ephemeral: true });
 
-      db.db.prepare('DELETE FROM starboard_messages WHERE guild_id=?').run(guildId);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+      await db.db.prepare('DELETE FROM starboard_messages WHERE guild_id=?').run(guildId);
+      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('Orange').setTitle('🗑️ Starboard réinitialisé')
           .setDescription(`**${count} message(s)** ont été supprimés de la base de données du starboard.\n> Les messages Discord dans le salon restent, seul le suivi est effacé.`)
       ], ephemeral: true });

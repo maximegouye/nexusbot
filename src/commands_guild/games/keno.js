@@ -52,7 +52,7 @@ async function runGame(ctx, rawNums, mise, isPrefix = false) {
 
   const userData = db.getUser(userId, guildId);
   if (!userData || userData.balance < mise) {
-    const msg = `❌ Solde insuffisant ! Tu as **${(userData?.balance || 0).toLocaleString()} 💰** pour une mise de **${mise.toLocaleString()} 💰**.`;
+    const msg = `❌ Solde insuffisant ! Tu as **${(userData?.balance || 0).toLocaleString()} €** pour une mise de **${mise.toLocaleString()} €**.`;
     return isPrefix ? ctx.reply(msg) : ctx.reply({ content: msg, ephemeral: true });
   }
 
@@ -138,8 +138,8 @@ async function runGame(ctx, rawNums, mise, isPrefix = false) {
     tableStr || 'Aucun gain possible',
     '',
     gain > 0
-      ? `💰 **GAIN : +${gain.toLocaleString()} coins** (×${mult})`
-      : `💸 Perdu : **-${mise.toLocaleString()} coins**`,
+      ? `€ **GAIN : +${gain.toLocaleString()} €** (×${mult})`
+      : `€ Perdu : **-${mise.toLocaleString()} €**`,
   ].join('\n');
 
   const embed = new EmbedBuilder()
@@ -161,8 +161,15 @@ async function runGame(ctx, rawNums, mise, isPrefix = false) {
   );
 
   const sendOpts = { embeds: [embed], components: isPrefix ? [] : [replayRow] };
-  if (isPrefix) return ctx.reply(sendOpts);
-  return ctx.editReply ? ctx.editReply(sendOpts).catch(() => {}) : ctx.reply(sendOpts);
+  if (isPrefix) {
+    await ctx.reply(sendOpts);
+    return;
+  }
+  if (ctx.editReply && (ctx.deferred || ctx.replied)) {
+    await ctx.editReply(sendOpts).catch(() => {});
+  } else {
+    await ctx.reply(sendOpts).catch(() => {});
+  }
 }
 
 module.exports = {
@@ -178,7 +185,7 @@ module.exports = {
     )
     .addIntegerOption(o => o
       .setName('mise')
-      .setDescription('Montant à parier (50–100 000 coins)')
+      .setDescription('Montant à parier (50–100 000 €)')
       .setRequired(true)
       .setMinValue(50)
       .setMaxValue(100000)
@@ -216,11 +223,12 @@ module.exports = {
       const mise  = parseInt(parts[parts.length - 1]);
       const sess  = kenoSessions.get(userId);
       if (!sess) {
-        return interaction.editReply({ content: '❌ Session expirée. Relance `/keno` pour jouer.', ephemeral: true });
+        await interaction.deferUpdate().catch(() => {});
+        return interaction.editReply({ content: '❌ Session expirée. Relance `/keno` pour jouer.', ephemeral: true }).catch(() => {});
       }
       const u = db.getUser(userId, interaction.guildId);
       if (!u || u.balance < mise) {
-        return interaction.editReply({ content: `❌ Solde insuffisant. Tu as **${u?.balance || 0} 💰**.`, ephemeral: true });
+        return interaction.editReply({ content: `❌ Solde insuffisant. Tu as **${u?.balance || 0} €**.`, ephemeral: true }).catch(() => {});
       }
       if (!interaction.deferred && !interaction.replied) await interaction.deferReply().catch(() => {});
       return runGame(interaction, sess.rawNums, mise, false);
@@ -233,7 +241,7 @@ module.exports = {
     if (args.length < 2) return message.reply('❌ Usage : `&keno <numéros> <mise>` — Ex : `&keno 5,12,23,34 300`');
     const mise    = parseInt(args[args.length - 1]);
     const rawNums = args.slice(0, -1).join(' ');
-    if (!mise || mise < 50 || mise > 100000) return message.reply('❌ Mise invalide (50–100 000 coins).');
+    if (!mise || mise < 50 || mise > 100000) return message.reply('❌ Mise invalide (50–100 000 €).');
     return runGame(message, rawNums, mise, true);
   },
 };

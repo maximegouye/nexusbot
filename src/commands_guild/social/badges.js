@@ -17,8 +17,8 @@ const BADGES = {
   orateur:          { name: 'Orateur',           emoji: '📢', desc: '1000 messages envoyés',       category: '💬 Activité', hidden: false },
   vocal_actif:      { name: 'Vocal Actif',       emoji: '🎙️', desc: '10h en vocal',               category: '💬 Activité', hidden: false },
   // Économie
-  riche:            { name: 'Riche',             emoji: '💰', desc: 'Avoir 10 000 coins',          category: '💰 Économie', hidden: false },
-  millionnaire:     { name: 'Millionnaire',      emoji: '💎', desc: 'Avoir 1 000 000 coins',       category: '💰 Économie', hidden: false },
+  riche:            { name: 'Riche',             emoji: '💰', desc: 'Avoir 10 000 €',          category: '💰 Économie', hidden: false },
+  millionnaire:     { name: 'Millionnaire',      emoji: '💎', desc: 'Avoir 1 000 000 €',       category: '💰 Économie', hidden: false },
   gambler:          { name: 'Gambler',           emoji: '🎰', desc: 'Jouer 50 fois au casino',     category: '💰 Économie', hidden: false },
   // Niveaux
   niveau_5:         { name: 'Débutant',          emoji: '⭐', desc: 'Atteindre le niveau 5',       category: '📊 Niveaux', hidden: false },
