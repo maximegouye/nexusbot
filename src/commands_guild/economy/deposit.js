@@ -11,8 +11,8 @@ module.exports = {
   async execute(interaction) {
     try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    const cfg   = db.getConfig(interaction.guildId);
-    const user  = db.getUser(interaction.user.id, interaction.guildId);
+    const cfg   = db.getConfig(interaction.guildId) || {};
+    const user  = db.getUser(interaction.user.id, interaction.guildId) || { balance: 0, bank: 0 };
     const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Euros';
     const input = interaction.options.getString('montant').toLowerCase();

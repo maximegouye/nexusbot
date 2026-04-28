@@ -122,10 +122,10 @@ module.exports = {
     try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub   = interaction.options.getSubcommand();
-    const cfg   = db.getConfig(interaction.guildId);
+    const cfg   = db.getConfig(interaction.guildId) || {};
     const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Euros';
-    const user  = db.getUser(interaction.user.id, interaction.guildId);
+    const user  = db.getUser(interaction.user.id, interaction.guildId) || { balance: 0, bank: 0 };
     // parseBet accepte nombres, all, tout, max, moitié, 50%
     const parseBet = (raw, base) => {
       const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();

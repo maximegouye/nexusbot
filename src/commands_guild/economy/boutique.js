@@ -90,7 +90,7 @@ module.exports = {
         });
       }
 
-      const u      = db.getUser(userId, guildId);
+      const u      = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
       const coins  = u?.balance || 0;
 
       const embed = new EmbedBuilder()
@@ -126,7 +126,7 @@ module.exports = {
 
       if (item.stock === 0) return interaction.editReply({ content: '❌ Stock épuisé !', ephemeral: true });
 
-      const u     = db.getUser(userId, guildId);
+      const u     = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
       const coins = u?.balance || 0;
       if (coins < item.prix) {
         return interaction.editReply({

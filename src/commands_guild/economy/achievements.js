@@ -87,7 +87,7 @@ module.exports = {
     const userId = sub === 'membre' ? interaction.options.getUser('membre').id : interaction.user.id;
     const targetUser = sub === 'membre' ? interaction.options.getUser('membre') : interaction.user;
 
-    const user = db.getUser(userId, guildId);
+    const user = db.getUser(userId, guildId) || { balance: 0, bank: 0, level: 1, xp: 0, messages: 0 };
     const unlocked = getUnlocked(userId, guildId);
 
     if (sub === 'voir' || sub === 'membre') {

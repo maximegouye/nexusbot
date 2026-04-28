@@ -33,7 +33,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Impossible d\'envoyer des € à un bot.', ephemeral: true });
     }
 
-    const sender = db.getUser(userId, guildId);
+    const sender = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
     if (!sender || sender.balance < montant) {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         content: `❌ Solde insuffisant. Tu as **${(sender?.balance || 0).toLocaleString('fr-FR')} ${coin}**.`,
@@ -89,7 +89,7 @@ module.exports = {
     if (mention.id === userId) return message.reply('❌ Tu ne peux pas t\'envoyer des €.');
     if (mention.bot)           return message.reply('❌ Impossible d\'envoyer des € à un bot.');
 
-    const sender = db.getUser(userId, guildId);
+    const sender = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
     if (!sender || sender.balance < montant) {
       return message.reply(`❌ Solde insuffisant. Tu as **${(sender?.balance || 0).toLocaleString('fr-FR')} ${coin}**.`);
     }

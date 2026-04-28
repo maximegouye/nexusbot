@@ -33,12 +33,12 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
-    const cfg = db.getConfig(guildId);
+    const cfg = db.getConfig(guildId) || {};
     const coin = cfg.currency_emoji || '€';
 
     if (sub === 'voir') {
       const target = interaction.options.getUser('membre') || interaction.user;
-      const u = db.getUser(target.id, guildId);
+      const u = db.getUser(target.id, guildId) || { balance: 0, bank: 0, level: 1, xp: 0, prestige: 0 };
       const prestige = u.prestige || 0;
       const pData = PRESTIGE_LEVELS[prestige - 1];
       const nextP = PRESTIGE_LEVELS[prestige];
@@ -64,7 +64,7 @@ module.exports = {
     }
 
     if (sub === 'monter') {
-      const u = db.getUser(userId, guildId);
+      const u = db.getUser(userId, guildId) || { balance: 0, bank: 0, level: 1, xp: 0, prestige: 0 };
       const currentPrestige = u.prestige || 0;
       const nextPData = PRESTIGE_LEVELS[currentPrestige];
 
@@ -128,11 +128,11 @@ async function handleComponent(interaction, customId) {
   }
 
   const guildId = interaction.guildId;
-  const cfg     = db.getConfig(guildId);
+  const cfg     = db.getConfig(guildId) || {};
   const coin    = cfg.currency_emoji || '€';
 
   if (action === 'confirm') {
-    const u             = db.getUser(interaction.user.id, guildId);
+    const u             = db.getUser(interaction.user.id, guildId) || { balance: 0, bank: 0, level: 1, xp: 0, prestige: 0 };
     const currentPrestige = u.prestige || 0;
     const nextPData     = PRESTIGE_LEVELS[currentPrestige];
 

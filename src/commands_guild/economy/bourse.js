@@ -58,7 +58,7 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const userId = interaction.user.id;
     const guildId = interaction.guild.id;
-    const cfg = db.getConfig(guildId);
+    const cfg = db.getConfig(guildId) || {};
     const coin = cfg.currency_emoji || '€';
 
     const marche = {
@@ -89,7 +89,7 @@ module.exports = {
       if (!marche[sym]) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Action **${sym}** introuvable.`, ephemeral: true });
       if (isNaN(qty) || qty <= 0) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Quantité invalide.', ephemeral: true });
       const total = marche[sym].prix * qty;
-      const ecoRow = db.getUser(userId, guildId);
+      const ecoRow = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
       const balance = ecoRow?.balance || 0;
       if (balance < total) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Fonds insuffisants. Besoin: **${total.toLocaleString()} ${coin}**, Solde: **${balance.toLocaleString()} ${coin}**.`, ephemeral: true });
       db.removeCoins(userId, guildId, total);

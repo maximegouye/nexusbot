@@ -30,7 +30,7 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
-    const cfg = db.getConfig(guildId);
+    const cfg = db.getConfig(guildId) || {};
     const coin = cfg.currency_emoji || '€';
     // Format YYYY-WW (identique au DEFAULT SQLite strftime('%Y-%W','now'))
     const now = new Date();
@@ -47,7 +47,7 @@ module.exports = {
     if (sub === 'acheter') {
       const qte = interaction.options.getInteger('quantite') || 1;
       const prix = (lotoCfg.ticket_price || 100) * qte;
-      const u = db.getUser(userId, guildId);
+      const u = db.getUser(userId, guildId) || { balance: 0, bank: 0 };
 
       if (u.balance < prix) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Il te faut **${prix} ${coin}** pour acheter ${qte} ticket(s).`, ephemeral: true });
 

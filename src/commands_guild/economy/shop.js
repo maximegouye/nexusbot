@@ -10,7 +10,7 @@ module.exports = {
   async execute(interaction) {
     try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
-    const cfg   = db.getConfig(interaction.guildId);
+    const cfg   = db.getConfig(interaction.guildId) || {};
     const emoji = cfg.currency_emoji || '€';
     const name  = cfg.currency_name  || 'Euros';
 
@@ -26,7 +26,7 @@ module.exports = {
       });
     }
 
-    const user = db.getUser(interaction.user.id, interaction.guildId);
+    const user = db.getUser(interaction.user.id, interaction.guildId) || { balance: 0, bank: 0 };
     const guild = interaction.guild;
     const PAGE_SIZE = 8;
     const pages = Math.ceil(items.length / PAGE_SIZE);

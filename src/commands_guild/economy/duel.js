@@ -20,8 +20,8 @@ module.exports = {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const opponent = interaction.options.getUser('adversaire');
     const miseRaw  = interaction.options.getString('mise');
-    const cfg      = db.getConfig(interaction.guildId);
-    const _me      = db.getUser(interaction.user.id, interaction.guildId);
+    const cfg      = db.getConfig(interaction.guildId) || {};
+    const _me      = db.getUser(interaction.user.id, interaction.guildId) || { balance: 0, bank: 0 };
     const parseBet = (raw, base) => {
       const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
       if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
@@ -41,8 +41,8 @@ module.exports = {
     if (opponent.bot) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas défier un bot.', ephemeral: true });
     if (opponent.id === interaction.user.id) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te battre contre toi-même.', ephemeral: true });
 
-    const challenger = db.getUser(interaction.user.id, interaction.guildId);
-    const defender   = db.getUser(opponent.id, interaction.guildId);
+    const challenger = db.getUser(interaction.user.id, interaction.guildId) || { balance: 0, bank: 0 };
+    const defender   = db.getUser(opponent.id, interaction.guildId) || { balance: 0, bank: 0 };
 
     if (challenger.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${challenger.balance.toLocaleString('fr-FR')} ${emoji}**.`, ephemeral: true });
     if (defender.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ **${opponent.username}** n'a que **${defender.balance.toLocaleString('fr-FR')} ${emoji}**. Mise trop élevée.`, ephemeral: true });

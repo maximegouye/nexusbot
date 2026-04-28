@@ -52,7 +52,7 @@ module.exports = {
     try {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const target  = interaction.options.getUser('membre');
-    const senderPre = db.getUser(interaction.user.id, interaction.guildId);
+    const senderPre = db.getUser(interaction.user.id, interaction.guildId) || { balance: 0, bank: 0 };
     const parseBet = (raw, base) => {
       const s = String(raw ?? '').replace(/[\s_,]/g, '').toLowerCase();
       if (s === 'all' || s === 'tout' || s === 'max') return Math.max(0, Number(base || 0));
@@ -68,7 +68,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
     const note    = interaction.options.getString('note') || '';
-    const cfg     = db.getConfig(interaction.guildId);
+    const cfg     = db.getConfig(interaction.guildId) || {};
     const symbol  = cfg.currency_emoji || '€';
 
     if (target.id === interaction.user.id)
@@ -76,7 +76,7 @@ module.exports = {
     if (target.bot)
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas payer un bot.', ephemeral: true });
 
-    const sender = db.getUser(interaction.user.id, interaction.guildId);
+    const sender = db.getUser(interaction.user.id, interaction.guildId) || { balance: 0, bank: 0 };
     if (sender.balance < amount) {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()

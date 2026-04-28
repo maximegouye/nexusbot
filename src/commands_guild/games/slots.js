@@ -459,7 +459,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
       : source.reply(err);
   }
   if (mise < 5) {
-    const err = '❌ Mise minimale : **5 coins** par ligne.';
+    const err = `❌ Mise minimale : **5 ${coin}** par ligne.`;
     return isInteraction
       ? source.editReply({ content: err })
       : source.reply(err);

@@ -54,7 +54,7 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
-    const cfg = db.getConfig(guildId);
+    const cfg = db.getConfig(guildId) || {};
     const coin = cfg.currency_emoji || '€';
 
     if (sub === 'marche') {
