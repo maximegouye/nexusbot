@@ -134,7 +134,8 @@ function renderCompleteTable() {
   return lines.join('\n');
 }
 
-// ─── Roue circulaire ───────────────────────────────────────────
+// ─── Roue circulaire AGRANDIE — pointeur ▼ fixe, cylindre défilant ──
+// 9 numéros visibles en haut (case gagnante au centre), arc latéral, footer numéros
 function renderWheelArc(centerIdx, wheelOrder, spinning = true, highlight = false) {
   const N = wheelOrder.length;
   const g = (off) => {
@@ -143,35 +144,45 @@ function renderWheelArc(centerIdx, wheelOrder, spinning = true, highlight = fals
     return { n, col: numColor(n) };
   };
 
-  const topCenter = Math.floor(N / 2);
-  const topRow = [-2,-1,0,1,2].map(off => {
-    const { n, col } = g(topCenter + off);
-    return `${col}${nStr(n)}`;
-  }).join(' ');
-
-  const { n: L1n, col: L1c } = g(topCenter - 3);
-  const { n: R1n, col: R1c } = g(topCenter + 3);
-
-  const botRow = [-2,-1,0,1,2].map(off => {
+  // Rangée du dessus : 9 numéros (offset -4..+4) — le 0 est sous le pointeur
+  const topRow = [-4,-3,-2,-1,0,1,2,3,4].map(off => {
     const { n, col } = g(off);
     if (off === 0) {
-      if (highlight) return `❱${col}**${nStr(n)}**❰`;
-      return `❱${col}${nStr(n)}❰`;
+      return highlight ? `❱${col}${nStr(n)}❰` : `❱${col}${nStr(n)}❰`;
     }
     return `${col}${nStr(n)}`;
   }).join(' ');
 
-  const midLine = spinning
-    ? `  ${L1c}${nStr(L1n)}  │   ⟳  bille en cours...   │  ${R1c}${nStr(R1n)}`
-    : `  ${L1c}${nStr(L1n)}  │   ◉  la bille s'arrête   │  ${R1c}${nStr(R1n)}`;
+  // Arc latéral
+  const { n: L1n, col: L1c } = g(-6);
+  const { n: L2n, col: L2c } = g(-7);
+  const { n: R1n, col: R1c } = g(6);
+  const { n: R2n, col: R2c } = g(7);
+
+  // Bottom : continuation du cylindre (vue arrière de la roue, offset à mi-chemin)
+  const halfN = Math.floor(N / 2);
+  const botRow = [-3,-2,-1,0,1,2,3].map(off => {
+    const { n, col } = g(off + halfN);
+    return `${col}${nStr(n)}`;
+  }).join(' ');
+
+  const ballMsg = spinning
+    ? '⟳  ⚪ La bille file autour du cylindre...  ⟳'
+    : '◉  La bille s\'est posée pile dans la case !';
+
+  const center = highlight ? '🎯  CASE GAGNANTE  🎯' : '🎡       ALMOSNI       🎡';
 
   return [
-    `         ${topRow}`,
-    `       ╭───────────────────────╮`,
-    midLine,
-    `       ╰───────────────────────╯`,
-    `         ${botRow}`,
-    highlight ? `                 ▲  ▲  ▲` : `                 ▲`,
+    `                       ▼  POINTEUR  ▼`,
+    `   ${topRow}`,
+    `      ╔═══════════════════════════════════╗`,
+    `${L2c}${nStr(L2n)} ${L1c}${nStr(L1n)} ║${' '.repeat(35)}║ ${R1c}${nStr(R1n)} ${R2c}${nStr(R2n)}`,
+    `      ║   ${ballMsg.padEnd(31)} ║`,
+    `      ║         ${center}        ║`,
+    `      ║${' '.repeat(35)}║`,
+    `      ╚═══════════════════════════════════╝`,
+    `              ${botRow}`,
+    highlight ? `                       ▲  GAGNANT  ▲` : `                       ▲`,
   ].join('\n');
 }
 
@@ -367,24 +378,7 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
   if (isInteraction) msg = await source.editReply({ embeds: [startEmbed] });
   else               msg = await source.reply({ embeds: [startEmbed] });
 
-  // ── Animation bille PREMIUM ───────────────────────────────────
-  for (const phase of BALL_PHASES) {
-    for (let f = 0; f < phase.steps; f++) {
-      frameIdx = (frameIdx + 1) % WHEEL_ORDER.length;
-      const animDesc = [
-        header(mode),
-        `**${phase.label}**`,
-        '',
-        renderWheelArc(frameIdx, WHEEL_ORDER, true),
-        '',
-        `**Paris :** ${betLabels}  |  **Mise :** ${chipDisplay(totalMise, coin)}`,
-      ].join('\n');
-      await msg.edit({ embeds: [new EmbedBuilder().setColor(phase.color).setTitle('🎡 Roulette Royale').setDescription(animDesc)] }).catch(() => {});
-      await sleep(phase.delay);
-    }
-  }
-
-  // ── Résultat ──────────────────────────────────────────────────
+  // ── PRE-DÉTERMINATION DU RÉSULTAT — pour que l'animation converge dessus ──
   const maxResult = mode === 'american' ? 38 : 37;
   let result = Math.floor(Math.random() * maxResult);
 
@@ -398,6 +392,53 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
   addToHistory(guildId, result);
 
   const resultIdx = WHEEL_ORDER.indexOf(result);
+
+  // ── Animation bille PREMIUM v9 — décélération ease-out CONVERGENTE ────
+  // distance = 5 tours complets + delta jusqu'à resultIdx (≈ 188 crans)
+  const N_WHEEL = WHEEL_ORDER.length;
+  const startIdx = frameIdx;
+  const totalRotations = 5;
+  const ballDistance = totalRotations * N_WHEEL + ((resultIdx - startIdx + N_WHEEL) % N_WHEEL);
+  const BALL_FRAMES = 18;
+
+  const ballPhases = [
+    { color:'#C0392B', label:'⚡ 🎱 *La bille part comme une flèche !*' },
+    { color:'#E74C3C', label:'🌀 💨 *Vitesse maximale ! Le cylindre tourbillonne !*' },
+    { color:'#D35400', label:'💨 🏓 *Frottement... la bille ralentit progressivement...*' },
+    { color:'#E67E22', label:'🏓 ⚪ *Elle rebondit sur les séparateurs !*' },
+    { color:'#F39C12', label:'🎯 ⚪ *Elle hésite entre deux cases...*' },
+    { color:'#F1C40F', label:'🤫 ⚪ *Suspense absolu... silence dans le casino...*' },
+    { color:'#2ECC71', label:'🔔 ⚪ *Derniers rebonds dans la pochette...*' },
+    { color:'#27AE60', label:'💫 ✨ *CLIC ! La bille se pose pile dedans !*' },
+  ];
+
+  for (let f = 1; f <= BALL_FRAMES; f++) {
+    const t = f / BALL_FRAMES;
+    const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out → t=1 ⇒ ease=1
+    frameIdx = (startIdx + Math.round(ballDistance * ease)) % N_WHEEL;
+    const phase = ballPhases[Math.min(ballPhases.length - 1, Math.floor(t * ballPhases.length))];
+
+    const progressBarLen = 18;
+    const barFill = Math.round(t * progressBarLen);
+    const bar = '▓'.repeat(barFill) + '░'.repeat(progressBarLen - barFill);
+
+    const animDesc = [
+      header(mode),
+      `**${phase.label}**`,
+      '',
+      renderWheelArc(frameIdx, WHEEL_ORDER, true),
+      '',
+      `\`${bar}\` ${Math.round(t * 100)}%`,
+      `**Paris :** ${betLabels}  |  **Mise :** ${chipDisplay(totalMise, coin)}`,
+    ].join('\n');
+
+    await msg.edit({ embeds: [new EmbedBuilder().setColor(phase.color).setTitle('🎡 Roulette Royale').setDescription(animDesc)] }).catch(() => {});
+
+    // Délai ease-out : court → long
+    const delay = Math.round(60 + 700 * Math.pow(t, 1.7));
+    await sleep(delay);
+  }
+  // À ce stade : frameIdx === resultIdx (math garantie)
 
   // Pré-évaluation pour flash
   const betPreview = bets.map(bet => ({

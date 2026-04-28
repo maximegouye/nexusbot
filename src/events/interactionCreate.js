@@ -46,6 +46,7 @@ const COMPONENT_ROUTES = {
   'cs_':          'casino-stats',
   'keno_':        'keno',
   'rl_':          'roulette',   // replay roulette
+  'cf_':          'coffre-magique', // coffre magique multi-niveaux
   // ── Sondage avancé (handles persistent components) ────────
   'sondagev_':    'sondage-avance',
   // ── Jeux supplémentaires ──────────────────────────────────

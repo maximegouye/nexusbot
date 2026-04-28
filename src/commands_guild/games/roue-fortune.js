@@ -42,22 +42,32 @@ function weightedSpin() {
 // Historique des tours (stocké en mémoire par guildId)
 const spinHistory = new Map(); // guildId → [{idx, gain, emoji}, ...]
 
-// ─── Animation textuelle de la roue (12 segments circulaires) ──
-function renderWheelFrame(centerIdx, phase = 0) {
+// ─── Rendu de la GRANDE ROUE VERTICALE — pointeur fixe en haut, segments défilants ──
+function renderWheelFrame(centerIdx, hilite = false) {
   const N = SEGMENTS.length;
-  const getSegment = (offset) => SEGMENTS[(centerIdx + offset + N) % N];
-
-  const top = getSegment(-1).emoji;
-  const center = getSegment(0).emoji;
-  const bottom = getSegment(1).emoji;
-  const phases = ['▀', '▄', '█', '▓', '▒'][phase % 5];
-
-  return [
-    `      ${top}`,
-    `    ◆ ${phases}${center}${phases} ◆`,
-    `      ${bottom}`,
-    `        ▼`,
-  ].join('\n');
+  const seg = (off) => SEGMENTS[((centerIdx + off) % N + N) % N];
+  const pad = (s, w = 17) => {
+    const trimmed = String(s);
+    return trimmed.length >= w ? trimmed.slice(0, w) : trimmed + ' '.repeat(w - trimmed.length);
+  };
+  const lines = [];
+  lines.push('```');
+  lines.push('              ▼   POINTEUR   ▼');
+  lines.push('       ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓');
+  for (let off = -2; off <= 2; off++) {
+    const s = seg(off);
+    if (off === 0) {
+      const m = hilite ? '★' : '▶';
+      lines.push(`       ┃ ${m} ${s.emoji}  ${pad(s.label)} ${m} ┃`);
+    } else {
+      const fadeL = (off === -2 || off === 2) ? '·' : ' ';
+      lines.push(`       ┃ ${fadeL} ${s.emoji}  ${pad(s.label)} ${fadeL} ┃`);
+    }
+  }
+  lines.push('       ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛');
+  lines.push('              ▲   GAGNANT    ▲');
+  lines.push('```');
+  return lines.join('\n');
 }
 
 // ─── Visualisation finale avec l'étiquette ──────────
@@ -116,17 +126,22 @@ async function playRoueFortune(source, userId, guildId, mise) {
   const finalIdx = weightedSpin();
   const segment = SEGMENTS[finalIdx];
 
-  // ── Phase 1 : Introduction ────────────────────────────────────
-  let startPos = Math.floor(Math.random() * SEGMENTS.length);
+  // ── Identifiant joueur (interaction OU message prefix) ───────
+  const playerName = (source.user && source.user.username) || (source.author && source.author.username) || 'Joueur';
+
+  // ── Phase 0 : Compte à rebours dramatique 3·2·1 ────────────────
+  const N = SEGMENTS.length;
+  let startPos = Math.floor(Math.random() * N);
+
   const introEmbed = new EmbedBuilder()
     .setColor('#F39C12')
     .setTitle('🎡 ━━━ GRANDE ROUE ALMOSNI PREMIUM ━━━ 🎡')
     .setDescription([
-      `**${source.user.username}** mise **${mise.toLocaleString()} ${coin}**`,
+      `**${playerName}** mise **${mise.toLocaleString()} ${coin}**`,
       '',
-      renderWheelFrame(startPos, 0),
+      renderWheelFrame(startPos, false),
       '',
-      '🎬 *La roue commence à tourner...*',
+      '🎬 *Préparation de la roue...*',
     ].join('\n'))
     .setFooter({ text: 'Grande Roue Almosni Premium · Jeu de hasard' });
 
@@ -134,58 +149,82 @@ async function playRoueFortune(source, userId, guildId, mise) {
   if (isInteraction) msg = await source.editReply({ embeds: [introEmbed] });
   else               msg = await source.reply({ embeds: [introEmbed] });
 
-  // ── Phase 2 : Rotation rapide (6 frames) ──────────────────────
+  for (const [cnt, col] of [['3️⃣','#FF4500'],['2️⃣','#FF8C00'],['1️⃣','#FFD700']]) {
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(col)
+      .setTitle(`🎡 LANCEMENT ${cnt}`)
+      .setDescription([
+        renderWheelFrame(startPos, false),
+        '',
+        `## ${cnt}`,
+        `**${playerName}** · Mise : **${mise.toLocaleString()} ${coin}**`,
+      ].join('\n'))
+    ]}).catch(() => {});
+    await sleep(380);
+  }
+
+  // ── PHASE PRINCIPALE : décélération ease-out qui CONVERGE PILE sur finalIdx ──
+  // distance = 4 tours complets + le delta jusqu'au segment final → ~52 crans
+  const totalRotations = 4;
+  const distance = totalRotations * N + ((finalIdx - startPos + N) % N);
+  const FRAMES = 16; // 16 frames d'animation lisses
   let pos = startPos;
-  for (let i = 0; i < 6; i++) {
-    pos = (pos + (Math.floor(Math.random() * 3) + 2)) % SEGMENTS.length;
-    const spinEmbed = new EmbedBuilder()
-      .setColor('#E74C3C')
-      .setTitle('🎡 ━━━ EN TRAIN DE TOURNER... ━━━ 🎡')
-      .setDescription([
-        renderWheelFrame(pos, i),
-        '',
-        '⚡ **La roue tourne à pleine vitesse !**',
-        '`▓▓▓▓▓▓▓▓░░  80%`',
-      ].join('\n'));
-    await msg.edit({ embeds: [spinEmbed] }).catch(() => {});
-    await sleep(120);
-  }
 
-  // ── Phase 3 : Ralentissement (4 frames) ──────────────────────
-  for (let i = 0; i < 4; i++) {
-    pos = (pos + 1) % SEGMENTS.length;
-    const spinEmbed = new EmbedBuilder()
-      .setColor('#F39C12')
-      .setTitle('🎡 ━━━ EN TRAIN DE TOURNER... ━━━ 🎡')
-      .setDescription([
-        renderWheelFrame(pos, i + 1),
-        '',
-        '💨 **Ralentissement en cours...**',
-        '`▓▓▓▓▓▓░░░░  60%`',
-      ].join('\n'));
-    await msg.edit({ embeds: [spinEmbed] }).catch(() => {});
-    await sleep(250);
-  }
+  for (let f = 1; f <= FRAMES; f++) {
+    const t = f / FRAMES;
+    const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
+    pos = (startPos + Math.round(distance * ease)) % N;
+    const isLast = (f === FRAMES);
 
-  // ── Phase 4 : Approche lente vers le résultat ────────────────
-  const diff = ((finalIdx - pos) % SEGMENTS.length + SEGMENTS.length) % SEGMENTS.length;
-  for (let s = 0; s < diff; s++) {
-    pos = (pos + 1) % SEGMENTS.length;
-    const isLast = pos === finalIdx;
-    const spinEmbed = new EmbedBuilder()
-      .setColor(isLast ? '#FFD700' : '#2ECC71')
-      .setTitle(isLast ? '🛑 ✨ ARRÊT ! ✨ 🛑' : '🎡 ━━━ EN TRAIN DE TOURNER... ━━━ 🎡')
-      .setDescription([
-        renderWheelFrame(pos, 3),
-        '',
-        isLast ? '🔔 **Clic ! La roue s\'arrête !**' : '🎯 *Dernier rebond...*',
-        `\`${isLast ? '▓▓░░░░░░░░   5%' : '▓▓▓░░░░░░░  30%'}\``,
-      ].join('\n'));
-    await msg.edit({ embeds: [spinEmbed] }).catch(() => {});
-    await sleep(isLast ? 300 : 200);
-  }
+    // Phases visuelles selon t
+    let title, hint, color, barFill;
+    if (isLast) {
+      title = '🛑 ✨ ARRÊT ! ✨ 🛑';
+      hint = '🔔 **CLIC ! La roue s\'immobilise sur le segment !**';
+      color = '#FFD700';
+      barFill = 14;
+    } else if (t < 0.30) {
+      title = '🎡 ⚡ PLEINE VITESSE ⚡ 🎡';
+      hint = '🌀 **La roue tourne à toute allure !**';
+      color = '#E74C3C';
+      barFill = Math.round(t * 14);
+    } else if (t < 0.65) {
+      title = '🎡 💨 RALENTISSEMENT 💨 🎡';
+      hint = '⏳ **Le frottement ralentit la roue...**';
+      color = '#E67E22';
+      barFill = Math.round(t * 14);
+    } else if (t < 0.90) {
+      title = '🎡 🎯 DERNIERS CRANS 🎯 🎡';
+      hint = '😬 *Plus que quelques segments...*';
+      color = '#F39C12';
+      barFill = Math.round(t * 14);
+    } else {
+      title = '🎡 🤫 SUSPENSE ABSOLU 🤫 🎡';
+      hint = '🔇 *La roue hésite... va-t-elle s\'arrêter ici ?*';
+      color = '#2ECC71';
+      barFill = Math.round(t * 14);
+    }
 
-  await sleep(500);
+    const bar = '▓'.repeat(barFill) + '░'.repeat(14 - barFill);
+
+    await msg.edit({ embeds: [new EmbedBuilder()
+      .setColor(color)
+      .setTitle(title)
+      .setDescription([
+        renderWheelFrame(pos, isLast),
+        '',
+        hint,
+        `\`${bar}\` ${Math.round(t * 100)}%`,
+      ].join('\n'))
+    ]}).catch(() => {});
+
+    // Délai ease-out aussi : court → long (créé la sensation de freinage)
+    const delay = Math.round(70 + 1100 * Math.pow(t, 1.6));
+    await sleep(delay);
+  }
+  // À ce stade : pos === finalIdx (math garantie : ease(1)=1, distance ≡ Δ mod N)
+
+  await sleep(450);
 
   // ── Calcul du gain ──────────────────────────────────────────
   let gain = 0;

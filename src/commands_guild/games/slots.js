@@ -347,11 +347,30 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
     await sleep(580);
   }
 
-  // PHASE 3: Révélation rouleau par rouleau CINÉMATIQUE
+  // PHASE 3: Révélation rouleau par rouleau CINÉMATIQUE + ANTICIPATION
   const partial = Array.from({length:5}, () => Array.from({length:3}, () => ({emoji:'🌀'})));
   const stopColors = ['#8E44AD','#2980B9','#27AE60','#F39C12','#E74C3C'];
   const stopLabels = ['ROULEAU 1 ▶ ARRÊT !','ROULEAU 2 ▶ ARRÊT !','ROULEAU 3 ▶ ARRÊT !','ROULEAU 4 ▶ ARRÊT !','🔒 RÉSULTAT FINAL !'];
   const suspenseEmoji = ['🔴','🟠','🟡','🟢','✅'];
+
+  // Helper : détecte un GROS POTENTIEL après N rouleaux révélés (3+ symboles premium ou wild)
+  const detectBigPotential = (revealedCols) => {
+    const PREMIUM = new Set(['wild','wild2','seven','diamond','trophy']);
+    let maxCount = 0;
+    let topSym = null;
+    // Scan les 3 lignes principales (top, mid, bot)
+    for (let row = 0; row < 3; row++) {
+      const counts = {};
+      for (let c = 0; c < revealedCols; c++) {
+        const sym = partial[c][row];
+        if (PREMIUM.has(sym.id)) {
+          counts[sym.id] = (counts[sym.id] || 0) + 1;
+          if (counts[sym.id] > maxCount) { maxCount = counts[sym.id]; topSym = sym; }
+        }
+      }
+    }
+    return { count: maxCount, sym: topSym };
+  };
 
   for (let col = 0; col < 5; col++) {
     partial[col] = grid[col];
@@ -373,6 +392,31 @@ async function animateSpin(msg, grid, coin, mise, jackpot) {
       .setFooter({text:`★ ALMOSNI CASINO ★  │  Rouleau ${col+1}/5 arrêté`})
     ]}).catch(() => {});
     await sleep(col < 4 ? 520 : 280);
+
+    // ── ANTICIPATION : 3+ premium alignés après reels 3 ou 4 ──
+    if (col === 2 || col === 3) {
+      const { count, sym } = detectBigPotential(col + 1);
+      if (count >= 3) {
+        // Frame TENSION : la machine vibre, sons d'alerte
+        const tensionMsg = count >= 4
+          ? `🚨 🚨 🚨  **4 ${sym.emoji} ALIGNÉS — JACKPOT À UN ROULEAU !**  🚨 🚨 🚨`
+          : `⚠️ ⚠️  **3 ${sym.emoji} ALIGNÉS — GROS GAIN POSSIBLE !**  ⚠️ ⚠️`;
+        const shake = ['🎰', '🎰  ', '  🎰', '🎰'][col % 4];
+
+        await msg.edit({ embeds: [new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle(`${shake}  ANTICIPATION  ${shake}`)
+          .setDescription(`\`\`\`\n${display}\n\`\`\`\n${tensionMsg}\n\n*🎵 ...la machine vibre... un dernier rouleau...*`)
+          .addFields(
+            {name:'💰 Mise',value:`${mise.toLocaleString('fr-FR')} ${coin}`,inline:true},
+            {name:'🎯 Symboles alignés',value:`${count}× ${sym.emoji}`,inline:true},
+            {name:'🏆 Jackpot',value:`${jackpot.toLocaleString('fr-FR')} ${coin}`,inline:true},
+          )
+          .setFooter({text:`★ ALMOSNI CASINO ★  │  TENSION MAXIMALE`})
+        ]}).catch(() => {});
+        await sleep(count >= 4 ? 1100 : 750);
+      }
+    }
   }
 }
 

@@ -1,7 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 
+// ⚠️ Ce fichier est une duplication historique de shop.js — neutralisé pour
+// éviter le doublon slash 'shop' qui bloquait deploy-commands.js.
+// La vraie commande /shop reste dans economy/shop.js.
 module.exports = {
+  _prefixOnly: true,
   data: new SlashCommandBuilder()
     .setName('shop')
     .setDescription('🛒 Affiche la boutique du serveur'),
