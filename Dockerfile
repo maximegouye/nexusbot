@@ -9,14 +9,7 @@ WORKDIR /app
 
 # Copier package.json en premier pour utiliser le cache Docker
 COPY package*.json ./
-
-# Installation principale — skip les optional deps lourdes (canvas v2, sodium-native...)
 RUN npm install --omit=optional
-
-# Réinstaller @napi-rs/canvas + gif-encoder-2 AVEC les binaires platform (Linux x64 glibc).
-# Cette commande inclut les optional deps du package (le prebuilt binaire natif),
-# nécessaire pour la roulette/roue graphique animée en GIF.
-RUN npm install @napi-rs/canvas gif-encoder-2
 
 # Copier le reste du code
 COPY . .
