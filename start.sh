@@ -25,4 +25,12 @@ fi
 
 # Aller dans le dossier du bot et démarrer
 cd "$APP_DIR"
+
+# Enregistrer les slash commands sur Discord (toujours, pour prendre en compte les nouvelles)
+echo "[START] Enregistrement des slash commands..."
+node deploy-commands.js
+if [ $? -ne 0 ]; then
+  echo "[START] ⚠️  deploy-commands.js a échoué — le bot démarre quand même."
+fi
+
 exec node src/index.js
