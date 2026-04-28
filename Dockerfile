@@ -1,5 +1,9 @@
 FROM node:20-slim
 
+# Cache-bust 2026-04-28T21:10 — force rebuild pour appliquer le nouveau start.sh
+ARG CACHEBUST=20260428_2110
+RUN echo "Cache bust: $CACHEBUST"
+
 # Outils pour compiler better-sqlite3 (module natif)
 RUN apt-get update && \
     apt-get install -y python3 make g++ && \
@@ -16,5 +20,8 @@ COPY . .
 
 # Créer le dossier data
 RUN mkdir -p /app/data
+
+# Diagnostic : afficher les premieres lignes de start.sh dans le build pour verifier
+RUN echo "=== Contenu de start.sh dans l image ===" && head -50 start.sh
 
 CMD ["sh", "start.sh"]
