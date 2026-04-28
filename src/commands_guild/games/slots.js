@@ -120,10 +120,19 @@ function spinReel() {
 function spinGrid() {
   return Array.from({ length: 5 }, () => Array.from({ length: 3 }, () => spinReel()));
 }
-function gridDisplay(grid, highlightRows = null) {
+function gridDisplay(grid, highlightRows = null, activeLines = null) {
+  // Détermine quelles lignes horizontales sont évaluées
+  const activeRowSet = new Set();
+  if (activeLines !== null) {
+    const usedPl = PAYLINES.slice(0, activeLines);
+    for (const pl of usedPl) {
+      if (pl.rows.every(r => r === pl.rows[0])) activeRowSet.add(pl.rows[0]);
+    }
+  }
   return [0, 1, 2].map(row => {
     const line = grid.map(col => col[row].emoji).join(' ');
     if (highlightRows && highlightRows.includes(row)) return `▶ ${line} ◀`;
+    if (activeLines !== null && activeRowSet.has(row)) return `━ ${line} ━`;
     return `  ${line}  `;
   }).join('\n');
 }
@@ -339,7 +348,7 @@ async function runFreeSpins(msg, userId, guildId, mise, coin, freeCount, startMu
     totalGain += spinGain;
     if (spinGain > 0) { multiplier = Math.min(10, multiplier + 1); }
 
-    const rowsDisplay = gridDisplay(freeGrid);
+    const rowsDisplay = gridDisplay(freeGrid, null, activeLines);
     const spinLabel = spinGain > 0
       ? `+${spinGain.toLocaleString('fr-FR')} ${coin} (×${multiplier})`
       : '—';
@@ -416,7 +425,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
   let maxMultiplier = 0;
 
   // Grille de base
-  const gridBase = gridDisplay(grid);
+  const gridBase = gridDisplay(grid, null, activeLines);
 
   // ── JACKPOT ────────────────────────────────────────────
   if (hasJackpot) {
@@ -534,7 +543,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
 
       await msg.edit({ embeds: [new EmbedBuilder().setColor('#00BCD4')
         .setTitle(`⚡ CASCADE ${cascadeCount} ! +${cGain.toLocaleString('fr-FR')} ${coin}`)
-        .setDescription(`\`\`\`\n${gridDisplay(newGrid)}\n\`\`\`\n*Les symboles gagnants s'effondrent !*`)
+        .setDescription(`\`\`\`\n${gridDisplay(newGrid, null, activeLines)}\n\`\`\`\n*Les symboles gagnants s'effondrent !*`)
         .addFields({name:'💰 Cascade gain',value:`+${cGain.toLocaleString('fr-FR')} ${coin}`,inline:true})
       ]}).catch(() => {});
       await sleep(800);
@@ -590,9 +599,15 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
   const currentStreak = streakStats.get(userId) || { current: 0 };
   const newBalance = db.getUser(userId, guildId)?.balance || 0;
 
+  // Légende des paylines actives (━ = évaluée)
+  const plNames = PAYLINES.slice(0, activeLines).map(p => p.name).join(' · ');
+  const plNote = activeLines < 3
+    ? `📌 Ligne${activeLines > 1 ? 's' : ''} évaluée${activeLines > 1 ? 's' : ''} (━): **${plNames}** · Ajoute des lignes : \`/slots <mise> <1-5>\``
+    : `📌 Paylines actives (━): **${plNames}**`;
+
   const finalEmbed = new EmbedBuilder()
     .setColor(color).setTitle(title)
-    .setDescription(`\`\`\`\n${gridBase}\n\`\`\`\n\n${desc}`)
+    .setDescription(`\`\`\`\n${gridBase}\n\`\`\`\n${plNote}\n\n${desc}`)
     .addFields(
       { name: '💰 Mise', value: `${totalMise.toLocaleString('fr-FR')} ${coin}`, inline: true },
       { name: totalGain > 0 ? '✅ Gain' : '❌ Perte',
