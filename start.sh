@@ -29,8 +29,20 @@ cd "$APP_DIR"
 # Enregistrer les slash commands sur Discord (toujours, pour prendre en compte les nouvelles)
 echo "[START] Enregistrement des slash commands..."
 node deploy-commands.js
-if [ $? -ne 0 ]; then
+DEPLOY_RESULT=$?
+echo "[START] deploy-commands.js exit code: $DEPLOY_RESULT"
+if [ $DEPLOY_RESULT -ne 0 ]; then
   echo "[START] ⚠️  deploy-commands.js a échoué — le bot démarre quand même."
 fi
 
-exec node src/index.js
+echo "[START] >>> Lancement de node src/index.js a $(date -u +%H:%M:%S) UTC <<<"
+ls -la src/index.js
+echo "[START] Node version: $(node --version)"
+echo "[START] Args: $0 $@"
+
+# Pas d'exec — utilise un fork pour garder le shell vivant et capturer les exits
+node src/index.js
+NODE_EXIT=$?
+echo "[START] !!! node src/index.js a exit avec code $NODE_EXIT a $(date -u +%H:%M:%S) UTC !!!"
+sleep 5
+exit $NODE_EXIT
