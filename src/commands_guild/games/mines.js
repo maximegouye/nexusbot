@@ -409,11 +409,9 @@ async function handleComponent(interaction) {
 
     if (customUserId !== userId) {
       return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
-
-
     }
 
-    await interaction.deferUpdate();
+    await interaction.deferUpdate().catch(() => {});
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playMines(source, userId, guildId, mise, mines);
     return true;
@@ -426,9 +424,9 @@ async function handleComponent(interaction) {
     const minesCount   = parseInt(parts[3]);
     const mise         = parseInt(parts[4]);
     if (customUserId !== userId) {
-      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
     }
-    await interaction.deferUpdate();
+    await interaction.deferUpdate().catch(() => {});
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playMines(source, userId, guildId, mise, minesCount);
     return true;
@@ -439,9 +437,9 @@ async function handleComponent(interaction) {
     const customUserId = parts[2];
     const minesCount = parseInt(parts[3]) || 3;
     if (customUserId !== userId) {
-      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
     }
-    await interaction.showModal(changeMiseModal('mines', userId, `${minesCount}`));
+    await interaction.showModal(changeMiseModal('mines', userId, `${minesCount}`)).catch(() => {});
     return true;
   }
 
@@ -458,7 +456,7 @@ async function handleComponent(interaction) {
     if (!newMise || newMise < 10) {
       return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true }).catch(() => {});
     }
-    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await playMines(interaction, userId, guildId, newMise, minesCount);
     return true;
   }

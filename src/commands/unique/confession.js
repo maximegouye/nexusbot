@@ -202,13 +202,13 @@ module.exports = {
           Math.floor(Date.now() / 1000)
         );
 
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: `✅ Votre confession a été envoyée anonymement! (#${confessionNumber})`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Confession error:', error);
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue lors de l\'envoi de la confession.',
           ephemeral: true,
         });
@@ -234,13 +234,13 @@ module.exports = {
           db.db.prepare('INSERT INTO guild_config (guild_id, confession_channel) VALUES (?, ?)').run(guildId, channel.id);
         }
 
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: `✅ Salon des confessions configuré: ${channel}`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Setup error:', error);
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });
@@ -259,13 +259,13 @@ module.exports = {
       try {
         db.db.prepare('UPDATE guild_config SET confession_channel = NULL WHERE guild_id = ?').run(guildId);
 
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '✅ Les confessions ont été désactivées.',
           ephemeral: true,
         });
       } catch (error) {
         console.error('Disable error:', error);
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });
@@ -292,13 +292,13 @@ module.exports = {
           interaction.user.id
         );
 
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: `✅ ${user.username} a été banni des confessions. Raison: ${reason}`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Ban error:', error);
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });
@@ -319,13 +319,13 @@ module.exports = {
       try {
         db.db.prepare('DELETE FROM confession_bans WHERE guild_id = ? AND user_id = ?').run(guildId, user.id);
 
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: `✅ ${user.username} a été débanni des confessions.`,
           ephemeral: true,
         });
       } catch (error) {
         console.error('Unban error:', error);
-        (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+        await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
           content: '❌ Une erreur est survenue.',
           ephemeral: true,
         });

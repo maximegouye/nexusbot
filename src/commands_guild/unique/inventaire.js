@@ -183,7 +183,7 @@ module.exports = {
     if (sub === 'donner') {
       const target = interaction.options.getUser('joueur');
       const itemId = interaction.options.getString('item');
-      const qty = parseInt(interaction.options.getString('quantite')) || 1;
+      const qty = interaction.options.getInteger('quantite') || 1;
       if (target.id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas vous donner un item à vous-même.', ephemeral: true });
 
       const owned = db.db.prepare('SELECT quantity FROM inventaires WHERE guild_id=? AND user_id=? AND item_id=?').get(guildId, userId, itemId);
@@ -205,7 +205,7 @@ module.exports = {
 
     if (sub === 'vendre') {
       const itemId = interaction.options.getString('item');
-      const prix = parseInt(interaction.options.getString('prix'));
+      const prix = interaction.options.getInteger('prix');
       const owned = db.db.prepare('SELECT quantity FROM inventaires WHERE guild_id=? AND user_id=? AND item_id=?').get(guildId, userId, itemId);
       if (!owned || owned.quantity < 1) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne possédez pas cet item.', ephemeral: true });
 
@@ -219,7 +219,7 @@ module.exports = {
     }
 
     if (sub === 'lootbox') {
-      const qty = parseInt(interaction.options.getString('quantite')) || 1;
+      const qty = interaction.options.getInteger('quantite') || 1;
       const cost = 50 * qty;
       const u = db.getUser(userId, guildId);
       if ((u.balance || 0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Il faut **${cost} ${coin}** pour ouvrir ${qty} lootbox(es).`, ephemeral: true });

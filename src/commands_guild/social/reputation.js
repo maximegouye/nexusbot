@@ -78,7 +78,7 @@ module.exports = {
     if (sub === 'retirer') {
       if (!interaction.member.permissions.has(0x4000n)) return interaction.editReply({ content: '❌ Modérateur uniquement.', ephemeral: true });
       const target = interaction.options.getUser('membre');
-      const montant = interaction.options.getInteger('montant');
+      const montant = 1;
       db.getUser(target.id, guildId);
       db.db.prepare('UPDATE users SET reputation = MAX(0, reputation - ?) WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
       db.db.prepare('INSERT INTO rep_log (guild_id, from_id, to_id, amount, reason) VALUES (?,?,?,?,?)').run(guildId, userId, target.id, -montant, 'Retrait staff');

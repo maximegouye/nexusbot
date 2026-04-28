@@ -27,6 +27,7 @@ module.exports = {
     }
 
     const user = db.getUser(interaction.user.id, interaction.guildId);
+    const guild = interaction.guild;
     const PAGE_SIZE = 8;
     const pages = Math.ceil(items.length / PAGE_SIZE);
     let page = 0;
@@ -50,8 +51,6 @@ module.exports = {
       }
       return embed;
     };
-
-    const guild = interaction.guild;
 
     const buildRow = (p) => {
       return new ActionRowBuilder().addComponents(
@@ -79,10 +78,8 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
     } catch {}
-  }}
+  }
+},
 };
-
-// Réactivé comme prefix-only (limite slash Discord)
-if (module.exports && module.exports.data) module.exports._prefixOnly = true;

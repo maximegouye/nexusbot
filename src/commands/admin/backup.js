@@ -108,7 +108,7 @@ module.exports = {
       await interaction.deferReply({ ephemeral: true });
 
       try {
-        const backupId = parseInt(interaction.options.getString('id'));
+        const backupId = interaction.options.getInteger('id');
         const backup = db.db.prepare(
           'SELECT * FROM backups WHERE id = ? AND guild_id = ?'
         ).get(backupId, interaction.guildId);
@@ -169,7 +169,7 @@ module.exports = {
     }
 
     if (sub === 'supprimer') {
-      const backupId = parseInt(interaction.options.getString('id'));
+      const backupId = interaction.options.getInteger('id');
       const backup = db.db.prepare(
         'SELECT * FROM backups WHERE id = ? AND guild_id = ?'
       ).get(backupId, interaction.guildId);

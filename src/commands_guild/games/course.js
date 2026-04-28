@@ -57,7 +57,7 @@ module.exports = {
         if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
         return Math.floor(n);
       };
-      const miseRaw = interaction.options.get('mise')?.value;
+      const miseRaw = interaction.options.getString('mise');
       const mise = parseBet(miseRaw, u.balance);
       if (!Number.isFinite(mise) || mise < 10) {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Mise invalide. Minimum **10**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
@@ -67,7 +67,7 @@ module.exports = {
       if (u.balance < mise) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Solde insuffisant.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -mise);
-      await interaction.deferReply();
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
 
       // Animation de course
       const lines = HORSES.map(h => `${h.emoji} **${h.name}** : ${'🟫'.repeat(3)}`);
@@ -105,7 +105,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
     } catch {}
   }}
 };

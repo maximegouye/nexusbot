@@ -319,15 +319,13 @@ module.exports = {
       const riskKey = parts[3] || 'medium';
       if (interaction.user.id !== userId) {
         await interaction.reply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
-
-
         return true;
       }
-      await interaction.deferUpdate();
+      await interaction.deferUpdate().catch(() => {});
       const u2 = db.getUser(userId, interaction.guildId);
       const allIn = u2?.balance || 0;
       if (allIn < 10) {
-        await interaction.editReply({ content: '❌ Solde insuffisant pour un All-In (min 10).', ephemeral: true });
+        await interaction.editReply({ content: '❌ Solde insuffisant pour un All-In (min 10).', ephemeral: true }).catch(() => {});
         return true;
       }
       await playPlinko(interaction, userId, interaction.guildId, allIn, riskKey);
@@ -339,10 +337,10 @@ module.exports = {
       const mise = parseInt(parts[3]);
       const newRisk = parts[4] || 'medium';
       if (interaction.user.id !== userId) {
-        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
         return true;
       }
-      await interaction.deferUpdate();
+      await interaction.deferUpdate().catch(() => {});
       await playPlinko(interaction, userId, interaction.guildId, mise, newRisk);
       return true;
     }
@@ -351,10 +349,10 @@ module.exports = {
       const userId = parts[2];
       const riskKey = parts[3] || 'medium';
       if (interaction.user.id !== userId) {
-        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true }).catch(() => {});
         return true;
       }
-      await interaction.showModal(changeMiseModal('plinko', userId, riskKey));
+      await interaction.showModal(changeMiseModal('plinko', userId, riskKey)).catch(() => {});
       return true;
     }
     if (cid.startsWith('plinko_modal_') && interaction.isModalSubmit()) {
@@ -362,7 +360,7 @@ module.exports = {
       const userId = parts[2];
       const riskKey = parts[3] || 'medium';
       if (interaction.user.id !== userId) {
-        await interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Ce modal ne t\'appartient pas.', ephemeral: true }).catch(() => {});
         return true;
       }
       const rawMise = interaction.fields.getTextInputValue('newmise');
@@ -371,7 +369,7 @@ module.exports = {
       if (!newMise || newMise < 10) {
         return interaction.reply({ content: '❌ Mise invalide (min 10 coins).', ephemeral: true }).catch(() => {});
       }
-      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false }).catch(() => {});
       await playPlinko(interaction, userId, interaction.guildId, newMise, riskKey);
       return true;
     }

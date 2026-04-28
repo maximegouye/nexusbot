@@ -143,11 +143,6 @@ function initializeDatabase() {
     }
   } catch (error) {
     // Silently ignore if tables already exist
-    if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-      (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', ephemeral: true }).catch(() => {});
-    } else if (interaction.isRepliable() && interaction.deferred && !interaction.replied) {
-      (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Une erreur est survenue. Ressaie.', }).catch(() => {});
-    }
   }
 }
 
@@ -193,7 +188,7 @@ async function handleSetup(interaction, guildId) {
       )
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors de la configuration : ${error.message}`, ephemeral: true });
   }
@@ -226,7 +221,7 @@ async function handleRename(interaction, guildId, userId) {
       .setDescription(`Votre salon vocal a été renommé en : **${newName}**`)
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors du renommage : ${error.message}`, ephemeral: true });
   }
@@ -258,7 +253,7 @@ async function handleLimit(interaction, guildId, userId) {
       .setDescription(`La limite de votre salon vocal est maintenant : **${limitText}**`)
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors de la définition de la limite : ${error.message}`, ephemeral: true });
   }
@@ -290,7 +285,7 @@ async function handleLock(interaction, guildId, userId) {
       .setDescription('Votre salon vocal est maintenant verrouillé. Seul le propriétaire peut inviter des membres.')
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors du verrouillage : ${error.message}`, ephemeral: true });
   }
@@ -322,7 +317,7 @@ async function handleUnlock(interaction, guildId, userId) {
       .setDescription('Votre salon vocal est maintenant ouvert à tous.')
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors du déverrouillage : ${error.message}`, ephemeral: true });
   }
@@ -360,7 +355,7 @@ async function handleKick(interaction, guildId, userId) {
       .setDescription(`**${targetUser.username}** a été expulsé de votre salon vocal.`)
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors de l'expulsion : ${error.message}`, ephemeral: true });
   }
@@ -397,7 +392,7 @@ async function handleTransfer(interaction, guildId, userId) {
       .setDescription(`La propriété de votre salon a été transférée à **${newOwner.username}**.`)
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors du transfert : ${error.message}`, ephemeral: true });
   }
@@ -437,7 +432,7 @@ async function handleStatus(interaction, guildId, userId) {
       )
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
     (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors de la récupération du statut : ${error.message}`, ephemeral: true });
   }
@@ -486,8 +481,8 @@ async function handleDisable(interaction, guildId) {
       )
       .setTimestamp();
 
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
   } catch (error) {
-    (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors de la désactivation : ${error.message}`, ephemeral: true });
+    await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Erreur lors de la désactivation : ${error.message}`, ephemeral: true });
   }
 }

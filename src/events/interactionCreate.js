@@ -165,8 +165,10 @@ module.exports = {
           if (handled) return;
         } catch (e) {
           console.error('[CFG] handleConfigInteraction crash:', e?.message || e);
-          if (!interaction.replied && !interaction.deferred) {
+          if (interaction.replied || interaction.deferred) {
             await interaction.editReply({ content: '❌ Erreur panneau config.', ephemeral: true }).catch(() => {});
+          } else {
+            await interaction.reply({ content: '❌ Erreur panneau config.', ephemeral: true }).catch(() => {});
           }
           return;
         }
@@ -181,8 +183,10 @@ module.exports = {
           if (handled) return;
         } catch (e) {
           console.error('[ADV] handleAdvancedInteraction crash:', e?.message || e);
-          if (!interaction.replied && !interaction.deferred) {
+          if (interaction.replied || interaction.deferred) {
             await interaction.editReply({ content: '❌ Erreur panneau config avancé.', ephemeral: true }).catch(() => {});
+          } else {
+            await interaction.reply({ content: '❌ Erreur panneau config avancé.', ephemeral: true }).catch(() => {});
           }
           return;
         }

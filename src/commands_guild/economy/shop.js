@@ -26,8 +26,8 @@ module.exports = {
       });
     }
 
-    const guild = interaction.guild;
     const user = db.getUser(interaction.user.id, interaction.guildId);
+    const guild = interaction.guild;
     const PAGE_SIZE = 8;
     const pages = Math.ceil(items.length / PAGE_SIZE);
     let page = 0;
@@ -81,5 +81,5 @@ module.exports = {
       else await interaction.reply(_em).catch(() => {});
     } catch {}
   }
-  },
+},
 };

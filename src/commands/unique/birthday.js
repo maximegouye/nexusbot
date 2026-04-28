@@ -22,9 +22,9 @@ module.exports = {
 
     // ── SET ──
     if (sub === 'set') {
-      const jour  = interaction.options.getInteger('jour');
-      const mois  = interaction.options.getInteger('mois');
-      const annee = interaction.options.getInteger('annee') || null;
+      const jour  = parseInt(interaction.options.getString('jour'));
+      const mois  = parseInt(interaction.options.getString('mois'));
+      const annee = interaction.options.getString('annee') ? parseInt(interaction.options.getString('annee')) : null;
 
       // Vérifier la date
       const testDate = new Date(annee || 2000, mois - 1, jour);
@@ -32,9 +32,13 @@ module.exports = {
 
       const bday = `${String(mois).padStart(2, '0')}-${String(jour).padStart(2, '0')}`;
 
-      db.db.prepare(`INSERT INTO users (user_id, guild_id, birthday, birth_year) VALUES (?, ?, ?, ?)
-        ON CONFLICT(user_id, guild_id) DO UPDATE SET birthday = ?, birth_year = ?`)
-        .run(interaction.user.id, interaction.guildId, bday, annee, bday, annee);
+      try {
+        db.db.prepare(`INSERT INTO users (user_id, guild_id, birthday, birth_year) VALUES (?, ?, ?, ?)
+          ON CONFLICT(user_id, guild_id) DO UPDATE SET birthday = ?, birth_year = ?`)
+          .run(interaction.user.id, interaction.guildId, bday, annee, bday, annee);
+      } catch (e) {
+        return interaction.editReply({ content: '❌ Erreur base de données.', ephemeral: true });
+      }
 
       await interaction.editReply({
         embeds: [new EmbedBuilder()

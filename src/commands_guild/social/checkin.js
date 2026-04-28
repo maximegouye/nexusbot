@@ -120,7 +120,8 @@ module.exports = {
       const todayTs = Math.floor(today.getTime()/1000);
       const isActive = logs.checked_at >= todayTs - 86400;
 
-      const totalCoins = db.db.prepare('SELECT SUM(coins_earned) as t FROM checkin_log WHERE user_id=? AND guild_id=?').get(userId, guildId)?.t || 0;
+      const totalCoinsResult = db.db.prepare('SELECT SUM(coins_earned) as t FROM checkin_log WHERE user_id=? AND guild_id=?').get(userId, guildId);
+      const totalCoins = totalCoinsResult?.t || 0;
 
       // Prochain milestone
       const nextMilestone = Object.keys(MILESTONES).map(Number).find(m => m > logs.streak);

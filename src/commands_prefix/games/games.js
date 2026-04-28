@@ -62,7 +62,7 @@ const commands = [
       const result = chambers[Math.floor(Math.random() * 6)];
 
       if (result) {
-        db.addCoins(message.author.id, message.guild.id, -bet);
+        db.removeCoins(message.author.id, message.guild.id, bet);
         message.channel.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('💥 BANG !').setDescription(`🔫 La balle était là ! <@${message.author.id}> perd **${bet} ${coin}** !`)] });
       } else {
         db.addCoins(message.author.id, message.guild.id, Math.floor(bet * 0.2));
@@ -141,7 +141,7 @@ const commands = [
       const price = 100;
       const u = db.getUser(message.author.id, message.guild.id);
       if ((u.balance||0) < price) return message.reply(`❌ Il vous faut **${price} ${coin}** pour un ticket.`);
-      db.addCoins(message.author.id, message.guild.id, -price);
+      db.removeCoins(message.author.id, message.guild.id, price);
       const nums = Array.from({length:6}, ()=>Math.floor(Math.random()*49)+1).sort((a,b)=>a-b);
       try {
         db.db.prepare('INSERT INTO lottery_tickets (guild_id,user_id,numbers) VALUES(?,?,?)').run(message.guild.id, message.author.id, nums.join(','));
@@ -172,7 +172,8 @@ const commands = [
         const choice = ['haut','h'].includes(col.first().content.toLowerCase()) ? 'haut' : 'bas';
         const next = Math.floor(Math.random()*98)+1;
         const correct = (choice==='haut' && next>current) || (choice==='bas' && next<current);
-        db.addCoins(message.author.id, message.guild.id, correct ? bet : -bet);
+        if (correct) db.addCoins(message.author.id, message.guild.id, bet);
+        else db.removeCoins(message.author.id, message.guild.id, bet);
         message.channel.send({ embeds:[new EmbedBuilder().setColor(correct?'#2ECC71':'#E74C3C').setTitle(correct?'✅ Correct !':'❌ Faux !').setDescription(`Vous avez dit **${choice}**, le nombre suivant était **${next}**\n${correct?`+${bet} ${coin}`:`-${bet} ${coin}`}`)] });
       } catch { message.reply('⏱️ Temps écoulé !'); }
     }
@@ -227,7 +228,7 @@ const commands = [
       let exploded = false;
       const timeout = setTimeout(async () => {
         exploded = true;
-        db.addCoins(currentHolder.id, message.guild.id, -bet);
+        db.removeCoins(currentHolder.id, message.guild.id, bet);
         m.edit({ embeds:[new EmbedBuilder().setColor('#E74C3C').setTitle('💥 BOOM !').setDescription(`La bombe a explosé entre les mains de <@${currentHolder.id}> ! -${bet} ${coin}`)] });
       }, timer*1000);
 

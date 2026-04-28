@@ -101,9 +101,10 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
     } catch {}
-  }}
+    }
+  }
 };
 
 // Réactivé comme prefix-only (limite slash Discord)

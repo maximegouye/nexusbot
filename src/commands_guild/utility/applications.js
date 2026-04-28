@@ -122,7 +122,7 @@ module.exports = {
     if (sub === 'supprimer_question') {
       if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.', ephemeral: true });
       const nom = interaction.options.getString('formulaire').toLowerCase();
-      const num = parseInt(interaction.options.getString('numero')) - 1;
+      const num = interaction.options.getInteger('numero') - 1;
       const form = db.db.prepare('SELECT * FROM app_forms WHERE guild_id=? AND name=?').get(guildId, nom);
       if (!form) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Formulaire introuvable.', ephemeral: true });
 

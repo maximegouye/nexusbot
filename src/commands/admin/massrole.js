@@ -44,7 +44,7 @@ module.exports = {
 
     if (sub === 'ajouter' || sub === 'retirer') {
       // Vérifier que le bot peut gérer ce rôle
-      if (!interaction.guild.members.me.roles.highest.comparePositionTo(role) > 0) {
+      if (interaction.guild.members.me.roles.highest.comparePositionTo(role) <= 0) {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Je ne peux pas gérer ce rôle (trop élevé).', ephemeral: true });
       }
 

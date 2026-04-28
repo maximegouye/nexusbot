@@ -100,10 +100,10 @@ module.exports = {
     }
 
     if (sub === 'configurer') {
-      const seuil  = parseInt(interaction.options.getString('seuil'));
-      const fenetre = parseInt(interaction.options.getString('fenetre'));
+      const seuil  = interaction.options.getInteger('seuil');
+      const fenetre = interaction.options.getInteger('fenetre');
       const action = interaction.options.getString('action');
-      const age    = parseInt(interaction.options.getString('age_compte'));
+      const age    = interaction.options.getInteger('age_compte');
       const log    = interaction.options.getChannel('log');
       if (seuil)   db.db.prepare('UPDATE antiraid_config SET join_threshold=? WHERE guild_id=?').run(seuil, guildId);
       if (fenetre) db.db.prepare('UPDATE antiraid_config SET join_window=? WHERE guild_id=?').run(fenetre, guildId);

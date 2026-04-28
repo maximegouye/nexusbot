@@ -317,7 +317,7 @@ async function handleComponent(interaction, cid) {
   const coin    = cfg?.currency_emoji || '🪙';
   const guild   = interaction.guild;
 
-  await interaction.deferUpdate();
+  await interaction.deferUpdate().catch(() => {});
 
   if (action === 'personal' || action === 'refresh') {
     let targetUser;

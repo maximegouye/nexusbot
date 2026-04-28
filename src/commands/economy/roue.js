@@ -114,7 +114,7 @@ module.exports = {
     await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildSpinEmbed(0)] });
     for (let i = 1; i <= 6; i++) {
       await new Promise(r => setTimeout(r, 450));
-      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [buildSpinEmbed(i)] }).catch(() => {});
+      await interaction.editReply({ embeds: [buildSpinEmbed(i)] }).catch(() => {});
     }
 
     const pick = POOL[Math.floor(Math.random() * POOL.length)];
@@ -152,7 +152,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }},

@@ -446,6 +446,9 @@ module.exports = {
     .addStringOption(o => o.setName('pari').setDescription('Ex: rouge | d1,rouge | voisins | 17,noir,c2 (max 3)').setRequired(true)),
 
   async execute(interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     await playRoulette(interaction, interaction.user.id, interaction.guildId,
       interaction.options.getInteger('mise'), interaction.options.getString('pari'));
   },

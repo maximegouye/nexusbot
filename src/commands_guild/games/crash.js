@@ -368,8 +368,6 @@ async function handleComponent(interaction) {
     const autoCashout  = parseFloat(parts[4]);
     if (customUserId !== userId) {
       return interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
-
-
     }
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };

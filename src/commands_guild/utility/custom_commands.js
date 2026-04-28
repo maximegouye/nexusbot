@@ -59,11 +59,10 @@ module.exports = {
       const isEmbed = interaction.options.getBoolean('embed') ?? false;
       const couleur = interaction.options.getString('couleur') || '#7B2FBE';
       const roleReq = interaction.options.getRole('role_requis');
-      const cooldown = interaction.options.getInteger('cooldown') || 0;
 
       try {
-        db.db.prepare('INSERT INTO custom_commands (guild_id, trigger, response, created_by, embed, embed_color, restricted_role, cooldown) VALUES(?,?,?,?,?,?,?,?)')
-          .run(guildId, trigger, reponse, userId, isEmbed ? 1 : 0, couleur, roleReq?.id || null, cooldown);
+        db.db.prepare('INSERT INTO custom_commands (guild_id, trigger, response, created_by, embed, embed_color, restricted_role) VALUES(?,?,?,?,?,?,?)')
+          .run(guildId, trigger, reponse, userId, isEmbed ? 1 : 0, couleur, roleReq?.id || null);
       } catch {
         return interaction.editReply({ content: `❌ La commande \`${trigger}\` existe déjà. Utilisez \`/customcmd modifier\`.`, ephemeral: true });
       }

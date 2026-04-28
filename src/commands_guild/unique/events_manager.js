@@ -140,7 +140,7 @@ module.exports = {
     }
 
     if (sub === 'info') {
-      const id = parseInt(interaction.options.getInteger('id'));
+      const id = parseInt(interaction.options.getString('id'));
       const ev = db.db.prepare('SELECT * FROM server_events WHERE id=? AND guild_id=?').get(id, guildId);
       if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable.` });
 
@@ -164,7 +164,7 @@ module.exports = {
     }
 
     if (sub === 'participer') {
-      const id = parseInt(interaction.options.getInteger('id'));
+      const id = parseInt(interaction.options.getString('id'));
       const ev = db.db.prepare("SELECT * FROM server_events WHERE id=? AND guild_id=? AND status='upcoming'").get(id, guildId);
       if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable ou terminé.` });
 
@@ -184,7 +184,7 @@ module.exports = {
     }
 
     if (sub === 'desister') {
-      const id = parseInt(interaction.options.getInteger('id'));
+      const id = parseInt(interaction.options.getString('id'));
       const existing = db.db.prepare('SELECT * FROM event_rsvp WHERE event_id=? AND user_id=?').get(id, userId);
       if (!existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu n\'es pas inscrit à cet événement.' });
       db.db.prepare('DELETE FROM event_rsvp WHERE event_id=? AND user_id=?').run(id, userId);
@@ -203,7 +203,7 @@ module.exports = {
 
     if (sub === 'terminer') {
       if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.' });
-      const id = parseInt(interaction.options.getInteger('id'));
+      const id = parseInt(interaction.options.getString('id'));
       const ev = db.db.prepare('SELECT * FROM server_events WHERE id=? AND guild_id=?').get(id, guildId);
       if (!ev) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Événement #${id} introuvable.` });
 
@@ -227,7 +227,7 @@ module.exports = {
 
     if (sub === 'annuler') {
       if (!isAdmin) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin uniquement.' });
-      const id = parseInt(interaction.options.getInteger('id'));
+      const id = parseInt(interaction.options.getString('id'));
       db.db.prepare("UPDATE server_events SET status='cancelled' WHERE id=? AND guild_id=?").run(id, guildId);
       db.db.prepare('DELETE FROM event_rsvp WHERE event_id=?').run(id);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#e74c3c').setDescription(`🗑️ Événement **#${id}** annulé.`)] });

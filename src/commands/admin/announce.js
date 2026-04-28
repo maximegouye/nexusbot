@@ -48,7 +48,7 @@ module.exports = {
       }
 
       // Vérifier que le salon est textuel
-      if (salon.isTextBased && !salon.isTextBased()) {
+      if (!salon.isTextBased()) {
         return interaction.editReply({ content: '❌ Ce salon ne supporte pas les messages.' });
       }
 

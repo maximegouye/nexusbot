@@ -178,7 +178,6 @@ module.exports = {
       const giveaway = db.db.prepare('SELECT * FROM giveaways WHERE (id = ? OR message_id = ?) AND guild_id = ?').get(idRaw, idRaw, interaction.guildId);
       if (!giveaway) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Giveaway introuvable.', ephemeral: true });
       if (giveaway.status !== 'active') return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Ce giveaway est déjà terminé.', ephemeral: true });
-      await interaction.deferReply({ ephemeral: true });
       await endGiveaway(giveaway, interaction.client);
       await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `✅ Giveaway **${giveaway.prize}** terminé !` });
     } else if (sub === 'reroll') {

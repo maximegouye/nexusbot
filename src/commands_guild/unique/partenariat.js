@@ -197,6 +197,7 @@ module.exports = {
 
   // ============================================================
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false });
     const sub = interaction.options.getSubcommand();
     const g   = getGuild(interaction.guildId);
 
@@ -206,7 +207,7 @@ module.exports = {
       'admin-demandes','admin-valider','admin-refuser','admin-ajouter','admin-retirer','admin-liste',
     ];
     if (ADMIN_SUBS.includes(sub) && !isAdmin(interaction.member)) {
-      return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
+      return await interaction.editReply({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
     }
 
     // ── /partenariat liste ────────────────────────────────────

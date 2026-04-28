@@ -513,8 +513,6 @@ async function handleComponent(interaction) {
     const mise   = parseInt(parts[3]);
     if (interaction.user.id !== userId) {
       return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true }).catch(() => {});
-
-
     }
     await interaction.deferUpdate().catch(() => {});
     await startGame(interaction, userId, interaction.guildId, mise);

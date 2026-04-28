@@ -63,7 +63,7 @@ module.exports = {
       if (m[2] === '%') return Math.floor((n / 100) * Number(base || 0));
       return Math.floor(n);
     };
-    const amount = parseBet(interaction.options.get('montant')?.value, senderPre.balance);
+    const amount = parseBet(interaction.options.getString('montant'), senderPre.balance);
     if (!Number.isFinite(amount) || amount < 1) {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Montant invalide. Minimum **1**. Tape un nombre, `all`, `50%`, `moitié`.', ephemeral: true });
     }
@@ -178,7 +178,7 @@ module.exports = {
     const _em = { content: `❌ Erreur : ${String(err?.message || 'Erreur inconnue').slice(0,200)}`, ephemeral: true };
     try {
       if (interaction.deferred || interaction.replied) await interaction.editReply(_em).catch(() => {});
-      else await interaction.editReply(_em).catch(() => {});
+      else await interaction.reply(_em).catch(() => {});
     } catch {}
   }},
 

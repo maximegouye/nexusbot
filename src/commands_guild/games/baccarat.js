@@ -290,8 +290,6 @@ async function handleComponent(interaction) {
     const userId = cid.split('_')[2];
     if (interaction.user.id !== userId) {
       return interaction.reply({ content: '❌ Ces stats ne t\'appartiennent pas.', ephemeral: true }).catch(() => {});
-
-
     }
     const sb = getScoreboard(userId);
     const winRate = sb.gamesPlayed > 0 ? ((sb.playerWins + sb.bankerWins + sb.ties) / sb.gamesPlayed * 100).toFixed(1) : '0.0';
@@ -320,8 +318,6 @@ async function handleComponent(interaction) {
 
     if (interaction.user.id !== userId) {
       return interaction.reply({ content: '❌ Ce n\'est pas ta partie!', ephemeral: true }).catch(() => {});
-
-
     }
 
     await interaction.deferUpdate().catch(() => {});

@@ -102,7 +102,9 @@ module.exports = {
     const key = `${guildId}_${userId}`;
 
     if (sub === 'jouer') {
-      if (activeGames.has(key)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà une partie en cours ! Cliquez sur les boutons pour jouer.', ephemeral: true });
+      if (activeGames.has(key)) {
+        return await interaction.editReply({ content: '❌ Vous avez déjà une partie en cours ! Cliquez sur les boutons pour jouer.', ephemeral: true });
+      }
 
       const word = WORDS[Math.floor(Math.random() * WORDS.length)];
       const game = { word, guessed: [], errors: 0, time: Date.now() };
@@ -122,7 +124,7 @@ module.exports = {
         .setDescription(HANGMAN[0])
         .setFooter({ text: `${word.length} lettres • Cliquez une lettre` });
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed], components: buildKeyboard([]) });
+      return await interaction.editReply({ embeds: [embed], components: buildKeyboard([]) });
     }
     } catch (err) {
     console.error('[CMD] Erreur:', err?.message || err);

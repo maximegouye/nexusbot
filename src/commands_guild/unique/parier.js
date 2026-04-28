@@ -96,7 +96,7 @@ module.exports = {
     if (sub === 'miser') {
       const id     = parseInt(interaction.options.getString('id'));
       const choix  = interaction.options.getString('choix');
-      const amount = parseInt(interaction.options.getString('montant'));
+      const amount = interaction.options.getInteger('montant');
 
       const pari = db.db.prepare('SELECT * FROM paris WHERE id=? AND guild_id=?').get(id, guildId);
       if (!pari) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Pari #${id} introuvable.` });

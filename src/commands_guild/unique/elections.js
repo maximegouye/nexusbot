@@ -54,7 +54,7 @@ module.exports = {
       }
       const titre = interaction.options.getString('titre');
       const candidatsRaw = interaction.options.getString('candidats');
-      const duree = parseInt(interaction.options.getString('duree_heures'));
+      const duree = interaction.options.getInteger('duree_heures');
       const desc = interaction.options.getString('description') || '';
       const endTime = now + duree * 3600;
       const candidats = candidatsRaw.split(',').map(c => c.trim()).filter(c => c.length > 0);
@@ -175,7 +175,7 @@ module.exports = {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Seuls les admins/modérateurs peuvent créer des référendums.', ephemeral: true });
       }
       const question = interaction.options.getString('question');
-      const duree = parseInt(interaction.options.getString('duree_heures')) || 24;
+      const duree = 24; // Fixed: no 'duree_heures' option defined for referendum subcommand
       const endTime = now + duree * 3600;
 
       const result = db.db.prepare('INSERT INTO elections (guild_id,creator_id,title,description,candidates,end_time) VALUES(?,?,?,?,?,?)')

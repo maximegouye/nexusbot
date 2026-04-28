@@ -26,7 +26,7 @@ module.exports = {
           { name: '📋 Total avertissements', value: `**${cases?.c ?? 0}**`, inline: true },
           { name: '🔇 Timeout actif', value: target.communicationDisabledUntil ? `<t:${Math.floor(target.communicationDisabledUntilTimestamp / 1000)}:R>` : 'Non', inline: true },
           { name: '🚨 5 derniers warns', value: warns.length
-            ? warns.map(w => `• ${w.reason} *(par <@${w.moderator_id}>)*`).join('\n')
+            ? warns.map(w => `• ${w.reason} *(par <@${w.mod_id}>)*`).join('\n')
             : '✅ Aucun avertissement', inline: false },
         )
         .setTimestamp();
@@ -37,7 +37,7 @@ module.exports = {
       try {
         const msg = { content: `❌ Erreur: ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
         if (interaction.deferred || interaction.replied) await interaction.editReply(msg);
-        else await interaction.editReply(msg);
+        else await interaction.reply(msg);
       } catch {}
     }
   }

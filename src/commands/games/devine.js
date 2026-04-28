@@ -72,12 +72,11 @@ module.exports = {
 
     collector.on('end', async (_, reason) => {
       if (reason === 'time') {
-        activeGames.delete(key);
         const game = activeGames.get(key);
         interaction.channel.send({
           embeds: [new EmbedBuilder()
             .setColor('#888888')
-            .setDescription(`⏰ <@${interaction.user.id}> Temps écoulé ! C'était **${activeGames.get(key)?.secret || '???'}**.`)
+            .setDescription(`⏰ <@${interaction.user.id}> Temps écoulé ! C'était **${game?.secret || '???'}**.`)
           ]
         }).catch(() => {});
         activeGames.delete(key);
@@ -90,7 +89,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(errMsg).catch(() => {});
       } else {
-        await interaction.editReply(errMsg).catch(() => {});
+        await interaction.reply(errMsg).catch(() => {});
       }
     } catch {}
   }}

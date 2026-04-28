@@ -170,14 +170,18 @@ module.exports = {
 };
 
 function getMoodStreak(userId, guildId) {
-  const logs = db.db.prepare('SELECT DATE(logged_at, \'unixepoch\') as day FROM mood_logs WHERE user_id=? AND guild_id=? GROUP BY day ORDER BY day DESC').all(userId, guildId);
+  const logs = db.db.prepare('SELECT CAST(logged_at as INTEGER) as ts FROM mood_logs WHERE user_id=? AND guild_id=? ORDER BY logged_at DESC').all(userId, guildId);
   if (!logs.length) return 0;
-  let streak = 1;
-  for (let i = 1; i < logs.length; i++) {
-    const d1 = new Date(logs[i-1].day);
-    const d2 = new Date(logs[i].day);
-    const diff = (d1 - d2) / (1000 * 60 * 60 * 24);
-    if (diff === 1) streak++;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const todayStart = Math.floor(now.getTime() / 1000);
+  let streak = 0;
+  for (let i = 0; i < logs.length; i++) {
+    const checkDate = new Date(logs[i].ts * 1000);
+    checkDate.setHours(0, 0, 0, 0);
+    const checkStart = Math.floor(checkDate.getTime() / 1000);
+    const expectedStart = todayStart - (i * 86400);
+    if (checkStart === expectedStart) streak++;
     else break;
   }
   return streak;

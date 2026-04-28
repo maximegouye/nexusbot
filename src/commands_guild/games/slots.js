@@ -315,7 +315,7 @@ async function animateCoinRain(msg, color, title) {
 }
 
 // ─── Free Spins avec multiplicateur progressif ────────────
-async function runFreeSpins(msg, userId, guildId, mise, coin, freeCount, startMult) {
+async function runFreeSpins(msg, userId, guildId, mise, coin, freeCount, startMult, activeLines = 5) {
   let totalGain = 0;
   let multiplier = startMult;
   const summary = [];

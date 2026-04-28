@@ -20,7 +20,7 @@ module.exports = {
 
         // Log dans la DB
         try {
-          db.db.prepare('INSERT INTO warnings (guild_id, user_id, moderator_id, reason, type) VALUES (?,?,?,?,?)')
+          db.db.prepare('INSERT INTO warnings (guild_id, user_id, mod_id, reason, type) VALUES (?,?,?,?,?)')
             .run(interaction.guildId, target.id, interaction.user.id, 'Timeout rapide 10min (menu contextuel)', 'timeout');
         } catch {}
 
@@ -39,7 +39,7 @@ module.exports = {
       try {
         const msg = { content: `❌ Erreur: ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
         if (interaction.deferred || interaction.replied) await interaction.editReply(msg);
-        else await interaction.editReply(msg);
+        else await interaction.reply(msg);
       } catch {}
     }
   }

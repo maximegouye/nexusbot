@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../../database/db');
 
 try {
@@ -40,7 +40,7 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 
-    if (!interaction.member.permissions.has(0x20n)) return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.editReply({ content: '❌ Admin uniquement.', ephemeral: true });
 
     const cfg = db.getConfig(guildId);
 

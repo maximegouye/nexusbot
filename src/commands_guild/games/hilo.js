@@ -456,7 +456,7 @@ async function handleComponent(interaction, customId) {
           .setTitle('⚠️ Limite atteinte')
           .setDescription('Maximum 5 manches. Encaisse tes gains !');
 
-        await interaction.message.edit({ embeds: [embed] }).catch(() => {})
+        await interaction.message.edit({ embeds: [embed] }).catch(() => {});
         return true;
       }
 

@@ -453,7 +453,7 @@ module.exports = {
       }
 
       if (sub === 'daily') {
-        const montant = parseInt(interaction.options.getString('montant'));
+        const montant = interaction.options.getInteger('montant');
         db.db.prepare('UPDATE guild_config SET daily_amount=? WHERE guild_id=?').run(montant, guildId);
         auditLog(guildId, userId, 'CONFIG_DAILY', null, `montant=${montant}`);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
@@ -463,7 +463,7 @@ module.exports = {
       }
 
       if (sub === 'xp-multiplicateur') {
-        const valeur = parseFloat(interaction.options.getString('valeur'));
+        const valeur = interaction.options.getNumber('valeur');
         db.db.prepare('UPDATE guild_config SET xp_multiplier=? WHERE guild_id=?').run(valeur, guildId);
         auditLog(guildId, userId, 'CONFIG_XP_MULT', null, `multiplicateur=${valeur}`);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
@@ -473,7 +473,7 @@ module.exports = {
       }
 
       if (sub === 'coins-par-message') {
-        const montant = parseInt(interaction.options.getString('montant'));
+        const montant = interaction.options.getInteger('montant');
         db.db.prepare('UPDATE guild_config SET coins_per_msg=? WHERE guild_id=?').run(montant, guildId);
         auditLog(guildId, userId, 'CONFIG_COINS_MSG', null, `coins_per_msg=${montant}`);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
@@ -619,12 +619,11 @@ module.exports = {
 
       if (sub === 'ajouter') {
         const nom       = interaction.options.getString('nom');
-        const prix      = parseInt(interaction.options.getString('prix'));
+        const prix      = interaction.options.getInteger('prix');
         const desc      = interaction.options.getString('description');
         const emoji     = interaction.options.getString('emoji') || '📦';
         const role      = interaction.options.getRole('role');
-        const stock     = parseInt(interaction.options.getString('stock')) ?? -1;
-        const maxUser   = parseInt(interaction.options.getString('max-par-user'));
+        const stock     = interaction.options.getInteger('stock') ?? -1;
 
         const result = db.db.prepare(
           'INSERT INTO shop_items (guild_id, name, description, emoji, price, stock, role_id) VALUES (?,?,?,?,?,?,?)'
@@ -657,7 +656,7 @@ module.exports = {
 
       if (sub === 'modifier-prix') {
         const id   = parseInt(interaction.options.getString('id'));
-        const prix = parseInt(interaction.options.getString('prix'));
+        const prix = interaction.options.getInteger('prix');
         const item = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
         if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('UPDATE shop_items SET price=? WHERE id=?').run(prix, id);
@@ -673,7 +672,7 @@ module.exports = {
 
       if (sub === 'modifier-stock') {
         const id    = parseInt(interaction.options.getString('id'));
-        const stock = parseInt(interaction.options.getString('stock'));
+        const stock = interaction.options.getInteger('stock');
         const item  = db.db.prepare('SELECT * FROM shop_items WHERE id=? AND guild_id=?').get(id, guildId);
         if (!item) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Article #${id} introuvable.` });
         db.db.prepare('UPDATE shop_items SET stock=? WHERE id=?').run(stock, id);
