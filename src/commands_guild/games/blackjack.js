@@ -1,6 +1,6 @@
 // ============================================================
-// blackjack.js — Blackjack complet (v5)
-// Nouveautés : bouton conseil + probabilité bust
+// blackjack.js — Blackjack complet (v6)
+// Nouveautés: Split, Double Down, Insurance, Surrender, Blackjack ×2.5, Affichage premium
 // ============================================================
 
 const {
@@ -136,6 +136,13 @@ function handStr(hand, hideSecond = false) {
 }
 function isBlackjack(hand) { return hand.length === 2 && handValue(hand) === 21; }
 function isSoft17(hand)    { return handValue(hand) === 17 && hand.some(c => c.value === 'A'); }
+// ─── Affichage premium des cartes ──────────────────────
+function cardDisplayAscii(card) {
+  const suit = card.suit;
+  const val = card.value.padStart(2);
+  return `╔═══╗\n║${val} ║\n║ ${suit} ║\n║  ${val}║\n╚═══╝`;
+}
+
 
 // ─── Sessions ─────────────────────────────────────────────
 const gameSessions = new Map();
@@ -159,6 +166,7 @@ function buildEmbed(state, status = '') {
   const color = status === 'win'  ? '#2ECC71'
               : status === 'lose' ? '#E74C3C'
               : status === 'push' ? '#F39C12'
+              : status === 'blackjack' ? '#FFD700'
               : '#2C3E50';
 
   const headerAscii = '╔═══════════════════════════════╗\n║      ⚡ BLACKJACK TABLE ⚡    ║\n╚═══════════════════════════════╝';
@@ -176,6 +184,9 @@ function buildEmbed(state, status = '') {
 
   if (state.split) {
     embed.addFields({ name: `🎮 Main 2 (${handValue(state.split)})`, value: handStr(state.split), inline: false });
+  }
+  if (state.doubled) {
+    embed.addFields({ name: '✖️ Double Down', value: 'Mise doublée — 1 carte supplémentaire', inline: true });
   }
   if (state.insurance !== null) {
     embed.addFields({ name: '🛡️ Assurance', value: state.insurance ? '✅ Prise' : '❌ Refusée', inline: true });
@@ -206,6 +217,7 @@ function buildEmbed(state, status = '') {
       lose:      '💸 Perdu...',
       bust:      '💥 Dépassé ! Perdu.',
       push:      '🤝 Égalité — mise remboursée.',
+      surrender: '🏳️ Abandonné — 50% remboursé.',
     };
     embed.setDescription(headerAscii + '\n\n' + (msgs[status] || status));
   }
@@ -213,7 +225,7 @@ function buildEmbed(state, status = '') {
 }
 
 function buildButtons(state) {
-  const canDouble = state.player.length === 2 && !state.split;
+  const canDouble = state.player.length === 2 && !state.split && !state.doubled;
   const canSplit  = state.player.length === 2
                  && cardVal(state.player[0]) === cardVal(state.player[1])
                  && !state.split;
@@ -636,7 +648,7 @@ async function handleComponent(interaction) {
     deleteSession(userId);
     db.addCoins(userId, guildId, Math.floor(st.mise / 2));
     onLose(userId, guildId);
-    const e = buildEmbed(st, 'lose');
+    const e = buildEmbed(st, 'surrender');
     e.setDescription('🏳️ Abandonné — moitié de la mise remboursée.');
     e.setFooter({ text: `Solde: ${db.getUser(userId, guildId)?.balance || 0} ${coin}` });
     await msg.edit({ embeds: [e], components: playAgainButtons(userId, st.mise) });

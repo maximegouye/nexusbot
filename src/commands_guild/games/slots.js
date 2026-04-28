@@ -1,5 +1,5 @@
 // ============================================================
-// slots.js — Machine à sous 5 rouleaux ULTRA-PREMIUM (v6)
+// slots.js — Machine à sous 5 rouleaux ULTRA-PREMIUM (v7) avec Jackpot Progressif
 // Nouveautés : Wild×2, Scatter, 5 paylines + diagonales,
 //              Cascading reels, Win Tiers, Gamble+, Auto-Spin,
 //              Bonus Mystery Box, Streak bonus, Animations enrichies
@@ -44,6 +44,15 @@ const PAYLINES = [
   { id: 4, name: 'V',       rows: [0,1,2,1,0] },
   { id: 5, name: '∧',       rows: [2,1,0,1,2] },
 ];
+
+
+// ─── FONCTIONNALITÉS JACKPOT PROGRESSIF (v7) ──────────────────
+// - Chaque mise contribue 1% au jackpot du serveur
+// - Jackpot stocké en DB: slots_jackpot
+// - Affichage temps réel du jackpot dans chaque embed
+// - Si 5 WILDS (ou 777): remporter le jackpot complet
+// - Jackpot réinitialié à 5000 après gain
+// ───────────────────────────────────────────────────────────────
 
 // ─── DB init ──────────────────────────────────────────────
 try {
@@ -393,7 +402,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
   }
 
   db.addCoins(userId, guildId, -totalMise);
-  addToJackpot(guildId, Math.floor(totalMise * 0.02));
+  addToJackpot(guildId, Math.floor(totalMise * 0.01)); // Contribution 1% au jackpot progressif
 
   const startEmbed = new EmbedBuilder()
     .setColor('#F39C12').setTitle('🎰 SLOT MACHINE ROYALE 🎰')
@@ -670,7 +679,7 @@ async function runAutoSpin(msg, userId, guildId, mise, activeLines, count, coin)
     if (!u || u.balance < totalMise) break;
 
     db.addCoins(userId, guildId, -totalMise);
-    addToJackpot(guildId, Math.floor(totalMise * 0.02));
+    addToJackpot(guildId, Math.floor(totalMise * 0.01)); // Contribution 1% au jackpot progressif
 
     const grid = spinGrid();
     const { wins: lineWins, hasJackpot, scatterCount } = evalGridFull(grid, activeLines);
