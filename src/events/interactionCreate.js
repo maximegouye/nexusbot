@@ -28,6 +28,8 @@ const COMPONENT_ROUTES = {
   'reward_':      'recompenses',
   'pendu_':       'pendu',
   'poll_':        'poll',
+  // ── Mega Slots VIP ─────────────────────────────────────────
+  'ms_':          'mega-slots',
   // ── Jeux de casino (replay persistent) ─────────────────────
   'grattage_':    'grattage',
   'tour_':        'tour',

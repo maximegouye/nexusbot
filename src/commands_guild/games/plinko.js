@@ -236,8 +236,17 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
   const finalColor = mult >= 2 ? '#27AE60' : mult >= 1 ? '#F1C40F' : '#E74C3C';
   const { boardStr } = renderBoard(path, 9, mults, finalSlot);
 
-  // Boutons rejouer + changer la mise
-  const row = makeGameRow('plinko', userId, mise, riskKey);
+  // Boutons rejouer + changer mise + quick risk switch
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`plinko_replay_${userId}_${mise}_${riskKey}`).setLabel('🔄 Rejouer').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`plinko_changemise_${userId}_${riskKey}`).setLabel('💰 Changer mise').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`plinko_allin_${userId}_${riskKey}`).setLabel('🎲 All-In').setStyle(ButtonStyle.Danger),
+  );
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`plinko_replay_${userId}_${mise}_low`).setLabel('🟢 Faible').setStyle(riskKey === 'low' ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`plinko_replay_${userId}_${mise}_medium`).setLabel('🟡 Moyen').setStyle(riskKey === 'medium' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`plinko_replay_${userId}_${mise}_high`).setLabel('🔴 Élevé').setStyle(riskKey === 'high' ? ButtonStyle.Danger : ButtonStyle.Secondary),
+  );
 
   const finalEmbed = new EmbedBuilder()
     .setColor(finalColor)
@@ -253,7 +262,7 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     )
     .setTimestamp();
 
-  await msg.edit({ embeds: [finalEmbed], components: [row] });
+  await msg.edit({ embeds: [finalEmbed], components: [row1, row2] });
 }
 
 // ─── Mapping risque ────────────────────────────────────────
@@ -304,6 +313,24 @@ module.exports = {
   },
 
   async handleComponent(interaction, cid) {
+    if (cid.startsWith('plinko_allin_')) {
+      const parts   = cid.split('_');
+      const userId  = parts[2];
+      const riskKey = parts[3] || 'medium';
+      if (interaction.user.id !== userId) {
+        await interaction.editReply({ content: '❌ Ce bouton ne t\'appartient pas.', ephemeral: true });
+        return true;
+      }
+      await interaction.deferUpdate();
+      const u2 = db.getUser(userId, interaction.guildId);
+      const allIn = u2?.balance || 0;
+      if (allIn < 10) {
+        await interaction.editReply({ content: '❌ Solde insuffisant pour un All-In (min 10).', ephemeral: true });
+        return true;
+      }
+      await playPlinko(interaction, userId, interaction.guildId, allIn, riskKey);
+      return true;
+    }
     if (cid.startsWith('plinko_replay_')) {
       const parts = cid.split('_');
       const userId = parts[2];

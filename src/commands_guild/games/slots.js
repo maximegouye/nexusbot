@@ -611,10 +611,13 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
 
   // ── Boutons action ─────────────────────────────────────
   const rows = [];
+  const allInMise = Math.floor(newBalance / activeLines);
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`slots_replay_${userId}_${mise}_${activeLines}`).setLabel('🔄 Rejouer').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId(`slots_changemise_${userId}_${activeLines}`).setLabel('💰 Changer la mise').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`slots_maxmise_${userId}_${Math.min(u.balance, 10000)}_${activeLines}`).setLabel(`💎 Mise max (${Math.min(u.balance, 10000).toLocaleString('fr-FR')})`).setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`slots_maxmise_${userId}_${Math.min(newBalance, 10000)}_${activeLines}`).setLabel(`💎 Max (${Math.min(newBalance, 10000).toLocaleString('fr-FR')})`).setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`slots_paytable_${userId}`).setLabel('📊 Paytable').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`slots_allin_${userId}_${activeLines}`).setLabel('🎲 All-In').setStyle(ButtonStyle.Danger).setDisabled(allInMise < 5),
   );
   rows.push(row1);
 
@@ -623,17 +626,18 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
     row2Btns.push(
       new ButtonBuilder()
         .setCustomId(`slots_gamble_${userId}_${totalGain}_rouge`)
-        .setLabel(`🔴 Rouge/Noir ×2 (+${totalGain.toLocaleString('fr-FR')})`)
+        .setLabel(`🔴 ×2 (+${totalGain.toLocaleString('fr-FR')})`)
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
         .setCustomId(`slots_gamble_${userId}_${totalGain}_or`)
-        .setLabel(`🥇 Couleur ×4`)
+        .setLabel(`🥇 ×4 (25%)`)
         .setStyle(ButtonStyle.Danger),
     );
   }
   row2Btns.push(
     new ButtonBuilder().setCustomId(`slots_autospin_${userId}_${mise}_${activeLines}_5`).setLabel('⚡ Auto ×5').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`slots_autospin_${userId}_${mise}_${activeLines}_10`).setLabel('⚡ Auto ×10').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`slots_autospin_${userId}_${mise}_${activeLines}_25`).setLabel('⚡ Auto ×25').setStyle(ButtonStyle.Secondary),
   );
   if (row2Btns.length > 0 && row2Btns.length <= 5) rows.push(new ActionRowBuilder().addComponents(row2Btns));
 
@@ -915,6 +919,59 @@ async function handleComponent(interaction) {
 
     addStats(userId, guildId, true, prize, false);
     bonusGames.delete(bonusKey);
+    return true;
+  }
+
+  // ── Paytable ──────────────────────────────────────────
+  if (cid.startsWith('slots_paytable_')) {
+    const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
+    const jp   = getJackpot(guildId);
+    const symLines = SYMBOLS
+      .filter(s => s.value > 0)
+      .map(s => {
+        const v3 = s.value, v4 = s.value * 3, v5 = s.value * 8;
+        return `${s.emoji} **${s.name}** — ×${v3} / ×${v4} / ×${v5} (mise × ligne)`;
+      }).join('\n');
+    const embed = new EmbedBuilder()
+      .setColor('#F39C12')
+      .setTitle('📊 PAYTABLE — SLOT MACHINE ROYALE')
+      .setDescription(
+        `**Symboles (gain pour 3× / 4× / 5× sur une payline)**\n\n${symLines}\n\n` +
+        `🃏 **WILD** — Substitue tous les symboles\n` +
+        `🎴 **WILD×2** — Substitue + double le multiplicateur\n` +
+        `🌠 **SCATTER** — 3+ partout → 8-20 Free Spins (mult. croissant)\n` +
+        `🎁 **BONUS** — 3+ partout → Mystery Box (choix parmi 3 prix)\n` +
+        `🃏×5 **5 WILDS** → 🏆 JACKPOT PROGRESSIF !`
+      )
+      .addFields(
+        { name: '🏆 Jackpot actuel', value: `**${jp.toLocaleString('fr-FR')} ${coin}**`, inline: true },
+        { name: '📏 Paylines (1-5)', value: 'Milieu · Haut · Bas · Diag-V · Diag-∧', inline: true },
+        { name: '🔥 Streak Bonus', value: '×3 → +10%  |  ×5 → +25%  |  ×10 → +50%', inline: false },
+        { name: '⚡ Cascading Reels', value: 'Symboles gagnants remplacés → jusqu\'à 2 cascades bonus', inline: false },
+      )
+      .setFooter({ text: 'Les gains sont multiplicateurs × mise par ligne · Jackpot: 2% de chaque mise' });
+    await interaction.editReply({ embeds: [embed], ephemeral: true }).catch(() => {});
+    return true;
+  }
+
+  // ── All-In ────────────────────────────────────────────
+  if (cid.startsWith('slots_allin_')) {
+    const parts   = cid.split('_');
+    const ownerId = parts[2];
+    const lines   = parseInt(parts[3]) || 1;
+    if (ownerId !== userId) {
+      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+    await interaction.deferUpdate().catch(() => {});
+    const u2 = db.getUser(userId, guildId);
+    const allInMise2 = Math.floor((u2?.balance || 0) / lines);
+    if (!allInMise2 || allInMise2 < 5) {
+      await interaction.editReply({ content: '❌ Solde insuffisant pour un All-In.', ephemeral: true }).catch(() => {});
+      return true;
+    }
+    const msgRef = interaction.message;
+    await playSlots({ editReply: d => msgRef.edit(d), deferred: true }, userId, guildId, allInMise2, lines);
     return true;
   }
 

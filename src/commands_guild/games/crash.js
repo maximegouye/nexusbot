@@ -262,8 +262,8 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
         // Animate crash
         await animateCrash(msg);
 
-        const replayRow = makeGameRow('crash', userId, mise);
-        await msg.edit({ embeds: [buildCrashEmbed(true)], components: [replayRow] }).catch(() => {});
+        const replayRows = makeCrashEndRows(userId, mise);
+        await msg.edit({ embeds: [buildCrashEmbed(true)], components: replayRows }).catch(() => {});
       } else {
         // Update embed pour montrer progression
         const e = buildCrashEmbed();
@@ -297,9 +297,9 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
       // Animate crash
       await animateCrash(msg);
 
-      const replayRow2 = makeGameRow('crash', userId, mise);
+      const replayRows2 = makeCrashEndRows(userId, mise);
       const e = buildCrashEmbed(true);
-      await msg.edit({ embeds: [e], components: [replayRow2] }).catch(() => {});
+      await msg.edit({ embeds: [e], components: replayRows2 }).catch(() => {});
     } else {
       // Update bouton avec nouveau multiplicateur
       const btn = new ActionRowBuilder().addComponents(
@@ -339,10 +339,59 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
   });
 }
 
+// ─── Helper : rangée de fin de partie enrichie ────────────
+function makeCrashEndRows(userId, mise) {
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`crash_replay_${userId}_${mise}`).setLabel('🔄 Rejouer').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`crash_changemise_${userId}`).setLabel('💰 Changer mise').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`crash_allin_${userId}_${mise}`).setLabel('🎲 All-In').setStyle(ButtonStyle.Danger),
+  );
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`crash_auto_${userId}_${mise}_1.5`).setLabel('🤖 Auto ×1.5').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`crash_auto_${userId}_${mise}_2`).setLabel('🤖 Auto ×2').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`crash_auto_${userId}_${mise}_3`).setLabel('🤖 Auto ×3').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`crash_auto_${userId}_${mise}_5`).setLabel('🤖 Auto ×5').setStyle(ButtonStyle.Secondary),
+  );
+  return [row1, row2];
+}
+
 // ─── Handle Component ──────────────────────────────────────
 async function handleComponent(interaction) {
   const userId = interaction.user.id;
   const guildId = interaction.guildId;
+
+  // ── Auto cash-out preset ─────────────────────────────────
+  if (interaction.customId.startsWith('crash_auto_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const mise         = parseInt(parts[3]);
+    const autoCashout  = parseFloat(parts[4]);
+    if (customUserId !== userId) {
+      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+    await interaction.deferUpdate();
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playCrash(source, userId, guildId, mise, autoCashout);
+    return true;
+  }
+
+  // ── All-In ────────────────────────────────────────────────
+  if (interaction.customId.startsWith('crash_allin_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    if (customUserId !== userId) {
+      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+    await interaction.deferUpdate();
+    const u2 = db.getUser(userId, guildId);
+    const allIn = u2?.balance || 0;
+    if (allIn < 10) {
+      return interaction.editReply({ content: '❌ Solde insuffisant pour un All-In (min 10).', ephemeral: true });
+    }
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playCrash(source, userId, guildId, allIn, null);
+    return true;
+  }
 
   if (interaction.customId.startsWith('crash_replay_')) {
     const parts = interaction.customId.split('_');

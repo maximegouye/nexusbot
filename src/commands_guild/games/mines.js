@@ -114,9 +114,17 @@ function buildGridComponents(state) {
     );
     rows.push(cashRow);
   } else {
-    // Rejouer + Changer la mise après la partie
+    // Rejouer + Changer la mise + difficulty presets
     const replayRow = makeGameRow('mines', state.userId, state.mise, `${state.minesCount}`);
     rows.push(replayRow);
+    // Quick difficulty change (même mise, difficulté différente)
+    rows.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_3_${state.mise}`).setLabel('🟢 3 mines').setStyle(state.minesCount === 3 ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_5_${state.mise}`).setLabel('🟡 5 mines').setStyle(state.minesCount === 5 ? ButtonStyle.Primary : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_10_${state.mise}`).setLabel('🟠 10 mines').setStyle(state.minesCount === 10 ? ButtonStyle.Primary : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_15_${state.mise}`).setLabel('🔴 15 mines').setStyle(state.minesCount === 15 ? ButtonStyle.Danger : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_20_${state.mise}`).setLabel('☠️ 20 mines').setStyle(state.minesCount === 20 ? ButtonStyle.Danger : ButtonStyle.Secondary),
+    ));
   }
 
   return rows;
@@ -406,6 +414,21 @@ async function handleComponent(interaction) {
     await interaction.deferUpdate();
     const source = { editReply: (d) => interaction.editReply(d), deferred: true };
     await playMines(source, userId, guildId, mise, mines);
+    return true;
+  }
+
+  // ── Difficulty preset buttons ─────────────────────────────
+  if (interaction.customId.startsWith('mines_preset_')) {
+    const parts = interaction.customId.split('_');
+    const customUserId = parts[2];
+    const minesCount   = parseInt(parts[3]);
+    const mise         = parseInt(parts[4]);
+    if (customUserId !== userId) {
+      return interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true });
+    }
+    await interaction.deferUpdate();
+    const source = { editReply: (d) => interaction.editReply(d), deferred: true };
+    await playMines(source, userId, guildId, mise, minesCount);
     return true;
   }
 
