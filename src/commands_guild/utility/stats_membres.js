@@ -25,7 +25,7 @@ module.exports = {
     if (sub === 'membre') {
       const target = interaction.options.getUser('utilisateur') || interaction.user;
       const member = interaction.guild.members.cache.get(target.id);
-      const user   = db.getUser(target.id, guildId);
+      const user   = db.getUser(target.id, guildId) || { balance: 0, bank: 0, level: 1, xp: 0, messages: 0, reputation: 0 };
 
       // XP & level
       const xpForNext = (user.level + 1) * 100;

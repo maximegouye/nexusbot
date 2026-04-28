@@ -26,7 +26,7 @@ function getActiveLoan(userId, guildId) {
 function buildBalanceEmbed(user, cfg, target, rank, totalMembers) {
   const sym  = cfg.currency_emoji || '€';
   const name = cfg.currency_name  || 'Euros';
-  const net  = user.balance + user.bank;
+  const net  = (user.balance||0) + (user.bank||0);
   const pct  = totalMembers > 1 ? Math.round((1 - (rank - 1) / totalMembers) * 100) : 100;
   const loan = getActiveLoan(target.id, cfg._guildId);
 
@@ -92,10 +92,10 @@ async function showSolde(interaction, targetUser) {
   targetUser = targetUser || interaction.user;
   const cfg   = db.getConfig(interaction.guildId);
   cfg._guildId = interaction.guildId;
-  const user  = db.getUser(targetUser.id, interaction.guildId);
+  const user  = db.getUser(targetUser.id, interaction.guildId) || { balance: 0, bank: 0, level: 1, xp: 0 };
   const rank  = db.db.prepare(
     'SELECT COUNT(*) as r FROM users WHERE guild_id=? AND (balance+bank)>?'
-  ).get(interaction.guildId, user.balance + user.bank).r + 1;
+  ).get(interaction.guildId, (user.balance||0) + (user.bank||0)).r + 1;
   const total = db.db.prepare(
     'SELECT COUNT(*) as c FROM users WHERE guild_id=? AND (balance+bank)>0'
   ).get(interaction.guildId).c;
@@ -197,7 +197,7 @@ async function doLoan(interaction, amountRaw) {
   }
 
   const maxLoan = Math.min(
-    Math.floor((user.balance + user.bank) * LOAN_MAX_RATIO),
+    Math.floor(((user.balance||0) + (user.bank||0)) * LOAN_MAX_RATIO),
     LOAN_MAX_ABS
   );
 
@@ -256,7 +256,7 @@ async function doRepay(interaction) {
   }
 
   const user = db.getUser(interaction.user.id, interaction.guildId);
-  const totalAvail = user.balance + user.bank;
+  const totalAvail = (user.balance||0) + (user.bank||0);
 
   if (totalAvail < loan.total_due) {
     return interaction.editReply({
@@ -357,7 +357,7 @@ async function handleComponent(interaction) {
     const sym  = cfg.currency_emoji || '€';
     const user = db.getUser(userId, interaction.guildId);
     const maxLoan = Math.min(
-      Math.floor((user.balance + user.bank) * LOAN_MAX_RATIO),
+      Math.floor(((user.balance||0) + (user.bank||0)) * LOAN_MAX_RATIO),
       LOAN_MAX_ABS
     );
     const modal = new ModalBuilder()
@@ -386,7 +386,7 @@ async function handleComponent(interaction) {
     const user  = db.getUser(userId, interaction.guildId);
     const rank  = db.db.prepare(
       'SELECT COUNT(*) as r FROM users WHERE guild_id=? AND (balance+bank)>?'
-    ).get(interaction.guildId, user.balance + user.bank).r + 1;
+    ).get(interaction.guildId, (user.balance||0) + (user.bank||0)).r + 1;
     const total = db.db.prepare(
       'SELECT COUNT(*) as c FROM users WHERE guild_id=? AND (balance+bank)>0'
     ).get(interaction.guildId).c;

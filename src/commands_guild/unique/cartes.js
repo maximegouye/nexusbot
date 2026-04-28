@@ -109,7 +109,7 @@ module.exports = {
     if (sub === 'ouvrir') {
       const packType = interaction.options.getString('pack');
       const cost = PACK_PRICE[packType];
-      const u = db.getUser(userId, guildId);
+      const u = db.getUser(userId, guildId) || { balance: 0 };
       if ((u.balance||0) < cost) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Ce pack coûte **${cost} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -cost);
@@ -182,7 +182,7 @@ module.exports = {
       if (!listing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Annonce introuvable.', ephemeral: true });
       if (listing.seller_id === userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous ne pouvez pas acheter votre propre carte.', ephemeral: true });
 
-      const u = db.getUser(userId, guildId);
+      const u = db.getUser(userId, guildId) || { balance: 0 };
       if ((u.balance||0) < listing.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Vous avez besoin de **${listing.price} ${coin}**.`, ephemeral: true });
 
       db.addCoins(userId, guildId, -listing.price);
