@@ -88,7 +88,7 @@ module.exports = {
 
       let completionMsg = '';
       if (updated.current >= updated.target && updated.status === 'active') {
-        db.db.prepare('UPDATE quests SET status = "completed" WHERE id = ?').run(questId);
+        db.db.prepare("UPDATE quests SET status = 'completed' WHERE id = ?").run(questId);
         completionMsg = `\n\n🎉 **QUÊTE ACCOMPLIE !** ${updated.reward}`;
         // Distribuer une récompense bonus à tous les contributeurs
         const contributors = db.db.prepare('SELECT * FROM quest_contributions WHERE quest_id = ?').all(questId);

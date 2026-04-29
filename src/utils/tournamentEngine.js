@@ -15,7 +15,7 @@ try {
     played INTEGER DEFAULT 0, played_at TEXT)`).run();
 } catch {}
 function getTournament(id) { return db.db.prepare('SELECT * FROM tournaments WHERE id=?').get(id); }
-function getActiveTournament(guildId) { return db.db.prepare('SELECT * FROM tournaments WHERE guild_id=? AND status IN ("open","running") ORDER BY id DESC LIMIT 1').get(guildId); }
+function getActiveTournament(guildId) { return db.db.prepare("SELECT * FROM tournaments WHERE guild_id=? AND status IN ('open','running') ORDER BY id DESC LIMIT 1").get(guildId); }
 function getPlayers(tId) { return db.db.prepare('SELECT * FROM tournament_players WHERE tournament_id=? AND eliminated=0').all(tId); }
 function getAllPlayers(tId) { return db.db.prepare('SELECT * FROM tournament_players WHERE tournament_id=?').all(tId); }
 function getPendingMatches(tId) { return db.db.prepare('SELECT * FROM tournament_matches WHERE tournament_id=? AND played=0').all(tId); }
@@ -58,7 +58,7 @@ function resolveMatch(matchId) {
     else { winner=m.player2; s2=Math.floor(Math.random()*5)+3; s1=Math.floor(Math.random()*s2); }
   }
   const loser = m.player1===winner ? m.player2 : m.player1;
-  db.db.prepare('UPDATE tournament_matches SET winner=?,score_p1=?,score_p2=?,played=1,played_at=strftime("%s","now") WHERE id=?').run(winner,s1,s2,matchId);
+  db.db.prepare("UPDATE tournament_matches SET winner=?,score_p1=?,score_p2=?,played=1,played_at=strftime('%s','now') WHERE id=?").run(winner,s1,s2,matchId);
   if (loser!=='BYE') db.db.prepare('UPDATE tournament_players SET eliminated=1 WHERE tournament_id=? AND user_id=?').run(m.tournament_id, loser);
   return {winner, loser, s1, s2};
 }

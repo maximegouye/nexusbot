@@ -43,7 +43,7 @@ function addBlacklist(userId, guildId, reason, addedBy) { try { db.db.prepare('I
 function removeBlacklist(userId, guildId) { return db.db.prepare('DELETE FROM security_blacklist WHERE user_id=? AND guild_id=?').run(userId, guildId).changes > 0; }
 function getBlacklist(guildId) { return db.db.prepare('SELECT * FROM security_blacklist WHERE guild_id=? ORDER BY added_at DESC').all(guildId); }
 function checkDailyLimit(userId, guildId, action, maxCount) {
-  const row = db.db.prepare('SELECT count FROM security_daily_limits WHERE user_id=? AND guild_id=? AND action=? AND date=date("now")').get(userId, guildId, action);
+  const row = db.db.prepare("SELECT count FROM security_daily_limits WHERE user_id=? AND guild_id=? AND action=? AND date=date('now')").get(userId, guildId, action);
   const current = row ? row.count : 0;
   if (current >= maxCount) return { ok: false, current, max: maxCount };
   db.db.prepare('INSERT INTO security_daily_limits (user_id,guild_id,action,count) VALUES (?,?,?,1) ON CONFLICT(user_id,guild_id,action,date) DO UPDATE SET count=count+1').run(userId, guildId, action);

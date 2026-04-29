@@ -124,7 +124,7 @@ module.exports = {
       const prize = lotoCfg.jackpot;
 
       db.addCoins(winner, guildId, prize);
-      db.db.prepare('UPDATE loto_config SET jackpot=10000, last_draw=datetime("now") WHERE guild_id=?').run(guildId);
+      db.db.prepare("UPDATE loto_config SET jackpot=10000, last_draw=datetime('now') WHERE guild_id=?").run(guildId);
       db.db.prepare('DELETE FROM loto WHERE guild_id=? AND week=?').run(guildId, week);
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [

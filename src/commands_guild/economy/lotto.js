@@ -19,9 +19,9 @@ module.exports = {
     const user   = db.getUser(interaction.user.id, interaction.guildId);
 
     // Infos du lotto actuel
-    const pot    = db.db.prepare('SELECT SUM(amount) as pot FROM lotto WHERE guild_id = ? AND week = strftime("%W", "now")').get(interaction.guildId)?.pot || 0;
-    const count  = db.db.prepare('SELECT COUNT(*) as c FROM lotto WHERE guild_id = ? AND week = strftime("%W", "now")').get(interaction.guildId)?.c || 0;
-    const myTickets = db.db.prepare('SELECT SUM(tickets) as t FROM lotto WHERE guild_id = ? AND user_id = ? AND week = strftime("%W", "now")').get(interaction.guildId, interaction.user.id)?.t || 0;
+    const pot    = db.db.prepare("SELECT SUM(amount) as pot FROM lotto WHERE guild_id = ? AND week = strftime('%W', 'now')").get(interaction.guildId)?.pot || 0;
+    const count  = db.db.prepare("SELECT COUNT(*) as c FROM lotto WHERE guild_id = ? AND week = strftime('%W', 'now')").get(interaction.guildId)?.c || 0;
+    const myTickets = db.db.prepare("SELECT SUM(tickets) as t FROM lotto WHERE guild_id = ? AND user_id = ? AND week = strftime('%W', 'now')").get(interaction.guildId, interaction.user.id)?.t || 0;
 
     if (!qty) {
       // Afficher les infos seulement
