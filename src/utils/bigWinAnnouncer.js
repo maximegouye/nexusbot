@@ -71,13 +71,12 @@ async function announceBigWin(client, guildId, userId, amount, game, type = 'win
 
     if (type === 'jackpot' || amount >= 500000) {
       color = 0xFFD700;
-      title = '🚨🎰 JACKPOT 🎰🚨';
-      desc = `### 🌟 **${username}** vient de remporter\n# **+${amtStr} ${symbol}**\n\nau jeu ${gameLabel} !\n\nQui va lui voler le sommet du classement ? 👀`;
-      content = amount >= PING_THRESHOLD ? '@here Un JACKPOT vient de tomber ! 💎' : null;
+      title = '🎰 Jackpot !';
+      desc = `🌟 **${username}** vient de remporter **+${amtStr} ${symbol}** au ${gameLabel} !`;
     } else if (amount >= 50000) {
       color = 0xFF6B00;
-      title = '🔥 MEGA WIN ! 🔥';
-      desc = `**${username}** vient de gagner **+${amtStr} ${symbol}** au ${gameLabel} ! 💰\n\nUn vrai coup de maître. Vous tentez votre chance ?`;
+      title = '🔥 Mega win !';
+      desc = `**${username}** vient de gagner **+${amtStr} ${symbol}** au ${gameLabel} ! 💰`;
     } else {
       color = 0x2ECC71;
       title = '✨ Gros gain !';
@@ -91,7 +90,8 @@ async function announceBigWin(client, guildId, userId, amount, game, type = 'win
       .setThumbnail(member?.user.displayAvatarURL({ size: 128 }) || null)
       .setTimestamp();
 
-    await channel.send({ content, embeds: [embed], allowedMentions: { parse: ['everyone'] } }).catch(() => {});
+    // ⚠️ Jamais de ping @here/@everyone — l'embed parle de lui-même
+    await channel.send({ embeds: [embed], allowedMentions: { parse: [] } }).catch(() => {});
   } catch (e) {
     console.error('[bigWinAnnouncer]', e.message);
   }

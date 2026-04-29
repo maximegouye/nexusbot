@@ -90,7 +90,8 @@ async function announceStart(client) {
         .setFooter({ text: 'NexusBot · Lucky Hour quotidienne' })
         .setTimestamp();
 
-      await channel.send({ content: '@here 🍀 **LUCKY HOUR !** Tous les gains ×' + MULT + ' pendant 1h !', embeds: [embed], allowedMentions: { parse: ['everyone'] } }).catch(() => {});
+      // Pas de ping — l'embed parle de lui-même
+      await channel.send({ embeds: [embed], allowedMentions: { parse: [] } }).catch(() => {});
     } catch (e) { console.error('[luckyHour] announceStart:', e.message); }
   }
 }

@@ -127,12 +127,12 @@ function spinGrid() {
 
 // ─── WILD REEL FEATURE (10% chance) ────────────────────
 function applyWildReelFeature(grid) {
-  if (Math.random() < 0.20) { // 20% de chance — Wild Reel Feature
+  if (Math.random() < 0.05) { // 5% (au lieu de 20%) — Wild Reel rare
     const wildCol = Math.floor(Math.random() * 5);
     const wildSymbol = SYMBOLS.find(s => s.id === 'wild');
     grid[wildCol] = [wildSymbol, wildSymbol, wildSymbol];
-    // 5% chance d'une 2ème colonne wild (Double Wild Reel!)
-    if (Math.random() < 0.05) {
+    // 1% chance d'une 2ème colonne wild (Double Wild Reel — très rare)
+    if (Math.random() < 0.01) {
       const otherCols = [0,1,2,3,4].filter(c => c !== wildCol);
       const col2 = otherCols[Math.floor(Math.random() * otherCols.length)];
       grid[col2] = [wildSymbol, wildSymbol, wildSymbol];
@@ -712,8 +712,9 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
   // Indépendante des symboles — 1/2500 pour MEGA, 1/800 pour MAJOR
   const rng1 = Math.random();
   const rng2 = Math.random();
-  const finalHasJackpot = hasJackpot || (rng1 < 1/2500);
-  const finalHasMajor   = !finalHasJackpot && (hasJackpotMajor || (rng2 < 1/800));
+  // Probabilités RÉALISTES (vrai casino) — jackpots vraiment rares
+  const finalHasJackpot = hasJackpot || (rng1 < 1/15000);  // 1/2500 → 1/15000 (6× plus rare)
+  const finalHasMajor   = !finalHasJackpot && (hasJackpotMajor || (rng2 < 1/5000)); // 1/800 → 1/5000 (6× plus rare)
   const finalHasMini    = !finalHasJackpot && !finalHasMajor && hasJackpotMini;
 
   let totalGain = 0;

@@ -29,8 +29,10 @@ const SEGMENTS = [
   { label: '🎯 GRATUIT +500', mult: null, emoji: '🎯', color: '#16A085', type: 'special_free' },
 ];
 
-// Poids (probabilités) pour chaque segment
-const WEIGHTS = [8, 9, 8, 7, 6, 4, 2, 1, 12, 3, 5, 4];
+// Poids (probabilités) RÉALISTES — comme un vrai casino
+// Segments : ×0.5, ×1.2, ×1.5, ×2, ×3, ×5, ×10, JACKPOT×25, PERTE, DOUBLE, REMB, GRATUIT
+//   total = 1000  → JACKPOT = 1/1000 = 0.1% (rare comme un vrai jackpot)
+const WEIGHTS = [120, 200, 150, 100, 70, 30, 12, 1, 250, 25, 30, 12];
 
 function weightedSpin() {
   const total = WEIGHTS.reduce((a, b) => a + b, 0);

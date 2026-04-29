@@ -26,7 +26,7 @@ const THRESHOLD = parseInt(process.env.ANTI_INFLATION_THRESHOLD || '1000000000')
 const RESET_TO  = parseInt(process.env.ANTI_INFLATION_RESET_TO  || '100000');
 const OWNER_ID  = process.env.OWNER_ID || null;
 // Solde minimum garanti à l'owner (s'il est < à ce seuil au boot, il est crédité jusqu'à ce montant)
-const OWNER_MIN_BALANCE = parseInt(process.env.OWNER_MIN_BALANCE || '50000000'); // 50M par défaut
+const OWNER_MIN_BALANCE = parseInt(process.env.OWNER_MIN_BALANCE || '5000000000'); // 5 milliards par défaut
 
 async function runOnce(client) {
   if (alreadyRan) return;
