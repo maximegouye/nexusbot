@@ -549,6 +549,24 @@ module.exports = {
     client._timers.push(setInterval(() => checkNotifications(client).catch(() => {}), 300_000));
     console.log('✅ Notification Checker : démarré (5min interval)');
 
+    // Wealth Roles — auto-attribution des rôles selon richesse (toutes les 5min)
+    try {
+      const wealthRoles = require('../utils/wealthRoles');
+      if (wealthRoles.isEnabled()) {
+        // Auto-create roles si absents (au premier passage)
+        for (const guild of client.guilds.cache.values()) {
+          wealthRoles.ensureRolesExist(guild).catch(() => {});
+        }
+        wealthRoles.runScan(client).catch(() => {});
+        client._timers.push(setInterval(() => wealthRoles.runScan(client).catch(() => {}), 300_000));
+        console.log('✅ Wealth Roles : démarré (5min interval)');
+      } else {
+        console.log('ℹ️  Wealth Roles : dormant (WEALTH_ROLES_ENABLED != true)');
+      }
+    } catch (e) {
+      console.log('⚠️  Wealth Roles error:', e.message);
+    }
+
     // Scheduled Worker — messages programmés (cron-based, une seule initialisation)
     try {
       startScheduledWorker(client).catch(() => {});
