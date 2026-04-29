@@ -233,7 +233,13 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     if (!cashedOut && current < crashPoint) {
       cashedOut   = true;
       cashoutMult = current;
-      const gain  = Math.floor(mise * cashoutMult);
+      let gain  = Math.floor(mise * cashoutMult);
+      // 🎰 RTP réaliste + cap
+      try {
+        const rtp = require('../../utils/realCasinoEngine');
+        gain = rtp.applyRtp('crash', mise, gain);
+        gain = rtp.capWin('crash', mise, gain);
+      } catch (_) {}
       db.addCoins(userId, guildId, gain);
     }
   });

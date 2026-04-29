@@ -394,6 +394,15 @@ async function playMegaSlots(source, userId, guildId, mise, freeSpinsLeft = 0, h
 
   const newMult = result.grossGain >= mise * 10 ? Math.min(10, multiplierTrail + 1) : 1;
 
+  // 🎰 RTP réaliste : applique RTP cible + cap maximum (sauf jackpot progressif)
+  try {
+    const rtp = require('../../utils/realCasinoEngine');
+    if (!result.jackpotHit && finalGain > 0) {
+      finalGain = rtp.applyRtp('mega-slots', mise, finalGain);
+      finalGain = rtp.capWin('mega-slots', mise, finalGain);
+    }
+  } catch (_) {}
+
   if (finalGain > 0) db.addCoins(userId, guildId, finalGain);
 
   const newBal = db.getUser(userId, guildId)?.balance || 0;

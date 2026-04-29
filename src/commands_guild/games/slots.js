@@ -1389,6 +1389,16 @@ async function handleComponent(interaction) {
     } else {
       let gain = 0;
       for (const w of wins) gain += Math.floor((mise / 10) * w.mult);
+
+      // 🎰 RTP réaliste + cap (vrai casino)
+      try {
+        const rtp = require('../../utils/realCasinoEngine');
+        if (gain > 0) {
+          gain = rtp.applyRtp('slots', totalMise, gain);
+          gain = rtp.capWin('slots', totalMise, gain);
+        }
+      } catch (_) {}
+
       if (gain > 0) db.addCoins(userId, guildId, gain);
       trackSession(userId, gain > 0 ? gain : -totalMise, totalMise);
       addStats(userId, guildId, gain > 0, gain, false);

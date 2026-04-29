@@ -267,6 +267,14 @@ async function handleComponent(interaction, customId) {
 
   if (allRevealed) {
     result = calcGain(session.grid, session.mise);
+    // 🎰 RTP réaliste grattage (70% comme vrai grattage français) + cap
+    try {
+      const rtp = require('../../utils/realCasinoEngine');
+      if (result.gain > 0) {
+        result.gain = rtp.applyRtp('grattage', session.mise, result.gain);
+        result.gain = rtp.capWin('grattage', session.mise, result.gain);
+      }
+    } catch (_) {}
     // Créditer les gains
     if (result.gain > 0) {
       db.addCoins(session.userId, session.guildId, result.gain);

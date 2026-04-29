@@ -211,6 +211,15 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
 
   await sleep(200);
 
+  // 🎰 RTP réaliste plinko (97%) + cap
+  try {
+    const rtp = require('../../utils/realCasinoEngine');
+    if (gain > 0) {
+      gain = rtp.applyRtp('plinko', mise, gain);
+      gain = rtp.capWin('plinko', mise, gain);
+    }
+  } catch (_) {}
+
   // Résultat final (balancer économique : taxe riches / boost owner)
   const adjustedGain = gain > 0 ? balancer.adjustGain(gain, userId, guildId) : 0;
   if (adjustedGain > 0) db.addCoins(userId, guildId, adjustedGain);

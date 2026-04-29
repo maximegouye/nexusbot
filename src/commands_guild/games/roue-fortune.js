@@ -276,6 +276,15 @@ async function playRoueFortune(source, userId, guildId, mise) {
   }
   // lose: gain reste 0
 
+  // 🎰 RTP réaliste : applique RTP + cap maximum
+  try {
+    const rtp = require('../../utils/realCasinoEngine');
+    if (gain > 0) {
+      gain = rtp.applyRtp('roue-fortune', mise, gain);
+      gain = rtp.capWin('roue-fortune', mise, gain);
+    }
+  } catch (_) {}
+
   // Application du balancer (taxe riches / boost owner)
   if (gain > 0) {
     gain = balancer.adjustGain(gain, userId, guildId);

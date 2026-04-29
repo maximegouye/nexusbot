@@ -308,7 +308,13 @@ async function playMines(source, userId, guildId, mise, minesCount) {
     if (i.customId === `mines_cashout_${userId}`) {
       // Cash-out
       const mult = calcMult(TOTAL_CELLS, st.minesCount, st.safeRevealed);
-      const gain = Math.floor(st.mise * mult);
+      let gain = Math.floor(st.mise * mult);
+      // 🎰 RTP réaliste + cap
+      try {
+        const rtp = require('../../utils/realCasinoEngine');
+        gain = rtp.applyRtp('mines', st.mise, gain);
+        gain = rtp.capWin('mines', st.mise, gain);
+      } catch (_) {}
       db.addCoins(userId, guildId, gain);
       st.ended = true;
       sessions.delete(userId);
