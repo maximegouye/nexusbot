@@ -116,7 +116,7 @@ const MINI_EVENTS = [
   { type: 'fact',     emoji: '💡', title: 'Stratégie', text: 'Sur slots, plus tu actives de paylines, plus tu as de chances de gagner. Essaie `/slots mise:50 lignes:5` ! 🎰' },
   { type: 'fact',     emoji: '💡', title: 'Le Saviez-Vous ?', text: 'Le `/coffre-magique` a 5 niveaux : si tu vas jusqu\'au bout, tu multiplies ta mise par **×7** ! 🗝️' },
   { type: 'fact',     emoji: '💡', title: 'Stratégie', text: 'Sur la `/roue-fortune`, le segment JACKPOT donne **×50** ta mise. Mise petit pour tester ! 🎡' },
-  { type: 'challenge', emoji: '🎯', title: 'Mini-défi rapide', text: 'Le premier qui gagne **+1 000€** dans les 30 prochaines minutes via `/slots` reçoit **+500€** bonus ! ⚡' },
+  { type: 'challenge', emoji: '🎯', title: 'Mini-défi rapide', text: 'Le premier qui gagne **+10 000€** dans les 30 prochaines minutes via `/slots` reçoit **+5 000€** bonus ! ⚡' },
   { type: 'challenge', emoji: '🎯', title: 'Mini-défi rapide', text: 'Tente ta chance sur la `/roue-fortune` — qui sera le premier à toucher le JACKPOT cette heure ? 🌟' },
   { type: 'reminder',  emoji: '⏰', title: 'Rappel quotidien', text: 'Tu n\'as pas encore fait ton `/daily` aujourd\'hui ? File chercher tes coins gratuits ! 💰' },
   { type: 'reminder',  emoji: '⏰', title: 'Bourse active', text: 'Les cryptos bougent en temps réel ! Tape `/bourse` ou `/crypto` pour voir les prix. 📈' },
@@ -210,7 +210,7 @@ async function postDailyQuiz(client) {
         .setColor(0x3498db) // Bleu
         .setTitle('🎯 Quiz Quotidien')
         .setDescription(question.q)
-        .setFooter({ text: 'Réponds en moins de 10 minutes pour gagner 500€ !' })
+        .setFooter({ text: 'Réponds en moins de 10 minutes pour gagner 5 000€ !' })
         .setTimestamp();
 
       const msg = await channel.send({
@@ -341,14 +341,14 @@ async function handleQuizButton(interaction) {
     // C'est le premier à répondre correctement
     quiz.winner = interaction.user.id;
 
-    // Donner 500€
+    // Donner 5 000€ (au lieu de 500€)
     const guildObj = interaction.guild;
     if (guildObj) {
-      db.addCoins(interaction.user.id, guildObj.id, 500);
+      db.addCoins(interaction.user.id, guildObj.id, 5000);
     }
 
     await interaction.reply({
-      content: `🎉 Bravo <@${interaction.user.id}> ! Vous avez remporté le quiz et gagné **500€** !`,
+      content: `🎉 Bravo <@${interaction.user.id}> ! Vous avez remporté le quiz et gagné **5 000€** ! 💰`,
       ephemeral: false
     }).catch(() => {});
   } else if (isCorrect && quiz.winner && quiz.winner === interaction.user.id) {

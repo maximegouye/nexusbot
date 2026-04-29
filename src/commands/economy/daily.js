@@ -76,7 +76,7 @@ module.exports = {
     const wasYesterday = lastDaily > 0 && (now - lastDaily) < (cooldown * 2);
     const newStreak    = wasYesterday ? (user.streak || 0) + 1 : 1;
 
-    const base         = cfg.daily_amount || 250;
+    const base         = cfg.daily_amount || 1000; // Boost base 250 → 1000 (4×)
     const streakPct    = Math.max(15, cfg.daily_streak_bonus ?? 15); // 15% par jour (au lieu de 10)
     const streakBonus  = Math.min(newStreak - 1, 100) * Math.max(1, Math.floor(base * streakPct / 100));
 
