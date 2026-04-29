@@ -500,23 +500,34 @@ async function handleComponent(interaction, customId) {
   // ─── ticket_claim_{id} ────────────────────────────────────────────────────────
   if (customId.startsWith('ticket_claim_')) {
     try {
+      // Defer le bouton click pour pouvoir editReply ensuite (fix : "reply has not been sent or deferred")
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const ticketId = customId.replace('ticket_claim_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
+      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.' });
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
-      if (ticket.claimed_by) return interaction.editReply({ content: `⚠️ Déjà pris en charge par <@${ticket.claimed_by}>.`, ephemeral: true });
+      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.' });
+      if (ticket.claimed_by) return interaction.editReply({ content: `⚠️ Déjà pris en charge par <@${ticket.claimed_by}>.` });
       db.db.prepare('UPDATE tickets SET claimed_by=?, last_activity=? WHERE id=?').run(interaction.user.id, ts(), ticket.id);
       await interaction.channel.setTopic(`ticket:${ticket.user_id} | ✋ ${interaction.user.username}`).catch(() => {});
-      await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71')
+      await interaction.channel.send({ embeds: [new EmbedBuilder().setColor('#2ECC71')
         .setDescription(`✋ **${interaction.member.displayName}** a pris en charge ce ticket.\n<@${ticket.user_id}>, tu vas être aidé rapidement ! 🎯`)
         .setAuthor({ name: interaction.member.displayName, iconURL: interaction.user.displayAvatarURL() }).setTimestamp()
-      ]});
+      ]}).catch(() => {});
+      await interaction.editReply({ content: '✅ Ticket pris en charge.' });
     } catch (err) {
       console.error('[ticket_claim] error:', err?.message);
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      try {
+        if (interaction.deferred || interaction.replied) {
+          await interaction.followUp({ content: '❌ Erreur lors du claim.', ephemeral: true }).catch(() => {});
+        } else {
+          await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+        }
+      } catch {}
     }
     return true;
   }

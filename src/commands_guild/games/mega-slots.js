@@ -353,6 +353,11 @@ function buildButtons(userId, mise, freeSpinsLeft, grossGain, holdTriggered, hel
 
 // ─── Jouer un spin ───────────────────────────────────────
 async function playMegaSlots(source, userId, guildId, mise, freeSpinsLeft = 0, held = null, multiplierTrail = 1) {
+  // ⚠️ Garde : source DOIT être défini (sinon "Cannot read properties of undefined")
+  if (!source || typeof source !== 'object') {
+    console.error('[mega-slots] source invalide:', source);
+    return;
+  }
   const isInteraction = !!source.editReply;
   const coin_  = coin(guildId);
   const u = db.getUser(userId, guildId);

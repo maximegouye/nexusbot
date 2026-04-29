@@ -583,45 +583,22 @@ module.exports = {
       console.log('⚠️  Wealth Roles error:', e.message);
     }
 
-    // Scheduled Worker — messages programmés (cron-based, une seule initialisation)
-    try {
-      startScheduledWorker(client).catch(() => {});
-      console.log('✅ Scheduled Worker : démarré (cron-based)');
-    } catch (e) {
-      console.error('⚠️  Scheduled Worker error:', e.message);
-    }
+    // ⚠️ Helper pour démarrer un worker safely même si la fonction est sync
+    const safeWorker = (name, fn, ...args) => {
+      try {
+        const result = fn(...args);
+        if (result && typeof result.catch === 'function') result.catch(() => {});
+        console.log(`✅ ${name} : démarré`);
+      } catch (e) {
+        console.error(`⚠️  ${name} error:`, e.message);
+      }
+    };
 
-    // Crypto Price Worker — prix cryptos (une seule initialisation)
-    try {
-      startCryptoPriceWorker(db).catch(() => {});
-      console.log('✅ Crypto Price Worker : démarré');
-    } catch (e) {
-      console.error('⚠️  Crypto Price Worker error:', e.message);
-    }
-
-    // Weekly Leaderboard Worker — classement hebdo (une seule initialisation)
-    try {
-      startWeeklyLeaderboard(client).catch(() => {});
-      console.log('✅ Weekly Leaderboard Worker : démarré');
-    } catch (e) {
-      console.error('⚠️  Weekly Leaderboard Worker error:', e.message);
-    }
-
-    // Anti-Raid Worker — protection contre les raids (une seule initialisation)
-    try {
-      startAntiRaid(client).catch(() => {});
-      console.log('✅ Anti-Raid Worker : démarré');
-    } catch (e) {
-      console.error('⚠️  Anti-Raid Worker error:', e.message);
-    }
-
-    // Auto Events Worker — événements automatiques (une seule initialisation)
-    try {
-      startAutoEvents(client).catch(() => {});
-      console.log('✅ Auto Events Worker : démarré');
-    } catch (e) {
-      console.error('⚠️  Auto Events Worker error:', e.message);
-    }
+    safeWorker('Scheduled Worker (cron)',     startScheduledWorker, client);
+    safeWorker('Crypto Price Worker',          startCryptoPriceWorker, db);
+    safeWorker('Weekly Leaderboard Worker',    startWeeklyLeaderboard, client);
+    safeWorker('Anti-Raid Worker',             startAntiRaid, client);
+    safeWorker('Auto Events Worker',           startAutoEvents, client);
 
     console.log('✅ Tous les workers automatiques ont été démarrés');
   },
