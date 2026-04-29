@@ -252,6 +252,8 @@ module.exports = {
     try {
       const antiInflation = require('../utils/antiInflationCheck');
       antiInflation.runOnce(client).catch(e => console.error('[antiInflation]', e.message));
+      // Garantit un solde minimum pour l'owner (s'il a été reseté ou est sous le seuil)
+      antiInflation.ensureOwnerBalance(client).catch(e => console.error('[ownerSeed]', e.message));
     } catch (e) { console.log('[antiInflation] module load:', e.message); }
 
     // ── Avatar auto (si le bot a encore l'avatar par défaut) ──
@@ -554,6 +556,14 @@ module.exports = {
     checkNotifications(client).catch(() => {});
     client._timers.push(setInterval(() => checkNotifications(client).catch(() => {}), 300_000));
     console.log('✅ Notification Checker : démarré (5min interval)');
+
+    // Lucky Hour — heure de chance quotidienne (gains x2 pour 1h)
+    try {
+      const luckyHour = require('../utils/luckyHour');
+      luckyHour.tick(client).catch(() => {});
+      client._timers.push(setInterval(() => luckyHour.tick(client).catch(() => {}), 60_000));
+      console.log('✅ Lucky Hour : démarré (1min interval, déclenche 1x/jour)');
+    } catch (e) { console.log('⚠️  Lucky Hour error:', e.message); }
 
     // Wealth Roles — auto-attribution des rôles selon richesse (toutes les 5min)
     try {

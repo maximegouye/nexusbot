@@ -24,6 +24,9 @@ let alreadyRan = false;
 const DISABLED  = process.env.ANTI_INFLATION_DISABLED === 'true';
 const THRESHOLD = parseInt(process.env.ANTI_INFLATION_THRESHOLD || '1000000000');
 const RESET_TO  = parseInt(process.env.ANTI_INFLATION_RESET_TO  || '100000');
+const OWNER_ID  = process.env.OWNER_ID || null;
+// Solde minimum garanti à l'owner (s'il est < à ce seuil au boot, il est crédité jusqu'à ce montant)
+const OWNER_MIN_BALANCE = parseInt(process.env.OWNER_MIN_BALANCE || '50000000'); // 50M par défaut
 
 async function runOnce(client) {
   if (alreadyRan) return;
@@ -43,12 +46,17 @@ async function runOnce(client) {
 
     if (!richies.length) {
       console.log('[antiInflation] aucun solde anormal détecté');
-      return;
     }
 
-    console.log(`[antiInflation] ${richies.length} solde(s) anormal(aux) détecté(s)`);
+    if (richies.length) console.log(`[antiInflation] ${richies.length} solde(s) anormal(aux) détecté(s)`);
 
     for (const u of richies) {
+      // ⚠️ Skip l'owner — il garde son solde quoi qu il arrive
+      if (OWNER_ID && String(u.user_id) === String(OWNER_ID)) {
+        console.log(`[antiInflation] Owner ${u.user_id} ignoré (skip protection)`);
+        continue;
+      }
+
       const oldBalance = u.balance || 0;
       const oldBank    = u.bank || 0;
       const oldTotal   = oldBalance + oldBank;
@@ -98,4 +106,32 @@ async function runOnce(client) {
   }
 }
 
-module.exports = { runOnce };
+// ─── Garantit un solde minimum pour l'owner ───────────────
+// Run une fois par boot. Si OWNER_ID est défini et que son solde < OWNER_MIN_BALANCE,
+// le ramène à OWNER_MIN_BALANCE (donne la différence).
+let ownerSeedRan = false;
+
+async function ensureOwnerBalance(client) {
+  if (ownerSeedRan) return;
+  ownerSeedRan = true;
+  if (!OWNER_ID) return;
+
+  try {
+    // Pour chaque guild, vérifier le solde de l'owner
+    for (const guild of client.guilds.cache.values()) {
+      const u = db.getUser(OWNER_ID, guild.id);
+      if (!u) continue;
+
+      const total = (u.balance || 0) + (u.bank || 0);
+      if (total >= OWNER_MIN_BALANCE) continue;
+
+      const toAdd = OWNER_MIN_BALANCE - total;
+      db.addCoins(OWNER_ID, guild.id, toAdd);
+      console.log(`[ownerSeed] Owner ${OWNER_ID} guild ${guild.id} : ${total.toLocaleString('fr-FR')}€ + ${toAdd.toLocaleString('fr-FR')}€ → ${OWNER_MIN_BALANCE.toLocaleString('fr-FR')}€`);
+    }
+  } catch (e) {
+    console.error('[ownerSeed] erreur:', e.message);
+  }
+}
+
+module.exports = { runOnce, ensureOwnerBalance };

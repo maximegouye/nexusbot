@@ -71,7 +71,13 @@ function getLuckModifier(userId, guildId) {
 function adjustGain(gain, userId, guildId) {
   if (gain <= 0) return gain;
   const mod = getLuckModifier(userId, guildId);
-  return Math.max(0, Math.floor(gain * mod.rtp));
+  // Bonus Lucky Hour si actif
+  let luckyMult = 1;
+  try {
+    const luckyHour = require('./luckyHour');
+    luckyMult = luckyHour.currentMultiplier();
+  } catch {}
+  return Math.max(0, Math.floor(gain * mod.rtp * luckyMult));
 }
 
 // ─── Vérifie un événement "malaise" aléatoire pour les riches ──
