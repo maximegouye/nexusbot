@@ -250,7 +250,7 @@ module.exports = {
   cooldown: 8,
 
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
 
     const target     = interaction.options.getUser('membre') || interaction.user;
     const themeOpt   = interaction.options.getString('theme') || 'default';

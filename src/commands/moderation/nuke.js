@@ -16,7 +16,7 @@ module.exports = {
 
     if (nbMessages) {
       // Suppression de N messages (bulk delete)
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
       try {
         const deleted = await interaction.channel.bulkDelete(nbMessages, true);
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `🗑️ **${deleted.size}** message${deleted.size > 1 ? 's' : ''} supprimé${deleted.size > 1 ? 's' : ''}.` });

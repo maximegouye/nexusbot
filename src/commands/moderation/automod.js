@@ -101,7 +101,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const cfg = getAutomodCfg(interaction.guildId);
 

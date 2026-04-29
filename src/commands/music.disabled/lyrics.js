@@ -9,7 +9,7 @@ module.exports = {
     .addStringOption(o => o.setName('chanson').setDescription('Titre + artiste (ex: "Bohemian Rhapsody Queen")').setRequired(false)),
 
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
 
     let query = interaction.options.getString('chanson');
 

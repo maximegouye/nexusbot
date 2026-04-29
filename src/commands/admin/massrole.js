@@ -21,7 +21,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+      try { await interaction.deferReply({ ephemeral: true }).catch(() => {}); } catch (e) { /* already ack'd */ }
     }
 
     const sub = interaction.options.getSubcommand();
@@ -63,7 +63,7 @@ module.exports = {
 
       // Defer si plus de 50 membres
       if (targetMembers.size > 50) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
       }
 
       let successful = 0;

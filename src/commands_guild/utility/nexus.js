@@ -309,7 +309,7 @@ module.exports = {
     const coin    = cfg.currency_emoji || '€';
     const now     = Math.floor(Date.now() / 1000);
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
     // ══════════════════════════════════════════════════════════════════════
     // GROUPE ECO

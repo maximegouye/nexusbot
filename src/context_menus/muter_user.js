@@ -9,7 +9,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const target = interaction.targetMember || await interaction.guild.members.fetch(interaction.targetId).catch(() => null);
       if (!target) return await interaction.editReply('❌ Membre introuvable.');
       if (!target.moderatable) return await interaction.editReply('❌ Je ne peux pas mettre ce membre en timeout.');

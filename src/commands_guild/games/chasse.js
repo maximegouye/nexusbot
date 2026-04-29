@@ -56,7 +56,7 @@ module.exports = {
       const cd = COOLDOWN - (now - c.last_hunt);
       if (cd > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `🔫 Rechargement dans **${cd}s**.`, ephemeral: true });
 
-      await interaction.deferReply();
+      await interaction.deferReply().catch(() => {});
       await new Promise(r => setTimeout(r, 1000));
 
       const totalWeight = ANIMALS.reduce((a, a2) => a + a2.weight, 0);

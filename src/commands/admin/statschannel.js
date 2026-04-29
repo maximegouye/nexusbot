@@ -30,7 +30,7 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'setup') {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
       try {
         // Créer ou trouver la catégorie "📊 Stats"
@@ -138,7 +138,7 @@ module.exports = {
     }
 
     if (sub === 'retirer') {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
       const stats = db.db.prepare(
         'SELECT * FROM stats_channels WHERE guild_id = ?'
@@ -171,7 +171,7 @@ module.exports = {
     }
 
     if (sub === 'statut') {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
       const stats = db.db.prepare(
         'SELECT * FROM stats_channels WHERE guild_id = ?'

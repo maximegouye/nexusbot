@@ -80,7 +80,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply(); } catch (e) { /* already ack'd */ }
+      try { await interaction.deferReply().catch(() => {}); } catch (e) { /* already ack'd */ }
     }
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guildId;

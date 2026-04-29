@@ -71,7 +71,7 @@ module.exports = {
   cooldown: 5,
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false });
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub     = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     const userId  = interaction.user.id;

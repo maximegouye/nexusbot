@@ -23,7 +23,7 @@ module.exports = {
       return errFn({ content: '🚫 Réservé aux modérateurs.', ephemeral: true }).catch(() => {});
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guild.id;

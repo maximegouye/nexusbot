@@ -45,7 +45,7 @@ module.exports = {
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
     const ville = interaction.options.getString('ville');
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
 
     let data;
     try { data = await fetchWeather(ville); }

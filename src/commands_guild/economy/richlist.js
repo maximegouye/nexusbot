@@ -47,7 +47,7 @@ module.exports = {
       )),
 
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
     const type = interaction.options.getString('type') || 'total';
 
     let query, label;

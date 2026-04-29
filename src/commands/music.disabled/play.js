@@ -9,7 +9,7 @@ module.exports = {
     .addStringOption(o => o.setName('recherche').setDescription('URL ou nom de la musique').setRequired(true)),
 
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
 
     const query = interaction.options.getString('recherche');
     if (!interaction.member.voice?.channel) {

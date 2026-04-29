@@ -461,7 +461,7 @@ module.exports = {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Configure d\'abord avec `/recrutement setup`.', ephemeral: true });
       }
       if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
       }
 
       const guild      = interaction.guild;
@@ -549,7 +549,7 @@ module.exports = {
     // ── /recrutement candidatures ──────────────────────────────────────────
     if (sub === 'candidatures') {
       if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
       }
       const poste  = interaction.options.getString('poste');
       const statut = interaction.options.getString('statut');
@@ -581,7 +581,7 @@ module.exports = {
     // ── /recrutement stats ─────────────────────────────────────────────────
     if (sub === 'stats') {
       if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
       }
       const total    = db.db.prepare('SELECT COUNT(*) as c FROM rec_apps WHERE guild_id=?').get(guildId).c;
       const pending  = db.db.prepare("SELECT COUNT(*) as c FROM rec_apps WHERE guild_id=? AND status='pending'").get(guildId).c;

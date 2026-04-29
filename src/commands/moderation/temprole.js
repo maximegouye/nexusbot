@@ -45,7 +45,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'donner') {

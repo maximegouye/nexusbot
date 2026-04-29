@@ -50,7 +50,7 @@ module.exports = {
       const depuis = interaction.options.getString('depuis') || 'auto';
 
       if (texte.length > 1000) return interaction.reply({ content: '❌ Texte trop long (1000 caractères max).', ephemeral: true }).catch(() => {});
-      await interaction.deferReply();
+      await interaction.deferReply().catch(() => {});
 
       try {
         const result = await translate(texte, vers, depuis);
@@ -74,7 +74,7 @@ module.exports = {
 
     if (sub === 'detecter') {
       const texte = interaction.options.getString('texte');
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
       try {
         const result = await translate(texte.slice(0, 100), 'fr', 'auto');

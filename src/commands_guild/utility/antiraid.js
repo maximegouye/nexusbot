@@ -61,7 +61,7 @@ module.exports = {
   joinTracker,
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 

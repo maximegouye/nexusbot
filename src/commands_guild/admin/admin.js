@@ -45,7 +45,7 @@ module.exports = {
     }
 
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: true }); } catch (e) { /* already ack'd */ }
+      try { await interaction.deferReply({ ephemeral: true }).catch(() => {}); } catch (e) { /* already ack'd */ }
     }
 
     const sub     = interaction.options.getSubcommand();

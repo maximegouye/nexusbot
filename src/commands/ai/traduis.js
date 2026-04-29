@@ -21,7 +21,7 @@ module.exports = {
     if (!cfg.enabled)    return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ IA désactivée.', ephemeral: true });
     if (!ai.isAvailable()) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA.', ephemeral: true });
 
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
     try {
       const res = await ai.translate({ text, targetLang: lang, guildId: interaction.guildId, userId: interaction.user.id, cfg });
 

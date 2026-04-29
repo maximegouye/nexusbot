@@ -374,7 +374,7 @@ async function run(message, args) {
 
 // ─── execute() pour slash / ───────────────────────────────
 async function execute(interaction) {
-  await interaction.deferReply();
+  await interaction.deferReply().catch(() => {});
 
   const guildId    = interaction.guildId;
   const targetMember = interaction.options.getMember('utilisateur') || null;

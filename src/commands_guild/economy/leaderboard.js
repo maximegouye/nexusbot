@@ -41,7 +41,7 @@ module.exports = {
       )),
 
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
     const cat    = interaction.options.getString('categorie') || 'coins';
     const guildId = interaction.guildId;
     const cfg    = db.getConfig ? db.getConfig(guildId) : null;

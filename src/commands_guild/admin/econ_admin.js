@@ -65,7 +65,7 @@ module.exports = {
   async execute(interaction) {
     // ── Defer en premier, TOUJOURS, avant tout traitement ──────
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
     } catch (e) {
       // Déjà acknowledged — on continue quand même
     }

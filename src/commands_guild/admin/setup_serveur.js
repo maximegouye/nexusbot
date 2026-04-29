@@ -71,7 +71,7 @@ module.exports = {
     }
 
     if (sub === 'renommer') {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
       let renamed = 0;
       for (const [, ch] of guild.channels.cache.filter(c => c.type === ChannelType.GuildText && !c.name.includes('・'))) {
         for (const [pat, newName] of RENAME_MAP) {
@@ -84,7 +84,7 @@ module.exports = {
     }
 
     if (sub === 'creer') {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
       let created = 0, existed = 0;
       for (const def of TEMPLATE) {
         let cat = guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name === def.category);

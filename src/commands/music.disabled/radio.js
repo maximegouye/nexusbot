@@ -32,7 +32,7 @@ module.exports = {
     const station = STATIONS[idx];
     if (!station) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Station inconnue.', ephemeral: true });
 
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
 
     const track = {
       title: `📻 ${station.name} — ${station.genre}`,

@@ -8,7 +8,7 @@ module.exports = {
   cooldown: 30,
 
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
     const cfg   = db.getConfig(interaction.guildId);
     const guild = interaction.guild;
     await guild.fetch();

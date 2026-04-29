@@ -84,7 +84,7 @@ module.exports = {
     .addStringOption(o => o.setName('message').setDescription('Message optionnel').setRequired(false)),
 
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
     const type   = interaction.options.getString('type');
     const target = interaction.options.getUser('cible');
     const msg    = interaction.options.getString('message');

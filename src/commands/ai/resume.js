@@ -32,7 +32,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Rôle requis : <@&${cfg.required_role}>`, ephemeral: true });
     }
 
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
 
     try {
       const collection = await chan.messages.fetch({ limit: Math.min(n, 100) }).catch(() => null);

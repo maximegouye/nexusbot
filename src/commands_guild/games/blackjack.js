@@ -650,7 +650,7 @@ async function handleComponent(interaction) {
     if (!newMise || newMise < 10) {
       return interaction.reply({ content: '❌ Mise invalide (min 10).', ephemeral: true });
     }
-    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
+    if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await startGame(interaction, userId, interaction.guildId, newMise);
     return true;
   }

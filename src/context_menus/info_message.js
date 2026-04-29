@@ -8,7 +8,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const msg = interaction.targetMessage;
       const embed = new EmbedBuilder()
         .setColor('#7B2FBE')

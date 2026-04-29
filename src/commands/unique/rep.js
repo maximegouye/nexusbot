@@ -160,7 +160,7 @@ async function handleVoir(interaction) {
 
 async function handleClassement(interaction) {
   try {
-    await interaction.deferReply();
+    await interaction.deferReply().catch(() => {});
 
     const topUsers = db.db.prepare(
       `SELECT u.user_id, u.reputation

@@ -144,7 +144,7 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
-      try { await interaction.deferReply({ ephemeral: false }); } catch {}
+      try { await interaction.deferReply({ ephemeral: false }).catch(() => {}); } catch {}
     }
 
     const sub     = interaction.options.getSubcommand();

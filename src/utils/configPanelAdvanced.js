@@ -2414,7 +2414,7 @@ async function handleAdvancedInteraction(interaction, db, client) {
       if (action === 'test') {
         const current = aiMod.getAIConfig(interaction.guildId, db);
         if (!aiMod.isAvailable()) return await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucune clé API IA configurée côté Railway.', ephemeral: true }).catch(() => {});
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
         try {
           const res = await aiMod.askAI({
             prompt: 'En UNE seule phrase, présente-toi et dis que tu es prêt à aider.',

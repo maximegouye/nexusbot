@@ -140,7 +140,7 @@ module.exports.cooldown = 3;
 
 module.exports.execute = async function execute(interaction) {
   if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply({ ephemeral: false });
+    await interaction.deferReply({ ephemeral: false }).catch(() => {});
   }
   const sub    = interaction.options.getSubcommand();
   const userId  = interaction.user.id;

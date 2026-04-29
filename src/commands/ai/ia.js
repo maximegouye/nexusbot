@@ -41,7 +41,7 @@ module.exports = {
     const cA = checkAllowed(interaction.member, cfg);       if (!cA.ok) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: cA.msg, ephemeral: true });
     const cC = checkChannel(interaction.channelId, cfg);    if (!cC.ok) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: cC.msg, ephemeral: true });
 
-    await interaction.deferReply({ ephemeral: priv });
+    await interaction.deferReply({ ephemeral: priv }).catch(() => {});
 
     try {
       const res = await ai.askAI({

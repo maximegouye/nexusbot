@@ -62,7 +62,7 @@ module.exports = {
       const cd = COOLDOWN - (now - m.last_mine);
       if (cd > 0) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `⏳ Pioche en refroidissement ! Réessayez dans **${cd}s**.`, ephemeral: true });
 
-      await interaction.deferReply();
+      await interaction.deferReply().catch(() => {});
       await new Promise(r => setTimeout(r, 1200));
 
       // Filtrer les minerais disponibles selon la profondeur

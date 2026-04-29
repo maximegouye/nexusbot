@@ -11,7 +11,7 @@ module.exports = {
     .addIntegerOption(o => o.setName('supprimer_messages').setDescription('Supprimer les messages des N derniers jours (0-7)').setMinValue(0).setMaxValue(7).setRequired(false)),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true }).catch(() => {});
 
     const idsRaw  = interaction.options.getString('ids');
     const raison  = interaction.options.getString('raison') || 'Bannissement de masse';
