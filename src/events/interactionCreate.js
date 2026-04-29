@@ -114,21 +114,6 @@ module.exports = {
 
       try {
         await command.execute(interaction);
-
-        // 🏅 Achievements : tracker l'utilisation de commandes et notifier les badges débloqués
-        try {
-          const ach = require('../utils/achievements');
-          ach.addStat(interaction.user.id, interaction.guildId, 'commands_used', 1);
-          const newBadges = ach.checkAchievements(interaction.user.id, interaction.guildId);
-          for (const b of newBadges) {
-            try {
-              await interaction.followUp({
-                content: `🎉 **Badge débloqué !** ${b.emoji} **${b.name}**\n*${b.desc}*\n+${b.reward.toLocaleString('fr-FR')}€ de récompense !`,
-                ephemeral: true,
-              });
-            } catch (_) {}
-          }
-        } catch (_) {}
       } catch (error) {
         const detail = (error?.message || String(error)).slice(0, 800);
         console.error(`[SLASH /${interaction.commandName}] Erreur:`, error?.stack || error);

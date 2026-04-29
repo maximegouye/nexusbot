@@ -600,6 +600,12 @@ module.exports = {
     safeWorker('Anti-Raid Worker',             startAntiRaid, client);
     safeWorker('Auto Events Worker',           startAutoEvents, client);
 
+    // 🏅 Auto-attribution des badges (toutes les 5 min)
+    try {
+      const { startAutoBadgeWorker } = require('../utils/autoBadgeWorker');
+      safeWorker('Auto Badge Worker',           startAutoBadgeWorker, client);
+    } catch (e) { console.log('[autoBadge] worker init error:', e.message); }
+
     console.log('✅ Tous les workers automatiques ont été démarrés');
   },
 };
