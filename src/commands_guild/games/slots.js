@@ -11,6 +11,7 @@ const {
 } = require('discord.js');
 const db = require('../../database/db');
 const { changeMiseModal, parseMise } = require('../../utils/casinoUtils');
+const balancer = require('../../utils/economyBalancer');
 
 // ─── Maps de session en mémoire ──────────────────────────
 const sessionStats = new Map(); // userId → {gains, losses, spins, biggestWin, totalWagered}
@@ -821,6 +822,9 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
     const streakMult = getStreakMultiplier(streak.current);
     if (streakMult > 1) totalGain = Math.floor(totalGain * streakMult);
 
+    // Balancer économique (taxe riches / boost owner) — applique uniquement aux wins
+    // normaux, PAS aux jackpots (qui restent affichés à leur valeur brute pour préserver la magie).
+    totalGain = balancer.adjustGain(totalGain, userId, guildId);
     db.addCoins(userId, guildId, totalGain);
 
     const tier = getWinTier(totalGain, totalMise);
@@ -929,9 +933,13 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
 
   const plNames = PAYLINES.slice(0, activeLines).map(p => p.name).join(' · ');
 
+  // Balancer : malaise aléatoire pour les riches (uniquement après un spin avec gain)
+  const malaise = totalGain > 0 ? balancer.rollMalaise(userId, guildId) : null;
+  const malaiseText = balancer.malaiseEmbedText(malaise, coin);
+
   const finalEmbed = new EmbedBuilder()
     .setColor(color).setTitle(title)
-    .setDescription(`\`\`\`\n${gridBase}\n\`\`\`\n\n${desc}`)
+    .setDescription(`\`\`\`\n${gridBase}\n\`\`\`\n\n${desc}${malaiseText}`)
     .addFields(
       { name: '💰 Mise', value: `${totalMise.toLocaleString('fr-FR')} ${coin}`, inline: true },
       { name: totalGain > 0 ? '✅ Gain' : '❌ Perte',

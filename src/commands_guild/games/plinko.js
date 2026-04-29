@@ -2,6 +2,7 @@
 // plinko.js — Plinko avec animation de chute visuelle
 // Emplacement : src/commands_guild/games/plinko.js
 // ============================================================
+const balancer = require('../../utils/economyBalancer');
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const db = require('../../database/db');
@@ -210,8 +211,10 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
 
   await sleep(200);
 
-  // Résultat final
-  if (gain > 0) db.addCoins(userId, guildId, gain);
+  // Résultat final (balancer économique : taxe riches / boost owner)
+  const adjustedGain = gain > 0 ? balancer.adjustGain(gain, userId, guildId) : 0;
+  if (adjustedGain > 0) db.addCoins(userId, guildId, adjustedGain);
+  const malaise = balancer.rollMalaise(userId, guildId);
   const newBal = db.getUser(userId, guildId)?.balance || 0;
 
   let resultMsg;
@@ -268,11 +271,12 @@ async function playPlinko(source, userId, guildId, mise, risk = 'medium') {
     new ButtonBuilder().setCustomId(`plinko_replay_${userId}_${mise}_high`).setLabel('🔴 Élevé').setStyle(riskKey === 'high' ? ButtonStyle.Danger : ButtonStyle.Secondary),
   );
 
+  const malaiseText = balancer.malaiseEmbedText(malaise, coin);
   const finalEmbed = new EmbedBuilder()
-    .setColor(finalColor)
+    .setColor(malaise ? '#8E44AD' : finalColor)
     .setTitle('🎯 Plinko — Résultat')
     .setDescription(
-      '```\n' + boardStr + '\n```\n' + resultMsg
+      '```\n' + boardStr + '\n```\n' + resultMsg + malaiseText
     )
     .addFields(
       { name: '⚠️ Risque',        value: RISK_LABELS[riskKey], inline: true },

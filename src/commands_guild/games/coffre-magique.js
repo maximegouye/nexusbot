@@ -8,6 +8,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const db = require('../../database/db');
 const wheelImage = require('../../utils/wheelImage');
+const balancer = require('../../utils/economyBalancer');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -235,7 +236,8 @@ async function handleDoorPick(interaction, userId, guildId, doorIdx) {
   sess.level += 1;
 
   if (sess.level >= 5) {
-    // ── VICTOIRE FINALE : top niveau atteint ──
+    // ── VICTOIRE FINALE : top niveau atteint (avec balancer) ──
+    newGain = balancer.adjustGain(newGain, userId, guildId);
     db.addCoins(userId, guildId, newGain);
     const newBal = db.getUser(userId, guildId)?.balance || 0;
     sessions.delete(key);
@@ -320,8 +322,9 @@ async function handleCashout(interaction, userId, guildId) {
 
   const cfg = db.getConfig ? db.getConfig(guildId) : {};
   const coin = cfg.currency_emoji || '€';
-  const finalGain = sess.currentGain;
-  db.addCoins(userId, guildId, finalGain);
+  const finalGainAdjusted = balancer.adjustGain(sess.currentGain, userId, guildId);
+  const finalGain = finalGainAdjusted;
+  db.addCoins(userId, guildId, finalGainAdjusted);
   const newBal = db.getUser(userId, guildId)?.balance || 0;
   const lvlReached = sess.level;
   const mise = sess.mise;

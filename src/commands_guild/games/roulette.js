@@ -7,6 +7,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const db = require('../../database/db');
 const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 const wheelImage = require('../../utils/wheelImage');
+const balancer = require('../../utils/economyBalancer');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -503,12 +504,18 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
     await sleep(320);
   }
 
-  // ── Appliquer gains ───────────────────────────────────────────
+  // ── Appliquer gains (avec balancer économique) ──────────────
   let totalGain = 0;
   const betResults = betPreview.map(({ bet, won, gain }) => {
-    if (won) { db.addCoins(userId, guildId, gain); totalGain += gain; }
+    if (won) {
+      const adjusted = balancer.adjustGain(gain, userId, guildId);
+      db.addCoins(userId, guildId, adjusted);
+      totalGain += adjusted;
+      return { bet, won, gain: adjusted };
+    }
     return { bet, won, gain };
   });
+  const malaise = balancer.rollMalaise(userId, guildId);
   const netDiff = totalGain - totalMise;
 
   // ── Croupier ──────────────────────────────────────────────────
@@ -608,6 +615,7 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
     recentSpinsDisplay,
     statsLine,
     martingaleAdvice,
+    balancer.malaiseEmbedText(malaise, coin),
   ].join('\n');
 
   const modeStr = mode === 'american' ? '🇺🇸' : mode === 'french' ? '🇫🇷' : '🇪🇺';

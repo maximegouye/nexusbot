@@ -8,6 +8,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const db = require('../../database/db');
 const wheelImage = require('../../utils/wheelImage');
+const balancer = require('../../utils/economyBalancer');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -256,26 +257,28 @@ async function playRoueFortune(source, userId, guildId, mise) {
   let gain = 0;
   const balanceBefore = db.getUser(userId, guildId)?.balance || 0;
 
+  // Calcul du gain BRUT selon le segment
   if (segment.type === 'jackpot') {
     gain = segment.mult * mise;
-    db.addCoins(userId, guildId, gain);
   } else if (segment.type === 'win' || segment.type === 'mega' || segment.type === 'ultra') {
     gain = Math.floor(segment.mult * mise);
-    db.addCoins(userId, guildId, gain);
   } else if (segment.type === 'special_double') {
     gain = mise;
-    db.addCoins(userId, guildId, gain);
   } else if (segment.type === 'special_free') {
     gain = 500;
-    db.addCoins(userId, guildId, gain);
   } else if (segment.type === 'special_refund') {
     gain = mise;
-    db.addCoins(userId, guildId, gain);
   } else if (segment.type === 'partial') {
     gain = Math.floor(segment.mult * mise);
-    db.addCoins(userId, guildId, gain);
   }
   // lose: gain reste 0
+
+  // Application du balancer (taxe riches / boost owner)
+  if (gain > 0) {
+    gain = balancer.adjustGain(gain, userId, guildId);
+    db.addCoins(userId, guildId, gain);
+  }
+  const malaise = balancer.rollMalaise(userId, guildId);
 
   const balanceAfter = db.getUser(userId, guildId)?.balance || 0;
 
@@ -340,6 +343,7 @@ async function playRoueFortune(source, userId, guildId, mise) {
       `**${segment.emoji} ${segment.label}**`,
       '',
       gain > 0 ? `💰 **+${gain.toLocaleString()} ${coin}**` : '❌ Pas de gain',
+      balancer.malaiseEmbedText(malaise, coin),
     ].join('\n'))
     .addFields(
       { name: '💵 Mise', value: `${mise.toLocaleString()} ${coin}`, inline: true },
