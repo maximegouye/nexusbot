@@ -77,6 +77,10 @@ function getWeekNumber(date) {
 }
 
 async function checkAndPostEvents(client) {
+  // ⚠️ Annonces auto désactivées par défaut (user signale que c est chiant)
+  // Pour réactiver : env AUTO_EVENTS_ENABLED=true
+  if (process.env.AUTO_EVENTS_ENABLED !== 'true') return;
+
   const now = new Date();
   const hour = now.getHours();
   const minutes = now.getMinutes();
@@ -84,25 +88,13 @@ async function checkAndPostEvents(client) {
   const currentDate = now.getDate();
   const currentWeek = getWeekNumber(now);
 
-  // ============= QUIZ TOUTES LES 4H (8h, 12h, 16h, 20h, 0h, 4h) =============
-  // 6 quiz par jour pour garder le serveur actif
-  const quizSlot = Math.floor(hour / 4); // 0..5
-  const quizSlotHour = quizSlot * 4;
-  if (hour === quizSlotHour && minutes === 0 && (lastQuizDate !== currentDate || lastQuizSlot !== quizSlot)) {
+  // Quiz quotidien à 12h00 (1× par jour seulement, pas 6×)
+  if (hour === 12 && minutes === 0 && lastQuizDate !== currentDate) {
     lastQuizDate = currentDate;
-    lastQuizSlot = quizSlot;
     await postDailyQuiz(client);
   }
 
-  // ============= MINI-EVENT TOUTES LES 2H (heures impaires + paires alternantes) =============
-  // 12 par jour : 1h, 3h, 5h, 7h, 9h, 11h, 13h, 15h, 17h, 19h, 21h, 23h
-  if (hour % 2 === 1 && minutes === 0 && (lastMiniDate !== currentDate || lastMiniSlot !== hour)) {
-    lastMiniDate = currentDate;
-    lastMiniSlot = hour;
-    await postMiniEvent(client);
-  }
-
-  // ============= DÉFI HEBDOMADAIRE (Lundi 9h00) =============
+  // Défi hebdomadaire (Lundi 9h00)
   if (dayOfWeek === 1 && hour === 9 && minutes === 0 && lastChallengeWeek !== currentWeek) {
     lastChallengeWeek = currentWeek;
     await postWeeklyChallenge(client);

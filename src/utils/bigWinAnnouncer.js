@@ -18,7 +18,8 @@
 
 const db = require('../database/db');
 
-const DISABLED = process.env.BIG_WIN_DISABLED === 'true';
+// Désactivé PAR DÉFAUT (mettre BIG_WIN_DISABLED=false pour réactiver)
+const DISABLED = process.env.BIG_WIN_DISABLED !== 'false';
 const BIG_THRESHOLD  = parseInt(process.env.BIG_WIN_THRESHOLD || '10000');
 const PING_THRESHOLD = parseInt(process.env.BIG_WIN_PING_THRESHOLD || '100000');
 

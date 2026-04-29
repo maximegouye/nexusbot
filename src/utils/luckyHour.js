@@ -15,7 +15,8 @@
 const { EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
 
-const DISABLED = process.env.LUCKY_HOUR_DISABLED === 'true';
+// Désactivé PAR DÉFAUT (mettre LUCKY_HOUR_DISABLED=false pour réactiver)
+const DISABLED = process.env.LUCKY_HOUR_DISABLED !== 'false';
 const MULT     = parseFloat(process.env.LUCKY_HOUR_MULT || '2');
 
 // État de la lucky hour active

@@ -67,38 +67,26 @@ async function runOnce(client) {
 
       console.log(`[antiInflation] User ${u.user_id} guild ${u.guild_id} : ${oldTotal.toLocaleString('fr-FR')}€ → ${RESET_TO.toLocaleString('fr-FR')}€`);
 
-      // Annonce dans le canal général
-      try {
-        const guild = client.guilds.cache.get(u.guild_id);
-        if (!guild) continue;
-        const cfg = db.getConfig ? db.getConfig(u.guild_id) : {};
-        const channelId = cfg.general_channel || cfg.welcome_channel;
-        if (!channelId) continue;
-        const channel = guild.channels.cache.get(channelId);
-        if (!channel || !channel.isTextBased()) continue;
-
-        const member = await guild.members.fetch(u.user_id).catch(() => null);
-        const username = member?.user.username || `<@${u.user_id}>`;
-        const symbol = cfg.currency_emoji || '€';
-
-        const embed = new EmbedBuilder()
-          .setColor(0xE74C3C)
-          .setTitle('⚠️ Correction économie — annonce officielle')
-          .setDescription([
-            `Suite à une **mauvaise configuration** des récompenses du bot ces dernières heures, certains gains étaient anormalement élevés.`,
-            ``,
-            `Nous corrigeons l'économie pour que le serveur reste équilibré et fun pour tout le monde.`,
-            ``,
-            `**${username}**, ton solde est ramené à **${RESET_TO.toLocaleString('fr-FR')} ${symbol}** (au lieu de ${oldTotal.toLocaleString('fr-FR')} ${symbol}).`,
-            ``,
-            `Désolé pour la gêne — c'est un bug d'équilibrage de notre côté, pas le tien. Continue à profiter du casino, les gains sont maintenant à des niveaux raisonnables ! 🎰`,
-          ].join('\n'))
-          .setFooter({ text: 'NexusBot · Régulation automatique anti-inflation' })
-          .setTimestamp();
-
-        await channel.send({ embeds: [embed] }).catch(() => {});
-      } catch (e) {
-        console.error('[antiInflation] notification error:', e.message);
+      // Annonce publique désactivée — correction silencieuse (user n'aime pas le spam)
+      // Pour réactiver : env ANTI_INFLATION_ANNOUNCE=true
+      if (process.env.ANTI_INFLATION_ANNOUNCE === 'true') {
+        try {
+          const guild = client.guilds.cache.get(u.guild_id);
+          if (!guild) continue;
+          const cfg = db.getConfig ? db.getConfig(u.guild_id) : {};
+          const channelId = cfg.general_channel || cfg.welcome_channel;
+          if (!channelId) continue;
+          const channel = guild.channels.cache.get(channelId);
+          if (!channel || !channel.isTextBased()) continue;
+          const member = await guild.members.fetch(u.user_id).catch(() => null);
+          const username = member?.user.username || `<@${u.user_id}>`;
+          const symbol = cfg.currency_emoji || '€';
+          const embed = new EmbedBuilder()
+            .setColor(0xE74C3C)
+            .setTitle('⚠️ Correction économie')
+            .setDescription(`**${username}** — solde corrigé à ${RESET_TO.toLocaleString('fr-FR')} ${symbol} (anti-inflation).`);
+          await channel.send({ embeds: [embed] }).catch(() => {});
+        } catch (e) { console.error('[antiInflation] notification:', e.message); }
       }
     }
   } catch (e) {

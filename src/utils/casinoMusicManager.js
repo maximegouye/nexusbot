@@ -7,10 +7,16 @@
 const { ChannelType } = require('discord.js');
 
 let _voice = null;
+let _voiceUnavailable = false;
 function voice() {
-  if (!_voice) _voice = require('@discordjs/voice');
+  if (_voiceUnavailable) return null;
+  if (!_voice) {
+    try { _voice = require('@discordjs/voice'); }
+    catch { _voiceUnavailable = true; return null; }
+  }
   return _voice;
 }
+function voiceAvailable() { return !!voice(); }
 
 // ─── Stations radio jazz/lounge — HTTP direct, 0 auth, 100% Railway ───
 const RADIO_STATIONS = [
@@ -258,6 +264,11 @@ function getState(guildId) { return guildStates.get(guildId) || null; }
 
 // ─── Auto-init — attend que le cache guild soit prêt ─────────
 async function autoInit(client, guildId) {
+  // Skip si @discordjs/voice indisponible (pas de spam d'erreurs)
+  if (!voiceAvailable()) {
+    console.log('[CasinoMusic] @discordjs/voice indisponible — module désactivé silencieusement');
+    return;
+  }
   try {
     let guild = null;
     for (let i = 0; i < 10; i++) { // jusqu'à 50s
@@ -282,6 +293,11 @@ async function autoInit(client, guildId) {
 // ─── Background retry (boucle 45s si plus rien dans guildStates) ─
 async function startBackgroundRetry(client, guildId) {
   if (_bgRetryActive) return;
+  // Skip si pas de @discordjs/voice — pas la peine de retry
+  if (!voiceAvailable()) {
+    console.log('[CasinoMusic] @discordjs/voice indisponible — pas de retry background');
+    return;
+  }
   _bgRetryActive = true;
   console.log('[CasinoMusic] 🔄 Background retry actif (45s interval)');
   try {
