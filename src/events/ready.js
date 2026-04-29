@@ -248,6 +248,12 @@ module.exports = {
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.username} (${client.user.id})`);
 
+    // ── Anti-inflation : reset des soldes anormaux (>1B€) au boot ──
+    try {
+      const antiInflation = require('../utils/antiInflationCheck');
+      antiInflation.runOnce(client).catch(e => console.error('[antiInflation]', e.message));
+    } catch (e) { console.log('[antiInflation] module load:', e.message); }
+
     // ── Avatar auto (si le bot a encore l'avatar par défaut) ──
     if (!client.user.avatar) {
       try {

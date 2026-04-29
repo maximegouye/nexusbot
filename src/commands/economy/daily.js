@@ -76,20 +76,20 @@ module.exports = {
     const wasYesterday = lastDaily > 0 && (now - lastDaily) < (cooldown * 2);
     const newStreak    = wasYesterday ? (user.streak || 0) + 1 : 1;
 
-    const base         = cfg.daily_amount || 1000; // Boost base 250 → 1000 (4×)
+    const base         = cfg.daily_amount || 300; // Base raisonnable
     const streakPct    = Math.max(15, cfg.daily_streak_bonus ?? 15); // 15% par jour (au lieu de 10)
     const streakBonus  = Math.min(newStreak - 1, 100) * Math.max(1, Math.floor(base * streakPct / 100));
 
-    // Milestones EXPLOSIFS — récompenses de fidélité massives
+    // Milestones raisonnables (réduits — anti-inflation)
     const milestones   = {
-      3:   base * 2,      // ×2 dès le 3ème jour
-      7:   base * 5,      // ×5 (était ×2)
-      14:  base * 12,     // ×12 (était ×4)
-      30:  base * 30,     // ×30 (était ×10)
-      60:  base * 75,     // ×75 (était ×20)
-      100: base * 200,    // ×200 (était ×40) — crazy reward
-      200: base * 500,    // ×500 nouveau palier
-      365: base * 2000,   // 1 an = ×2000 (legendary)
+      3:   base * 1.5,    // ×1.5
+      7:   base * 2.5,    // ×2.5
+      14:  base * 4,      // ×4
+      30:  base * 8,      // ×8
+      60:  base * 15,     // ×15
+      100: base * 30,     // ×30
+      200: base * 60,     // ×60
+      365: base * 150,    // 1 an = ×150 (toujours legendary mais raisonnable)
     };
     const milestone    = milestones[newStreak] || 0;
 

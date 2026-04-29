@@ -7,28 +7,28 @@ function trackMission(userId, guildId, type, amount = 1) {
   try { require('../../commands_guild/unique/missions').progressMission(userId, guildId, type, amount); } catch {}
 }
 
-// Salaires triplés pour donner du jus à l'économie (était 30-1200 → 90-3600)
+// Salaires raisonnables (anti-inflation)
 const JOBS = [
-  { name: 'Développeur',    emoji: '💻', min: 540,  max: 1350 },
-  { name: 'Médecin',        emoji: '🩺', min: 660,  max: 1650 },
-  { name: 'Chef cuisto',    emoji: '👨‍🍳', min: 360,  max: 900  },
-  { name: 'Pilote',          emoji: '✈️', min: 600,  max: 1500 },
-  { name: 'Pompier',         emoji: '🔥', min: 450,  max: 1140 },
-  { name: 'Détective',       emoji: '🕵️', min: 540,  max: 1260 },
-  { name: 'Astronaute',      emoji: '🚀', min: 750,  max: 1950 },
-  { name: 'Musicien',        emoji: '🎵', min: 240,  max: 1050 },
-  { name: 'Streamer',         emoji: '🎮', min: 150,  max: 2400 },
-  { name: 'YouTubeur',        emoji: '📹', min: 90,   max: 2700 },
-  { name: 'Trader',           emoji: '📈', min: 60,   max: 3600 },
-  { name: 'Agriculteur',     emoji: '🌾', min: 300,  max: 840  },
-  { name: 'Chirurgien',      emoji: '🔪', min: 750,  max: 1800 },
-  { name: 'Boxeur',           emoji: '🥊', min: 450,  max: 1350 },
-  { name: 'Inventeur',        emoji: '💡', min: 360,  max: 2100 },
-  { name: 'Architecte',      emoji: '🏗️', min: 600,  max: 1560 },
-  { name: 'Journaliste',     emoji: '📰', min: 420,  max: 1080 },
-  { name: 'Chauffeur',        emoji: '🚗', min: 300,  max: 750  },
-  { name: 'Pharmacien',      emoji: '💊', min: 600,  max: 1440 },
-  { name: 'Graphiste',        emoji: '🎨', min: 450,  max: 1200 },
+  { name: 'Développeur',    emoji: '💻', min: 180, max: 450 },
+  { name: 'Médecin',        emoji: '🩺', min: 220, max: 550 },
+  { name: 'Chef cuisto',    emoji: '👨‍🍳', min: 120, max: 300 },
+  { name: 'Pilote',          emoji: '✈️', min: 200, max: 500 },
+  { name: 'Pompier',         emoji: '🔥', min: 150, max: 380 },
+  { name: 'Détective',       emoji: '🕵️', min: 180, max: 420 },
+  { name: 'Astronaute',      emoji: '🚀', min: 250, max: 650 },
+  { name: 'Musicien',        emoji: '🎵', min: 80,  max: 350 },
+  { name: 'Streamer',         emoji: '🎮', min: 50,  max: 800 },
+  { name: 'YouTubeur',        emoji: '📹', min: 30,  max: 900 },
+  { name: 'Trader',           emoji: '📈', min: 20,  max: 1200 },
+  { name: 'Agriculteur',     emoji: '🌾', min: 100, max: 280 },
+  { name: 'Chirurgien',      emoji: '🔪', min: 250, max: 600 },
+  { name: 'Boxeur',           emoji: '🥊', min: 150, max: 450 },
+  { name: 'Inventeur',        emoji: '💡', min: 120, max: 700 },
+  { name: 'Architecte',      emoji: '🏗️', min: 200, max: 520 },
+  { name: 'Journaliste',     emoji: '📰', min: 140, max: 360 },
+  { name: 'Chauffeur',        emoji: '🚗', min: 100, max: 250 },
+  { name: 'Pharmacien',      emoji: '💊', min: 200, max: 480 },
+  { name: 'Graphiste',        emoji: '🎨', min: 150, max: 400 },
 ];
 
 const PHRASES = [

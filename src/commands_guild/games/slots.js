@@ -52,7 +52,7 @@ const PAYLINES = [
 try {
   db.db.prepare(`CREATE TABLE IF NOT EXISTS slots_jackpot (
     guild_id TEXT PRIMARY KEY,
-    amount   INTEGER DEFAULT 50000
+    amount   INTEGER DEFAULT 10000
   )`).run();
   db.db.prepare(`CREATE TABLE IF NOT EXISTS slots_stats (
     user_id  TEXT,
@@ -69,8 +69,8 @@ try {
 function getJackpot(guildId) {
   let row = db.db.prepare('SELECT amount FROM slots_jackpot WHERE guild_id=?').get(guildId);
   if (!row) {
-    db.db.prepare('INSERT OR IGNORE INTO slots_jackpot (guild_id,amount) VALUES (?,50000)').run(guildId);
-    row = { amount: 50000 };
+    db.db.prepare('INSERT OR IGNORE INTO slots_jackpot (guild_id,amount) VALUES (?,10000)').run(guildId);
+    row = { amount: 10000 };
   }
   return row.amount;
 }
@@ -79,7 +79,7 @@ function addToJackpot(guildId, amount) {
   db.db.prepare('UPDATE slots_jackpot SET amount=amount+? WHERE guild_id=?').run(amount, guildId);
 }
 function resetJackpot(guildId) {
-  db.db.prepare('UPDATE slots_jackpot SET amount=50000 WHERE guild_id=?').run(guildId);
+  db.db.prepare('UPDATE slots_jackpot SET amount=10000 WHERE guild_id=?').run(guildId);
 }
 function addStats(userId, guildId, won, amount, isJackpot) {
   db.db.prepare('INSERT OR IGNORE INTO slots_stats (user_id,guild_id) VALUES (?,?)').run(userId, guildId);
@@ -683,7 +683,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
   }
 
   db.addCoins(userId, guildId, -totalMise);
-  addToJackpot(guildId, Math.floor(totalMise * 0.05)); // 2% contribution au jackpot
+  addToJackpot(guildId, Math.floor(totalMise * 0.01)); // 2% contribution au jackpot
 
   const startEmbed = new EmbedBuilder()
     .setColor('#F39C12').setTitle('🎰 MACHINE ALMOSNI — 5 ROULEAUX')
@@ -747,7 +747,7 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
     totalGain = majorGain;
     db.addCoins(userId, guildId, majorGain);
     // Réduire le jackpot du montant versé (sans reset complet)
-    db.db.prepare('UPDATE slots_jackpot SET amount = MAX(50000, amount - ?) WHERE guild_id = ?').run(majorGain, guildId);
+    db.db.prepare('UPDATE slots_jackpot SET amount = MAX(10000, amount - ?) WHERE guild_id = ?').run(majorGain, guildId);
     color = '#C0C0C0'; title = '🥈 MAJOR JACKPOT 🥈';
     desc  = `🎉 **MAJOR JACKPOT !** 25% du pot jackpot remporté !\n\n💰 **+${majorGain.toLocaleString('fr-FR')} ${coin}** remportés !\n\nLe jackpot progressif reste actif...`;
     await animateJackpot(msg, majorGain, coin, 'MAJOR');
@@ -1024,7 +1024,7 @@ async function runAutoSpin(msg, userId, guildId, mise, activeLines, count, coin)
     if (!u || u.balance < totalMise) break;
 
     db.addCoins(userId, guildId, -totalMise);
-    addToJackpot(guildId, Math.floor(totalMise * 0.05));
+    addToJackpot(guildId, Math.floor(totalMise * 0.01));
 
     const grid = spinGrid();
     const { wins: lineWins, hasJackpot, scatterCount } = evalGridFull(grid, activeLines);
@@ -1352,7 +1352,7 @@ async function handleComponent(interaction) {
     }
 
     db.addCoins(userId, guildId, -totalMise);
-    addToJackpot(guildId, Math.floor(totalMise * 0.05));
+    addToJackpot(guildId, Math.floor(totalMise * 0.01));
 
     const embed = new EmbedBuilder()
       .setColor('#FF00FF')
