@@ -1,7 +1,7 @@
 FROM node:20-slim
 
-# Cache-bust 2026-04-28T21:10 — force rebuild pour appliquer le nouveau start.sh
-ARG CACHEBUST=20260428_2110
+# Cache-bust 2026-04-29T18:55 — force rebuild COMPLET (purge defi.js, chainemots.js, etc)
+ARG CACHEBUST=20260429_1855
 RUN echo "Cache bust: $CACHEBUST"
 
 # Outils pour compiler better-sqlite3 (module natif)
