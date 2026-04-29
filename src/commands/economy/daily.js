@@ -77,13 +77,38 @@ module.exports = {
     const newStreak    = wasYesterday ? (user.streak || 0) + 1 : 1;
 
     const base         = cfg.daily_amount || 250;
-    const streakPct    = Math.max(0, cfg.daily_streak_bonus ?? 10);
-    const streakBonus  = Math.min(newStreak - 1, 60) * Math.max(1, Math.floor(base * streakPct / 100));
-    const milestones   = { 7: base * 2, 14: base * 4, 30: base * 10, 60: base * 20, 100: base * 40 };
+    const streakPct    = Math.max(15, cfg.daily_streak_bonus ?? 15); // 15% par jour (au lieu de 10)
+    const streakBonus  = Math.min(newStreak - 1, 100) * Math.max(1, Math.floor(base * streakPct / 100));
+
+    // Milestones EXPLOSIFS — récompenses de fidélité massives
+    const milestones   = {
+      3:   base * 2,      // ×2 dès le 3ème jour
+      7:   base * 5,      // ×5 (était ×2)
+      14:  base * 12,     // ×12 (était ×4)
+      30:  base * 30,     // ×30 (était ×10)
+      60:  base * 75,     // ×75 (était ×20)
+      100: base * 200,    // ×200 (était ×40) — crazy reward
+      200: base * 500,    // ×500 nouveau palier
+      365: base * 2000,   // 1 an = ×2000 (legendary)
+    };
     const milestone    = milestones[newStreak] || 0;
+
+    // ── Bonus COMEBACK : re-attirer ceux qui ont été absents ──
+    // Si retour après 2+ jours d'absence (mais pas total reset), gros bonus
+    let comebackBonus = 0;
+    let comebackDays  = 0;
+    if (!wasYesterday && lastDaily > 0) {
+      const daysAway = Math.floor((now - lastDaily) / 86400);
+      if (daysAway >= 2) {
+        comebackDays = daysAway;
+        // Plus on a été absent, plus le bonus est gros (capped a 14 jours)
+        comebackBonus = Math.min(daysAway, 14) * Math.floor(base * 0.5);
+      }
+    }
+
     // Boost Daily depuis boutique
     const dailyMult = (user.boost_daily_mult || 1) > 1 ? (user.boost_daily_mult) : 1;
-    const total     = Math.floor((base + streakBonus + milestone) * dailyMult);
+    const total     = Math.floor((base + streakBonus + milestone + comebackBonus) * dailyMult);
 
     db.addCoins(interaction.user.id, interaction.guildId, total);
     db.db.prepare('UPDATE users SET last_daily = ?, streak = ? WHERE user_id = ? AND guild_id = ?')
@@ -109,11 +134,15 @@ module.exports = {
     }
 
     let specialMsg = '';
-    if (newStreak === 7)   specialMsg = `\n🎖️ **1 semaine de fidélité !** Bonus exceptionnel de ${milestones[7].toLocaleString('fr-FR')}${symbol}.`;
-    if (newStreak === 14)  specialMsg = `\n🥇 **2 semaines de fidélité !** Bonus exceptionnel de ${milestones[14].toLocaleString('fr-FR')}${symbol}.`;
-    if (newStreak === 30)  specialMsg = `\n🏆 **1 mois de fidélité !** Incroyable ! Bonus de ${milestones[30].toLocaleString('fr-FR')}${symbol}.`;
-    if (newStreak === 60)  specialMsg = `\n👑 **2 mois de fidélité !** Bonus majestueux de ${milestones[60].toLocaleString('fr-FR')}${symbol}.`;
-    if (newStreak === 100) specialMsg = `\n💎 **100 jours d'affilée !** Légendaire ! Bonus de ${milestones[100].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 3)   specialMsg = `\n🎯 **3 jours d'affilée !** Bonus de bienvenue : ${milestones[3].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 7)   specialMsg = `\n🎖️ **1 semaine de fidélité !** ÉNORME bonus : ${milestones[7].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 14)  specialMsg = `\n🥇 **2 semaines de fidélité !** Bonus massif : ${milestones[14].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 30)  specialMsg = `\n🏆 **1 mois de fidélité !** Bonus colossal : ${milestones[30].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 60)  specialMsg = `\n👑 **2 mois de fidélité !** Bonus royal : ${milestones[60].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 100) specialMsg = `\n💎 **100 jours !** Bonus LÉGENDAIRE : ${milestones[100].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 200) specialMsg = `\n🌌 **200 jours !** Bonus MYTHIQUE : ${milestones[200].toLocaleString('fr-FR')}${symbol}.`;
+    if (newStreak === 365) specialMsg = `\n🌟 **1 AN ENTIER !** Bonus DIVIN : ${milestones[365].toLocaleString('fr-FR')}${symbol}.`;
+    if (comebackBonus > 0) specialMsg += `\n🚪 **Bon retour !** Tu étais absent ${comebackDays} jour${comebackDays>1?'s':''} → bonus comeback : **+${comebackBonus.toLocaleString('fr-FR')}${symbol}**.`;
 
     const flames = '🔥'.repeat(Math.min(newStreak, 7));
 

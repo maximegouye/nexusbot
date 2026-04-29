@@ -1,5 +1,5 @@
 // ============================================================
-// economyBalancer.js — Anti-snowball + Owner boost discret
+// economyBalancer.js — Anti-snowball + Owner POWER boost
 // ============================================================
 //
 // Configuration via variables d'environnement (Railway > Variables) :
@@ -7,18 +7,21 @@
 //   ECONOMY_DISABLED = "true" pour désactiver totalement le système
 //
 // Comportement :
-//  • Top 10% riches (par guild)  → RTP × 0.97 (-3%) + 0.3% chance/spin de malaise (perte 5-10%)
-//  • OWNER_ID                    → RTP × 1.06 (+6%), immunisé aux malaises, +1% chance jackpot
+//  • Top 10% riches (par guild)  → RTP × 0.95 (-5%) + 0.5% chance/spin malaise (perte 5-12%)
+//  • OWNER_ID                    → RTP × 1.30 (+30%), immunisé aux malaises,
+//                                  +5% chance jackpot, x1.5 sur tous les jackpots gagnés
 //  • Autres                      → RTP × 1.00 (neutre)
 //
 // Le système est silencieux — aucun log ne révèle qui est qui.
-// La taxe riches est expliquable comme une "house edge progressive".
 // ============================================================
 
 const db = require('../database/db');
 
 const ECONOMY_DISABLED = process.env.ECONOMY_DISABLED === 'true';
 const OWNER_ID         = process.env.OWNER_ID || null;
+
+// Log de vérification au boot (apparaît UNE fois dans les logs Railway)
+console.log(`[economyBalancer] init — disabled=${ECONOMY_DISABLED}, ownerSet=${!!OWNER_ID}${OWNER_ID ? ` (id=${OWNER_ID.slice(0,4)}***${OWNER_ID.slice(-4)})` : ''}`);
 
 // ─── Cache des wallet listings (rafraîchi toutes les 60s par guild) ──
 const richCache = new Map(); // guildId → { ts, topRich: Set<userId> }
@@ -45,20 +48,21 @@ function getTopRich(guildId) {
 }
 
 // ─── Modifier RTP pour un user (gains × ce modifier) ─────
-// Retourne { rtp: number, isOwner: bool, isRich: bool }
+// Retourne { rtp: number, isOwner: bool, isRich: bool, jackpotBonus: number }
 function getLuckModifier(userId, guildId) {
-  if (ECONOMY_DISABLED) return { rtp: 1.0, isOwner: false, isRich: false };
+  if (ECONOMY_DISABLED) return { rtp: 1.0, isOwner: false, isRich: false, jackpotBonus: 1.0 };
 
-  if (OWNER_ID && userId === OWNER_ID) {
-    return { rtp: 1.06, isOwner: true, isRich: false };
+  // Comparaison stricte en string (les IDs Discord sont des snowflakes 18-19 chiffres)
+  if (OWNER_ID && String(userId) === String(OWNER_ID)) {
+    return { rtp: 1.30, isOwner: true, isRich: false, jackpotBonus: 1.5 };
   }
 
   const topRich = getTopRich(guildId);
-  if (topRich.has(userId)) {
-    return { rtp: 0.97, isOwner: false, isRich: true };
+  if (topRich.has(String(userId))) {
+    return { rtp: 0.95, isOwner: false, isRich: true, jackpotBonus: 1.0 };
   }
 
-  return { rtp: 1.0, isOwner: false, isRich: false };
+  return { rtp: 1.0, isOwner: false, isRich: false, jackpotBonus: 1.0 };
 }
 
 // ─── Applique le modifier RTP à un montant gagné ─────────
@@ -91,12 +95,12 @@ function rollMalaise(userId, guildId) {
   if (mod.isOwner) return null;          // owner immunisé
   if (!mod.isRich) return null;          // seuls les top 10% sont concernés
 
-  if (Math.random() > 0.003) return null; // 0.3% par appel
+  if (Math.random() > 0.005) return null; // 0.5% par appel (au lieu de 0.3%)
 
   const u = db.getUser(userId, guildId);
   if (!u || u.balance < 1000) return null; // pas la peine pour les soldes trop bas
 
-  const pct = 0.05 + Math.random() * 0.05; // 5% à 10%
+  const pct = 0.05 + Math.random() * 0.07; // 5% à 12% (au lieu de 5-10%)
   const amount = Math.max(50, Math.floor(u.balance * pct));
 
   // Prélever
@@ -111,14 +115,23 @@ function rollMalaise(userId, guildId) {
   };
 }
 
-// ─── Bonus owner : +1% chance sur les jackpots ────────────
-// Appelle ça à la place de Math.random() pour les events rares.
-// Pour OWNER, retourne true 1% plus souvent.
+// ─── Bonus owner : +5% chance sur les jackpots ────────────
 function jackpotRoll(userId, guildId, baseChance) {
   if (ECONOMY_DISABLED) return Math.random() < baseChance;
   const mod = getLuckModifier(userId, guildId);
-  const adjusted = mod.isOwner ? baseChance + 0.01 : baseChance;
+  // Owner: +5% (au lieu de +1%) — significativement plus de chance d'avoir un jackpot
+  const adjusted = mod.isOwner ? Math.min(0.95, baseChance + 0.05) : baseChance;
   return Math.random() < adjusted;
+}
+
+// ─── Multiplicateur jackpot : x1.5 pour owner ─────────────
+// Applique sur le montant d'un jackpot gagné, après getLuckModifier
+function adjustJackpot(amount, userId, guildId) {
+  if (amount <= 0) return amount;
+  const mod = getLuckModifier(userId, guildId);
+  // Owner: x1.5 sur les jackpots, autres: pas de boost (les jackpots ne sont pas taxés)
+  if (mod.isOwner) return Math.floor(amount * 1.5);
+  return amount;
 }
 
 // ─── Helper : applique malaise sur embed (helper UI) ───────
@@ -131,6 +144,7 @@ function malaiseEmbedText(malaise, coin) {
 module.exports = {
   getLuckModifier,
   adjustGain,
+  adjustJackpot,
   rollMalaise,
   jackpotRoll,
   malaiseEmbedText,
