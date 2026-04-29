@@ -56,17 +56,23 @@ module.exports = {
           'SELECT COUNT(*) as count FROM warnings WHERE guild_id = ?'
         ).get(interaction.guildId).count;
 
-        const roles = (await interaction.guild.roles.fetch()).map(r => ({
-          id: r.id,
-          name: r.name,
-          color: r.color
-        }));
+        // Récupération des rôles et canaux — robust pour Collection ou Map ou Array
+        let roles = [];
+        try {
+          const fetched = await interaction.guild.roles.fetch().catch(() => null);
+          if (fetched) {
+            // Collection.map ou Array.from + map
+            const arr = typeof fetched.map === 'function' ? Array.from(fetched.values()) : Array.from(fetched.values?.() || []);
+            roles = arr.map(r => ({ id: r.id, name: r.name, color: r.color }));
+          }
+        } catch (e) { console.error('[backup] roles fetch error:', e.message); }
 
-        const channels = interaction.guild.channels.cache.map(c => ({
-          id: c.id,
-          name: c.name,
-          type: c.type
-        }));
+        let channels = [];
+        try {
+          const ch = interaction.guild.channels.cache;
+          const arr = ch ? Array.from(ch.values()) : [];
+          channels = arr.map(c => ({ id: c.id, name: c.name, type: c.type }));
+        } catch (e) { console.error('[backup] channels error:', e.message); }
 
         const premium = db.getPremium(interaction.guildId);
 
