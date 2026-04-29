@@ -248,28 +248,6 @@ module.exports = {
   async execute(client) {
     console.log(`✅ Bot connecté: ${client.user.username} (${client.user.id})`);
 
-    // ── DEBUG ONE-SHOT : dump des admins du serveur principal ──
-    // Permet d'identifier l'ID Discord du proprietaire du bot pour configurer OWNER_ID
-    try {
-      const homeId = process.env.HOME_GUILD_ID || process.env.GUILD_ID || '1492886135159128227';
-      const homeGuild = client.guilds.cache.get(homeId);
-      if (homeGuild) {
-        const members = await homeGuild.members.fetch({ withPresences: false }).catch(() => null);
-        if (members) {
-          const admins = members.filter(m => !m.user.bot && m.permissions.has('Administrator'));
-          console.log(`[ADMIN_DUMP] Guild "${homeGuild.name}" — ${admins.size} admin(s):`);
-          admins.forEach(m => console.log(`[ADMIN_DUMP]   ${m.user.id} | ${m.user.username} | tag=${m.user.tag || '?'}`));
-          // Trouve aussi le owner
-          if (homeGuild.ownerId) {
-            const owner = members.get(homeGuild.ownerId);
-            console.log(`[ADMIN_DUMP] Guild owner: ${homeGuild.ownerId} | ${owner?.user.username || '?'}`);
-          }
-        }
-      }
-    } catch (e) {
-      console.log('[ADMIN_DUMP] erreur:', e.message);
-    }
-
     // ── Avatar auto (si le bot a encore l'avatar par défaut) ──
     if (!client.user.avatar) {
       try {
