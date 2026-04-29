@@ -115,8 +115,9 @@ module.exports = {
       try {
         await command.execute(interaction);
       } catch (error) {
-        console.error(`[SLASH /${interaction.commandName}] Erreur:`, error?.message || error);
-        const errMsg = { content: '❌ Une erreur est survenue. Réessaie dans quelques secondes.' };
+        const detail = (error?.message || String(error)).slice(0, 800);
+        console.error(`[SLASH /${interaction.commandName}] Erreur:`, error?.stack || error);
+        const errMsg = { content: `❌ Erreur \`/${interaction.commandName}\` : \`${detail}\`` };
         try {
           if (interaction.deferred || interaction.replied) await interaction.followUp({ ...errMsg, ephemeral: true });
           else await interaction.reply({ ...errMsg, ephemeral: true });

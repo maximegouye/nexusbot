@@ -413,11 +413,20 @@ async function playMegaSlots(source, userId, guildId, mise, freeSpinsLeft = 0, h
   }
 
   let msg;
-  if (!isInteraction || source.deferred || source.replied) {
-    msg = await (isInteraction ? source.editReply : source.reply.bind(source))({ embeds: [embed], components: comps });
-  } else {
-    await source.deferReply().catch(() => {});
-    msg = await source.editReply({ embeds: [embed], components: comps });
+  try {
+    if (isInteraction) {
+      if (!source.deferred && !source.replied) {
+        await source.deferReply().catch(() => {});
+      }
+      msg = await source.editReply({ embeds: [embed], components: comps });
+    } else {
+      msg = await source.reply({ embeds: [embed], components: comps });
+    }
+  } catch (e) {
+    console.error('[mega-slots] erreur envoi msg:', e?.message || e);
+    if (isInteraction) {
+      try { await source.followUp({ content: `❌ Erreur mega-slots : \`${(e?.message||e).toString().slice(0,500)}\``, ephemeral: true }); } catch {}
+    }
   }
 
   return msg;
