@@ -16,6 +16,23 @@ const PETS = {
   robot:    { emoji:'🤖', rarity:'épique',    baseStats:{hp:180,atk:40,def:35},evolutions:['robot_v1','robot_v2','robot_v3','robot_ultime'] },
 };
 
+// 🎲 Prénoms thématiques aléatoires par type d'animal
+const PET_NAMES = {
+  chien:    ['Rex','Buddy','Max','Charlie','Rocky','Bailey','Cooper','Tucker','Duke','Jack','Toby','Oliver','Bear','Leo','Milo','Riley','Zeus','Loki','Apollo','Thor','Atlas','Bandit','Shadow','Diesel','Ranger','Scout','Bruno','Luna','Bella','Daisy','Nala','Coco','Lucy','Sadie'],
+  chat:     ['Luna','Bella','Lucy','Lily','Nala','Chloé','Stella','Cléo','Mia','Olive','Pixie','Misty','Ginger','Pepper','Pumpkin','Whiskers','Mittens','Tigger','Felix','Salem','Simba','Garfield','Tom','Oscar','Boots','Smokey','Patches','Snowball','Mocha','Caramel','Saphir','Onyx'],
+  dragon:   ['Drakkar','Pyrosvale','Inferno','Ignis','Vulcan','Khaal','Mordor','Smaug','Bahamut','Tiamat','Glaurung','Nidhögg','Falkor','Toothless','Dracarys','Nargacuga','Charizard','Drogon','Rhaegal','Viserion','Saphira','Spyro','Daenerys','Eragon','Fafnir','Jormungandr','Kalessin','Norbert','Maleficent','Ouroboros','Quetzalcoatl','Vermithrax'],
+  lapin:    ['Coton','Caramel','Choco','Vanille','Mochi','Pompom','Praline','Truffe','Marshmallow','Biscuit','Gingembre','Pancake','Brownie','Toffee','Cookie','Donut','Crumpet','Bonbon','Sucre','Pelote','Nuage','Flocon','Boule','Câlin','Sirop','Patate','Carotte','Lapinou','Daisy','Olympe','Hop','Bunny'],
+  renard:   ['Rusé','Vega','Ash','Foxy','Tails','Ember','Cinder','Ruby','Saphir','Jasper','Onyx','Mystique','Spectre','Phantom','Astro','Star','Comet','Nova','Eclipse','Solar','Lunaire','Aurora','Boreal','Wisp','Whisper','Echo','Shadow','Silver','Copper','Bronze','Gold','Cosmo'],
+  licorne:  ['Étoile','Arc-en-Ciel','Stardust','Celeste','Aurora','Cristal','Diamant','Saphir','Rubis','Améthyste','Opale','Perle','Lumière','Iris','Galaxie','Magie','Féerie','Espoir','Joie','Rêve','Souhait','Souffle','Murmure','Brise','Comète','Nova','Sirius','Vega','Lyra','Pegasus','Pénélope','Daisy'],
+  pingouin: ['Pingu','Tux','Frosty','Snowball','Iceberg','Glacier','Blizzard','Polar','Arctic','Penny','Pip','Pebble','Cube','Slip','Slide','Waddle','Tuxedo','Domino','Oreo','Pancake','Captain','Admiral','Skipper','Kowalski','Rico','Private','Mumble','Lovelace','Erik','Boots','Berg','Frost'],
+  robot:    ['Mark-I','R2-D2','C-3PO','BB-8','Wall-E','Eve','HAL','Bender','Optimus','Megatron','Bumblebee','Sentinel','Cypher','Vector','Pixel','Byte','Glitch','Neon','Helix','Omega','Alpha','Beta','Gamma','Delta','Sigma','Atlas','Forge','Ion','Photon','Quantum','Nexus','Spark'],
+};
+
+function generateRandomName(type) {
+  const pool = PET_NAMES[type] || PET_NAMES.chien;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 const RARITY_COLORS = { commun:'#95A5A6', rare:'#3498DB', épique:'#9B59B6', légendaire:'#F1C40F' };
 const RARITY_CHANCE = { commun:0.55, rare:0.30, épique:0.12, légendaire:0.03 };
 
@@ -60,10 +77,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('pet')
     .setDescription('🐾 Système d\'animaux de compagnie — Adoptez, élevez, combattez !')
-    .addSubcommand(s => s.setName('adopter').setDescription('🥚 Adopter un animal (aléatoire ou choisi)')
-      .addStringOption(o => o.setName('nom').setDescription('Prénom de votre animal').setRequired(true).setMaxLength(20))
-      .addStringOption(o => o.setName('type').setDescription('Type d\'animal (laisse vide = aléatoire)')
-        .addChoices(...Object.keys(PETS).map(k => ({ name: `${PETS[k].emoji} ${k} (${PETS[k].rarity})`, value: k })))))
+    .addSubcommand(s => s.setName('adopter').setDescription('🥚 Adopter un animal (prénom auto-généré thématique)')
+      .addStringOption(o => o.setName('type').setDescription('Type d\'animal (laisse vide = aléatoire)').setRequired(false)
+        .addChoices(...Object.keys(PETS).map(k => ({ name: `${PETS[k].emoji} ${k} (${PETS[k].rarity})`, value: k }))))
+      .addStringOption(o => o.setName('nom').setDescription('Prénom personnalisé (optionnel — auto si vide)').setRequired(false).setMaxLength(20)))
     .addSubcommand(s => s.setName('voir').setDescription('👁️ Voir votre animal')
       .addUserOption(o => o.setName('membre').setDescription('Voir l\'animal d\'un autre membre')))
     .addSubcommand(s => s.setName('nourrir').setDescription('🍖 Nourrir votre animal')
@@ -93,8 +110,8 @@ module.exports = {
       const existing = db.db.prepare('SELECT * FROM pets WHERE guild_id=? AND user_id=?').get(guildId, userId);
       if (existing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà un animal ! Utilisez `/pet voir` ou `/pet abandonner`.', ephemeral: true });
 
-      const nom = interaction.options.getString('nom');
       let type = interaction.options.getString('type');
+      let customName = interaction.options.getString('nom');
 
       if (!type) {
         // Tirage aléatoire selon les chances
@@ -107,6 +124,10 @@ module.exports = {
         type = type || 'chien';
       }
 
+      // 🎲 Si pas de nom personnalisé, génère un nom thématique aléatoire
+      const nom = customName ? customName.trim() : generateRandomName(type);
+      const wasGenerated = !customName;
+
       const petData = PETS[type];
       const cost = petData.rarity === 'légendaire' ? 5000 : petData.rarity === 'épique' ? 2000 : petData.rarity === 'rare' ? 500 : 100;
       const u = db.getUser(userId, guildId);
@@ -118,7 +139,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor(RARITY_COLORS[petData.rarity])
         .setTitle(`${petData.emoji} ${nom} vous a rejoint !`)
-        .setDescription(`Vous avez adopté un **${type}** de rareté **${petData.rarity}** !`)
+        .setDescription(`Vous avez adopté un **${type}** de rareté **${petData.rarity}** !${wasGenerated ? `\n\n🎲 *Prénom thématique généré aléatoirement.*` : ''}`)
         .addFields(
           { name: '❤️ HP', value: `${petData.baseStats.hp}`, inline: true },
           { name: '⚔️ ATK', value: `${petData.baseStats.atk}`, inline: true },
