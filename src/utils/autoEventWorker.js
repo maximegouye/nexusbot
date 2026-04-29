@@ -62,8 +62,11 @@ const QUIZ_QUESTIONS = [
   { q: 'Quel est le plus grand stade de football français ?', choices: ['Parc des Princes', 'Stade Vélodrome', 'Stade de France', 'Matmut Atlantique'], answer: 2 },
 ];
 
-let lastQuizDate = -1; // Pour tracker si on a déjà posté le quiz aujourd'hui
-let lastChallengeWeek = -1; // Pour tracker la semaine du dernier défi
+let lastQuizSlot = -1;     // Slot 4h (0-5) du dernier quiz posté aujourd'hui
+let lastQuizDate  = -1;    // Date du dernier slot
+let lastChallengeWeek = -1; // Semaine du dernier défi
+let lastMiniDate  = -1;    // Date du dernier mini-event
+let lastMiniSlot  = -1;    // Slot 2h (0-11) du dernier mini-event
 
 function getWeekNumber(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -81,10 +84,22 @@ async function checkAndPostEvents(client) {
   const currentDate = now.getDate();
   const currentWeek = getWeekNumber(now);
 
-  // ============= QUIZ QUOTIDIEN (12h00) =============
-  if (hour === 12 && minutes === 0 && lastQuizDate !== currentDate) {
+  // ============= QUIZ TOUTES LES 4H (8h, 12h, 16h, 20h, 0h, 4h) =============
+  // 6 quiz par jour pour garder le serveur actif
+  const quizSlot = Math.floor(hour / 4); // 0..5
+  const quizSlotHour = quizSlot * 4;
+  if (hour === quizSlotHour && minutes === 0 && (lastQuizDate !== currentDate || lastQuizSlot !== quizSlot)) {
     lastQuizDate = currentDate;
+    lastQuizSlot = quizSlot;
     await postDailyQuiz(client);
+  }
+
+  // ============= MINI-EVENT TOUTES LES 2H (heures impaires + paires alternantes) =============
+  // 12 par jour : 1h, 3h, 5h, 7h, 9h, 11h, 13h, 15h, 17h, 19h, 21h, 23h
+  if (hour % 2 === 1 && minutes === 0 && (lastMiniDate !== currentDate || lastMiniSlot !== hour)) {
+    lastMiniDate = currentDate;
+    lastMiniSlot = hour;
+    await postMiniEvent(client);
   }
 
   // ============= DÉFI HEBDOMADAIRE (Lundi 9h00) =============
@@ -92,6 +107,60 @@ async function checkAndPostEvents(client) {
     lastChallengeWeek = currentWeek;
     await postWeeklyChallenge(client);
   }
+}
+
+// ─── Mini-events : devinettes / faits / défis rapides ──────
+const MINI_EVENTS = [
+  { type: 'fact',     emoji: '💡', title: 'Le Saviez-Vous ?', text: 'Une partie de roulette \'européenne\' offre 97.3% de RTP — meilleur que l\'américaine (94.7%) ! 🎡' },
+  { type: 'fact',     emoji: '💡', title: 'Astuce Casino', text: 'Joue ton `/daily` chaque jour — au bout d\'une semaine, le bonus monte à **base × 5** ! 🔥' },
+  { type: 'fact',     emoji: '💡', title: 'Stratégie', text: 'Sur slots, plus tu actives de paylines, plus tu as de chances de gagner. Essaie `/slots mise:50 lignes:5` ! 🎰' },
+  { type: 'fact',     emoji: '💡', title: 'Le Saviez-Vous ?', text: 'Le `/coffre-magique` a 5 niveaux : si tu vas jusqu\'au bout, tu multiplies ta mise par **×7** ! 🗝️' },
+  { type: 'fact',     emoji: '💡', title: 'Stratégie', text: 'Sur la `/roue-fortune`, le segment JACKPOT donne **×50** ta mise. Mise petit pour tester ! 🎡' },
+  { type: 'challenge', emoji: '🎯', title: 'Mini-défi rapide', text: 'Le premier qui gagne **+1 000€** dans les 30 prochaines minutes via `/slots` reçoit **+500€** bonus ! ⚡' },
+  { type: 'challenge', emoji: '🎯', title: 'Mini-défi rapide', text: 'Tente ta chance sur la `/roue-fortune` — qui sera le premier à toucher le JACKPOT cette heure ? 🌟' },
+  { type: 'reminder',  emoji: '⏰', title: 'Rappel quotidien', text: 'Tu n\'as pas encore fait ton `/daily` aujourd\'hui ? File chercher tes coins gratuits ! 💰' },
+  { type: 'reminder',  emoji: '⏰', title: 'Bourse active', text: 'Les cryptos bougent en temps réel ! Tape `/bourse` ou `/crypto` pour voir les prix. 📈' },
+  { type: 'reminder',  emoji: '⏰', title: 'Travail = Argent', text: 'Pas de coins ? Tape `/work` toutes les heures pour gagner sans risque. 💼' },
+  { type: 'fact',     emoji: '💡', title: 'Top Joueurs', text: 'Tape `/leaderboard` pour voir les plus riches du serveur. Vise le top 10 ! 🏆' },
+  { type: 'fact',     emoji: '💡', title: 'Achievements', text: 'Tape `/achievements` pour voir les défis à débloquer et leurs récompenses. 🎖️' },
+];
+
+async function postMiniEvent(client) {
+  const event = MINI_EVENTS[Math.floor(Math.random() * MINI_EVENTS.length)];
+  const guilds = getActiveGuilds();
+  for (const cfg of guilds) {
+    try {
+      const guild = client.guilds.cache.get(cfg.guild_id);
+      if (!guild) continue;
+      const channel = guild.channels.cache.get(cfg.general_channel);
+      if (!channel || !channel.isTextBased()) continue;
+
+      const colors = { fact: 0x3498db, challenge: 0xE67E22, reminder: 0x9B59B6 };
+      const embed = new EmbedBuilder()
+        .setColor(colors[event.type] || 0x7B2FBE)
+        .setTitle(`${event.emoji} ${event.title}`)
+        .setDescription(event.text)
+        .setFooter({ text: 'NexusBot · Mini-event automatique' });
+
+      await channel.send({ embeds: [embed] }).catch(() => {});
+    } catch (e) {
+      console.error('[AutoEvent] mini-event:', e.message);
+    }
+  }
+}
+
+function getActiveGuilds() {
+  try {
+    let guilds = db.db.prepare(
+      'SELECT guild_id, general_channel FROM guild_config WHERE general_channel IS NOT NULL AND general_channel != \'\''
+    ).all();
+    if (guilds.length === 0) {
+      guilds = db.db.prepare(
+        'SELECT guild_id, welcome_channel as general_channel FROM guild_config WHERE welcome_channel IS NOT NULL AND welcome_channel != \'\''
+      ).all();
+    }
+    return guilds;
+  } catch { return []; }
 }
 
 async function postDailyQuiz(client) {

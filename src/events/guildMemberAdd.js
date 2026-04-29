@@ -218,7 +218,7 @@ module.exports = {
     if (!channel) return;
 
     const memberCount = guild.memberCount;
-    const defaultMsg = `🎉 Bienvenue **{username}** sur **{server}** ! Tu es le **{count}ᵉ** membre !\n\n📋 Prends le temps de lire les règles et n'hésite pas à choisir tes rôles.`;
+    const defaultMsg = `🎉 **Bienvenue {user} sur {server} !** Tu es le **{count}ᵉ** membre.\n\n💰 **Cadeau de bienvenue : 5 000€ déjà crédités** sur ton compte !\n\n🎯 **Pour commencer en 30 secondes :**\n• \`/daily\` → 250€ + bonus de fidélité (×2 dès J3, ×5 à J7, jusqu'à ×2000 à J365 !)\n• \`/work\` → travailler chaque heure pour gagner sans risque\n• \`/slots mise:50 lignes:5\` → tester la machine à sous\n• \`/roue-fortune mise:100\` → tenter la roue jackpot\n• \`/coffre-magique mise:100\` → 5 niveaux progressifs (×7 max)\n• \`/leaderboard\` → voir le top des plus riches\n\n🏆 **Système de rang automatique :** Bronze (5k€) · Silver (50k€) · Gold (500k€) · Platinum (5M€) · Diamond (50M€). Plus tu gagnes, plus ton rôle évolue automatiquement !`;
 
     // Texte : system_messages.content > cfg.welcome_msg > défaut
     const rawText = (sysMsg && sysMsg.content) || cfg.welcome_msg || defaultMsg;

@@ -8,6 +8,7 @@ const db = require('../../database/db');
 const { makeGameRow, changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 const wheelImage = require('../../utils/wheelImage');
 const balancer = require('../../utils/economyBalancer');
+const { announceBigWin } = require('../../utils/bigWinAnnouncer');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -649,6 +650,11 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
       .setTimestamp()],
     components: [row, quickRow],
   });
+
+  // Big Win Announcer : annonce les gros gains dans le canal général
+  if (totalGain >= 10000 && msg.client) {
+    announceBigWin(msg.client, guildId, userId, totalGain, 'roulette', 'win').catch(() => {});
+  }
 }
 
 // ─── Exports ───────────────────────────────────────────────────

@@ -9,6 +9,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const db = require('../../database/db');
 const wheelImage = require('../../utils/wheelImage');
 const balancer = require('../../utils/economyBalancer');
+const { announceBigWin } = require('../../utils/bigWinAnnouncer');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -386,6 +387,12 @@ async function playRoueFortune(source, userId, guildId, mise) {
 
   const btns = new ActionRowBuilder().addComponents(...btnArr);
   await msg.edit({ embeds: [finalEmbed], components: [btns] });
+
+  // Big Win Announcer : annonce des gains importants
+  if (gain >= 10000 && msg.client) {
+    const winType = segment.type === 'jackpot' ? 'jackpot' : (gain >= 50000 ? 'mega' : 'win');
+    announceBigWin(msg.client, guildId, userId, gain, 'roue-fortune', winType).catch(() => {});
+  }
 }
 
 // ─── handleComponent ──────────────────────────────────────────

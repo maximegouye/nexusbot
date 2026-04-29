@@ -12,6 +12,7 @@ const {
 const db = require('../../database/db');
 const { changeMiseModal, parseMise } = require('../../utils/casinoUtils');
 const balancer = require('../../utils/economyBalancer');
+const { announceBigWin } = require('../../utils/bigWinAnnouncer');
 
 // ─── Maps de session en mémoire ──────────────────────────
 const sessionStats = new Map(); // userId → {gains, losses, spins, biggestWin, totalWagered}
@@ -1000,6 +1001,15 @@ async function playSlots(source, userId, guildId, mise, activeLines = 1) {
   }
 
   await msg.edit({ embeds: [finalEmbed], components: rows });
+
+  // ── Big Win Announcer : annonce les gros gains dans le canal général ──
+  if (totalGain >= 10000) {
+    const client = msg.client || (source?.client);
+    if (client) {
+      const winType = isJackpotWon ? 'jackpot' : (totalGain >= 50000 ? 'mega' : 'win');
+      announceBigWin(client, guildId, userId, totalGain, 'slots', winType).catch(() => {});
+    }
+  }
 }
 
 // ─── Auto-Spin ──────────────────────────────────────────
