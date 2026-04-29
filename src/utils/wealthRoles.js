@@ -37,11 +37,12 @@ async function ensureRolesExist(guild) {
       const existing = guild.roles.cache.get(id);
       if (existing) continue;
     }
-    // Rôle absent → on le crée
+    // Rôle absent → on le crée (utilise "colors" obj — non déprécié en v14.16+)
     try {
       const role = await guild.roles.create({
         name: `💎 ${tier.name}`,
-        color: tier.color,
+        // discord.js v14 accepte les 2 formats. Utilise "colors" pour éviter le warning.
+        colors: { primaryColor: tier.color },
         hoist: tier.hoist,
         mentionable: false,
         reason: 'Auto-création rôle richesse NexusBot',
