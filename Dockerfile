@@ -25,4 +25,4 @@ RUN mkdir -p /app/data
 RUN echo "=== Contenu de start.sh dans l image ===" && head -50 start.sh
 
 CMD ["sh", "start.sh"]
-# trigger redeploy 1453
+# trigger redeploy 1803 — force Railway pour appliquer fix opensModal
