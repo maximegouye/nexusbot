@@ -195,13 +195,28 @@ module.exports = {
       .setName('admin-liste')
       .setDescription('📋 [ADMIN] Liste complète des partenaires avec leurs IDs')),
 
+  // ⚠️ Indique au routeur global de ne PAS auto-deferReply pour ces sous-commandes
+  // (Discord interdit showModal() après deferReply)
+  opensModal: (interaction) => {
+    try {
+      const sub = interaction.options.getSubcommand(false);
+      return ['demander', 'pub', 'config-notre-pub', 'admin-ajouter'].includes(sub);
+    } catch { return false; }
+  },
+
   // ============================================================
   async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: false });
-    }
     const sub = interaction.options.getSubcommand();
     const g   = getGuild(interaction.guildId);
+
+    // ⚠️ NE PAS deferReply pour les sous-commandes qui ouvrent un modal
+    // (Discord interdit showModal() après deferReply)
+    const MODAL_SUBS = ['demander', 'pub', 'config-notre-pub', 'admin-ajouter'];
+    const opensModal = MODAL_SUBS.includes(sub);
+
+    if (!opensModal && !interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+    }
 
     const ADMIN_SUBS = [
       'config-salon-demandes','config-salon-partenaires','config-salon-pub',
@@ -209,7 +224,10 @@ module.exports = {
       'admin-demandes','admin-valider','admin-refuser','admin-ajouter','admin-retirer','admin-liste',
     ];
     if (ADMIN_SUBS.includes(sub) && !isAdmin(interaction.member)) {
-      return await interaction.editReply({ content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true });
+      const reply = { content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true };
+      return interaction.deferred || interaction.replied
+        ? interaction.editReply(reply).catch(() => {})
+        : interaction.reply(reply).catch(() => {});
     }
 
     // ── /partenariat liste ────────────────────────────────────
@@ -439,14 +457,13 @@ module.exports = {
       if (!pending.length) {
         return await interaction.editReply({ embeds: [new EmbedBuilder().setColor(C_GREEN).setTitle('📨 Demandes').setDescription('✅ Aucune demande en attente !').setTimestamp()], ephemeral: true });
       }
-      if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: true });
-      }
+      // (deferReply déjà fait en haut de execute())
+      await interaction.editReply({ content: `📨 ${pending.length} demande(s) en attente :`, ephemeral: true }).catch(() => {});
       for (const req of pending.slice(0, 5)) {
-        await interaction.followUp({ embeds: [buildRequestEmbed(req)], components: [buildReviewButtons(req.id)], ephemeral: true });
+        await interaction.followUp({ embeds: [buildRequestEmbed(req)], components: [buildReviewButtons(req.id)], ephemeral: true }).catch(() => {});
       }
       if (pending.length > 5) {
-        await interaction.followUp({ content: `📌 *${pending.length - 5} demande(s) supplémentaire(s) non affichée(s).*`, ephemeral: true });
+        await interaction.followUp({ content: `📌 *${pending.length - 5} demande(s) supplémentaire(s) non affichée(s).*`, ephemeral: true }).catch(() => {});
       }
       return;
     }
@@ -517,10 +534,13 @@ module.exports = {
   async handleComponent(interaction) {
     const id = interaction.customId;
 
-    // Bouton valider/refuser
+    // Bouton valider/refuser → defer puis traiter
     if (interaction.isButton()) {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       if (!isAdmin(interaction.member)) {
-        return await interaction.editReply({ content: '🔒 Admins uniquement.', ephemeral: true });
+        return await interaction.editReply({ content: '🔒 Admins uniquement.', ephemeral: true }).catch(() => {});
       }
       if (id.startsWith('part_valider_')) {
         return validerDemande(interaction, id.replace('part_valider_', ''));
@@ -530,8 +550,11 @@ module.exports = {
       }
     }
 
-    // Modals
+    // Modals → defer puis traiter
     if (interaction.isModalSubmit()) {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       if (id === 'part_modal_demande')   return submitDemande(interaction);
       if (id === 'part_modal_ajouter')   return submitAjouter(interaction);
       if (id === 'part_modal_pub')       return submitPub(interaction);

@@ -47,9 +47,17 @@ module.exports = {
     .addSubcommand(s => s.setName('fermer').setDescription('🔒 Ouvrir/fermer un formulaire (Admin)')
       .addStringOption(o => o.setName('formulaire').setDescription('Nom du formulaire').setRequired(true))),
 
+  // Indique au routeur global de NE PAS auto-deferReply pour 'postuler' (ouvre un modal)
+  opensModal: (interaction) => {
+    try { return interaction.options.getSubcommand(false) === 'postuler'; } catch { return false; }
+  },
+
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: false }).catch(() => {});
     const sub = interaction.options.getSubcommand();
+    // 'postuler' ouvre un modal → pas de deferReply
+    if (sub !== 'postuler' && !interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const isAdmin = interaction.member.permissions.has(0x20n);

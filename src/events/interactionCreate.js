@@ -90,16 +90,26 @@ module.exports = {
 
     // -- Slash Commands
     if (interaction.isChatInputCommand()) {
-      // ── Acquittement immédiat (< 3s garantis) ─────────────
-      // Appelé ICI dans le handler pour garantir qu'aucune commande ne timeout,
-      // même si execute() crashe avant son propre deferReply.
-      if (!interaction.deferred && !interaction.replied) {
-        try { await interaction.deferReply({ ephemeral: false }); } catch (_) {}
-      }
-
       const command = client.commands.get(interaction.commandName);
       if (!command) {
-        return interaction.editReply({ content: '❌ Commande inconnue.' }).catch(() => {});
+        return interaction.reply({ content: '❌ Commande inconnue.', ephemeral: true }).catch(() => {});
+      }
+
+      // ── Auto-defer SAUF si la commande ouvre un modal ────────
+      // (showModal() interdit après deferReply)
+      // Les commandes qui ouvrent un modal doivent exposer `opensModal: true`
+      // OU `opensModal: (interaction) => bool` pour les cas par sous-commande.
+      let willOpenModal = false;
+      if (command.opensModal) {
+        try {
+          willOpenModal = typeof command.opensModal === 'function'
+            ? !!command.opensModal(interaction)
+            : !!command.opensModal;
+        } catch (_) { willOpenModal = false; }
+      }
+
+      if (!willOpenModal && !interaction.deferred && !interaction.replied) {
+        try { await interaction.deferReply({ ephemeral: false }); } catch (_) {}
       }
 
       try {
