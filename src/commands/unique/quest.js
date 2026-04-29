@@ -29,7 +29,7 @@ module.exports = {
 
     // ── VOIR ──
     if (sub === 'voir') {
-      const quests = db.db.prepare('SELECT * FROM quests WHERE guild_id = ? AND status = "active" ORDER BY created_at DESC').all(interaction.guildId);
+      const quests = db.db.prepare("SELECT * FROM quests WHERE guild_id = ? AND status = 'active' ORDER BY created_at DESC").all(interaction.guildId);
 
       if (!quests.length) {
         return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
@@ -66,7 +66,7 @@ module.exports = {
     if (sub === 'contribuer') {
       const questId = interaction.options.getInteger('quest_id');
       const amount  = interaction.options.getInteger('montant');
-      const quest   = db.db.prepare('SELECT * FROM quests WHERE id = ? AND guild_id = ? AND status = "active"').get(questId, interaction.guildId);
+      const quest   = db.db.prepare("SELECT * FROM quests WHERE id = ? AND guild_id = ? AND status = 'active'").get(questId, interaction.guildId);
 
       if (!quest) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Quête **#${questId}** introuvable.`, ephemeral: true });
 

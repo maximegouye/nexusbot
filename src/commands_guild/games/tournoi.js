@@ -69,7 +69,7 @@ module.exports = {
       const t=eng.getActiveTournament(guildId);
       if(!t||t.host_id!==userId) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({content:'❌ Pas de tournoi / pas l\'hôte.',ephemeral:true});
       if(t.entry_fee>0){const pl=eng.getAllPlayers(t.id);for(const p of pl)db.addCoins(p.user_id,guildId,t.entry_fee);}
-      db.db.prepare('UPDATE tournaments SET status="cancelled" WHERE id=?').run(t.id);
+      db.db.prepare("UPDATE tournaments SET status='cancelled' WHERE id=?").run(t.id);
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({embeds:[new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Tournoi annulé').setDescription(`Tournoi **${t.name}** annulé.${t.entry_fee>0?` Joueurs remboursés (${t.entry_fee} ${coin}).`:''}`)]}); 
     }
     } catch (err) {

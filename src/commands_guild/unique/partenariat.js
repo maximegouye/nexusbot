@@ -277,7 +277,7 @@ module.exports = {
               .setLabel('📛 Nom de votre serveur Discord')
               .setStyle(TextInputStyle.Short)
               .setRequired(true)
-              .setMaxLength(100)
+              .setMaxLength(200)
               .setPlaceholder('Ex: Gaming Paradise'),
           ),
           new ActionRowBuilder().addComponents(
@@ -286,6 +286,7 @@ module.exports = {
               .setLabel('🔗 Lien d\'invitation (discord.gg/...)')
               .setStyle(TextInputStyle.Short)
               .setRequired(true)
+              .setMaxLength(500)
               .setPlaceholder('https://discord.gg/monserveur'),
           ),
           new ActionRowBuilder().addComponents(
@@ -294,17 +295,17 @@ module.exports = {
               .setLabel('📢 Publicité à poster sur notre serveur')
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(true)
-              .setMaxLength(500)
-              .setPlaceholder('Rédigez ici la pub qui sera postée sur notre serveur si votre demande est acceptée...'),
+              .setMaxLength(4000)
+              .setPlaceholder('Rédigez votre pub complète (jusqu\'à 4000 caractères)...'),
           ),
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId('description')
-              .setLabel('📝 Description courte de votre serveur')
+              .setLabel('📝 Description de votre serveur')
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(true)
-              .setMaxLength(200)
-              .setPlaceholder('Thème, activités, communauté...'),
+              .setMaxLength(4000)
+              .setPlaceholder('Thème, activités, communauté... (jusqu\'à 4000 caractères)'),
           ),
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
@@ -312,6 +313,7 @@ module.exports = {
               .setLabel('👥 Nombre de membres approximatif')
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
+              .setMaxLength(50)
               .setPlaceholder('Ex: 500'),
           ),
         );
@@ -384,8 +386,8 @@ module.exports = {
               .setLabel('Votre message (événements, nouveautés...)')
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(true)
-              .setMaxLength(1000)
-              .setPlaceholder('Parlez de vos événements, nouveautés, offres spéciales...'),
+              .setMaxLength(4000)
+              .setPlaceholder('Parlez de vos événements, nouveautés, offres spéciales (jusqu\'à 4000 caractères)...'),
           ),
         );
       return await interaction.showModal(modal);
@@ -424,9 +426,9 @@ module.exports = {
               .setLabel('Notre pub à envoyer aux nouveaux partenaires')
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(true)
-              .setMaxLength(1000)
-              .setValue(g.notrePub || '')
-              .setPlaceholder('Rédigez ici la pub que les partenaires acceptés recevront par DM pour la poster sur leur serveur...'),
+              .setMaxLength(4000)
+              .setValue((g.notrePub || '').slice(0, 4000))
+              .setPlaceholder('Rédigez votre pub (jusqu\'à 4000 caractères)...'),
           ),
         );
       return await interaction.showModal(modal);
@@ -481,19 +483,19 @@ module.exports = {
         .setTitle('➕ Ajouter un partenaire direct')
         .addComponents(
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('nom').setLabel('Nom du serveur').setStyle(TextInputStyle.Short).setRequired(true),
+            new TextInputBuilder().setCustomId('nom').setLabel('Nom du serveur').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200),
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('invite').setLabel('Lien d\'invitation').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('discord.gg/...'),
+            new TextInputBuilder().setCustomId('invite').setLabel('Lien d\'invitation').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(500).setPlaceholder('discord.gg/...'),
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('pub').setLabel('Pub à poster sur notre serveur').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(500),
+            new TextInputBuilder().setCustomId('pub').setLabel('Pub à poster sur notre serveur').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(4000),
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(200),
+            new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(4000),
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('representant_id').setLabel('ID Discord du représentant (optionnel)').setStyle(TextInputStyle.Short).setRequired(false),
+            new TextInputBuilder().setCustomId('representant_id').setLabel('ID Discord du représentant (optionnel)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(50),
           ),
         );
       return await interaction.showModal(modal);

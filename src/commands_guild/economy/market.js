@@ -73,12 +73,12 @@ module.exports = {
       if (!invItem) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as pas ${qty}x de l'article #${itemId} dans ton inventaire.`, ephemeral: true });
 
       // Limite: max 5 annonces actives
-      const count = db.db.prepare('SELECT COUNT(*) as c FROM market_listings WHERE seller_id = ? AND guild_id = ? AND status = "active"')
+      const count = db.db.prepare("SELECT COUNT(*) as c FROM market_listings WHERE seller_id = ? AND guild_id = ? AND status = 'active'")
         .get(interaction.user.id, interaction.guildId).c;
       if (count >= 5) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu as atteint la limite de 5 annonces actives.', ephemeral: true });
 
       db.removeItem(interaction.user.id, interaction.guildId, itemId, qty);
-      db.db.prepare('INSERT INTO market_listings (guild_id, seller_id, item_id, quantity, price, status, created_at) VALUES (?, ?, ?, ?, ?, "active", ?)')
+      db.db.prepare("INSERT INTO market_listings (guild_id, seller_id, item_id, quantity, price, status, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?)")
         .run(interaction.guildId, interaction.user.id, itemId, qty, price, Math.floor(Date.now() / 1000));
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
@@ -97,7 +97,7 @@ module.exports = {
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id
-        WHERE ml.id = ? AND ml.guild_id = ? AND ml.status = "active"
+        WHERE ml.id = ? AND ml.guild_id = ? AND ml.status = 'active'
       `).get(listingId, interaction.guildId);
 
       if (!listing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Annonce **#${listingId}** introuvable.`, ephemeral: true });
@@ -114,7 +114,7 @@ module.exports = {
       db.removeCoins(interaction.user.id, interaction.guildId, listing.price);
       db.addCoins(listing.seller_id, interaction.guildId, sellerGain);
       db.addItem(interaction.user.id, interaction.guildId, listing.item_id, listing.quantity, null);
-      db.db.prepare('UPDATE market_listings SET status = "sold", buyer_id = ? WHERE id = ?').run(interaction.user.id, listing.id);
+      db.db.prepare("UPDATE market_listings SET status = 'sold', buyer_id = ? WHERE id = ?").run(interaction.user.id, listing.id);
 
       // DM au vendeur
       const seller = await interaction.client.users.fetch(listing.seller_id).catch(() => null);
@@ -138,13 +138,13 @@ module.exports = {
       const listing   = db.db.prepare(`
         SELECT ml.*, s.name as item_name, s.emoji as item_emoji
         FROM market_listings ml JOIN shop s ON ml.item_id = s.id
-        WHERE ml.id = ? AND ml.guild_id = ? AND ml.seller_id = ? AND ml.status = "active"
+        WHERE ml.id = ? AND ml.guild_id = ? AND ml.seller_id = ? AND ml.status = 'active'
       `).get(listingId, interaction.guildId, interaction.user.id);
 
       if (!listing) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Annonce **#${listingId}** introuvable ou ce n'est pas la tienne.`, ephemeral: true });
 
       db.addItem(interaction.user.id, interaction.guildId, listing.item_id, listing.quantity, null);
-      db.db.prepare('UPDATE market_listings SET status = "cancelled" WHERE id = ?').run(listingId);
+      db.db.prepare("UPDATE market_listings SET status = 'cancelled' WHERE id = ?").run(listingId);
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()

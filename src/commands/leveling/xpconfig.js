@@ -43,8 +43,8 @@ module.exports = {
     const cfg = db.getConfig(interaction.guildId);
 
     if (sub === 'statut') {
-      const noXpCh   = db.db.prepare('SELECT target_id FROM no_xp WHERE guild_id=? AND type="channel"').all(interaction.guildId);
-      const noXpR    = db.db.prepare('SELECT target_id FROM no_xp WHERE guild_id=? AND type="role"').all(interaction.guildId);
+      const noXpCh   = db.db.prepare("SELECT target_id FROM no_xp WHERE guild_id=? AND type='channel'").all(interaction.guildId);
+      const noXpR    = db.db.prepare("SELECT target_id FROM no_xp WHERE guild_id=? AND type='role'").all(interaction.guildId);
       const mults    = db.db.prepare('SELECT role_id, multiplier FROM xp_multipliers WHERE guild_id=?').all(interaction.guildId);
       return await (interaction.deferred||interaction.replied ? interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')

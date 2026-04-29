@@ -43,7 +43,7 @@ function startTournament(tId) {
     db.db.prepare('INSERT INTO tournament_matches (tournament_id,round,player1,player2) VALUES (?,1,?,?)').run(tId, p1.user_id, p2?p2.user_id:'BYE');
     if (!p2) db.db.prepare('UPDATE tournament_matches SET winner=?,played=1 WHERE tournament_id=? AND round=1 AND player1=?').run(p1.user_id, tId, p1.user_id);
   }
-  db.db.prepare('UPDATE tournaments SET status="running",started_at=strftime("%s","now") WHERE id=?').run(tId);
+  db.db.prepare("UPDATE tournaments SET status='running',started_at=strftime('%s','now') WHERE id=?").run(tId);
   return {ok:true, matches:getPendingMatches(tId)};
 }
 function resolveMatch(matchId) {
