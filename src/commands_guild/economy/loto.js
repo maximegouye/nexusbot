@@ -23,7 +23,8 @@ module.exports = {
     .addSubcommand(s => s.setName('jackpot').setDescription('💰 Voir le jackpot actuel et ton nombre de tickets'))
     .addSubcommand(s => s.setName('classement').setDescription('📋 Qui a le plus de chances de gagner ?'))
     .addSubcommand(s => s.setName('tirage').setDescription('🎲 Effectuer le tirage au sort (Admin)')
-      .addBooleanOption(o => o.setName('forcer').setDescription('Forcer le tirage maintenant').setRequired(true))),
+      .addBooleanOption(o => o.setName('forcer').setDescription('Forcer le tirage maintenant').setRequired(true)))
+    .addSubcommand(s => s.setName('annuler').setDescription('❌ [ADMIN] Annuler le loto en cours et rembourser tous les participants')),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});
@@ -105,6 +106,33 @@ module.exports = {
           .setTitle('📊 Classement Loto de la semaine')
           .setDescription(lines)
           .setFooter({ text: `Jackpot: ${lotoCfg.jackpot} ${coin}` })
+          .setTimestamp()
+      ]});
+    }
+
+    if (sub === 'annuler') {
+      if (!interaction.member.permissions.has('ManageGuild')) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Réservé aux admins.', ephemeral: true });
+
+      const participants = db.db.prepare('SELECT * FROM loto WHERE guild_id=? AND week=? AND ticket_count > 0').all(guildId, week);
+      if (!participants.length) {
+        return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Aucun loto en cours cette semaine.', ephemeral: true });
+      }
+
+      // Rembourser tous les participants
+      let totalRefund = 0;
+      for (const p of participants) {
+        const refund = p.ticket_count * (lotoCfg.ticket_price || 100);
+        db.addCoins(p.user_id, guildId, refund);
+        totalRefund += refund;
+      }
+      // Reset le jackpot et supprimer les tickets
+      db.db.prepare("UPDATE loto_config SET jackpot=10000 WHERE guild_id=?").run(guildId);
+      db.db.prepare('DELETE FROM loto WHERE guild_id=? AND week=?').run(guildId, week);
+
+      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
+        new EmbedBuilder().setColor('#E74C3C')
+          .setTitle('❌ Loto annulé')
+          .setDescription(`Le loto de cette semaine a été **annulé**.\n\n✅ **${participants.length} participant(s) remboursé(s)** pour un total de **${totalRefund.toLocaleString('fr-FR')} ${coin}**.\nJackpot remis à **10 000 ${coin}**.`)
           .setTimestamp()
       ]});
     }
