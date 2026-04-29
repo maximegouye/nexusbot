@@ -1,0 +1,229 @@
+=== HEURE: 2026-04-29T10:55:23.781Z ===
+
+=== 5 DERNIERS DEPLOIEMENTS ===
+SUCCESS        | 2026-04-29T10:53:28.252Z | id=c5bd6763
+REMOVED        | 2026-04-29T10:44:04.701Z | id=c23370dc
+REMOVED        | 2026-04-29T10:44:02.552Z | id=13ebfca3
+REMOVED        | 2026-04-29T10:43:59.607Z | id=d84d226b
+REMOVED        | 2026-04-29T10:43:34.641Z | id=8caca9b3
+
+=== DERNIER DEPLOIEMENT (SUCCESS) ===
+
+--- BUILD LOGS (51) ---
+10:53:32 [debug] found 'nixpacks.toml' at 'nixpacks.toml'
+10:53:32 [debug] found 'railway.toml' at 'railway.toml'
+10:53:32 [info] analyzing snapshot
+10:53:33 [info] unpacking archive
+10:53:33 [info] uploading snapshot
+10:53:35 [info] [internal] load build definition from Dockerfile
+10:53:35 [info] [internal] load build definition from Dockerfile
+10:53:35 [info] [internal] load build definition from Dockerfile
+10:53:35 [info] [internal] load build definition from Dockerfile
+10:53:35 [info] [internal] load metadata for docker.io/library/node:20-slim
+10:53:36 [info] [internal] load metadata for docker.io/library/node:20-slim
+10:53:36 [info] [internal] load .dockerignore
+10:53:36 [info] [internal] load .dockerignore
+10:53:36 [info] [internal] load .dockerignore
+10:53:36 [info] [internal] load .dockerignore
+10:53:36 [info] [9/9] RUN echo "=== Contenu de start.sh dans l image ===" && head -50 start.sh
+10:53:36 [info] [8/9] RUN mkdir -p /app/data
+10:53:36 [info] [7/9] COPY . .
+10:53:36 [info] [6/9] RUN npm install --omit=optional
+10:53:36 [info] [5/9] COPY package*.json ./
+10:53:36 [info] [internal] load build context
+10:53:36 [info] [4/9] WORKDIR /app
+10:53:36 [info] [3/9] RUN apt-get update &&     apt-get install -y python3 make g++ &&     rm -rf /var/lib/apt/lists/*
+10:53:36 [info] [2/9] RUN echo "Cache bust: 20260428_2110"
+10:53:36 [info] [1/9] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+10:53:36 [info] [1/9] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+10:53:36 [info] [internal] load build context
+10:53:36 [info] [1/9] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+10:53:36 [info] [1/9] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+10:53:36 [info] [1/9] FROM docker.io/library/node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+10:53:36 [info] [internal] load build context
+10:53:37 [info] [internal] load build context
+10:53:38 [info] [2/9] RUN echo "Cache bust: 20260428_2110"
+10:53:38 [info] [3/9] RUN apt-get update &&     apt-get install -y python3 make g++ &&     rm -rf /var/lib/apt/lists/*
+10:53:38 [info] [4/9] WORKDIR /app
+10:53:38 [info] [5/9] COPY package*.json ./
+10:53:38 [info] [6/9] RUN npm install --omit=optional
+10:53:38 [info] [7/9] COPY . .
+10:53:38 [info] [7/9] COPY . .
+10:53:39 [info] [8/9] RUN mkdir -p /app/data
+10:53:39 [info] [8/9] RUN mkdir -p /app/data
+10:53:39 [info] [9/9] RUN echo "=== Contenu de start.sh dans l image ===" && head -50 start.sh
+10:53:39 [info] === Contenu de start.sh dans l image ===
+
+10:53:39 [info] #!/bin/sh
+# =========================================================
+# NexusBot — Script de démarrage (Railway / Discloud)
+# =========================================================
+
+# Déterminer le répertoire de travail (Discloud = /app, Railway = /app)
+APP_DIR="${APP_DIR:-$(dirname $(readlink -f $0))}"
+DATA_DIR="$APP_DIR/data"
+SEED_DIR="$APP_DIR/data_seed"
+
+mkdir -p "$DATA_DIR"
+
+# Premier démarrage : copier la base de données initiale
+if [ ! -f "$DATA_DIR/nexusbot.db" ]; then
+  if [ -f "$SEED_DIR/nexusbot.db" ]; then
+    echo "[START] Premier démarrage — copie de la base de données..."
+    cp "$SEED_DIR/nexusbot.db" "$DATA_DIR/nexusbot.db"
+    echo "[START] Base de données initialisée."
+  else
+    echo "[START] Nouvelle base de données sera créée au démarrage."
+  fi
+else
+  echo "[START] Base de données existante trouvée."
+fi
+
+# Aller dans le dossier du bot et démarrer
+cd "$APP_DIR"
+
+# Enregistrer les slash commands sur Discord (toujours, pour prendre en compte les nouvelles)
+echo "[START] Enregistrement des slash commands..."
+node deploy-commands.js
+DEPLOY_RESULT=$?
+echo "[START] deploy-commands.js exit code: $DEPLOY_RESULT"
+if [ $DEPLOY_RESULT -ne 0 ]; then
+  echo "[START] ⚠️  deploy-commands.js a échoué — le bot démarre quand même."
+fi
+
+echo "[START] >>> Lancement de node src/index.js a $(date -u +%H:%M:%S) UTC <<<"
+ls -la src/index.js
+echo "[START] Node version: $(node --version)"
+echo "[START] Args: $0 $@"
+
+# Pas d'exec — utilise un fork pour garder le shell vivant et capturer les exits
+node src/index.js
+NODE_EXIT=$?
+echo "[START] !!! node src/index.js a exit avec code $NODE_EXIT a $(date -u +%H:%M:%S) UTC !!!"
+sleep 5
+exit $NODE_EXIT
+
+10:53:40 [info] [9/9] RUN echo "=== Contenu de start.sh dans l image ===" && head -50 start.sh
+10:53:40 [info] exporting to docker image format
+10:53:42 [info] exporting to docker image format
+10:53:42 [info] containerimage.digest: sha256:b9a4213bb43d7bdc5dbe0e4c42c351e7e28fa8f0d8e9617608ed547398b86582
+10:53:42 [info] containerimage.descriptor: eyJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJkaWdlc3QiOiJzaGEyNTY6YjlhNDIxM2JiNDNkN2JkYzVkYmUwZTRjNDJjMzUxZTdlMjhmYThmMGQ4ZTk2MTc2MDhlZDU0NzM5OGI4NjU4MiIsInNpemUiOjI3NjIsImFubm90YXRpb25zIjp7Im9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wNC0yOVQxMDo1Mzo0MVoifSwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In19
+10:53:42 [info] containerimage.config.digest: sha256:18d41d3fb25646654211f07b6f4a74772b8189b8451dd71fb1f81db690fbd918
+10:53:52 [info] image push
+
+--- RUNTIME LOGS (115) ---
+10:54:09 [info] Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/4e78898d-d491-4cab-a947-667fba1fa5d9/vol_o1kutv4i664xxpsx
+10:54:09 [info] Starting Container
+10:54:10 [info] [START] Enregistrement des slash commands...
+10:54:10 [info] 📦 Chargement des commandes...
+10:54:10 [info] [START] Base de données existante trouvée.
+10:54:10 [info] [DB] Migration crypto_portfolio → crypto_wallet : 0 ligne(s) copiée(s), 1 ignorée(s) (obsolète) · total ancien = 5.
+10:54:10 [info] 
+10:54:10 [info] 🌐 Global: 81 commandes
+10:54:10 [info] [wheelImage] libs canvas/gif indisponibles → fallback ASCII. (Cannot find module '@napi-rs/canvas')
+10:54:10 [info] [economyBalancer] init — disabled=false, ownerSet=true (id=1976***6210)
+10:54:10 [info] 🏠 Guild:  73 commandes
+10:54:11 [info] ✅ 73 guild commands enregistrées → serveur 1492886135159128227
+10:54:11 [info] ✅ 81 global commands enregistrées (propagation ~1h)
+10:54:11 [info] 
+10:54:11 [info] ✅ Registration complète — démarrage du bot...
+10:54:11 [info] [START] deploy-commands.js exit code: 0
+10:54:11 [info] [START] >>> Lancement de node src/index.js a 10:54:11 UTC <<<
+10:54:11 [info] -rw-rw-r-- 1 root root 8531 Apr 29 12:53 src/index.js
+10:54:11 [info] [START] Node version: v20.20.2
+10:54:11 [info] [START] Args: start.sh 
+10:54:11 [info] 🚀 [2026-04-29T10:54:11.683Z] src/index.js démarré (PID 20)
+10:54:11 [info] ✓ dotenv chargé
+10:54:11 [info] ✓ discord.js chargé (version: 14.26.3)
+10:54:12 [info] 🔐 [2026-04-29T10:54:12.229Z] Tentative 1 de connexion à Discord...
+10:54:12 [info] ✅ Événement : guildMemberUpdate
+10:54:12 [info] ✅ Événement : interactionCreate
+10:54:12 [info] ✅ Événement : messageCreate
+10:54:12 [info] ✅ Événement : messageDelete
+10:54:12 [info] ✅ Événement : messageReactionAdd
+10:54:12 [info] ✅ Événement : messageReactionRemove
+10:54:12 [info] ✅ Événement : messageUpdate
+10:54:12 [info] ✅ Événement : clientReady
+10:54:12 [info] [DB] Migration crypto_portfolio → crypto_wallet : 0 ligne(s) copiée(s), 1 ignorée(s) (obsolète) · total ancien = 5.
+10:54:12 [info] ✅ Événement : voiceStateUpdate
+10:54:12 [info] [wheelImage] libs canvas/gif indisponibles → fallback ASCII. (Cannot find module '@napi-rs/canvas')
+10:54:12 [info] [PrefixHandler] 31 commandes préfixe chargées (préfixe: &)
+10:54:12 [info] [economyBalancer] init — disabled=false, ownerSet=true (id=1976***6210)
+10:54:12 [info] ✅ Prefix handler (&) actif
+10:54:12 [info] ✅ 184 commande(s) slash chargée(s) (global:81 guild:73)
+10:54:12 [info] ✅ Événement : messageCreate
+10:54:12 [info] ✅ Événement : channelDelete
+10:54:12 [info] ✅ Événement : guildMemberAdd
+10:54:12 [info] ✅ Événement : guildMemberRemove
+10:54:13 [info] ✅ NexusBot connecté en tant que NexusBot
+10:54:13 [info] ✅ Bot connecté: NexusBot (1493962497437466716)
+10:54:13 [info] [antiInflation] scan en cours (seuil=1 000 000 000€)...
+10:54:13 [info] [antiInflation] 1 solde(s) anormal(aux) détecté(s)
+10:54:13 [info] [antiInflation] Owner 197626250066526210 ignoré (skip protection)
+10:54:13 [info] [Dashboard] Client Discord injecté.
+10:54:13 [info] [Dashboard] ✅ Dashboard disponible sur http://localhost:8080
+10:54:13 [info] [Dashboard] URL publique : https://nexusbot-production-74a2.up.railway.app
+10:54:14 [info] ✅ Description application mise à jour
+10:54:14 [error] Require stack:
+10:54:14 [info] ✅ Présence : statuts rotatifs activés (30s interval)
+10:54:14 [error] - /app/src/utils/casinoMusicManager.js
+10:54:14 [info] ✅ Bump Reminder : checker démarré (60s interval, persistant DB)
+10:54:14 [error] - /app/src/commands_guild/games/casino-musique.js
+10:54:14 [error] - /app/src/index.js
+10:54:14 [info] ✅ Migration : leave_channel réinitialisé à NULL pour tous les guilds
+10:54:14 [info] [CasinoMusic] 🔄 Background retry actif (45s interval)
+10:54:14 [info] 📦 Global: 81 | Guild: 73 commandes
+10:54:14 [info] ✅ Validation OK
+10:54:14 [error] [CasinoMusic] autoInit error: Cannot find module '@discordjs/voice'
+10:54:14 [info] ✅ 73 guild commands enregistrées
+10:54:15 [error] [GiveawayCheck] Erreur: no such column: ended
+10:54:15 [error] [GiveawayCheck] Erreur: no such column: ended
+10:54:15 [info] ✅ Voice XP Tick : démarré (1min interval)
+10:54:15 [info] ✅ Lotto Check : démarré (1h interval)
+10:54:15 [info] ✅ 81 global commands enregistrées
+10:54:15 [info] ✅ Birthday Check : démarré (1h interval)
+10:54:15 [info] ✅ Giveaway Check : démarré (30s interval)
+10:54:15 [info] ✅ Quest Reset : démarré (10min interval)
+10:54:15 [info] ✅ Reminder Check : démarré (30s interval)
+10:54:15 [info] ✅ Tempban Check : démarré (1min interval)
+10:54:15 [info] ✅ TempRole Check : démarré (1min interval)
+10:54:15 [info] ✅ Ticket Auto Close : démarré (10min interval)
+10:54:15 [info] ✅ Ticket Follow Up : démarré (10min interval)
+10:54:15 [info] ✅ Stats Channel Updater : démarré (10min interval)
+10:54:15 [error] [GiveawayCheck] Erreur: no such column: ended
+10:54:15 [error] [GiveawayCheck] Erreur: no such column: ended
+10:54:15 [info] ✅ Notification Checker : démarré (5min interval)
+10:54:15 [info] [luckyHour] Lucky Hour planifiée aujourd'hui à 19h00
+10:54:15 [info] ✅ Lucky Hour : démarré (1min interval, déclenche 1x/jour)
+10:54:15 [info] ✅ Wealth Roles : démarré (5min interval)
+10:54:15 [info] [ScheduledWorker] démarré (rafraîchissement toutes les 60 s).
+10:54:15 [error] ⚠️  Scheduled Worker error: Cannot read properties of undefined (reading 'catch')
+10:54:15 [info] [CryptoPrices] Worker demarre.
+10:54:15 [error] ⚠️  Crypto Price Worker error: Cannot read properties of undefined (reading 'catch')
+10:54:15 [info] [WeeklyLeaderboard] démarré (vérification toutes les 60 s pour dimanche 20h00).
+10:54:15 [error] ⚠️  Weekly Leaderboard Worker error: Cannot read properties of undefined (reading 'catch')
+10:54:15 [error] ⚠️  Anti-Raid Worker error: Cannot read properties of undefined (reading 'catch')
+10:54:15 [info] [AutoEvent] démarré (vérification toutes les 60 s pour quiz 12h et défi lundi 9h).
+10:54:15 [error] ⚠️  Auto Events Worker error: Cannot read properties of undefined (reading 'catch')
+10:54:15 [info] ✅ Tous les workers automatiques ont été démarrés
+10:54:15 [error] (node:20) Warning: Passing "color" to RoleManager#create() is deprecated. Use "colors" instead.
+10:54:15 [error] (Use `node --trace-warnings ...` to show where the warning was created)
+10:54:15 [error] [CryptoPrices] Rate-limited, fallback CoinCap
+10:54:15 [info] [wealthRoles] Créé rôle Diamond (id=1499000861324611664) dans Zone Entraide 🤝
+10:54:15 [info] [wealthRoles] Créé rôle Platinum (id=1499000862390095973) dans Zone Entraide 🤝
+10:54:16 [info] [wealthRoles] Créé rôle Gold (id=1499000863497392250) dans Zone Entraide 🤝
+10:54:16 [info] [wealthRoles] Créé rôle Silver (id=1499000864377929840) dans Zone Entraide 🤝
+10:54:16 [info] [wealthRoles] Créé rôle Bronze (id=1499000865539752037) dans Zone Entraide 🤝
+10:54:36 [info] [Recrutement] Auto-setup : panneau déjà présent dans #📋・candidatures, skip.
+10:54:36 [info] 💸 [AUTO-REMB] Canal casino = 1495333990633177178
+10:54:36 [info] 💸 [AUTO-REMB] 197626250066526210 — v2 déjà envoyée, skip
+10:54:36 [info] 💸 [AUTO-REMB] 1440416200646594612 — v2 déjà envoyée, skip
+10:54:36 [info] 💸 [AUTO-REMB] Aucun remboursement en attente.
+10:54:45 [error] [GiveawayCheck] Erreur: no such column: ended
+10:54:45 [error] [GiveawayCheck] Erreur: no such column: ended
+10:54:45 [error] [GiveawayCheck] Erreur: no such column: ended
+10:54:45 [error] [GiveawayCheck] Erreur: no such column: ended
+10:55:05 [error] - /app/src/utils/casinoMusicManager.js
+10:55:05 [error] - /app/src/commands_guild/games/casino-musique.js
+10:55:05 [info] [CasinoMusic] 🔁 Retry background...
+10:55:05 [error] Require stack:

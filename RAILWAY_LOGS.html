@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Railway Logs - NexusBot</title>
+<style>
+  body { font-family: -apple-system, monospace; background: #0a0a0f; color: #e0e0e0; padding: 20px; margin: 0; }
+  h1 { color: #FFD700; border-bottom: 2px solid #FFD700; padding-bottom: 10px; }
+  .deploy { padding: 8px 12px; margin: 4px 0; border-radius: 4px; font-family: monospace; }
+  .SUCCESS { background: #0F4F2A; border-left: 4px solid #2ECC71; }
+  .DEPLOYING, .BUILDING, .INITIALIZING, .QUEUED, .WAITING { background: #4A3F0E; border-left: 4px solid #F39C12; }
+  .FAILED, .CRASHED, .REMOVED { background: #4A1A1A; border-left: 4px solid #E74C3C; }
+  .log { padding: 4px 8px; font-family: monospace; font-size: 13px; border-bottom: 1px solid #222; white-space: pre-wrap; }
+  .log.error { background: #3A1010; color: #FFB0B0; }
+  .log.warn { background: #3A2810; color: #FFD080; }
+  button { background: #FFD700; color: #000; padding: 10px 20px; border: 0; border-radius: 4px; font-weight: bold; cursor: pointer; margin: 10px 5px; }
+  button:hover { background: #FFE680; }
+  .status { color: #999; font-size: 13px; margin: 5px 0; }
+  pre { background: #000; padding: 8px; border-radius: 4px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>🚂 NexusBot — Logs Railway en direct</h1>
+<div id="status" class="status">⏳ Chargement...</div>
+<button onclick="fetchAll()">🔄 Rafraîchir</button>
+<button onclick="document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight">⬇️ Bas</button>
+
+<div id="deployments"></div>
+<h2>📋 Logs (build + runtime) — dernier déploiement</h2>
+<div id="logs" style="max-height: 70vh; overflow-y: auto; background: #050508; padding: 10px; border-radius: 6px;"></div>
+
+<script>
+const TOKEN = '147a6d64-9cd2-4a68-9886-67a72b38ba48';
+const PROJECT_ID = 'a0c39acd-4411-47ee-afac-65865344abc8';
+const ENV_ID = '237639dd-6c48-44a4-942d-60f2fe44a388';
+const SVC_ID = '2b8861da-683f-4221-a4c6-31f874c96c40';
+
+async function gql(query) {
+  const res = await fetch('https://backboard.railway.app/graphql/v2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+    body: JSON.stringify({ query })
+  });
+  return res.json();
+}
+
+function escape(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function fetchAll() {
+  document.getElementById('status').textContent = '⏳ Récupération...';
+  try {
+    const dep = await gql(`query { deployments(first: 5, input: { projectId: "${PROJECT_ID}", environmentId: "${ENV_ID}", serviceId: "${SVC_ID}" }) { edges { node { id status createdAt } } } }`);
+    const edges = (dep && dep.data && dep.data.deployments && dep.data.deployments.edges) || [];
+    if (!edges.length) {
+      document.getElementById('status').textContent = '❌ Pas de déploiement trouvé. Réponse: ' + JSON.stringify(dep);
+      return;
+    }
+    let html = '';
+    for (const e of edges) {
+      const d = e.node;
+      html += '<div class="deploy ' + d.status + '">' + d.status.padEnd(14) + ' · ' + d.createdAt + ' · id=' + d.id.slice(0,8) + '</div>';
+    }
+    document.getElementById('deployments').innerHTML = html;
+
+    const latest = edges[0].node;
+    document.getElementById('status').textContent = '📋 Dernier déploiement: ' + latest.status + ' (' + latest.createdAt + ')';
+
+    const [bl, dl] = await Promise.all([
+      gql(`query { buildLogs(deploymentId: "${latest.id}", limit: 200) { message timestamp severity } }`),
+      gql(`query { deploymentLogs(deploymentId: "${latest.id}", limit: 200) { message timestamp severity } }`),
+    ]);
+    const buildLogs = (bl && bl.data && bl.data.buildLogs) || [];
+    const runLogs = (dl && dl.data && dl.data.deploymentLogs) || [];
+
+    let logsHtml = '';
+    if (buildLogs.length) {
+      logsHtml += '<h3 style="color:#3498DB">═══ BUILD LOGS (' + buildLogs.length + ') ═══</h3>';
+      for (const l of buildLogs) {
+        const cls = (l.severity || '').toLowerCase();
+        const css = cls === 'error' ? 'log error' : cls === 'warn' ? 'log warn' : 'log';
+        logsHtml += '<div class="' + css + '">' + l.timestamp.slice(11,19) + '  ' + escape(l.message) + '</div>';
+      }
+    }
+    if (runLogs.length) {
+      logsHtml += '<h3 style="color:#27AE60">═══ RUNTIME LOGS (' + runLogs.length + ') ═══</h3>';
+      for (const l of runLogs) {
+        const cls = (l.severity || '').toLowerCase();
+        const css = cls === 'error' ? 'log error' : cls === 'warn' ? 'log warn' : 'log';
+        logsHtml += '<div class="' + css + '">' + l.timestamp.slice(11,19) + '  ' + escape(l.message) + '</div>';
+      }
+    }
+    if (!buildLogs.length && !runLogs.length) {
+      logsHtml = '<p>Aucun log disponible. Réponses brutes:</p><pre>BUILD: ' + escape(JSON.stringify(bl, null, 2)) + '\n\nRUN: ' + escape(JSON.stringify(dl, null, 2)) + '</pre>';
+    }
+    document.getElementById('logs').innerHTML = logsHtml;
+    document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight;
+  } catch (e) {
+    document.getElementById('status').textContent = '❌ Erreur: ' + e.message;
+  }
+}
+fetchAll();
+setInterval(fetchAll, 15000);
+</script>
+</body>
+</html>

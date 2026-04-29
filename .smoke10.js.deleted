@@ -1,0 +1,38 @@
+const Module = require('module'); const path = require('path'); const fs = require('fs');
+const orig = Module._resolveFilename;
+Module._resolveFilename = function(req) { if (req === 'better-sqlite3') return require.resolve('events'); if (req==='@napi-rs/canvas'||req==='gif-encoder-2') throw new Error('no'); return orig.apply(this, arguments); };
+const dbStub = { db:{prepare:()=>({run:()=>{},get:()=>null,all:()=>[]}),exec:()=>{}}, getUser:()=>({balance:1}), getConfig:()=>({}), addCoins:()=>{}, removeCoins:()=>{}, kvGet:()=>null, kvSet:()=>{}, getSystemMessage:()=>null, incrementStat:()=>{}, addItem:()=>{}, getInventory:()=>[], removeItem:()=>{}, logTransaction:()=>{} };
+require.cache[path.resolve('./src/database/db.js')] = { exports: dbStub, id:'',filename:'',loaded:true,children:[],paths:[] };
+let errs = 0, loaded = 0; const namesGuild = []; const namesGlobal = [];
+function load(dir, set) {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, {withFileTypes:true})) {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory() && !e.name.includes('.disabled')) load(f, set);
+    else if (e.name.endsWith('.js') && !e.name.includes('.disabled') && !e.name.includes('.bak')) {
+      try { delete require.cache[require.resolve(f)]; const c = require(f);
+        if (c.data && c.data.toJSON && c.execute && !c._prefixOnly) {
+          loaded++;
+          set.push({n: c.data.name, f: f.replace(process.cwd(),'.')});
+          try { c.data.toJSON(); } catch (er) { errs++; console.log('❌ JSON', c.data.name, '→', er.message); }
+        }
+      } catch (er) { errs++; console.log('❌ LOAD', f.replace(process.cwd(),'.'), '→', er.message.split('\n')[0]); }
+    }
+  }
+}
+load(path.resolve('./src/commands_guild'), namesGuild);
+load(path.resolve('./src/commands'), namesGlobal);
+console.log('Guild:', namesGuild.length, '/100 | Global:', namesGlobal.length, '/100');
+console.log('Loaded errors:', errs);
+
+function findDups(arr) {
+  const map = {};
+  arr.forEach(x => { map[x.n] = (map[x.n]||[]).concat(x.f); });
+  return Object.entries(map).filter(([n,l]) => l.length > 1);
+}
+const gd = findDups(namesGuild); const gld = findDups(namesGlobal);
+if (gd.length) { console.log('\n❌ DOUBLONS GUILD:'); gd.forEach(([n,l]) => console.log(' ', n, '→', l.join(' VS '))); }
+if (gld.length) { console.log('\n❌ DOUBLONS GLOBAL:'); gld.forEach(([n,l]) => console.log(' ', n, '→', l.join(' VS '))); }
+if (!gd.length && !gld.length) console.log('✅ Aucun doublon');
+if (namesGuild.length > 100) console.log('⚠️ Guild dépasse 100 !');
+if (namesGlobal.length > 100) console.log('⚠️ Global dépasse 100 !');

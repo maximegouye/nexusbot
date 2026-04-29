@@ -1,0 +1,17 @@
+=== Configuration OWNER_ID dans Railway ===
+
+Reponse : {
+  "data": {
+    "variableUpsert": true
+  }
+}
+
+✅ OWNER_ID = 197626250066526210 configure !
+   Le boost owner sera actif au prochain redemarrage du bot.
+
+=== Force un redeploiement ===
+Redeploy : {
+  "data": {
+    "serviceInstanceRedeploy": true
+  }
+}

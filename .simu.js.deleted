@@ -1,0 +1,26 @@
+// Simule la convergence de l'animation eased pour vérifier
+// que la roue s'arrête PILE sur finalIdx pour 1000 essais aléatoires
+function test(N) {
+  let fails = 0;
+  for (let trial = 0; trial < 1000; trial++) {
+    const finalIdx = Math.floor(Math.random() * N);
+    const startPos = Math.floor(Math.random() * N);
+    const totalRotations = 4;
+    const distance = totalRotations * N + ((finalIdx - startPos + N) % N);
+    const FRAMES = 16;
+    let pos = startPos;
+    for (let f = 1; f <= FRAMES; f++) {
+      const t = f / FRAMES;
+      const ease = 1 - Math.pow(1 - t, 3);
+      pos = (startPos + Math.round(distance * ease)) % N;
+    }
+    if (pos !== finalIdx) { fails++; if (fails <= 3) console.log(`  ❌ trial ${trial}: final=${finalIdx} pos=${pos} startPos=${startPos}`); }
+  }
+  console.log(`N=${N}: ${1000 - fails}/1000 (${fails} fails)`);
+}
+console.log('Test convergence roue-fortune (12 segments):');
+test(12);
+console.log('Test convergence roulette EU (37 cases):');
+test(37);
+console.log('Test convergence roulette US (38 cases):');
+test(38);

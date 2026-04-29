@@ -1,0 +1,20 @@
+=== Set TZ=Europe/Paris ===
+TZ: {
+  "data": {
+    "variableUpsert": true
+  }
+}
+
+=== Set OWNER_MIN_BALANCE=5000000000 ===
+OWNER_MIN_BALANCE: {
+  "data": {
+    "variableUpsert": true
+  }
+}
+
+=== Redeploy ===
+Redeploy: {
+  "data": {
+    "serviceInstanceRedeploy": true
+  }
+}

@@ -1,0 +1,31 @@
+const Module = require('module'); const path = require('path'); const fs = require('fs');
+const orig = Module._resolveFilename;
+Module._resolveFilename = function(req) { if (req === 'better-sqlite3') return require.resolve('events'); if (req==='@napi-rs/canvas'||req==='gif-encoder-2') throw new Error('no'); return orig.apply(this, arguments); };
+const dbStub = { db:{prepare:()=>({run:()=>{},get:()=>null,all:()=>[]}),exec:()=>{}}, getUser:()=>({balance:1000}), getConfig:()=>({}), addCoins:()=>{}, removeCoins:()=>{}, kvGet:()=>null, kvSet:()=>{}, getSystemMessage:()=>null, incrementStat:()=>{} };
+require.cache[path.resolve('./src/database/db.js')] = { exports: dbStub, id:'',filename:'',loaded:true,children:[],paths:[] };
+let errs = 0, loaded = 0;
+function load(dir) {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, {withFileTypes:true})) {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory() && !e.name.includes('.disabled')) load(f);
+    else if (e.name.endsWith('.js') && !e.name.includes('.disabled') && !e.name.includes('.test.') && !e.name.includes('.bak')) {
+      try { delete require.cache[require.resolve(f)]; const c = require(f);
+        if (c.data && c.execute) { loaded++; try { c.data.toJSON(); } catch (er) { errs++; console.log('❌', f.replace(process.cwd(),'.'), '→', er.message); } }
+      } catch (er) { errs++; console.log('❌', f.replace(process.cwd(),'.'), '→', er.message.split('\n')[0]); }
+    }
+  }
+}
+load(path.resolve('./src/commands'));
+load(path.resolve('./src/commands_guild'));
+const evDir = path.resolve('./src/events');
+let evL=0, evE=0;
+for (const e of fs.readdirSync(evDir, {withFileTypes:true})) {
+  if (e.name.endsWith('.js')) {
+    try { delete require.cache[require.resolve(path.join(evDir, e.name))]; require(path.join(evDir, e.name)); evL++; }
+    catch (er) { evE++; console.log('❌', e.name, '→', er.message.split('\n')[0]); }
+  }
+}
+console.log('Cmds:', loaded, '| erreurs:', errs);
+console.log('Events:', evL, '| erreurs:', evE);
+console.log(errs+evE === 0 ? '✅ TOUT OK' : '⚠️  Erreurs');

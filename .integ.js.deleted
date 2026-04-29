@@ -1,0 +1,43 @@
+// Simu : récupère renderWheelArc et renderWheelFrame internes en lisant les fichiers
+const fs = require('fs');
+
+// Test 1: validation que renderWheelArc produit du texte sans crash
+const roul = fs.readFileSync('./src/commands_guild/games/roulette.js','utf8');
+const renderArcSrc = roul.match(/function renderWheelArc\([\s\S]*?^}/m)[0];
+const numColorSrc = roul.match(/function numColor\([\s\S]*?^}/m)[0];
+const nStrSrc = roul.match(/function nStr\([\s\S]*?^}/m)[0];
+const wheelOrderEU = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+const BLACK_NUMS = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
+
+eval(numColorSrc); eval(nStrSrc); eval(renderArcSrc);
+
+console.log('=== Test renderWheelArc (roulette) ===');
+const out = renderWheelArc(0, wheelOrderEU, true, false);
+console.log(out);
+console.log(`\n  → ${out.split('\n').length} lignes, ${out.length} caractères`);
+
+const out2 = renderWheelArc(15, wheelOrderEU, false, true);
+console.log('\n=== Avec highlight ===');
+console.log(out2);
+
+// Test 2: roue-fortune
+console.log('\n=== Test renderWheelFrame (roue-fortune) ===');
+const rf = fs.readFileSync('./src/commands_guild/games/roue-fortune.js','utf8');
+const SEGMENTS = [
+  { label: '×0.5 REMB', emoji: '🔄' }, { label: '×1.5 GAIN', emoji: '📈' },
+  { label: '×2 MISE', emoji: '💰' }, { label: '×2.5 BOOST', emoji: '⚡' },
+  { label: '×3 SUPER', emoji: '🔥' }, { label: '×5 MEGA', emoji: '💎' },
+  { label: '×10 ULTRA', emoji: '👑' }, { label: 'JACKPOT ×50', emoji: '🌟' },
+  { label: '💸 PERTE', emoji: '💀' }, { label: '🎁 DOUBLE MISE', emoji: '🎁' },
+  { label: '🔁 REMBOURSÉ', emoji: '✅' }, { label: '🎯 GRATUIT +500', emoji: '🎯' },
+];
+const renderFrameSrc = rf.match(/function renderWheelFrame\([\s\S]*?^}/m)[0];
+eval(renderFrameSrc);
+const out3 = renderWheelFrame(0, false);
+console.log(out3);
+console.log(`\n  → ${out3.split('\n').length} lignes, ${out3.length} caractères`);
+
+const out4 = renderWheelFrame(7, true);
+console.log('\n=== Roue avec hilite (gagnant) ===');
+console.log(out4);

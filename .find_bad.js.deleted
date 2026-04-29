@@ -1,0 +1,55 @@
+const Module = require('module'); const path = require('path'); const fs = require('fs');
+const orig = Module._resolveFilename;
+Module._resolveFilename = function(req) { if (req === 'better-sqlite3') return require.resolve('events'); return orig.apply(this, arguments); };
+const dbStub = { db:{prepare:()=>({run:()=>{},get:()=>null,all:()=>[]}),exec:()=>{}}, getUser:()=>({balance:1000}), getConfig:()=>({}), addCoins:()=>{}, removeCoins:()=>{}, kvGet:()=>null, kvSet:()=>{} };
+require.cache[path.resolve('./src/database/db.js')] = { exports: dbStub, id:'',filename:'',loaded:true,children:[],paths:[] };
+
+function checkOptionsOrder(opts, path = '') {
+  if (!opts) return [];
+  const errs = [];
+  let seenOptional = false;
+  for (let i = 0; i < opts.length; i++) {
+    const o = opts[i];
+    if (o.required) {
+      if (seenOptional) errs.push(path + '.options[' + i + '] (' + o.name + ') REQUIRED après optional');
+    } else {
+      seenOptional = true;
+    }
+    if (o.options) {
+      // sub-command or sub-command-group
+      const subErrs = checkOptionsOrder(o.options, path + '.options[' + i + '](' + o.name + ')');
+      errs.push(...subErrs);
+    }
+  }
+  return errs;
+}
+
+function load(dir, results) {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, {withFileTypes:true})) {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory() && !e.name.includes('.disabled')) load(f, results);
+    else if (e.name.endsWith('.js') && !e.name.includes('.disabled') && !e.name.includes('.test.') && !e.name.includes('.bak')) {
+      try { delete require.cache[require.resolve(f)]; const c = require(f);
+        if (c.data && c.data.toJSON && c.execute && !c._prefixOnly) {
+          const json = c.data.toJSON();
+          const errs = checkOptionsOrder(json.options);
+          if (errs.length) {
+            results.push({ name: json.name, file: f.replace(process.cwd(),'.'), errs });
+          }
+        }
+      } catch (er) {}
+    }
+  }
+}
+const guildResults = [];
+load(path.resolve('./src/commands_guild'), guildResults);
+const globalResults = [];
+load(path.resolve('./src/commands'), globalResults);
+
+console.log('=== GUILD commandes avec required-after-optional ===');
+guildResults.forEach(r => { console.log('  ❌ ' + r.name + ' (' + r.file + ')'); r.errs.forEach(e => console.log('     ' + e)); });
+console.log('\n=== GLOBAL commandes avec required-after-optional ===');
+globalResults.forEach(r => { console.log('  ❌ ' + r.name + ' (' + r.file + ')'); r.errs.forEach(e => console.log('     ' + e)); });
+
+if (!guildResults.length && !globalResults.length) console.log('✅ Aucun problème détecté');

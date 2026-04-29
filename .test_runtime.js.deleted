@@ -1,0 +1,45 @@
+const Module = require('module');
+const path = require('path');
+const orig = Module._resolveFilename;
+Module._resolveFilename = function(req, parent) {
+  if (req === 'better-sqlite3') return require.resolve('events');
+  return orig.apply(this, arguments);
+};
+const dbStub = {
+  db: { prepare: () => ({ run:()=>{}, get:()=>null, all:()=>[] }), exec:()=>{} },
+  getUser: () => ({ balance: 1000 }),
+  getConfig: () => ({ currency_emoji: '€' }),
+  addCoins: () => {}, removeCoins: () => {},
+  kvGet: () => null, kvSet: () => {},
+};
+require.cache[path.resolve('./src/database/db.js')] = { exports: dbStub, id:'',filename:'',loaded:true,children:[],paths:[] };
+
+const tests = [
+  './src/commands_guild/games/roue-fortune.js',
+  './src/commands_guild/games/roulette.js',
+  './src/commands_guild/games/slots.js',
+  './src/commands_guild/games/coffre-magique.js',
+  './src/commands_guild/economy/vol.js',
+  './src/commands_guild/economy/shop.js',
+  './src/events/interactionCreate.js',
+];
+
+for (const t of tests) {
+  try {
+    delete require.cache[require.resolve(t)];
+    const m = require(t);
+    console.log('✅', t, '| name=', m.data?.name || '(none)', '| _prefixOnly=', !!m._prefixOnly);
+  } catch (e) {
+    console.log('❌', t, '→', e.message);
+  }
+}
+
+// Simule l'animation roulette pour vérifier qu'aucune fonction interne ne crash
+console.log('\n--- Test des fonctions internes ---');
+try {
+  // On charge roulette.js, on extrait des fonctions exportées indirectement via require
+  const r = require('./src/commands_guild/games/roulette.js');
+  console.log('  roulette commands keys:', Object.keys(r));
+} catch (e) {
+  console.log('  ❌ require roulette:', e.message);
+}

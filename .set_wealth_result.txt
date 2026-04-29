@@ -1,0 +1,13 @@
+=== Activation WEALTH_ROLES_ENABLED ===
+Result: {
+  "data": {
+    "variableUpsert": true
+  }
+}
+
+=== Redeploiement ===
+Redeploy: {
+  "data": {
+    "serviceInstanceRedeploy": true
+  }
+}

@@ -1,0 +1,42 @@
+const Module = require('module');
+const path = require('path');
+const fs = require('fs');
+const orig = Module._resolveFilename;
+Module._resolveFilename = function(req) { if (req === 'better-sqlite3') return require.resolve('events'); return orig.apply(this, arguments); };
+const dbStub = { db:{prepare:()=>({run:()=>{},get:()=>null,all:()=>[]}),exec:()=>{}}, getUser:()=>({balance:1}), getConfig:()=>({}), addCoins:()=>{}, removeCoins:()=>{}, kvGet:()=>null, kvSet:()=>{} };
+require.cache[path.resolve('./src/database/db.js')] = { exports: dbStub, id:'',filename:'',loaded:true,children:[],paths:[] };
+
+function load(dir, results = []) {
+  if (!fs.existsSync(dir)) return results;
+  for (const e of fs.readdirSync(dir, {withFileTypes:true})) {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory() && !e.name.includes('.disabled')) load(f, results);
+    else if (e.name.endsWith('.js') && !e.name.includes('.disabled') && !e.name.includes('.bak')) {
+      try {
+        delete require.cache[require.resolve(f)];
+        const c = require(f);
+        if (c.data && c.data.toJSON && c.execute && !c._prefixOnly) {
+          // Try toJSON to validate the builder
+          try {
+            const json = c.data.toJSON();
+            results.push({name: json.name, file: f, ok: true, descLen: (json.description||'').length});
+          } catch (jerr) {
+            results.push({name: c.data.name || '???', file: f, ok: false, err: jerr.message});
+          }
+        }
+      } catch (_) {}
+    }
+  }
+  return results;
+}
+const guild = load(path.resolve('./src/commands_guild'));
+const broken = guild.filter(c => !c.ok);
+const tooLong = guild.filter(c => c.descLen > 100);
+console.log('Total guild commands:', guild.length);
+console.log('Broken JSON:', broken.length);
+broken.forEach(c => console.log('  ❌', c.file, '→', c.err));
+console.log('Description trop longue (>100):', tooLong.length);
+tooLong.forEach(c => console.log('  ⚠️ ', c.name, c.descLen, 'chars'));
+console.log('');
+const myCmds = guild.filter(c => ['coffre-magique','roue-fortune','roulette','slots'].includes(c.name));
+myCmds.forEach(c => console.log('  ✅', c.name, '— description:', c.descLen, 'chars'));

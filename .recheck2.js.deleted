@@ -1,0 +1,35 @@
+const Module = require('module'); const path = require('path'); const fs = require('fs');
+const orig = Module._resolveFilename;
+Module._resolveFilename = function(req) { if (req === 'better-sqlite3') return require.resolve('events'); return orig.apply(this, arguments); };
+const dbStub = { db:{prepare:()=>({run:()=>{},get:()=>null,all:()=>[]}),exec:()=>{}}, getUser:()=>({balance:1000}), getConfig:()=>({}), addCoins:()=>{}, removeCoins:()=>{}, kvGet:()=>null, kvSet:()=>{} };
+require.cache[path.resolve('./src/database/db.js')] = { exports: dbStub, id:'',filename:'',loaded:true,children:[],paths:[] };
+function check(opts, p='') {
+  if (!opts) return [];
+  const e = []; let opt = false;
+  for (let i = 0; i < opts.length; i++) {
+    if (opts[i].required) { if (opt) e.push(p+'.options['+i+']('+opts[i].name+') REQ après opt'); }
+    else opt = true;
+    if (opts[i].options) e.push(...check(opts[i].options, p+'.options['+i+']('+opts[i].name+')'));
+  }
+  return e;
+}
+function load(dir, results) {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, {withFileTypes:true})) {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory() && !e.name.includes('.disabled')) load(f, results);
+    else if (e.name.endsWith('.js') && !e.name.includes('.disabled') && !e.name.includes('.test.') && !e.name.includes('.bak')) {
+      try { delete require.cache[require.resolve(f)]; const c = require(f);
+        if (c.data && c.data.toJSON && c.execute && !c._prefixOnly) {
+          const errs = check(c.data.toJSON().options);
+          if (errs.length) results.push({n: c.data.name, e: errs, file: f.replace(process.cwd(),'.')});
+        }
+      } catch (er) { results.push({n: '???', e: ['LOAD ERROR: '+er.message], file: f.replace(process.cwd(),'.')}); }
+    }
+  }
+}
+const guild = []; const global = [];
+load(path.resolve('./src/commands_guild'), guild);
+load(path.resolve('./src/commands'), global);
+console.log('Guild errors:', guild.length); guild.slice(0,8).forEach(r => console.log('  ❌', r.n, r.file, r.e[0]));
+console.log('Global errors:', global.length); global.slice(0,5).forEach(r => console.log('  ❌', r.n, r.file, r.e[0]));

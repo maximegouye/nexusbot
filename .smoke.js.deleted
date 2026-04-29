@@ -1,0 +1,59 @@
+// Simule la fonction loadCommands de src/index.js sur tous les fichiers, exactement
+// comme le bot le fera au démarrage.
+const Module = require('module');
+const path = require('path');
+const fs = require('fs');
+const orig = Module._resolveFilename;
+Module._resolveFilename = function(req) { if (req === 'better-sqlite3') return require.resolve('events'); return orig.apply(this, arguments); };
+const dbStub = {
+  db:{prepare:()=>({run:()=>{},get:()=>null,all:()=>[]}),exec:()=>{}},
+  getUser:()=>({balance:1000}), getConfig:()=>({currency_emoji:'€'}),
+  addCoins:()=>{}, removeCoins:()=>{}, kvGet:()=>null, kvSet:()=>{},
+};
+require.cache[path.resolve('./src/database/db.js')] = { exports: dbStub, id:'',filename:'',loaded:true,children:[],paths:[] };
+
+let errors = [];
+let loaded = 0;
+function loadCommands(dir) {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, {withFileTypes:true})) {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory()) {
+      if (!e.name.includes('.disabled')) loadCommands(f);
+    } else if (e.name.endsWith('.js') && !e.name.includes('.disabled') && !e.name.includes('.test.') && !e.name.includes('.spec.') && !e.name.includes('.bak')) {
+      try {
+        delete require.cache[require.resolve(f)];
+        const cmd = require(f);
+        if (cmd.data && cmd.execute) {
+          loaded++;
+          // Validate JSON
+          try { cmd.data.toJSON(); }
+          catch (e) { errors.push({f, err: 'toJSON: ' + e.message}); }
+        }
+      } catch (e) {
+        errors.push({f, err: e.message});
+      }
+    }
+  }
+}
+loadCommands(path.resolve('./src/commands'));
+loadCommands(path.resolve('./src/commands_guild'));
+console.log('Commandes chargées:', loaded);
+console.log('Erreurs:', errors.length);
+errors.forEach(e => console.log('  ❌', e.f.replace(process.cwd(),'.'), '→', e.err.split('\n')[0]));
+
+// Tente aussi de charger les events
+const eventsDir = path.resolve('./src/events');
+let evLoaded = 0, evErrs = [];
+if (fs.existsSync(eventsDir)) {
+  for (const e of fs.readdirSync(eventsDir, {withFileTypes:true})) {
+    if (e.name.endsWith('.js')) {
+      try { delete require.cache[require.resolve(path.join(eventsDir, e.name))]; require(path.join(eventsDir, e.name)); evLoaded++; }
+      catch (err) { evErrs.push({f: e.name, err: err.message}); }
+    }
+  }
+}
+console.log('\nEvents chargés:', evLoaded, '| erreurs:', evErrs.length);
+evErrs.forEach(e => console.log('  ❌', e.f, '→', e.err.split('\n')[0]));
+
+console.log('\n✅ Total chargé:', loaded + evLoaded, '| Total erreurs:', errors.length + evErrs.length);
