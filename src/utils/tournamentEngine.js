@@ -67,7 +67,7 @@ function advanceRound(tId) {
   const active = getPlayers(tId);
   if (active.length===1) {
     const t=getTournament(tId), prize=Math.floor(t.prize_pool*0.9);
-    db.db.prepare('UPDATE tournaments SET status="ended",winner_id=?,ended_at=strftime("%s","now") WHERE id=?').run(active[0].user_id, tId);
+    db.db.prepare("UPDATE tournaments SET status='ended', winner_id=?, ended_at=strftime('%s','now') WHERE id=?").run(active[0].user_id, tId);
     if (prize>0) db.addCoins(active[0].user_id, t.guild_id, prize);
     return {ok:true, finished:true, winner:active[0].user_id, prize};
   }

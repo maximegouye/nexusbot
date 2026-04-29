@@ -21,7 +21,8 @@ module.exports = async (client) => {
         winners.push(pool.splice(idx, 1)[0]);
       }
 
-      db.db.prepare('UPDATE giveaways SET status = "ended", winner_ids = ? WHERE id = ?')
+      // ⚠️ SQL : SIMPLES quotes pour string (les doubles sont interprétées comme nom de colonne par SQLite)
+      db.db.prepare("UPDATE giveaways SET status = 'ended', winner_ids = ? WHERE id = ?")
         .run(JSON.stringify(winners), gw.id);
 
       if (!channel) continue;
