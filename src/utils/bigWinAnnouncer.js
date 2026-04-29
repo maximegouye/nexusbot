@@ -16,7 +16,6 @@
 //   BIG_WIN_DISABLED      = "true" pour désactiver
 // ============================================================
 
-const { EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
 
 const DISABLED = process.env.BIG_WIN_DISABLED === 'true';
@@ -69,29 +68,18 @@ async function announceBigWin(client, guildId, userId, amount, game, type = 'win
       'crash': '🚀 Crash',
     }[game] || `🎲 ${game}`;
 
+    // Format minimaliste : juste mention de l'user avec son gain — pas d'embed lourd
+    let line;
     if (type === 'jackpot' || amount >= 500000) {
-      color = 0xFFD700;
-      title = '🎰 Jackpot !';
-      desc = `🌟 **${username}** vient de remporter **+${amtStr} ${symbol}** au ${gameLabel} !`;
+      line = `🎰 <@${userId}> a touché un **JACKPOT** : **+${amtStr} ${symbol}** au ${gameLabel} !`;
     } else if (amount >= 50000) {
-      color = 0xFF6B00;
-      title = '🔥 Mega win !';
-      desc = `**${username}** vient de gagner **+${amtStr} ${symbol}** au ${gameLabel} ! 💰`;
+      line = `🔥 <@${userId}> a gagné **+${amtStr} ${symbol}** au ${gameLabel} !`;
     } else {
-      color = 0x2ECC71;
-      title = '✨ Gros gain !';
-      desc = `**${username}** a gagné **+${amtStr} ${symbol}** au ${gameLabel} ! 🎉`;
+      line = `✨ <@${userId}> a gagné **+${amtStr} ${symbol}** au ${gameLabel} !`;
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(color)
-      .setTitle(title)
-      .setDescription(desc)
-      .setThumbnail(member?.user.displayAvatarURL({ size: 128 }) || null)
-      .setTimestamp();
-
-    // ⚠️ Jamais de ping @here/@everyone — l'embed parle de lui-même
-    await channel.send({ embeds: [embed], allowedMentions: { parse: [] } }).catch(() => {});
+    // Mention de l'user gagnant uniquement (pas @here/@everyone)
+    await channel.send({ content: line, allowedMentions: { users: [userId] } }).catch(() => {});
   } catch (e) {
     console.error('[bigWinAnnouncer]', e.message);
   }
