@@ -230,3 +230,6 @@ module.exports = {
 };
 
 module.exports.activeMorpions = activeMorpions;
+
+// Désactivé pour libérer slot Discord (limite 100 cmds)
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;
