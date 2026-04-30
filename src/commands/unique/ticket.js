@@ -29,6 +29,8 @@ try {
   if (!gc.includes('ticket_log_channel'))  db.db.prepare("ALTER TABLE guild_config ADD COLUMN ticket_log_channel TEXT").run();
   if (!gc.includes('ticket_welcome_msg'))  db.db.prepare("ALTER TABLE guild_config ADD COLUMN ticket_welcome_msg TEXT").run();
   if (!gc.includes('ticket_max_open'))     db.db.prepare("ALTER TABLE guild_config ADD COLUMN ticket_max_open INTEGER DEFAULT 1").run();
+  // 🆕 Catégories Discord séparées par type de ticket (JSON map: { support: 'cat_id', bug: 'cat_id', ... })
+  if (!gc.includes('ticket_categories_map')) db.db.prepare("ALTER TABLE guild_config ADD COLUMN ticket_categories_map TEXT DEFAULT '{}'").run();
 } catch {}
 try {
   db.db.prepare(`CREATE TABLE IF NOT EXISTS ticket_blacklist (
@@ -266,13 +268,31 @@ async function createTicket(interaction, catValue, formData) {
   ]});
 
   const safeName = (member.user.username||'user').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12)||'user';
+
+  // 🆕 Sélection intelligente de la catégorie Discord :
+  // 1. Si une catégorie spécifique au type est configurée, l'utiliser
+  // 2. Sinon, fallback sur la catégorie globale ticket_category
+  let parentCategoryId = null;
+  try {
+    const catMap = cfg.ticket_categories_map ? JSON.parse(cfg.ticket_categories_map) : {};
+    if (catMap[catValue]) {
+      parentCategoryId = String(catMap[catValue]);
+      // Vérifier que la catégorie existe encore
+      const catCheck = guild.channels.cache.get(parentCategoryId);
+      if (!catCheck || catCheck.type !== ChannelType.GuildCategory) parentCategoryId = null;
+    }
+  } catch {}
+  if (!parentCategoryId && cfg.ticket_category) {
+    parentCategoryId = String(cfg.ticket_category);
+  }
+
   let ch;
   try {
     ch = await guild.channels.create({
       name: `🎫・${catValue}-${safeName}`,
       type: ChannelType.GuildText,
       topic: `ticket:${member.id}`,
-      parent: cfg.ticket_category ? String(cfg.ticket_category) : undefined,
+      parent: parentCategoryId || undefined,
       permissionOverwrites: perms,
     });
   } catch (err) {
@@ -964,7 +984,24 @@ module.exports = {
         .addChoices({ name: '➕ Ajouter', value: 'add' }, { name: '➖ Supprimer', value: 'remove' }, { name: '📋 Lister', value: 'list' }))
       .addStringOption(o => o.setName('titre').setDescription('Titre de la réponse').setRequired(false).setMaxLength(50))
       .addStringOption(o => o.setName('contenu').setDescription('Contenu ({user} = mention, {staff} = nom staff)').setRequired(false).setMaxLength(1000))
-    ),
+    )
+    .addSubcommand(s => s
+      .setName('setup-categories')
+      .setDescription('🆕 Crée auto les catégories Discord par type de ticket (Support/Bug/Partenariat...)'))
+    .addSubcommand(s => s
+      .setName('config-cat')
+      .setDescription('⚙️ Associer manuellement une catégorie Discord à un type de ticket')
+      .addStringOption(o => o.setName('type').setDescription('Type de ticket').setRequired(true)
+        .addChoices(
+          { name: '💬 Support', value: 'support' },
+          { name: '🐛 Bug', value: 'bug' },
+          { name: '🤝 Partenariat', value: 'partenariat' },
+          { name: '🚨 Signalement', value: 'signalement' },
+          { name: '💰 Achat', value: 'achat' },
+          { name: '🎯 Recrutement', value: 'recrutement' },
+          { name: '📋 Autre', value: 'autre' },
+        ))
+      .addChannelOption(o => o.setName('categorie').setDescription('Catégorie Discord').addChannelTypes(ChannelType.GuildCategory).setRequired(true))),
   cooldown: 3,
 
   handleComponent,
@@ -1296,6 +1333,121 @@ module.exports = {
     }
 
     // ══ QR (Quick Replies) ═════════════════════════════════════════════════════
+    // ══ NOUVEAU : Setup automatique des catégories par type ═════════════════════
+    if (sub === 'setup-categories') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+        return reply({ content: '❌ Permission insuffisante (Gérer le serveur requis).', ephemeral: true });
+
+      const guild = interaction.guild;
+      // Définition des catégories à créer
+      const CAT_DEFS = [
+        { value: 'support',     name: '🎫 ・ TICKETS SUPPORT' },
+        { value: 'bug',         name: '🐛 ・ TICKETS BUGS' },
+        { value: 'partenariat', name: '🤝 ・ TICKETS PARTENARIATS' },
+        { value: 'signalement', name: '🚨 ・ TICKETS SIGNALEMENTS' },
+        { value: 'achat',       name: '💰 ・ TICKETS ACHATS' },
+        { value: 'recrutement', name: '🎯 ・ TICKETS RECRUTEMENT' },
+        { value: 'autre',       name: '📋 ・ TICKETS DIVERS' },
+      ];
+
+      // Lire la map actuelle
+      let currentMap = {};
+      try { currentMap = cfg.ticket_categories_map ? JSON.parse(cfg.ticket_categories_map) : {}; } catch {}
+
+      // Permissions par défaut : @everyone caché, staff visible
+      const everyone = guild.roles.everyone;
+      const staffRoleId = cfg.ticket_staff_role;
+
+      let created = 0, kept = 0, failed = 0;
+      const errors = [];
+
+      for (const def of CAT_DEFS) {
+        try {
+          // Si déjà mappée et la catégorie existe, on garde
+          if (currentMap[def.value]) {
+            const existing = guild.channels.cache.get(String(currentMap[def.value]));
+            if (existing && existing.type === ChannelType.GuildCategory) { kept++; continue; }
+          }
+          // Sinon, chercher s'il existe déjà une catégorie avec ce nom
+          const found = guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name === def.name);
+          if (found) {
+            currentMap[def.value] = found.id;
+            kept++;
+            continue;
+          }
+          // Créer la catégorie
+          const overwrites = [
+            { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+            { id: guild.members.me.id, allow: [
+              PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageChannels,
+              PermissionFlagsBits.ManageMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.EmbedLinks,
+            ]},
+          ];
+          if (staffRoleId) {
+            overwrites.push({ id: String(staffRoleId), allow: [
+              PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages, PermissionFlagsBits.AttachFiles,
+            ]});
+          }
+          const cat = await guild.channels.create({
+            name: def.name,
+            type: ChannelType.GuildCategory,
+            permissionOverwrites: overwrites,
+          });
+          currentMap[def.value] = cat.id;
+          created++;
+          // Petit délai pour éviter rate-limits
+          await new Promise(r => setTimeout(r, 300));
+        } catch (e) {
+          failed++;
+          if (errors.length < 5) errors.push(`${def.name}: ${e?.message || 'erreur'}`);
+        }
+      }
+
+      // Sauvegarder la map
+      db.setConfig(interaction.guildId, 'ticket_categories_map', JSON.stringify(currentMap));
+
+      return reply({
+        embeds: [new EmbedBuilder()
+          .setColor(failed === 0 ? '#2ECC71' : '#E67E22')
+          .setTitle('🆕 Catégories Tickets configurées')
+          .setDescription([
+            `✅ **${created}** catégorie(s) créée(s)`,
+            `🔁 **${kept}** déjà existante(s) conservée(s)`,
+            failed ? `❌ **${failed}** échec(s)` : '',
+            '',
+            'Les futurs tickets iront automatiquement dans la bonne catégorie.',
+            errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n') : '',
+          ].filter(Boolean).join('\n'))
+          .setFooter({ text: 'Tu peux personnaliser une catégorie avec /ticket config-cat' })
+          .setTimestamp()],
+        ephemeral: true,
+      });
+    }
+
+    // ══ NOUVEAU : Associer manuellement une catégorie à un type ══════════════════
+    if (sub === 'config-cat') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild))
+        return reply({ content: '❌ Permission insuffisante.', ephemeral: true });
+
+      const type = interaction.options.getString('type');
+      const cat = interaction.options.getChannel('categorie');
+
+      let map = {};
+      try { map = cfg.ticket_categories_map ? JSON.parse(cfg.ticket_categories_map) : {}; } catch {}
+      map[type] = cat.id;
+      db.setConfig(interaction.guildId, 'ticket_categories_map', JSON.stringify(map));
+
+      return reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#2ECC71')
+          .setTitle('✅ Catégorie associée')
+          .setDescription(`Tickets de type **${type}** iront dans **${cat.name}**.`)
+        ], ephemeral: true,
+      });
+    }
+
     if (sub === 'qr') {
       if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
       const action = interaction.options.getString('action');

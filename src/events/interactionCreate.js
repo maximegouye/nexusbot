@@ -241,6 +241,27 @@ module.exports = {
             try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
           }
 
+          // ── AUTO-DEFER pour BOUTONS et SELECT MENUS qui n'ouvrent PAS de modal
+          // Cela résout les bugs « interaction has not been acknowledged » dans les
+          // handlers handleComponent qui font editReply sans avoir d'abord déferré.
+          // On exclut les boutons connus qui ouvrent un modal (showModal interdit après defer).
+          const MODAL_OPENING_PATTERNS = [
+            /^rec_apply_/,                   // recrutement → modal candidature
+            /^rec_rej_(?!conf_)/,            // recrutement refus (sauf confirmation)
+            /^part_demander_btn/,            // bouton de demande de partenariat → modal
+            /^pet_create/,                   // pet creation → modal name
+            /^ticket_open_/,                 // ticket avec raison → modal
+            /^suggestion_create/,            // suggestion → modal
+            /^report_create/,                // report → modal
+            /_modal$/,                       // suffixe convention
+            /_form$/,                        // suffixe convention
+          ];
+          const opensModalBtn = MODAL_OPENING_PATTERNS.some(rx => rx.test(cid));
+          if ((interaction.isButton() || interaction.isAnySelectMenu?.() || interaction.isStringSelectMenu?.()) &&
+              !opensModalBtn && !interaction.deferred && !interaction.replied) {
+            try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
+          }
+
           // ── handleComponent en premier (boutons / menus / modals) ──────────
           if (typeof handler.handleComponent === 'function') {
             try {
