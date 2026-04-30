@@ -104,6 +104,8 @@ module.exports = {
     .addSubcommand(s => s.setName('nettoyer-doublons-v2').setDescription("🧹 V2 : Supprime TOUS les rôles doublons (3+ exemplaires) avec smart-merge"))
     .addSubcommand(s => s.setName('organiser-hierarchie').setDescription("📐 Réordonne hiérarchie : Bots → Owner → Admin → Mod → Staff → Membres"))
     .addSubcommand(s => s.setName('hierarchie-pro').setDescription("👑 V2 PRO : crée Administrateur si manquant + hiérarchie inspirée des plus gros serveurs"))
+    .addSubcommand(s => s.setName('migrer-nouveaux').setDescription("🔄 Migre tous les Nouveaux → Membre + active autorole Membre pour les futurs arrivants"))
+    .addSubcommand(s => s.setName('diagnostic-perms').setDescription("🔍 Diagnostique les permissions du bot et liste les blocages éventuels"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -2507,6 +2509,187 @@ module.exports = {
         ].filter(Boolean).join('\n').slice(0, 4000))
         .setFooter({ text: 'Inspiré des plus gros serveurs Discord (style officiel)' })
         .setTimestamp()] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🔄 MIGRER NOUVEAUX → MEMBRE
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'migrer-nouveaux') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const db = require('../../database/db');
+
+      // Trouver le rôle Nouveau (insensible à la casse + emojis)
+      const nouveauRole = guild.roles.cache.find(r =>
+        !r.managed && /^(🆕|🌱|👶)?\s*nouv(eau|elle|el)?$/i.test(r.name.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim())
+      );
+
+      // Trouver le rôle Membre
+      const membreRole = guild.roles.cache.find(r =>
+        !r.managed && /^(💬|✅)?\s*membre$/i.test(r.name.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim())
+      );
+
+      if (!membreRole) {
+        return await interaction.editReply({
+          content: '❌ Le rôle **Membre** n\'existe pas. Créé-le d\'abord.',
+        });
+      }
+
+      let migrated = 0, alreadyHadMembre = 0, errors = 0;
+      const errorsList = [];
+
+      // Fetch all members
+      const members = await guild.members.fetch().catch(() => null);
+      if (!members) {
+        return await interaction.editReply({ content: '❌ Impossible de fetch les membres.' });
+      }
+
+      for (const [, member] of members) {
+        if (member.user.bot) continue;
+        try {
+          const hasNouveau = nouveauRole && member.roles.cache.has(nouveauRole.id);
+          const hasMembre = member.roles.cache.has(membreRole.id);
+
+          if (hasNouveau || !hasMembre) {
+            // Donner le rôle Membre s'il ne l'a pas
+            if (!hasMembre) {
+              await member.roles.add(membreRole, 'migrer-nouveaux');
+            } else {
+              alreadyHadMembre++;
+            }
+            // Retirer Nouveau s'il l'a
+            if (hasNouveau) {
+              await member.roles.remove(nouveauRole, 'migrer-nouveaux');
+              migrated++;
+            }
+          }
+          await new Promise(r => setTimeout(r, 50)); // anti rate-limit
+        } catch (e) {
+          errors++;
+          if (errorsList.length < 5) errorsList.push(`${member.user.username}: ${e?.message?.slice(0, 40)}`);
+        }
+      }
+
+      // Configurer l'auto-rôle sur Membre
+      let autoroleSet = false;
+      try {
+        db.setConfig(guild.id, 'autorole', membreRole.id);
+        autoroleSet = true;
+      } catch (e) {
+        errorsList.push(`autorole: ${e.message}`);
+      }
+
+      // Optionnellement supprimer le rôle Nouveau (si plus utilisé)
+      let nouveauDeleted = false;
+      const me = guild.members.me;
+      const myTopPos = me?.roles?.highest?.position || 0;
+      if (nouveauRole && nouveauRole.position < myTopPos) {
+        try {
+          // Re-fetch pour voir si encore des membres
+          const updatedRole = await guild.roles.fetch(nouveauRole.id);
+          if (updatedRole && updatedRole.members.size === 0) {
+            await updatedRole.delete('migrer-nouveaux : rôle vidé donc supprimé');
+            nouveauDeleted = true;
+          }
+        } catch {}
+      }
+
+      return await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor('#2ECC71')
+          .setTitle('🔄 ・ Migration Nouveau → Membre ・ Rapport')
+          .setDescription([
+            `✅ **${migrated}** membre(s) migré(s) (Nouveau retiré + Membre donné)`,
+            alreadyHadMembre ? `ℹ️ **${alreadyHadMembre}** membre(s) avaient déjà Membre` : '',
+            autoroleSet ? `🤖 **Auto-rôle activé** : tous les nouveaux arrivants recevront automatiquement **${membreRole.name}**` : '⚠️ Auto-rôle non configuré',
+            nouveauDeleted ? `🗑️ Rôle **Nouveau** supprimé (plus utilisé)` : nouveauRole ? `📋 Rôle **Nouveau** conservé (encore des membres ou intouchable)` : '📋 Aucun rôle "Nouveau" trouvé',
+            errors ? `⚠️ **${errors}** erreur(s)` : '',
+            errorsList.length ? '\n**Erreurs :**\n' + errorsList.map(e => `• ${e}`).join('\n') : '',
+            '',
+            '**Note :** le système de réaction sur règlement reste actif (les emojis ✅/🆔/☝️ donnent toujours Membre, mais maintenant le rôle est aussi donné automatiquement à l\'arrivée).',
+          ].filter(Boolean).join('\n').slice(0, 4000))
+          .setFooter({ text: 'Tu peux désactiver l\'autorole avec /setup autorole sans argument' })
+          .setTimestamp()],
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🔍 DIAGNOSTIC PERMISSIONS DU BOT
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'diagnostic-perms') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const me = guild.members.me;
+      const myTopPos = me?.roles?.highest?.position || 0;
+      const myTopName = me?.roles?.highest?.name || 'inconnu';
+
+      // Permissions globales
+      const globalPerms = me.permissions;
+      const importantPerms = [
+        ['Administrateur', PermissionFlagsBits.Administrator],
+        ['Gérer le serveur', PermissionFlagsBits.ManageGuild],
+        ['Gérer les rôles', PermissionFlagsBits.ManageRoles],
+        ['Gérer les salons', PermissionFlagsBits.ManageChannels],
+        ['Gérer les messages', PermissionFlagsBits.ManageMessages],
+        ['Gérer les threads', PermissionFlagsBits.ManageThreads],
+        ['Gérer les webhooks', PermissionFlagsBits.ManageWebhooks],
+        ['Gérer pseudos', PermissionFlagsBits.ManageNicknames],
+        ['Voir audit log', PermissionFlagsBits.ViewAuditLog],
+        ['Modérer les membres (timeout)', PermissionFlagsBits.ModerateMembers],
+        ['Bannir', PermissionFlagsBits.BanMembers],
+        ['Expulser', PermissionFlagsBits.KickMembers],
+      ];
+      const permsLines = importantPerms.map(([name, perm]) => {
+        const has = globalPerms.has(perm);
+        return `${has ? '✅' : '❌'} ${name}`;
+      }).join('\n');
+
+      // Vérification hiérarchie
+      const allRoles = [...guild.roles.cache.values()].filter(r => !r.managed && r.id !== guild.id);
+      const aboveMe = allRoles.filter(r => r.position >= myTopPos);
+      const aboveLines = aboveMe.slice(0, 10).map(r => `• **${r.name}** (position ${r.position})`).join('\n');
+
+      // Vérification salons inaccessibles
+      const inaccessibleChannels = [];
+      for (const [, ch] of guild.channels.cache) {
+        if (ch.type === 4) continue; // catégories
+        const perms = ch.permissionsFor(me);
+        if (!perms || !perms.has(PermissionFlagsBits.ViewChannel)) {
+          inaccessibleChannels.push(ch.name);
+        }
+      }
+
+      // Recommandations
+      const recos = [];
+      if (!globalPerms.has(PermissionFlagsBits.Administrator)) {
+        if (!globalPerms.has(PermissionFlagsBits.ManageRoles)) recos.push('Donner **Gérer les rôles** au bot');
+        if (!globalPerms.has(PermissionFlagsBits.ManageChannels)) recos.push('Donner **Gérer les salons** au bot');
+      }
+      if (aboveMe.length > 1) {
+        recos.push(`Monter **NexusBot** au-dessus de ${aboveMe.length - 1} rôle(s) qui le bloquent (Paramètres → Rôles)`);
+      }
+      if (inaccessibleChannels.length > 0) {
+        recos.push(`Donner accès à ${inaccessibleChannels.length} salon(s) inaccessible(s)`);
+      }
+
+      return await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor(recos.length === 0 ? '#2ECC71' : '#E67E22')
+          .setTitle('🔍 ・ Diagnostic Permissions Bot')
+          .setDescription([
+            `**Position dans la hiérarchie :** ${myTopPos} (rôle le plus haut: **${myTopName}**)`,
+            `**Rôles au-dessus du bot :** ${aboveMe.length}`,
+            '',
+            '**Permissions globales :**',
+            permsLines,
+            '',
+            aboveMe.length > 0 ? `**⚠️ Rôles qui bloquent le bot (le bot ne peut pas les modifier) :**\n${aboveLines}` : '✅ Aucun rôle ne bloque le bot',
+            '',
+            inaccessibleChannels.length > 0 ? `**📵 Salons inaccessibles (${inaccessibleChannels.length}) :** ${inaccessibleChannels.slice(0, 10).join(', ')}` : '✅ Tous les salons accessibles',
+            '',
+            recos.length > 0 ? `**💡 Recommandations :**\n${recos.map(r => `• ${r}`).join('\n')}` : '✅ Aucune action requise',
+          ].filter(Boolean).join('\n').slice(0, 4000))
+          .setFooter({ text: 'Pour résoudre les problèmes : Paramètres serveur → Rôles → glisser NexusBot tout en haut' })
+          .setTimestamp()],
+      });
     }
 
     if (sub === 'separateur') {
