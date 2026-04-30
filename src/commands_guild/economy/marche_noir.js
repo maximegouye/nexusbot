@@ -3,14 +3,26 @@ const db = require('../../database/db');
 
 // Marché noir : offres aléatoires toutes les heures, très risqué mais très rentable
 const ITEMS_BN = [
-  { id: 'boost_xp_2x', label: '⚡ Boost XP x2 (1h)', price_range: [500, 1500], type: 'boost' },
-  { id: 'vol_protection', label: '🛡️ Bouclier anti-vol (24h)', price_range: [800, 2000], type: 'protection' },
-  { id: 'mystery_box', label: '📦 Boîte mystère', price_range: [300, 1000], type: 'mystery' },
-  { id: 'casino_bonus', label: '🎰 Bonus casino +50% (5 parties)', price_range: [1000, 3000], type: 'boost' },
-  { id: 'fishing_bait', label: '🐟 Appât légendaire (10 pêches rares)', price_range: [600, 1800], type: 'tool' },
-  { id: 'mine_tnt', label: '💣 TNT de mine (+500% (1 mine))', price_range: [1500, 4000], type: 'tool' },
-  { id: 'fake_money', label: '💸 Faux billets (+5000 coins, risqué)', price_range: [200, 800], type: 'risky' },
-  { id: 'steal_kit', label: '🔓 Kit de vol (+50% vol réussi)', price_range: [2000, 5000], type: 'crime' },
+  // === Items COMMUNS (apparaissent souvent) ===
+  { id: 'boost_xp_2x', label: '⚡ Boost XP x2 (1h)', price_range: [500, 1500], type: 'boost', rarity: 'common' },
+  { id: 'vol_protection', label: '🛡️ Bouclier anti-vol (24h)', price_range: [800, 2000], type: 'protection', rarity: 'common' },
+  { id: 'mystery_box', label: '📦 Boîte mystère', price_range: [300, 1000], type: 'mystery', rarity: 'common' },
+  { id: 'casino_bonus', label: '🎰 Bonus casino +50% (5 parties)', price_range: [1000, 3000], type: 'boost', rarity: 'common' },
+  { id: 'fishing_bait', label: '🐟 Appât légendaire (10 pêches rares)', price_range: [600, 1800], type: 'tool', rarity: 'common' },
+  { id: 'mine_tnt', label: '💣 TNT de mine (+500% (1 mine))', price_range: [1500, 4000], type: 'tool', rarity: 'common' },
+  { id: 'fake_money', label: '💸 Faux billets (+5000 coins, risqué)', price_range: [200, 800], type: 'risky', rarity: 'common' },
+  { id: 'steal_kit', label: '🔓 Kit de vol (+50% vol réussi)', price_range: [2000, 5000], type: 'crime', rarity: 'common' },
+
+  // === Items RARES (apparaissent moins) ===
+  { id: 'lucky_charm', label: '🍀 Porte-bonheur (+15% gains casino 24h)', price_range: [5000, 12000], type: 'boost', rarity: 'rare' },
+  { id: 'work_boost', label: '💼 Boost salaire x3 (5 /work)', price_range: [3000, 8000], type: 'boost', rarity: 'rare' },
+  { id: 'bank_key', label: '🔑 Passe bancaire (frais bancaires 0% 7j)', price_range: [4000, 10000], type: 'utility', rarity: 'rare' },
+  { id: 'jail_card', label: '🚓 Carte sortie de prison (annule 1 prison)', price_range: [6000, 15000], type: 'crime', rarity: 'rare' },
+
+  // === Items LÉGENDAIRES (apparaissent rarement) ===
+  { id: 'diamond_ticket', label: '💎 Ticket Diamant (10 spins gratuits casino)', price_range: [25000, 60000], type: 'boost', rarity: 'legendary' },
+  { id: 'golden_pickaxe', label: '⛏️ Pioche d\'or (+1000% mine 24h)', price_range: [40000, 100000], type: 'tool', rarity: 'legendary' },
+  { id: 'mafia_protection', label: '🕴️ Protection mafia (anti-vol 30 jours)', price_range: [50000, 150000], type: 'protection', rarity: 'legendary' },
 ];
 
 try {
@@ -44,13 +56,26 @@ function getOrGenerateMarket(guildId) {
   let items = db.db.prepare('SELECT * FROM black_market WHERE guild_id=? AND available_until > ? AND stock > 0').all(guildId, now);
 
   if (items.length === 0) {
-    // Générer 4 nouvelles offres valables 2h
+    // Générer 4-5 nouvelles offres valables 2h, avec pondération par rareté
     const until = now + 7200;
-    const shuffled = [...ITEMS_BN].sort(() => Math.random() - 0.5).slice(0, 4);
-    for (const item of shuffled) {
+    // Pool pondéré : commons 70%, rares 25%, legendary 5%
+    const commons = ITEMS_BN.filter(i => i.rarity === 'common');
+    const rares = ITEMS_BN.filter(i => i.rarity === 'rare');
+    const legendaries = ITEMS_BN.filter(i => i.rarity === 'legendary');
+    const pool = [];
+    // 3 commons garantis
+    pool.push(...commons.sort(() => Math.random() - 0.5).slice(0, 3));
+    // 1 rare avec 60% chance
+    if (Math.random() < 0.6 && rares.length) pool.push(rares[Math.floor(Math.random() * rares.length)]);
+    // 1 légendaire avec 15% chance
+    if (Math.random() < 0.15 && legendaries.length) pool.push(legendaries[Math.floor(Math.random() * legendaries.length)]);
+
+    for (const item of pool) {
       const price = Math.floor(Math.random() * (item.price_range[1] - item.price_range[0])) + item.price_range[0];
+      // Stock réduit pour les rares/légendaires
+      const baseStock = item.rarity === 'legendary' ? 1 : item.rarity === 'rare' ? 2 : 3;
       db.db.prepare('INSERT INTO black_market (guild_id, item_id, price, stock, available_until) VALUES (?,?,?,?,?)')
-        .run(guildId, item.id, price, Math.floor(Math.random() * 3) + 1, until);
+        .run(guildId, item.id, price, Math.floor(Math.random() * baseStock) + 1, until);
     }
     items = db.db.prepare('SELECT * FROM black_market WHERE guild_id=? AND available_until > ? AND stock > 0').all(guildId, now);
   }
@@ -82,7 +107,8 @@ module.exports = {
       const desc = items.map((item, i) => {
         const meta = ITEMS_BN.find(x => x.id === item.item_id);
         const riskLabel = meta?.type === 'risky' ? ' ⚠️ *risqué*' : meta?.type === 'crime' ? ' 🚨 *illégal*' : '';
-        return `**${i+1}.** ${meta?.label || item.item_id} — **${item.price.toLocaleString()} ${coin}** (stock: ${item.stock})${riskLabel}`;
+        const rarityLabel = meta?.rarity === 'legendary' ? ' 💎 **LÉGENDAIRE**' : meta?.rarity === 'rare' ? ' ⭐ *rare*' : '';
+        return `**${i+1}.** ${meta?.label || item.item_id}${rarityLabel}\n— **${item.price.toLocaleString()} ${coin}** (stock: ${item.stock})${riskLabel}`;
       }).join('\n\n');
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
