@@ -91,6 +91,7 @@ module.exports = {
     .addSubcommand(s => s.setName('detecter-doublons-salons').setDescription("🔎 Détecte les salons qui font la même chose (par fonction)")
       .addBooleanOption(o => o.setName('supprimer-vides').setDescription('true = supprime les doublons vides automatiquement').setRequired(false)))
     .addSubcommand(s => s.setName('synchronisation-totale').setDescription("🔧 BÉTONNAGE complet : catégories + salons + permissions staff verrouillées"))
+    .addSubcommand(s => s.setName('fusion-intelligente').setDescription("🧠 FUSIONNE catégories doublons : déplace salons dans l'original + supprime vides"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -871,6 +872,119 @@ module.exports = {
         )
         .setFooter({ text: 'Aucun salon, message, ou membre supprimé. Permissions staff verrouillées.' })
         .setTimestamp()] });
+    }
+
+    // ─── 🧠 FUSION INTELLIGENTE des catégories doublons ─────────
+    if (sub === 'fusion-intelligente') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      // Patterns par "fonction" — toutes les variantes possibles
+      const CAT_PURPOSES = [
+        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil/i },
+        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général/i },
+        { id: 'ÉCONOMIE',       to: '┈ ・ ÉCONOMIE ・ ┈',        test: /[eé]conomie|economy/i },
+        { id: 'CASINO',         to: '┈ ・ CASINO ・ ┈',           test: /casino/i },
+        { id: 'JEUX FUN',       to: '┈ ・ JEUX FUN ・ ┈',         test: /jeux.?fun|fun.?jeux|amusement|fun$/i },
+        { id: 'JEUX',           to: '┈ ・ JEUX ・ ┈',             test: /^[┈・\s]*jeux[┈・\s]*$|^games$/i },
+        { id: 'ÉVÉNEMENTS',     to: '┈ ・ ÉVÉNEMENTS ・ ┈',       test: /[eé]v[eé]nements?|events?/i },
+        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community/i },
+        { id: 'ADMINISTRATION', to: '┈ ・ ADMINISTRATION ・ ┈',   test: /administration|admin|staff/i },
+      ];
+
+      // Group catégories existantes par fonction
+      const groups = {}; // purpose.id → [cat1, cat2, ...]
+      for (const [, cat] of guild.channels.cache.filter(c => c.type === ChannelType.GuildCategory)) {
+        // Strip decorations pour matching
+        const stripped = cat.name.replace(/[┈・\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim();
+        for (const p of CAT_PURPOSES) {
+          if (p.test.test(stripped) || p.test.test(cat.name)) {
+            if (!groups[p.id]) groups[p.id] = [];
+            groups[p.id].push({ cat, purpose: p });
+            break;
+          }
+        }
+      }
+
+      let moved = 0, deleted = 0, renamed = 0, errors = 0;
+      const report = [];
+
+      for (const [purposeId, items] of Object.entries(groups)) {
+        if (items.length === 0) continue;
+        const target = items[0].purpose.to;
+
+        if (items.length === 1) {
+          // Une seule catégorie → juste renommer si nécessaire
+          const cat = items[0].cat;
+          if (cat.name !== target) {
+            try { await cat.setName(target); renamed++; report.push(`📝 ${cat.name} → ${target}`); } catch (e) { errors++; }
+          }
+          continue;
+        }
+
+        // Plusieurs catégories → FUSION
+        // Trie par date création asc (plus ancienne = à garder)
+        items.sort((a, b) => a.cat.createdTimestamp - b.cat.createdTimestamp);
+        const keep = items[0].cat;       // l'originale (plus ancienne)
+        const merge = items.slice(1).map(i => i.cat);
+
+        report.push(`\n🧠 **${purposeId}** : fusion de ${items.length} catégories`);
+        report.push(`  ✅ Garder : **${keep.name}** (créée <t:${Math.floor(keep.createdTimestamp/1000)}:R>)`);
+
+        // Renomme la kept
+        if (keep.name !== target) {
+          try { await keep.setName(target); renamed++; } catch (e) { errors++; }
+        }
+
+        // Pour chaque catégorie à fusionner
+        for (const dup of merge) {
+          // Trouve les salons enfants de cette catégorie
+          const children = guild.channels.cache.filter(c => c.parentId === dup.id);
+          report.push(`  🔄 Fusionner : **${dup.name}** (${children.size} salon(s))`);
+
+          // Déplace chaque salon vers la kept
+          for (const [, child] of children) {
+            try {
+              await child.setParent(keep.id, { lockPermissions: false });
+              moved++;
+              report.push(`    ↪ <#${child.id}> déplacé`);
+            } catch (e) {
+              errors++;
+              console.error('[fusion] move err:', child.name, e.message);
+            }
+          }
+
+          // Supprime la catégorie vide
+          try {
+            await dup.delete('Fusion catégories doublons — /setup-serveur fusion-intelligente');
+            deleted++;
+            report.push(`    🗑️ Catégorie supprimée`);
+          } catch (e) {
+            errors++;
+            console.error('[fusion] delete err:', dup.name, e.message);
+          }
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      const embed = new EmbedBuilder().setColor('#9B59B6').setTitle('🧠 ・ Fusion intelligente terminée ・')
+        .setDescription([
+          '**Catégories doublons fusionnées intelligemment :**',
+          '✅ La catégorie originale (la + ancienne) est gardée',
+          '✅ Tous les salons des doublons sont déplacés dedans',
+          '✅ Les catégories vides sont supprimées',
+          '✅ AUCUN salon ni message perdu',
+          '',
+          report.slice(0, 30).join('\n'),
+        ].join('\n').slice(0, 4000))
+        .addFields(
+          { name: '📦 Salons déplacés', value: `**${moved}**`, inline: true },
+          { name: '🗑️ Catégories supprimées', value: `**${deleted}**`, inline: true },
+          { name: '🏷️ Renommées', value: `**${renamed}**`, inline: true },
+          { name: '❌ Erreurs', value: `**${errors}**`, inline: true },
+        )
+        .setFooter({ text: 'Maintenant lance /setup-serveur synchronisation-totale pour finaliser le visuel.' })
+        .setTimestamp();
+      return respFn({ embeds: [embed] });
     }
 
     if (sub === 'separateur') {
