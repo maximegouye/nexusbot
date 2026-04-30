@@ -92,6 +92,7 @@ module.exports = {
       .addBooleanOption(o => o.setName('supprimer-vides').setDescription('true = supprime les doublons vides automatiquement').setRequired(false)))
     .addSubcommand(s => s.setName('synchronisation-totale').setDescription("🔧 BÉTONNAGE complet : catégories + salons + permissions staff verrouillées"))
     .addSubcommand(s => s.setName('fusion-intelligente').setDescription("🧠 FUSIONNE catégories doublons : déplace salons dans l'original + supprime vides"))
+    .addSubcommand(s => s.setName('garder-nouvelles').setDescription("⭐ GARDE les nouvelles catégories au format ┈・X・┈ + déplace contenu existant dedans + supprime anciennes vides"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -983,6 +984,113 @@ module.exports = {
           { name: '❌ Erreurs', value: `**${errors}**`, inline: true },
         )
         .setFooter({ text: 'Maintenant lance /setup-serveur synchronisation-totale pour finaliser le visuel.' })
+        .setTimestamp();
+      return respFn({ embeds: [embed] });
+    }
+
+    // ─── ⭐ GARDER LES NOUVELLES CATÉGORIES (style ┈・X・┈) ─────
+    if (sub === 'garder-nouvelles') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      // Patterns par fonction → nom NEW (qu'on veut garder)
+      const CAT_TARGETS = [
+        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil/i },
+        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général/i },
+        { id: 'ÉCONOMIE',       to: '┈ ・ ÉCONOMIE ・ ┈',        test: /[eé]conomie|economy/i },
+        { id: 'CASINO',         to: '┈ ・ CASINO ・ ┈',           test: /casino/i },
+        { id: 'JEUX FUN',       to: '┈ ・ JEUX FUN ・ ┈',         test: /jeux.?fun|fun.?jeux|amusement|^fun$/i },
+        { id: 'JEUX',           to: '┈ ・ JEUX ・ ┈',             test: /(^|\s)jeux(\s|$)|^games$/i },
+        { id: 'ÉVÉNEMENTS',     to: '┈ ・ ÉVÉNEMENTS ・ ┈',       test: /[eé]v[eé]nements?|events?/i },
+        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community/i },
+        { id: 'ADMINISTRATION', to: '┈ ・ ADMINISTRATION ・ ┈',   test: /administration|admin|staff/i },
+      ];
+
+      // Collecte toutes les catégories par purpose
+      const groups = {}; // purposeId → [cats]
+      for (const [, cat] of guild.channels.cache.filter(c => c.type === ChannelType.GuildCategory)) {
+        const stripped = cat.name.replace(/[┈・\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim();
+        for (const p of CAT_TARGETS) {
+          if (p.test.test(stripped) || p.test.test(cat.name)) {
+            if (!groups[p.id]) groups[p.id] = [];
+            groups[p.id].push({ cat, target: p.to });
+            break;
+          }
+        }
+      }
+
+      let moved = 0, deletedCats = 0, renamed = 0, kept = 0, errors = 0;
+      const report = [];
+
+      for (const [purposeId, items] of Object.entries(groups)) {
+        if (items.length === 0) continue;
+        const target = items[0].target;
+
+        // Trouve la catégorie qui a DÉJÀ le bon nom (┈ ・ X ・ ┈) — c'est CELLE-LÀ qu'on garde
+        let keep = items.find(i => i.cat.name === target)?.cat;
+
+        if (!keep) {
+          // Aucune au bon format — on prend la plus récente (probablement ma nouvelle) et on la renomme
+          items.sort((a, b) => b.cat.createdTimestamp - a.cat.createdTimestamp); // desc = plus récente d'abord
+          keep = items[0].cat;
+          if (keep.name !== target) {
+            try { await keep.setName(target); renamed++; } catch (e) { errors++; }
+          }
+        }
+
+        kept++;
+        report.push(`\n⭐ **${purposeId}** : garder \`${target}\` (id: ${keep.id})`);
+
+        if (items.length === 1) {
+          report.push(`  ℹ️ Pas de doublon, juste renommage si nécessaire`);
+          continue;
+        }
+
+        // Pour chaque AUTRE catégorie de ce groupe (= les anciennes), on déplace les salons et on supprime
+        const others = items.filter(i => i.cat.id !== keep.id).map(i => i.cat);
+        for (const old of others) {
+          const children = guild.channels.cache.filter(c => c.parentId === old.id);
+          report.push(`  🔄 Vider et supprimer : **${old.name}** (${children.size} salon(s))`);
+
+          for (const [, child] of children) {
+            try {
+              await child.setParent(keep.id, { lockPermissions: false });
+              moved++;
+              report.push(`    ↪ \`${child.name}\` déplacé`);
+            } catch (e) { errors++; }
+          }
+
+          // Recompte après déplacement
+          const remaining = guild.channels.cache.filter(c => c.parentId === old.id).size;
+          if (remaining === 0) {
+            try {
+              await old.delete('Doublon de catégorie — fusion vers nouvelle');
+              deletedCats++;
+              report.push(`    🗑️ Catégorie supprimée`);
+            } catch (e) { errors++; }
+          }
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      const embed = new EmbedBuilder().setColor('#9B59B6').setTitle('⭐ ・ Nouvelles catégories conservées ・')
+        .setDescription([
+          '**Stratégie : on garde les nouvelles catégories au format `┈ ・ X ・ ┈` et on déplace tout le contenu dedans.**',
+          '',
+          '✅ Catégories `┈ ・ X ・ ┈` GARDÉES',
+          '✅ Salons des anciennes catégories DÉPLACÉS dedans',
+          '✅ Anciennes catégories vides SUPPRIMÉES',
+          '✅ Aucun message ni membre perdu',
+          '',
+          report.slice(0, 30).join('\n'),
+        ].join('\n').slice(0, 4000))
+        .addFields(
+          { name: '⭐ Catégories gardées', value: `**${kept}**`, inline: true },
+          { name: '📦 Salons déplacés', value: `**${moved}**`, inline: true },
+          { name: '🗑️ Anciennes supprimées', value: `**${deletedCats}**`, inline: true },
+          { name: '🏷️ Renommées', value: `**${renamed}**`, inline: true },
+          { name: '❌ Erreurs', value: `**${errors}**`, inline: true },
+        )
+        .setFooter({ text: 'Lance maintenant /setup-serveur synchronisation-totale pour finaliser visuel + perms.' })
         .setTimestamp();
       return respFn({ embeds: [embed] });
     }
