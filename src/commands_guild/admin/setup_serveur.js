@@ -99,6 +99,7 @@ module.exports = {
     .addSubcommand(s => s.setName('force-rename-categories').setDescription("🔥 FORCE le renommage de TOUTES les catégories au format ╭┈ EMOJI NOM"))
     .addSubcommand(s => s.setName('force-tout').setDescription("💎 FORCE renomme catégories + salons + topics + permissions (ULTIME)"))
     .addSubcommand(s => s.setName('audit-total-360').setDescription("🛡️ AUDIT 360° : rôles + perms + hiérarchie + Staff global + salons accessibles"))
+    .addSubcommand(s => s.setName('audit-rapide').setDescription("⚡ AUDIT 360° v2 OPTIMISÉ : 30s — perms en parallèle + bulk overwrites"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -1883,6 +1884,176 @@ module.exports = {
         .setFooter({ text: 'Si certains rôles n\'ont pas été mis à jour, c\'est qu\'ils sont au-dessus du bot dans la hiérarchie. Remonte le bot pour les inclure.' })
         .setTimestamp();
       return respFn({ embeds: [embed] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ⚡ AUDIT 360° v2 OPTIMISÉ : utilise Promise.all + permissionOverwrites.set
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'audit-rapide') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const everyone = guild.roles.everyone;
+      const me = guild.members.me;
+      const myTopRolePos = me?.roles?.highest?.position || 0;
+      const errors = [];
+
+      const allRoles = [...guild.roles.cache.values()].filter(r => !r.managed && r.id !== guild.id);
+      const ADMIN_NAME = /admin|propri[eé]taire|owner|fondateur|founder|h[eé]bergeur|d[eé]veloppeur|developer/i;
+      const MOD_NAME = /mod[eé]rateur|moderator|gestionnaire|manager|^staff$/i;
+      const adminRoles = allRoles.filter(r => r.permissions.has(PermissionFlagsBits.Administrator) || ADMIN_NAME.test(r.name));
+      const modRoles = allRoles.filter(r => !adminRoles.includes(r) && (MOD_NAME.test(r.name) || r.permissions.has(PermissionFlagsBits.ManageMessages)));
+      const botRoles = [...guild.roles.cache.values()].filter(r => r.managed);
+
+      // 1. Trouver/créer @Staff
+      let staffGlobal = guild.roles.cache.find(r => /^staff$/i.test(r.name) && !r.managed);
+      let createdStaff = false;
+      if (!staffGlobal) {
+        try {
+          staffGlobal = await guild.roles.create({
+            name: 'Staff', color: '#3498DB', mentionable: true, hoist: true, permissions: [],
+            reason: 'audit-rapide',
+          });
+          createdStaff = true;
+        } catch (e) { errors.push(`@Staff: ${e.message}`); }
+      } else if (!staffGlobal.mentionable) {
+        try { await staffGlobal.setMentionable(true); } catch {}
+      }
+
+      // 2. Construire la liste d'overwrites pré-calculée pour CHAQUE channel
+      const ALLOW_ALL_STAFF = [
+        PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.SendMessagesInThreads, PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ManageThreads,
+        PermissionFlagsBits.AttachFiles, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.AddReactions,
+        PermissionFlagsBits.UseExternalEmojis, PermissionFlagsBits.MentionEveryone, PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak, PermissionFlagsBits.MoveMembers, PermissionFlagsBits.MuteMembers,
+      ];
+      const ALLOW_BOT = [
+        PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.AttachFiles,
+      ];
+
+      const STAFF_CHAN_RX = /admin|staff|^mod|bot.?logs?|diagnostic|^config$|^dev$|audit/i;
+      const STAFF_CAT_RX = /admin|staff|moderation|modération|support/i;
+
+      // Pré-calcul : pour chaque channel, on construit le tableau d'overwrites COMPLET
+      const channels = [...guild.channels.cache.values()].filter(c => c.type !== ChannelType.GuildCategory);
+
+      // 3. Configuration parallèle des perms — par lots de 5 pour respecter les rate limits
+      let chFixed = 0, chFailed = 0;
+      const BATCH_SIZE = 5;
+
+      for (let i = 0; i < channels.length; i += BATCH_SIZE) {
+        const batch = channels.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async (ch) => {
+          try {
+            const isStaffChan = STAFF_CHAN_RX.test(ch.name) || STAFF_CAT_RX.test(ch.parent?.name || '');
+
+            // On garde les overwrites existants des USERS (pas des roles), on remplace les role overwrites
+            const existingUserOws = ch.permissionOverwrites.cache
+              .filter(o => o.type === 1) // type 1 = member
+              .map(o => ({ id: o.id, type: 1, allow: o.allow.bitfield, deny: o.deny.bitfield }));
+
+            const overwrites = [...existingUserOws];
+
+            // @everyone
+            if (isStaffChan) {
+              overwrites.push({ id: everyone.id, deny: [
+                PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory,
+              ]});
+            }
+            // @Staff voit TOUT
+            if (staffGlobal && staffGlobal.position < myTopRolePos) {
+              overwrites.push({ id: staffGlobal.id, allow: ALLOW_ALL_STAFF });
+            }
+            // Admin roles voient TOUT
+            for (const ar of adminRoles) {
+              if (ar.position >= myTopRolePos) continue;
+              overwrites.push({ id: ar.id, allow: ALLOW_ALL_STAFF });
+            }
+            // Mod roles voient TOUT
+            for (const mr of modRoles) {
+              if (mr.position >= myTopRolePos) continue;
+              overwrites.push({ id: mr.id, allow: ALLOW_ALL_STAFF });
+            }
+            // Bots
+            for (const br of botRoles) {
+              overwrites.push({ id: br.id, allow: ALLOW_BOT });
+            }
+
+            await ch.permissionOverwrites.set(overwrites, 'audit-rapide');
+            chFixed++;
+          } catch (e) {
+            chFailed++;
+            if (errors.length < 8) errors.push(`#${ch.name}: ${e.message.slice(0, 60)}`);
+          }
+        }));
+      }
+
+      // 4. Permissions @everyone (rôle global)
+      const EVERYONE_BASE = [
+        PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.SendMessagesInThreads,
+        PermissionFlagsBits.CreatePublicThreads, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions, PermissionFlagsBits.UseExternalEmojis, PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.UseVAD,
+        PermissionFlagsBits.UseApplicationCommands, PermissionFlagsBits.ChangeNickname, PermissionFlagsBits.Stream,
+      ];
+      try { await everyone.setPermissions(EVERYONE_BASE, 'audit-rapide'); } catch (e) { errors.push(`@everyone: ${e.message}`); }
+
+      // 5. Permissions des rôles admin/staff (si pas Administrator)
+      const ADMIN_PERMS = [
+        PermissionFlagsBits.ManageGuild, PermissionFlagsBits.ManageRoles, PermissionFlagsBits.ManageChannels,
+        PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ManageThreads, PermissionFlagsBits.ManageWebhooks,
+        PermissionFlagsBits.ManageEmojisAndStickers, PermissionFlagsBits.ManageEvents, PermissionFlagsBits.ManageNicknames,
+        PermissionFlagsBits.ViewAuditLog, PermissionFlagsBits.MentionEveryone, PermissionFlagsBits.ModerateMembers,
+        PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.SendMessagesInThreads,
+        PermissionFlagsBits.CreatePublicThreads, PermissionFlagsBits.CreatePrivateThreads, PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles, PermissionFlagsBits.AddReactions, PermissionFlagsBits.UseExternalEmojis,
+        PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.Stream,
+        PermissionFlagsBits.MuteMembers, PermissionFlagsBits.DeafenMembers, PermissionFlagsBits.MoveMembers,
+        PermissionFlagsBits.UseApplicationCommands, PermissionFlagsBits.ChangeNickname,
+      ];
+      const STAFF_PERMS = [
+        PermissionFlagsBits.ManageRoles, PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ManageThreads,
+        PermissionFlagsBits.ManageNicknames, PermissionFlagsBits.ViewAuditLog, PermissionFlagsBits.ModerateMembers,
+        PermissionFlagsBits.MentionEveryone, PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.SendMessagesInThreads, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions, PermissionFlagsBits.UseExternalEmojis, PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.MuteMembers,
+        PermissionFlagsBits.DeafenMembers, PermissionFlagsBits.MoveMembers, PermissionFlagsBits.UseApplicationCommands,
+        PermissionFlagsBits.ChangeNickname,
+      ];
+      let rolesFixed = 0;
+      await Promise.all([
+        ...adminRoles.filter(r => r.position < myTopRolePos && !r.permissions.has(PermissionFlagsBits.Administrator))
+          .map(r => r.setPermissions(ADMIN_PERMS, 'audit-rapide').then(() => rolesFixed++).catch(() => {})),
+        ...modRoles.filter(r => r.position < myTopRolePos)
+          .map(r => r.setPermissions(STAFF_PERMS, 'audit-rapide').then(() => rolesFixed++).catch(() => {})),
+        staffGlobal && staffGlobal.position < myTopRolePos ? staffGlobal.setPermissions(STAFF_PERMS, 'audit-rapide').then(() => rolesFixed++).catch(() => {}) : Promise.resolve(),
+      ]);
+
+      // 6. Rapport final
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder()
+        .setColor(errors.length === 0 ? '#2ECC71' : '#E67E22')
+        .setTitle('⚡ ・ AUDIT RAPIDE 360° ・ Résultat')
+        .setDescription([
+          '**Configuration pro appliquée en parallèle :**',
+          '',
+          createdStaff ? '🆕 Rôle **@Staff** créé (mentionnable, bleu, hoisted)' : `✅ Rôle **@${staffGlobal?.name || 'Staff'}** existant configuré`,
+          `🔍 Détectés : **${adminRoles.length}** admin/owner • **${modRoles.length}** mod • **${botRoles.length}** bot`,
+          `🔧 **${rolesFixed}** rôle(s) reconfiguré(s) (admin/staff sans ban/kick)`,
+          `📺 **${chFixed}/${channels.length}** salons reconfigurés (perms bulk)`,
+          chFailed ? `❌ **${chFailed}** salons en erreur` : '',
+          `✅ **@everyone** : perms de base saines (sans Manage, sans MentionEveryone)`,
+          '',
+          '**Règles appliquées partout :**',
+          '• Admin/Staff voient TOUT, peuvent tout faire SAUF ban/kick',
+          '• Staff peut gérer les rôles (sans casser hiérarchie)',
+          '• Salons staff invisibles à @everyone',
+          '• Bots gardent leurs accès',
+          errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n') : '',
+        ].filter(Boolean).join('\n').slice(0, 4000))
+        .setFooter({ text: 'Audit en parallèle • Si rôle plus haut que bot, monter NexusBot dans la hiérarchie.' })
+        .setTimestamp()] });
     }
 
     if (sub === 'separateur') {
