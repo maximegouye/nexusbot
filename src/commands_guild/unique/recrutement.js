@@ -619,6 +619,17 @@ module.exports = {
   async handleComponent(interaction, cid) {
     const guildId = interaction.guildId;
 
+    // Helper : reply OU editReply selon l'état de l'interaction
+    const safeReply = async (payload) => {
+      try {
+        if (interaction.deferred || interaction.replied) {
+          return await interaction.editReply(payload);
+        } else {
+          return await interaction.reply({ ...payload, ephemeral: payload.ephemeral !== false });
+        }
+      } catch (e) { console.error('[REC safeReply]', e?.message); }
+    };
+
     // ── Clic panneau → modal de candidature ──────────────────────────────
     if (cid.startsWith('rec_apply_')) {
       const poste = cid.slice(10);
@@ -626,19 +637,20 @@ module.exports = {
       if (!p) return false;
 
       const cfg = getConfig(guildId);
+      // Pour les checks d'erreur on utilise reply (pas defer) car on n'a pas encore appelé showModal
       if (cfg.status[poste] === false) {
-        await interaction.editReply({ content: `❌ Le poste **${p.label}** est actuellement **fermé** aux candidatures.`, ephemeral: true });
+        await safeReply({ content: `❌ Le poste **${p.label}** est actuellement **fermé** aux candidatures.`, ephemeral: true });
         return true;
       }
       if (hasPendingApp(guildId, interaction.user.id, poste)) {
-        await interaction.editReply({ content: `⏳ Tu as déjà une candidature **en cours** pour le poste **${p.label}**. Attends la décision de l'équipe.`, ephemeral: true });
+        await safeReply({ content: `⏳ Tu as déjà une candidature **en cours** pour le poste **${p.label}**. Attends la décision de l'équipe.`, ephemeral: true });
         return true;
       }
       const lastRej = getLastRejected(guildId, interaction.user.id, poste);
       if (lastRej) {
         const cooldownEnd = (lastRej.reviewed_at || lastRej.submitted_at) + COOLDOWN_DAYS * 86400;
         if (ts() < cooldownEnd) {
-          await interaction.editReply({ content: `⏳ Tu dois attendre <t:${cooldownEnd}:R> avant de repostuler au poste **${p.label}**.`, ephemeral: true });
+          await safeReply({ content: `⏳ Tu dois attendre <t:${cooldownEnd}:R> avant de repostuler au poste **${p.label}**.`, ephemeral: true });
           return true;
         }
       }
@@ -670,13 +682,17 @@ module.exports = {
 
     // ── Soumission du formulaire ──────────────────────────────────────────
     if (cid.startsWith('rec_form_') && interaction.isModalSubmit()) {
+      // Modal submit → defer ephemeral pour pouvoir editReply ensuite
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const poste = cid.slice(9);
       const p     = POSTES[poste];
       if (!p) return false;
 
       const cfg = getConfig(guildId);
       if (!cfg.log_channel) {
-        await interaction.editReply({ content: '❌ Le système de recrutement n\'est pas configuré. Contacte un admin.', ephemeral: true });
+        await interaction.editReply({ content: '❌ Le système de recrutement n\'est pas configuré. Contacte un admin.' }).catch(() => {});
         return true;
       }
 
@@ -732,14 +748,18 @@ module.exports = {
 
     // ── Bouton ✅ Accepter ────────────────────────────────────────────────
     if (cid.startsWith('rec_acc_')) {
+      // Defer ephemeral pour ce bouton (on va répondre puis editReply)
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const appId   = parseInt(cid.slice(8));
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
+      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.' }).catch(() => {}); return true; }
 
       const app = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app)                      { await interaction.editReply({ content: '❌ Candidature introuvable.',    ephemeral: true }); return true; }
-      if (app.status === 'accepted') { await interaction.editReply({ content: '✅ Déjà acceptée.',              ephemeral: true }); return true; }
-      if (app.status === 'rejected') { await interaction.editReply({ content: '❌ Déjà refusée.',              ephemeral: true }); return true; }
+      if (!app)                      { await interaction.editReply({ content: '❌ Candidature introuvable.' }).catch(() => {}); return true; }
+      if (app.status === 'accepted') { await interaction.editReply({ content: '✅ Déjà acceptée.' }).catch(() => {}); return true; }
+      if (app.status === 'rejected') { await interaction.editReply({ content: '❌ Déjà refusée.' }).catch(() => {}); return true; }
 
       const p   = POSTES[app.poste];
       const cfg = getConfig(guildId);
@@ -775,20 +795,21 @@ module.exports = {
 
       const fakeUser = candidate ?? { tag: `User#${app.user_id}`, displayAvatarURL: () => null };
       await interaction.message.edit({ embeds: [buildLogEmbed(appUpdated, fakeUser, p, 'accepted')], components: [] }).catch(() => {});
-      await interaction.editReply({ content: `✅ Candidature **#${appId}** acceptée.${roleGiven ? ' Rôle attribué.' : ''} Candidat notifié en DM.`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Candidature **#${appId}** acceptée.${roleGiven ? ' Rôle attribué.' : ''} Candidat notifié en DM.` }).catch(() => {});
       return true;
     }
 
     // ── Bouton ❌ Refuser → modal raison ─────────────────────────────────
     if (cid.startsWith('rec_rej_') && !cid.startsWith('rec_rej_conf_')) {
+      // Pas de defer ici car on va appeler showModal qui n'est pas compatible avec defer
       const appId   = parseInt(cid.slice(8));
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
+      if (!isStaff) { await safeReply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
 
       const app = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app)                      { await interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
-      if (app.status === 'rejected') { await interaction.editReply({ content: '❌ Déjà refusée.',            ephemeral: true }); return true; }
-      if (app.status === 'accepted') { await interaction.editReply({ content: '✅ Déjà acceptée.',           ephemeral: true }); return true; }
+      if (!app)                      { await safeReply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
+      if (app.status === 'rejected') { await safeReply({ content: '❌ Déjà refusée.',            ephemeral: true }); return true; }
+      if (app.status === 'accepted') { await safeReply({ content: '✅ Déjà acceptée.',           ephemeral: true }); return true; }
 
       await interaction.showModal(
         new ModalBuilder()
@@ -812,10 +833,14 @@ module.exports = {
 
     // ── Modal refus confirmé ──────────────────────────────────────────────
     if (cid.startsWith('rec_rej_conf_') && interaction.isModalSubmit()) {
+      // Modal submit → defer ephemeral pour pouvoir editReply ensuite
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const appId  = parseInt(cid.slice(13));
       const reason = interaction.fields.getTextInputValue('reason') || 'Aucune raison précisée.';
       const app    = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app) { await interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
+      if (!app) { await interaction.editReply({ content: '❌ Candidature introuvable.' }).catch(() => {}); return true; }
 
       const p = POSTES[app.poste];
       db.db.prepare('UPDATE rec_apps SET status=?, reviewer_id=?, reject_reason=?, reviewed_at=? WHERE id=?').run('rejected', interaction.user.id, reason, ts(), appId);
@@ -847,19 +872,23 @@ module.exports = {
         if (logCh) logCh.messages.fetch(app.msg_id).then(m => m.edit({ embeds: [buildLogEmbed(appUpdated, fakeUser, p, 'rejected')], components: [] })).catch(() => {});
       }
 
-      await interaction.editReply({ content: `❌ Candidature **#${appId}** refusée. Candidat notifié en DM.`, ephemeral: true });
+      await interaction.editReply({ content: `❌ Candidature **#${appId}** refusée. Candidat notifié en DM.` }).catch(() => {});
       return true;
     }
 
     // ── Bouton 🔍 En examen ───────────────────────────────────────────────
     if (cid.startsWith('rec_wait_')) {
+      // Defer ephemeral pour ce bouton
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const appId   = parseInt(cid.slice(9));
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) || interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
-      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.', ephemeral: true }); return true; }
+      if (!isStaff) { await interaction.editReply({ content: '❌ Permission insuffisante.' }).catch(() => {}); return true; }
 
       const app = db.db.prepare('SELECT * FROM rec_apps WHERE id=?').get(appId);
-      if (!app)                                                    { await interaction.editReply({ content: '❌ Candidature introuvable.', ephemeral: true }); return true; }
-      if (app.status === 'accepted' || app.status === 'rejected') { await interaction.editReply({ content: '❌ Candidature déjà traitée.', ephemeral: true }); return true; }
+      if (!app)                                                    { await interaction.editReply({ content: '❌ Candidature introuvable.' }).catch(() => {}); return true; }
+      if (app.status === 'accepted' || app.status === 'rejected') { await interaction.editReply({ content: '❌ Candidature déjà traitée.' }).catch(() => {}); return true; }
 
       const p = POSTES[app.poste];
       db.db.prepare('UPDATE rec_apps SET status=?, reviewer_id=? WHERE id=?').run('waiting', interaction.user.id, appId);
@@ -867,7 +896,7 @@ module.exports = {
       const candidate   = await interaction.client.users.fetch(app.user_id).catch(() => null);
       const fakeUser    = candidate ?? { tag: `User#${app.user_id}`, displayAvatarURL: () => null };
       await interaction.message.edit({ embeds: [buildLogEmbed(appUpdated, fakeUser, p, 'waiting')], components: buildLogButtons(appId, 'waiting') }).catch(() => {});
-      await interaction.editReply({ content: `🔍 Candidature **#${appId}** marquée **en examen** par <@${interaction.user.id}>.`, ephemeral: true });
+      await interaction.editReply({ content: `🔍 Candidature **#${appId}** marquée **en examen** par <@${interaction.user.id}>.` }).catch(() => {});
       return true;
     }
 

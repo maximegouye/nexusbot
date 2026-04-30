@@ -234,6 +234,13 @@ module.exports = {
 
       if (handler) {
         try {
+          // ── AUTO-DEFER pour MODAL SUBMIT ──────────────────────────────────
+          // Les modal submits ne peuvent pas ouvrir un autre modal, on peut donc
+          // auto-defer en safety net pour permettre editReply ensuite dans les handlers
+          if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied) {
+            try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
+          }
+
           // ── handleComponent en premier (boutons / menus / modals) ──────────
           if (typeof handler.handleComponent === 'function') {
             try {
