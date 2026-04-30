@@ -89,7 +89,8 @@ module.exports = {
     .addSubcommand(s => s.setName('perfectionner').setDescription("✨ Applique permissions+topics sans écraser tes customs"))
     .addSubcommand(s => s.setName('tout-synchroniser').setDescription("🎨 Force la cohérence visuelle partout — aucune suppression"))
     .addSubcommand(s => s.setName('detecter-doublons-salons').setDescription("🔎 Détecte les salons doublons par fonction")
-      .addBooleanOption(o => o.setName('supprimer-vides').setDescription('true = supprime les doublons vides').setRequired(false)))
+      .addBooleanOption(o => o.setName('supprimer-vides').setDescription('true = supprime les doublons vides').setRequired(false))
+      .addBooleanOption(o => o.setName('force-tout-supprimer').setDescription('true = supprime TOUS les doublons (même avec messages)').setRequired(false)))
     .addSubcommand(s => s.setName('synchronisation-totale').setDescription("🔧 BÉTONNAGE : catégories + salons + permissions staff verrouillées"))
     .addSubcommand(s => s.setName('fusion-intelligente').setDescription("🧠 Fusionne catégories doublons : déplace salons + supprime vides"))
     .addSubcommand(s => s.setName('garder-nouvelles').setDescription("⭐ Garde les nouvelles catégories + déplace contenu existant dedans"))
@@ -551,6 +552,7 @@ module.exports = {
     if (sub === 'detecter-doublons-salons') {
       await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const supprimer = interaction.options.getBoolean('supprimer-vides') === true;
+      const forceTout = interaction.options.getBoolean('force-tout-supprimer') === true;
 
       // Mêmes patterns de reconnaissance que tout-synchroniser
       const PURPOSES = [
@@ -642,10 +644,11 @@ module.exports = {
             msgCount = msgs.size;
           } catch {}
           const isEmpty = msgCount === 0;
-          const action = (supprimer && isEmpty) ? '🗑️ SUPPRIMÉ' : (isEmpty ? '🟡 vide' : `📝 ${msgCount}+ msg`);
+          const willDelete = forceTout || (supprimer && isEmpty);
+          const action = willDelete ? '🗑️ SUPPRIMÉ' : (isEmpty ? '🟡 vide' : `📝 ${msgCount}+ msg`);
           lines.push(`  ${action} : <#${c.id}> (${c.name})`);
-          if (supprimer && isEmpty) {
-            try { await c.delete('Doublon vide — fusion par /setup-serveur'); supprimés++; } catch {}
+          if (willDelete) {
+            try { await c.delete(forceTout ? 'Doublon — force suppression' : 'Doublon vide — fusion'); supprimés++; } catch {}
           }
         }
         lines.push('');
