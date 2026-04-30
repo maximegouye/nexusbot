@@ -103,6 +103,7 @@ module.exports = {
     .addSubcommand(s => s.setName('autoconfig').setDescription("🤖 AUTOCONFIG : détecte les bons salons et configure tout (welcome/logs/levels/etc)"))
     .addSubcommand(s => s.setName('nettoyer-doublons-v2').setDescription("🧹 V2 : Supprime TOUS les rôles doublons (3+ exemplaires) avec smart-merge"))
     .addSubcommand(s => s.setName('organiser-hierarchie').setDescription("📐 Réordonne hiérarchie : Bots → Owner → Admin → Mod → Staff → Membres"))
+    .addSubcommand(s => s.setName('hierarchie-pro').setDescription("👑 V2 PRO : crée Administrateur si manquant + hiérarchie inspirée des plus gros serveurs"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -2344,6 +2345,157 @@ module.exports = {
           '*Note : NexusBot lui-même reste à sa position actuelle (peut nécessiter remontée manuelle).*',
         ].filter(Boolean).join('\n').slice(0, 4000))
         .setFooter({ text: 'Pour tout customiser : Paramètres serveur → Rôles' })
+        .setTimestamp()] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 👑 HIÉRARCHIE PRO : style des plus gros serveurs Discord
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'hierarchie-pro') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const me = guild.members.me;
+      const myTopPos = me?.roles?.highest?.position || 0;
+
+      // Tiers ULTRA précis comme dans les serveurs pro (du plus haut au plus bas)
+      // Chaque pattern est testé dans l'ordre, le PREMIER matché gagne
+      const TIERS = [
+        // === STAFF ULTRA HAUT ===
+        { tier: 1,  name: '👑 Propriétaire',         test: /^(👑|🦊)?\s*propri[eé]taire|^owner$|^fondateur$|^founder$/i },
+        { tier: 2,  name: '🤴 Co-Propriétaire',      test: /co.?propri[eé]taire|co.?owner|co.?fondateur|co.?founder/i },
+        { tier: 3,  name: '⚡ Administrateur',        test: /^(⚡|🛡|👮)?\s*administrateur|^admin$|^administrator$/i },
+        { tier: 4,  name: '💻 Hébergeur/Dev',         test: /^h[eé]bergeur|^d[eé]veloppeur|^developer|^dev$|^tech.?lead/i },
+        { tier: 5,  name: '🛡 Modérateur Senior',     test: /head.?mod|senior.?mod|mod.?senior|chef.?mod/i },
+        { tier: 6,  name: '🛡 Modérateur',            test: /^(🛡|👮)?\s*mod[eé]rateur|^moderator$|gestionnaire|^manager$/i },
+        { tier: 7,  name: '🆘 Helper/Support',        test: /^helper$|^support$/i },
+        { tier: 8,  name: '🎪 Animateur/Event',       test: /animateur|event.?manager|gestionnaire.?event/i },
+        { tier: 9,  name: '👥 Staff',                 test: /^(👥|👮)?\s*staff$|^équipe$|^team$/i },
+        { tier: 10, name: '🎓 Trial/Stagiaire',       test: /trial.?mod|stagiaire/i },
+        { tier: 11, name: '🤝 Partenaire',            test: /partenaire|partner/i },
+        { tier: 12, name: '🎬 Streamer/YouTuber',     test: /streamer|youtuber|content.?creator/i },
+        { tier: 13, name: '💎 VIP/Premium',           test: /^vip$|premium|donateur|donator/i },
+        { tier: 14, name: '🚀 Server Booster',        test: /server.?booster|booster|nitro.?boost/i },
+        { tier: 15, name: '✨ Actif/OG/Top',          test: /^actif$|^active$|^og$|^top$|^l[eé]gende$|legend|fid[eè]le/i },
+        { tier: 16, name: '🌟 Niveaux',               test: /^(niveau|level|lvl|lv|nv)\s*\d+|^lv\d+$|^lvl\d+$/i },
+        { tier: 17, name: '🎮 Gaming',                test: /gamer|gaming|^pro.?gamer|^semi.?pro/i },
+        { tier: 18, name: '📢 Événements',            test: /[eé]v[eé]nements?|events?/i },
+        { tier: 19, name: '🎨 Personnalité',          test: /senior|cr[eé]atif|creative|d[eé]v|dev/i },
+        { tier: 20, name: '✅ Membre validé',         test: /^membre$|^member$|^v[eé]rifi[eé]|^verified/i },
+        { tier: 21, name: '📋 Autres',                test: /.*/ },
+      ];
+
+      // 1. Vérifier que le rôle Administrateur existe, sinon le créer
+      let adminRole = guild.roles.cache.find(r => /^(⚡|🛡|👮)?\s*administrateur$|^admin$/i.test(r.name) && !r.managed);
+      let createdAdmin = false;
+      if (!adminRole) {
+        try {
+          adminRole = await guild.roles.create({
+            name: '⚡ Administrateur',
+            color: '#E74C3C',
+            mentionable: true,
+            hoist: true,
+            permissions: [
+              PermissionFlagsBits.ManageGuild,
+              PermissionFlagsBits.ManageRoles,
+              PermissionFlagsBits.ManageChannels,
+              PermissionFlagsBits.ManageMessages,
+              PermissionFlagsBits.ManageWebhooks,
+              PermissionFlagsBits.ManageEmojisAndStickers,
+              PermissionFlagsBits.ManageEvents,
+              PermissionFlagsBits.ManageNicknames,
+              PermissionFlagsBits.ManageThreads,
+              PermissionFlagsBits.ViewAuditLog,
+              PermissionFlagsBits.MentionEveryone,
+              PermissionFlagsBits.ModerateMembers,
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.EmbedLinks,
+              PermissionFlagsBits.AttachFiles,
+              PermissionFlagsBits.AddReactions,
+              PermissionFlagsBits.UseExternalEmojis,
+              PermissionFlagsBits.Connect,
+              PermissionFlagsBits.Speak,
+              PermissionFlagsBits.MuteMembers,
+              PermissionFlagsBits.MoveMembers,
+              PermissionFlagsBits.UseApplicationCommands,
+              // PAS de BanMembers / KickMembers (règle user)
+            ],
+            reason: 'hierarchie-pro — création du rôle Administrateur',
+          });
+          createdAdmin = true;
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // 2. Classifier tous les rôles
+      const allRoles = [...guild.roles.cache.values()].filter(r =>
+        !r.managed && r.id !== guild.id
+      );
+
+      const classified = allRoles.map(r => {
+        const tier = TIERS.find(t => t.test.test(r.name)) || TIERS[TIERS.length - 1];
+        return { role: r, tier: tier.tier, tierName: tier.name };
+      });
+
+      // Trier : tier asc (1 = le plus haut)
+      classified.sort((a, b) => {
+        if (a.tier !== b.tier) return a.tier - b.tier;
+        return a.role.name.localeCompare(b.role.name);
+      });
+
+      // 3. Calculer les positions cibles : on commence juste en dessous du bot
+      const targetPositions = {};
+      let nextPos = myTopPos - 1;
+      for (const c of classified) {
+        if (c.role.position >= myTopPos) continue; // skip rôles intouchables
+        targetPositions[c.role.id] = nextPos--;
+        if (nextPos < 1) break;
+      }
+
+      // 4. Bulk setPositions
+      const positionsArray = Object.entries(targetPositions).map(([roleId, position]) => ({
+        role: roleId,
+        position: Math.max(1, position),
+      }));
+
+      let success = false;
+      let errorMsg = null;
+      try {
+        await guild.roles.setPositions(positionsArray);
+        success = true;
+      } catch (e) {
+        errorMsg = e?.message || 'Erreur';
+      }
+
+      // 5. Préparer le résumé
+      const skipped = classified.filter(c => c.role.position >= myTopPos).length;
+      const byTier = {};
+      for (const c of classified) {
+        if (!byTier[c.tierName]) byTier[c.tierName] = [];
+        byTier[c.tierName].push(c.role.name);
+      }
+      const tierLines = Object.entries(byTier)
+        .map(([tier, roles]) => `**${tier}** (${roles.length}) : ${roles.slice(0, 4).join(', ')}${roles.length > 4 ? '...' : ''}`)
+        .join('\n');
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder()
+        .setColor(success ? '#9B59B6' : '#E74C3C')
+        .setTitle('👑 ・ Hiérarchie PRO ・ Rapport')
+        .setDescription([
+          createdAdmin ? '🆕 Rôle **⚡ Administrateur** créé (rouge, hoisted, mentionnable, perms admin sans ban/kick)' : '✅ Rôle **Administrateur** existant détecté',
+          success
+            ? `✅ **${positionsArray.length}** rôle(s) repositionné(s) selon la hiérarchie PRO`
+            : `❌ Erreur bulk setPositions : ${errorMsg}`,
+          skipped ? `🔒 **${skipped}** rôle(s) intouchable(s) (au-dessus de NexusBot)` : '',
+          '',
+          '**Hiérarchie pro appliquée (du plus haut au plus bas) :**',
+          tierLines.slice(0, 2500),
+          '',
+          '*NexusBot et autres rôles managés restent à leur position. Pour mettre NexusBot tout en haut → Paramètres → Rôles → glisser à la main.*',
+        ].filter(Boolean).join('\n').slice(0, 4000))
+        .setFooter({ text: 'Inspiré des plus gros serveurs Discord (style officiel)' })
         .setTimestamp()] });
     }
 
