@@ -101,6 +101,8 @@ module.exports = {
     .addSubcommand(s => s.setName('audit-total-360').setDescription("🛡️ AUDIT 360° : rôles + perms + hiérarchie + Staff global + salons accessibles"))
     .addSubcommand(s => s.setName('audit-rapide').setDescription("⚡ AUDIT 360° v2 OPTIMISÉ : 30s — perms en parallèle + bulk overwrites"))
     .addSubcommand(s => s.setName('autoconfig').setDescription("🤖 AUTOCONFIG : détecte les bons salons et configure tout (welcome/logs/levels/etc)"))
+    .addSubcommand(s => s.setName('nettoyer-doublons-v2').setDescription("🧹 V2 : Supprime TOUS les rôles doublons (3+ exemplaires) avec smart-merge"))
+    .addSubcommand(s => s.setName('organiser-hierarchie').setDescription("📐 Réordonne hiérarchie : Bots → Owner → Admin → Mod → Staff → Membres"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -2160,6 +2162,188 @@ module.exports = {
         .setTitle('🤖 ・ AUTOCONFIG ・ Rapport')
         .setDescription(lines.slice(0, 4000))
         .setFooter({ text: 'Vérifie /setup voir pour confirmer • Personnaliser : /setup <sous-commande>' })
+        .setTimestamp()] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🧹 NETTOYER DOUBLONS V2 : supprime TOUS les rôles doublons
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'nettoyer-doublons-v2') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const me = guild.members.me;
+      const myTopPos = me?.roles?.highest?.position || 0;
+
+      // Grouper les rôles par nom (lowercase, normalisé)
+      const allRoles = [...guild.roles.cache.values()].filter(r =>
+        !r.managed && r.id !== guild.id // exclure @everyone et rôles bot
+      );
+
+      const groups = new Map();
+      for (const r of allRoles) {
+        const key = r.name.trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      }
+
+      let totalDeleted = 0, totalMembersMoved = 0, totalGroupsCleaned = 0;
+      const errors = [];
+      const examples = [];
+
+      for (const [name, roles] of groups) {
+        if (roles.length < 2) continue; // pas un doublon
+        totalGroupsCleaned++;
+
+        // Trier par : 1) le plus ancien d'abord (gardé), 2) le plus de membres si égal
+        roles.sort((a, b) => {
+          if (a.members.size !== b.members.size) return b.members.size - a.members.size;
+          return a.createdTimestamp - b.createdTimestamp;
+        });
+
+        const keep = roles[0];
+        const toDelete = roles.slice(1);
+
+        if (examples.length < 5) {
+          examples.push(`**${name}** : ${roles.length}× → garde ${keep.name} (${keep.members.size} membres)`);
+        }
+
+        for (const r of toDelete) {
+          // Sauter si rôle au-dessus de notre top
+          if (r.position >= myTopPos) {
+            errors.push(`${r.name} : au-dessus du bot`);
+            continue;
+          }
+          try {
+            // 1. Réassigner les membres au rôle gardé
+            for (const [, m] of r.members) {
+              if (!m.roles.cache.has(keep.id)) {
+                try { await m.roles.add(keep, 'merge doublons-v2'); totalMembersMoved++; } catch {}
+              }
+            }
+            // 2. Supprimer le rôle
+            await r.delete(`Doublon supprimé (gardé: ${keep.name}) - nettoyer-doublons-v2`);
+            totalDeleted++;
+            // Petit délai pour éviter rate-limits
+            await new Promise(r => setTimeout(r, 200));
+          } catch (e) {
+            errors.push(`${r.name}: ${e?.message || 'erreur'}`);
+          }
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder()
+        .setColor(errors.length === 0 ? '#2ECC71' : '#E67E22')
+        .setTitle('🧹 ・ Nettoyage doublons V2 ・ Rapport')
+        .setDescription([
+          `**${totalGroupsCleaned}** groupe(s) de doublons traité(s)`,
+          `🗑️ **${totalDeleted}** rôle(s) doublon(s) supprimé(s)`,
+          `👥 **${totalMembersMoved}** membre(s) réassigné(s) au rôle gardé`,
+          errors.length ? `❌ **${errors.length}** échec(s) (rôles au-dessus du bot)` : '',
+          '',
+          examples.length ? '**Exemples :**\n' + examples.join('\n') : '',
+          errors.length && errors.length <= 5 ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n') : '',
+        ].filter(Boolean).join('\n').slice(0, 4000))
+        .setFooter({ text: 'Si erreurs : monte NexusBot dans la hiérarchie et relance.' })
+        .setTimestamp()] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 📐 ORGANISER HIÉRARCHIE : Bot → Owner → Admin → Mod → Staff → Membres
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'organiser-hierarchie') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const me = guild.members.me;
+      const myTopPos = me?.roles?.highest?.position || 0;
+
+      // Patterns de classification (du plus haut prioritaire au plus bas)
+      const TIERS = [
+        { tier: 1,  name: 'Owner/Propriétaire',     test: /propri[eé]taire|^owner$|fondateur|founder/i },
+        { tier: 2,  name: 'Admin/Hébergeur',         test: /^admin|^h[eé]bergeur|^d[eé]veloppeur|^developer/i },
+        { tier: 3,  name: 'Modérateur',              test: /mod[eé]rateur|moderator|gestionnaire|manager/i },
+        { tier: 4,  name: 'Staff',                   test: /^staff$|^équipe$|^team$/i },
+        { tier: 5,  name: 'Helper/Support',          test: /helper|support/i },
+        { tier: 6,  name: 'VIP/Premium',             test: /^vip$|premium|^pro$/i },
+        { tier: 7,  name: 'Booster',                 test: /booster|boost/i },
+        { tier: 8,  name: 'Partenaire',              test: /partenaire|partner/i },
+        { tier: 9,  name: 'Actif/Top',               test: /actif|active|^top$/i },
+        { tier: 10, name: 'Niveau (level roles)',    test: /^niveau\s|^level\s|^lvl\s|^lv\s/i },
+        { tier: 11, name: 'Événements',              test: /[eé]v[eé]nements?|events?/i },
+        { tier: 12, name: 'Membre',                  test: /^membre$|^member$|^v[eé]rifi[eé]/i },
+        { tier: 13, name: 'Autres',                  test: /.*/ },
+      ];
+
+      // Classifier chaque rôle
+      const allRoles = [...guild.roles.cache.values()].filter(r =>
+        !r.managed && r.id !== guild.id
+      );
+
+      const classified = allRoles.map(r => {
+        const tier = TIERS.find(t => t.test.test(r.name)) || TIERS[TIERS.length - 1];
+        return { role: r, tier: tier.tier, tierName: tier.name };
+      });
+
+      // Trier : tier asc (1 = le plus haut)
+      classified.sort((a, b) => {
+        if (a.tier !== b.tier) return a.tier - b.tier;
+        return a.role.name.localeCompare(b.role.name);
+      });
+
+      // Calculer les positions cibles : on commence juste en dessous du bot
+      // Position max disponible = myTopPos - 1
+      // On veut : tier 1 = position la plus haute, tier 13 = la plus basse
+      const targetPositions = {};
+      let nextPos = myTopPos - 1;
+      for (const c of classified) {
+        if (c.role.position >= myTopPos) continue; // skip rôles intouchables
+        targetPositions[c.role.id] = nextPos--;
+        if (nextPos < 1) break;
+      }
+
+      // Construction de la liste pour setPositions (Discord API bulk)
+      const positionsArray = [];
+      for (const [roleId, position] of Object.entries(targetPositions)) {
+        positionsArray.push({ role: roleId, position: Math.max(1, position) });
+      }
+
+      let success = false;
+      let errorMsg = null;
+      try {
+        // setPositions accepte un array d'updates en bulk
+        await guild.roles.setPositions(positionsArray);
+        success = true;
+      } catch (e) {
+        errorMsg = e?.message || 'Erreur inconnue';
+      }
+
+      // Compter le nombre de rôles intouchables
+      const skipped = classified.filter(c => c.role.position >= myTopPos).length;
+
+      // Préparer le résumé par tier
+      const byTier = {};
+      for (const c of classified) {
+        if (!byTier[c.tierName]) byTier[c.tierName] = [];
+        byTier[c.tierName].push(c.role.name);
+      }
+      const tierLines = Object.entries(byTier)
+        .map(([tier, roles]) => `**${tier}** (${roles.length}) : ${roles.slice(0, 4).join(', ')}${roles.length > 4 ? '...' : ''}`)
+        .join('\n');
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder()
+        .setColor(success ? '#2ECC71' : '#E74C3C')
+        .setTitle('📐 ・ Organisation hiérarchie ・ Rapport')
+        .setDescription([
+          success
+            ? `✅ **${positionsArray.length}** rôle(s) repositionné(s) selon la hiérarchie standard`
+            : `❌ **Erreur** lors du bulk setPositions : ${errorMsg}`,
+          skipped ? `🔒 **${skipped}** rôle(s) intouchable(s) (au-dessus du bot)` : '',
+          '',
+          '**Ordre appliqué (du plus haut au plus bas) :**',
+          tierLines.slice(0, 2500),
+          '',
+          '*Note : NexusBot lui-même reste à sa position actuelle (peut nécessiter remontée manuelle).*',
+        ].filter(Boolean).join('\n').slice(0, 4000))
+        .setFooter({ text: 'Pour tout customiser : Paramètres serveur → Rôles' })
         .setTimestamp()] });
     }
 
