@@ -162,7 +162,9 @@ const data = new SlashCommandBuilder()
 
 async function execute(interaction) {
   try {
-    await interaction.deferReply();
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply().catch(() => {});
+    }
 
     const userId = interaction.user.id;
     const guildId = interaction.guildId;

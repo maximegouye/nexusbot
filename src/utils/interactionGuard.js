@@ -39,11 +39,15 @@ async function withWatchdog(interaction, handlerPromise) {
         // Pour boutons/menus → deferUpdate (silencieux)
         // Pour modal submits → deferReply ephemeral
         if (interaction.isModalSubmit?.()) {
-          await interaction.deferReply({ ephemeral: true });
+          if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply({ ephemeral: true }).catch(() => {});
+          }
         } else if (interaction.isButton?.() || interaction.isAnySelectMenu?.() || interaction.isStringSelectMenu?.()) {
           await interaction.deferUpdate();
         } else if (interaction.isChatInputCommand?.()) {
-          await interaction.deferReply({ ephemeral: false });
+          if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply({ ephemeral: false }).catch(() => {});
+          }
         }
       } catch (_) { /* l'interaction a peut-être été ack entre temps */ }
       resolve();
@@ -128,7 +132,9 @@ async function ensureAcked(interaction) {
     } else if (interaction.isButton?.() || interaction.isAnySelectMenu?.() || interaction.isStringSelectMenu?.()) {
       await interaction.deferUpdate();
     } else {
-      await interaction.deferReply({ ephemeral: false });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: false }).catch(() => {});
+      }
     }
   } catch { /* swallow */ }
 }

@@ -436,10 +436,13 @@ async function handleComponent(interaction, customId) {
   // ─── ticket_close_confirm_{id} (modal) → Fermer + Transcript ─────────────────
   if (customId.startsWith('ticket_close_confirm_')) {
     try {
-      await interaction.deferReply();
+      // ⚠️ FIX BUG : ne pas refaire deferReply si déjà déféré par interactionCreate auto-defer
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply().catch(() => {});
+      }
       const ticketId = customId.replace('ticket_close_confirm_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.' });
+      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.' }).catch(() => {});
 
       let reason = '';
       try { reason = interaction.fields.getTextInputValue('reason') || ''; } catch {}
@@ -716,7 +719,9 @@ async function handleComponent(interaction, customId) {
   // ─── ticket_transfer_confirm_{id} → Appliquer transfert ─────────────────────
   if (customId.startsWith('ticket_transfer_confirm_')) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const ticketId = customId.replace('ticket_transfer_confirm_', '');
       let staffId = '';
       try { staffId = interaction.fields.getTextInputValue('staff_id').trim(); } catch {}
@@ -1074,7 +1079,9 @@ module.exports = {
       }
       if (!channel) return reply({ content: '❌ Aucun salon configuré. Fais `/ticket setup` d\'abord ou spécifie un salon.', ephemeral: true });
 
-      await interaction.deferReply({ ephemeral: true });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
 
       const openCount  = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='open'").get(interaction.guildId)?.c || 0;
       const totalCount = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=?").get(interaction.guildId)?.c || 0;
@@ -1252,7 +1259,9 @@ module.exports = {
     // ══ STATS ══════════════════════════════════════════════════════════════════
     if (sub === 'stats') {
       if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
-      await interaction.deferReply({ ephemeral: true });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const open   = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='open'").get(interaction.guildId)?.c || 0;
       const closed = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='closed'").get(interaction.guildId)?.c || 0;
       const total  = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=?").get(interaction.guildId)?.c || 0;
@@ -1281,7 +1290,9 @@ module.exports = {
       const lastClosed = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='closed' ORDER BY closed_at DESC LIMIT 1")
         .get(interaction.guildId, target.id);
       if (!lastClosed) return reply({ content: `❌ Aucun ticket fermé trouvé pour ${target}.`, ephemeral: true });
-      await interaction.deferReply({ ephemeral: true });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      }
       const cat = getCat(lastClosed.category);
       const perms = [
         { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
