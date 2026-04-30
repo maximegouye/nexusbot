@@ -861,6 +861,8 @@ const migrations = [
   // crypto_market : colonnes ajoutées pour prix réels CoinGecko
   { table: 'crypto_market', column: 'cg_id',      sql: "ALTER TABLE crypto_market ADD COLUMN cg_id TEXT" },
   { table: 'crypto_market', column: 'change_24h', sql: "ALTER TABLE crypto_market ADD COLUMN change_24h REAL DEFAULT 0" },
+  // reaction_roles : colonne removable (0=permanent, 1=toggle)
+  { table: 'reaction_roles', column: 'removable', sql: "ALTER TABLE reaction_roles ADD COLUMN removable INTEGER DEFAULT 0" },
   // shop (active peut manquer sur des DBs anciennes)
   { table: 'shop', column: 'active', sql: "ALTER TABLE shop ADD COLUMN active INTEGER DEFAULT 1" },
   { table: 'shop', column: 'max_per_user', sql: "ALTER TABLE shop ADD COLUMN max_per_user INTEGER" },

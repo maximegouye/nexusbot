@@ -631,30 +631,60 @@ async function submitDemande(interaction) {
   });
 }
 
-// Validation d'une demande
+// Validation d'une demande (ou rejouer si déjà acceptée)
 async function validerDemande(interaction, reqId) {
   const g   = getGuild(interaction.guildId);
-  const idx = g.requests.findIndex(r => r.id === reqId && r.status === 'pending');
+  // Cherche la demande SANS exiger le statut 'pending' — permet de rejouer
+  // les actions (DM, pub channel) si la demande a déjà été acceptée mais que
+  // les actions n'ont pas pu se faire (ex: salon manquant à l'époque)
+  const idx = g.requests.findIndex(r => r.id === reqId);
   if (idx === -1) {
-    return interaction.editReply({ content: `❌ Demande \`${reqId}\` introuvable ou déjà traitée.`, ephemeral: true });
+    return interaction.editReply({ content: `❌ Demande \`${reqId}\` introuvable.`, ephemeral: true });
   }
 
   const req = g.requests[idx];
+  if (req.status === 'refused') {
+    return interaction.editReply({ content: `❌ Demande \`${reqId}\` a été refusée. Utilise une nouvelle demande.`, ephemeral: true });
+  }
+
+  // Si déjà accepted, on rejoue les actions sans re-créer le partenaire
+  const wasAlreadyAccepted = req.status === 'accepted';
   req.status = 'accepted';
 
-  const partnerId = genId();
-  const partner = {
-    id:         partnerId,
-    nom:        req.nom,
-    invite:     req.invite,
-    pub:        req.pub,
-    description: req.description,
-    membres:    req.membres,
-    repUserId:  req.submittedBy,
-    addedAt:    Date.now(),
-    addedBy:    interaction.user.id,
-  };
-  g.partners.push(partner);
+  let partner;
+  if (wasAlreadyAccepted) {
+    // Trouver le partenaire existant
+    partner = g.partners.find(p => p.repUserId === req.submittedBy && p.nom === req.nom);
+    if (!partner) {
+      // Pas trouvé : recréer
+      partner = {
+        id:         genId(),
+        nom:        req.nom,
+        invite:     req.invite,
+        pub:        req.pub,
+        description: req.description,
+        membres:    req.membres,
+        repUserId:  req.submittedBy,
+        addedAt:    Date.now(),
+        addedBy:    interaction.user.id,
+      };
+      g.partners.push(partner);
+    }
+  } else {
+    const partnerId = genId();
+    partner = {
+      id:         partnerId,
+      nom:        req.nom,
+      invite:     req.invite,
+      pub:        req.pub,
+      description: req.description,
+      membres:    req.membres,
+      repUserId:  req.submittedBy,
+      addedAt:    Date.now(),
+      addedBy:    interaction.user.id,
+    };
+    g.partners.push(partner);
+  }
   updateGuild(interaction.guildId, { requests: g.requests, partners: g.partners });
 
   // 1. Donner le rôle partenaire
@@ -707,13 +737,15 @@ async function validerDemande(interaction, reqId) {
   return interaction.editReply({
     embeds: [new EmbedBuilder()
       .setColor(C_GREEN)
-      .setTitle('✅ Partenariat validé !')
+      .setTitle(wasAlreadyAccepted ? '🔁 Partenariat rejoué !' : '✅ Partenariat validé !')
       .setDescription([
-        `**${req.nom}** est maintenant partenaire ! 🎉`,
+        wasAlreadyAccepted
+          ? `**${req.nom}** déjà partenaire — actions rejouées avec succès.`
+          : `**${req.nom}** est maintenant partenaire ! 🎉`,
         '',
-        '✅ Pub postée automatiquement dans le salon partenaires',
+        g.partnerChannelId ? '✅ Pub postée dans le salon partenaires' : '⚠️ Salon partenaires non configuré',
         '✅ Notre pub envoyée en DM au représentant',
-        g.partnerRoleId ? '✅ Rôle partenaire attribué' : '⚠️ Aucun rôle configuré',
+        g.partnerRoleId ? '✅ Rôle partenaire attribué' : '⚠️ Aucun rôle partenaire configuré',
       ].join('\n'))
       .setTimestamp()],
     ephemeral: true,
