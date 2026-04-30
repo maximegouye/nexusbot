@@ -196,7 +196,10 @@ module.exports = {
       .setDescription('📋 [ADMIN] Liste complète des partenaires avec leurs IDs'))
     .addSubcommand(s => s
       .setName('admin-republier')
-      .setDescription('🔁 [ADMIN] Re-publier toutes les pubs des partenaires dans le salon partenaires')),
+      .setDescription('🔁 [ADMIN] Re-publier toutes les pubs des partenaires dans le salon partenaires'))
+    .addSubcommand(s => s
+      .setName('admin-fix-roles')
+      .setDescription('🤝 [ADMIN] Donne le rôle partenaire à tous les partenaires existants')),
 
   // ⚠️ Indique au routeur global de ne PAS auto-deferReply pour ces sous-commandes
   // (Discord interdit showModal() après deferReply)
@@ -225,7 +228,7 @@ module.exports = {
       'config-salon-demandes','config-salon-partenaires','config-salon-pub',
       'config-role','config-notre-pub','config-voir',
       'admin-demandes','admin-valider','admin-refuser','admin-ajouter','admin-retirer','admin-liste',
-      'admin-republier',
+      'admin-republier','admin-fix-roles',
     ];
     if (ADMIN_SUBS.includes(sub) && !isAdmin(interaction.member)) {
       const reply = { content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true };
@@ -529,6 +532,65 @@ module.exports = {
       ).join('\n');
       return await interaction.editReply({
         embeds: [new EmbedBuilder().setColor(C_ADMIN).setTitle(`📋 Partenaires Admin (${fresh.partners.length})`).setDescription(lines.slice(0, 4000)).setFooter({ text: 'Retirer : /partenariat admin-retirer id:<ID>' }).setTimestamp()],
+        ephemeral: true,
+      });
+    }
+
+    // ── /partenariat admin-fix-roles ────────────────────────────
+    // Donne le rôle partenaire à tous les partenaires existants en DB
+    if (sub === 'admin-fix-roles') {
+      const fresh = getGuild(interaction.guildId);
+      if (!fresh.partnerRoleId) {
+        return await interaction.editReply({
+          content: '❌ Aucun rôle partenaire configuré. Utilise `/partenariat config-role` d\'abord.',
+          ephemeral: true,
+        });
+      }
+      const role = interaction.guild.roles.cache.get(fresh.partnerRoleId);
+      if (!role) {
+        return await interaction.editReply({
+          content: `❌ Rôle partenaire introuvable (ID: \`${fresh.partnerRoleId}\`). Reconfigure-le.`,
+          ephemeral: true,
+        });
+      }
+      if (!fresh.partners.length) {
+        return await interaction.editReply({
+          content: '❌ Aucun partenaire à fix.',
+          ephemeral: true,
+        });
+      }
+
+      let given = 0, alreadyHad = 0, notFound = 0, failed = 0;
+      const errors = [];
+      for (const p of fresh.partners) {
+        if (!p.repUserId) { notFound++; continue; }
+        try {
+          const m = await interaction.guild.members.fetch(p.repUserId).catch(() => null);
+          if (!m) { notFound++; continue; }
+          if (m.roles.cache.has(role.id)) {
+            alreadyHad++;
+          } else {
+            await m.roles.add(role, 'admin-fix-roles');
+            given++;
+          }
+        } catch (e) {
+          failed++;
+          if (errors.length < 5) errors.push(`${p.nom}: ${e?.message?.slice(0, 50) || 'erreur'}`);
+        }
+      }
+
+      return await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor(failed === 0 ? C_GREEN : C_GOLD)
+          .setTitle('🤝 Fix rôles partenaires')
+          .setDescription([
+            `✅ **${given}** partenaire(s) ont reçu le rôle ${role.name}`,
+            alreadyHad ? `ℹ️ **${alreadyHad}** avaient déjà le rôle` : '',
+            notFound ? `⚠️ **${notFound}** introuvable(s) sur le serveur (ont quitté ?)` : '',
+            failed ? `❌ **${failed}** échec(s)` : '',
+            errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n') : '',
+          ].filter(Boolean).join('\n'))
+          .setTimestamp()],
         ephemeral: true,
       });
     }

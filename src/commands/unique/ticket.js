@@ -400,14 +400,23 @@ async function handleComponent(interaction, customId) {
     try {
       const ticketId = customId.replace('ticket_close_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
+      // Helper pour répondre proprement (pas de defer car on doit pouvoir showModal)
+      const safeReply = async (payload) => {
+        try {
+          if (interaction.deferred || interaction.replied) {
+            return await interaction.editReply(payload);
+          }
+          return await interaction.reply({ ...payload, ephemeral: true });
+        } catch {}
+      };
       if (!ticket || ticket.status !== 'open') {
-        return interaction.editReply({ content: '❌ Ce ticket est déjà fermé.', ephemeral: true });
+        return safeReply({ content: '❌ Ce ticket est déjà fermé.' });
       }
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
       if (!isStaff && interaction.user.id !== ticket.user_id) {
-        return interaction.editReply({ content: '❌ Tu ne peux pas fermer ce ticket.', ephemeral: true });
+        return safeReply({ content: '❌ Tu ne peux pas fermer ce ticket.' });
       }
       await interaction.showModal(new ModalBuilder()
         .setCustomId(`ticket_close_confirm_${ticketId}`)

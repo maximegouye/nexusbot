@@ -246,15 +246,18 @@ module.exports = {
           // handlers handleComponent qui font editReply sans avoir d'abord déferré.
           // On exclut les boutons connus qui ouvrent un modal (showModal interdit après defer).
           const MODAL_OPENING_PATTERNS = [
-            /^rec_apply_/,                   // recrutement → modal candidature
-            /^rec_rej_(?!conf_)/,            // recrutement refus (sauf confirmation)
-            /^part_demander_btn/,            // bouton de demande de partenariat → modal
-            /^pet_create/,                   // pet creation → modal name
-            /^ticket_open_/,                 // ticket avec raison → modal
-            /^suggestion_create/,            // suggestion → modal
-            /^report_create/,                // report → modal
-            /_modal$/,                       // suffixe convention
-            /_form$/,                        // suffixe convention
+            /^rec_apply_/,                              // recrutement → modal candidature
+            /^rec_rej_(?!conf_)/,                       // recrutement refus (sauf confirmation)
+            /^part_demander_btn/,                       // bouton de demande de partenariat → modal
+            /^pet_create/,                              // pet creation → modal name
+            /^ticket_open_/,                            // ticket avec raison → modal
+            /^ticket_cat_/,                             // ticket catégorie → modal formulaire
+            /^ticket_close_(?!confirm_)/,               // ticket close (sauf confirmation submit)
+            /^suggestion_create/,                       // suggestion → modal
+            /^report_create/,                           // report → modal
+            /^banque_(dep|wit|tx|loan)/,                // banque → modaux dépôt/retrait/transfert/prêt
+            /_modal$/,                                  // suffixe convention
+            /_form$/,                                   // suffixe convention
           ];
           const opensModalBtn = MODAL_OPENING_PATTERNS.some(rx => rx.test(cid));
           if ((interaction.isButton() || interaction.isAnySelectMenu?.() || interaction.isStringSelectMenu?.()) &&
