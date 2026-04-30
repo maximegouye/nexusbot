@@ -86,6 +86,7 @@ module.exports = {
     .addSubcommand(s => s.setName('ajouter-nouveautes').setDescription("🆕 Ajoute SEULEMENT les nouvelles catégories (Casino, Jeux Fun, Événements, Communauté)"))
     .addSubcommand(s => s.setName('nettoyer-roles').setDescription("🧹 Trouve et liste les rôles en doublon (suppression sur confirmation)")
       .addBooleanOption(o => o.setName('supprimer').setDescription('true = supprime, false = liste seulement').setRequired(false)))
+    .addSubcommand(s => s.setName('perfectionner').setDescription("✨ Applique des permissions et topics parfaits à tous les salons (existants + nouveaux)"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -225,6 +226,160 @@ module.exports = {
           { name: '✅ Reste', value: `Originaux conservés`, inline: true }
         )
         .setFooter({ text: 'Les membres ont été re-attribués au rôle original avant suppression.' })
+        .setTimestamp()] });
+    }
+
+    // ─── ✨ PERFECTIONNER : permissions + topics + slowmode ──────
+    if (sub === 'perfectionner') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const everyone = guild.roles.everyone;
+
+      // Détection automatique des rôles staff
+      const adminRoles = guild.roles.cache.filter(r => r.permissions.has(PermissionFlagsBits.Administrator) && !r.managed);
+      const modRoles   = guild.roles.cache.filter(r =>
+        r.permissions.has(PermissionFlagsBits.ManageMessages) || r.permissions.has(PermissionFlagsBits.KickMembers)
+      );
+
+      // Profils de permissions (par pattern nom de salon)
+      const PROFILES = {
+        // Lecture seule pour @everyone, écriture pour admins
+        readOnly:  { everyone: { ViewChannel: true, SendMessages: false, AddReactions: true, ReadMessageHistory: true }, },
+        // Privé staff uniquement
+        staffOnly: { everyone: { ViewChannel: false }, },
+        // Public normal (@everyone read+send)
+        public:    { everyone: { ViewChannel: true, SendMessages: true, AddReactions: true, ReadMessageHistory: true, AttachFiles: true, EmbedLinks: true }, },
+        // Public mais slowmode 5s (anti-spam) pour les jeux/économie
+        publicSlow:{ everyone: { ViewChannel: true, SendMessages: true, AddReactions: true, ReadMessageHistory: true, AttachFiles: false, EmbedLinks: false }, slowmode: 5 },
+        // Public médias (autorise images)
+        media:     { everyone: { ViewChannel: true, SendMessages: true, AttachFiles: true, EmbedLinks: true, ReadMessageHistory: true }, },
+      };
+
+      // Mapping nom salon → profil + topic suggéré
+      const RULES = [
+        // Read-only (annonces, règles, bienvenue, partenaires, badges, classement, battle-pass)
+        { test: /règles?|rules?/i,        profile: 'readOnly',  topic: '📋 Règles du serveur — lis attentivement.' },
+        { test: /annonces?|announc/i,     profile: 'readOnly',  topic: '📣 Annonces officielles.' },
+        { test: /bienvenue|welcome/i,     profile: 'readOnly',  topic: '👋 Accueil des nouveaux membres.' },
+        { test: /partenaires?|partners?/i,profile: 'readOnly',  topic: '💎 Serveurs partenaires (auto via /partenariat).' },
+        { test: /classement|leaderboard|top/i, profile: 'readOnly',topic: '🏆 Classement — /top € /top xp /badges top' },
+        { test: /battle.?pass/i,          profile: 'readOnly',  topic: '🏆 /battlepass — récompenses progressives.' },
+        { test: /partenariat/i,           profile: 'readOnly',  topic: '💎 Annonces des partenariats.' },
+        { test: /badges?/i,               profile: 'readOnly',  topic: '🏅 /badges voir /badges liste — collectionnez.' },
+
+        // Staff only
+        { test: /bot.?logs?|moderation|mod-logs|admin/i, profile: 'staffOnly', topic: '🔒 Réservé au staff.' },
+        { test: /diagnostic|tickets-?logs?/i, profile: 'staffOnly', topic: '🔍 /diagnostic — santé du bot (admin).' },
+        { test: /config|configuration/i,  profile: 'staffOnly',  topic: '⚙️ Configuration.' },
+
+        // Médias
+        { test: /m[eé]dias?|images?|gifs?|photos?/i, profile: 'media', topic: '🖼 Images, GIFs et vidéos.' },
+
+        // Public slowmode (jeux, casino, économie - anti-spam)
+        { test: /slots?|mega.?slots?/i,   profile: 'publicSlow', topic: '🎰 /slots /mega-slots — machines à sous.' },
+        { test: /roulette|roue/i,         profile: 'publicSlow', topic: '🎡 /roulette /roue-fortune' },
+        { test: /cartes?|blackjack|baccarat|poker|videopoker|war/i, profile: 'publicSlow', topic: '🃏 Jeux de cartes — /blackjack /baccarat /videopoker /poker /war' },
+        { test: /d[eé]s|sicbo|craps/i,    profile: 'publicSlow', topic: '🎲 /des /sicbo /craps' },
+        { test: /mines|crash|plinko|coffre/i, profile: 'publicSlow', topic: '⛏️ /mines /crash /plinko /coffre-magique' },
+        { test: /grattage|scratch/i,      profile: 'publicSlow', topic: '🎫 /grattage — cartes à gratter.' },
+        { test: /casino/i,                profile: 'publicSlow', topic: '🎰 Salon casino — tous les jeux.' },
+        { test: /mystery|mystère/i,       profile: 'publicSlow', topic: '🎁 /mystery ouvrir — boîte mystère 6h.' },
+        { test: /spin|roue.?fortune/i,    profile: 'publicSlow', topic: '🎡 /spin tourner — roue gratuite quotidienne.' },
+        { test: /animaux|pets?|pet/i,     profile: 'publicSlow', topic: '🐾 /pet adopter /pet voir /pet nourrir' },
+        { test: /mini.?jeux|games?/i,     profile: 'publicSlow', topic: '🎯 /quiz /pendu /morpion /devine /enigme' },
+        { test: /aventures?|donjon|chasse|rpg|ferme/i, profile: 'publicSlow', topic: '🗺️ /donjon /chasse /mine /rpg /ferme' },
+        { test: /duels?|trivia/i,         profile: 'publicSlow', topic: '⚔️ /duel /trivia_duel' },
+        { test: /immobilier|immo|maison|propri[eé]t[eé]/i, profile: 'publicSlow', topic: '🏠 /immobilier catalogue /immo marche' },
+        { test: /banque|bank/i,           profile: 'publicSlow', topic: '🏦 /banque solde /banque interets /pret' },
+        { test: /march[eé]|market/i,      profile: 'publicSlow', topic: '📊 /market voir /market vendre /meteo_marche' },
+        { test: /[eé]conomie|economy|economic/i, profile: 'publicSlow', topic: '💰 /work /crime /heist /daily — gagner des €.' },
+        { test: /loto|lotto|loterie/i,    profile: 'publicSlow', topic: '🎟️ /loto acheter /lotto — loterie hebdo.' },
+        { test: /quêtes?|quests?/i,       profile: 'publicSlow', topic: '🗺️ /quest voir /missions — quêtes communautaires.' },
+        { test: /tournois?|tournaments?/i,profile: 'publicSlow', topic: '🎪 /tournoi creer /tournoi rejoindre' },
+        { test: /profils?|profiles?/i,    profile: 'publicSlow', topic: '👤 /profil — vos profils et statistiques.' },
+        { test: /mariages?|marriages?/i,  profile: 'publicSlow', topic: '💕 /mariage — engagez-vous.' },
+        { test: /famille/i,               profile: 'publicSlow', topic: '👨‍👩‍👧 /famille — créez votre famille.' },
+        { test: /clans?/i,                profile: 'publicSlow', topic: '🏰 /clans — rejoignez ou créez un clan.' },
+        { test: /r[eé]putation|rep/i,     profile: 'publicSlow', topic: '💖 /rep — donnez de la rep aux membres.' },
+        { test: /suggestions?|sugges/i,   profile: 'publicSlow', topic: '💭 /suggestion — vos idées pour le serveur.' },
+        { test: /humour|memes?|jokes?/i,  profile: 'public',     topic: '😂 Mèmes et blagues.' },
+        { test: /liens?|links?/i,         profile: 'public',     topic: '🔗 Liens utiles.' },
+        { test: /general|général|chat/i,  profile: 'public',     topic: '💬 Discussion générale.' },
+        { test: /r[oô]les?/i,             profile: 'readOnly',   topic: '🎫 Choisissez vos rôles.' },
+      ];
+
+      let totalUpdated = 0, errors = 0;
+
+      for (const [, ch] of guild.channels.cache.filter(c => c.type === ChannelType.GuildText)) {
+        // Trouve le profil applicable
+        let matched = null;
+        for (const r of RULES) {
+          if (r.test.test(ch.name)) { matched = r; break; }
+        }
+        if (!matched) continue; // Pas de règle = on ne touche pas
+
+        const profile = PROFILES[matched.profile];
+        if (!profile) continue;
+
+        try {
+          // Applique permissions @everyone
+          const overrides = [
+            { id: everyone.id, allow: [], deny: [] },
+          ];
+          for (const [perm, val] of Object.entries(profile.everyone || {})) {
+            if (val === true) overrides[0].allow.push(perm);
+            else if (val === false) overrides[0].deny.push(perm);
+          }
+
+          // Pour staffOnly : autorise admins
+          if (matched.profile === 'staffOnly') {
+            for (const [, ar] of adminRoles) {
+              overrides.push({ id: ar.id, allow: ['ViewChannel', 'SendMessages', 'ManageMessages'] });
+            }
+          }
+          // Pour readOnly : autorise admins à poster
+          if (matched.profile === 'readOnly') {
+            for (const [, ar] of adminRoles) {
+              overrides.push({ id: ar.id, allow: ['SendMessages', 'ManageMessages'] });
+            }
+          }
+
+          // Applique
+          await ch.permissionOverwrites.set(overrides).catch(() => {});
+
+          // Topic
+          if (matched.topic && ch.topic !== matched.topic) {
+            await ch.setTopic(matched.topic).catch(() => {});
+          }
+
+          // Slowmode
+          if (profile.slowmode && ch.rateLimitPerUser !== profile.slowmode) {
+            await ch.setRateLimitPerUser(profile.slowmode).catch(() => {});
+          }
+
+          totalUpdated++;
+        } catch (e) {
+          errors++;
+          console.error('[setup-serveur] perfectionner err:', ch.name, e.message);
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle('✨ ・ Serveur perfectionné ・')
+        .setDescription([
+          `**${totalUpdated}** salon(s) optimisé(s) : permissions, topics, et slowmode appliqués.`,
+          '',
+          '✅ **Annonces / règles / classement** → lecture seule (admins postent)',
+          '🔒 **Bot-logs / mod / config / diagnostic** → staff uniquement',
+          '🎰 **Casino / jeux / éco / immobilier** → public + slowmode 5s anti-spam',
+          '🖼 **Médias** → autorise images & embeds',
+          '💬 **Général / humour / liens** → public normal',
+          '',
+          '*Tes rôles existants ne sont PAS modifiés.*',
+        ].join('\n'))
+        .addFields(
+          { name: '✅ Salons mis à jour', value: `**${totalUpdated}**`, inline: true },
+          { name: '❌ Erreurs', value: `**${errors}**`, inline: true },
+        )
         .setTimestamp()] });
     }
 
