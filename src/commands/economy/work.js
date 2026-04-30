@@ -86,8 +86,34 @@ module.exports = {
     const gMin = (cfg.work_min != null && cfg.work_min > 0) ? cfg.work_min : job.min;
     const gMax = (cfg.work_max != null && cfg.work_max > 0) ? cfg.work_max : job.max;
     const [lo, hi] = gMin <= gMax ? [gMin, gMax] : [gMax, gMin];
-    const earned = Math.floor(Math.random() * (hi - lo + 1)) + lo;
-    const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)].replace('{job}', job.name);
+    let earned = Math.floor(Math.random() * (hi - lo + 1)) + lo;
+    let phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)].replace('{job}', job.name);
+
+    // ── ÉVÉNEMENTS ALÉATOIRES (réalisme) ───────────────────────
+    let eventText = '';
+    const eventRoll = Math.random();
+    if (eventRoll < 0.05) {
+      // 5% : Promotion exceptionnelle (×3)
+      earned = Math.floor(earned * 3);
+      eventText = `\n🎉 **PROMOTION !** Ton patron t'a remarqué — salaire ×3 !`;
+    } else if (eventRoll < 0.12) {
+      // 7% : Pourboire exceptionnel (+50%)
+      earned = Math.floor(earned * 1.5);
+      eventText = `\n💸 **Pourboire exceptionnel** — +50% !`;
+    } else if (eventRoll < 0.22) {
+      // 10% : Heures sup (+25%)
+      earned = Math.floor(earned * 1.25);
+      eventText = `\n⏰ **Heures supplémentaires** — +25% !`;
+    } else if (eventRoll < 0.27) {
+      // 5% : Accident léger (-30%)
+      earned = Math.floor(earned * 0.7);
+      eventText = `\n🤕 **Accident au travail** — perte de 30% du salaire en frais médicaux.`;
+    } else if (eventRoll < 0.30) {
+      // 3% : Vol au bureau (-50%)
+      earned = Math.floor(earned * 0.5);
+      eventText = `\n🦹 **Tu as été volé sur le chemin du retour** — moitié du salaire perdue !`;
+    }
+    // Sinon (70%) : journée normale, pas d'événement
 
     const lastWorkDate  = lastWork > 0 ? new Date(lastWork * 1000).toDateString() : null;
     const yesterdayDate = new Date(Date.now() - 86400000).toDateString();
@@ -135,7 +161,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(cfg.color || '#7B2FBE')
       .setTitle(`${job.emoji} Journée terminée !`)
-      .setDescription(`${phrase} **${total.toLocaleString('fr-FR')}${symbol}**${streakBonus > 0 ? ` *(+${streakBonus}${symbol} bonus streak 🔥)*` : ''}`)
+      .setDescription(`${phrase} **${total.toLocaleString('fr-FR')}${symbol}**${streakBonus > 0 ? ` *(+${streakBonus}${symbol} bonus streak 🔥)*` : ''}${eventText}`)
       .addFields(
         { name: '💼 Métier',        value: `${job.emoji} **${job.name}**`,                          inline: true },
         { name: `${symbol} Gagné`,  value: `**+${total.toLocaleString('fr-FR')}${symbol}**`,        inline: true },
