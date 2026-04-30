@@ -193,7 +193,10 @@ module.exports = {
       .addStringOption(o => o.setName('id').setDescription('ID du partenaire').setRequired(true)))
     .addSubcommand(s => s
       .setName('admin-liste')
-      .setDescription('📋 [ADMIN] Liste complète des partenaires avec leurs IDs')),
+      .setDescription('📋 [ADMIN] Liste complète des partenaires avec leurs IDs'))
+    .addSubcommand(s => s
+      .setName('admin-republier')
+      .setDescription('🔁 [ADMIN] Re-publier toutes les pubs des partenaires dans le salon partenaires')),
 
   // ⚠️ Indique au routeur global de ne PAS auto-deferReply pour ces sous-commandes
   // (Discord interdit showModal() après deferReply)
@@ -222,6 +225,7 @@ module.exports = {
       'config-salon-demandes','config-salon-partenaires','config-salon-pub',
       'config-role','config-notre-pub','config-voir',
       'admin-demandes','admin-valider','admin-refuser','admin-ajouter','admin-retirer','admin-liste',
+      'admin-republier',
     ];
     if (ADMIN_SUBS.includes(sub) && !isAdmin(interaction.member)) {
       const reply = { content: '🔒 Cette commande est réservée aux administrateurs.', ephemeral: true };
@@ -525,6 +529,59 @@ module.exports = {
       ).join('\n');
       return await interaction.editReply({
         embeds: [new EmbedBuilder().setColor(C_ADMIN).setTitle(`📋 Partenaires Admin (${fresh.partners.length})`).setDescription(lines.slice(0, 4000)).setFooter({ text: 'Retirer : /partenariat admin-retirer id:<ID>' }).setTimestamp()],
+        ephemeral: true,
+      });
+    }
+
+    // ── /partenariat admin-republier ────────────────────────────
+    // Re-poste les pubs de tous les partenaires existants dans le salon partenaires
+    // Utile si les pubs n'ont pas pu être postées au moment de l'acceptation
+    if (sub === 'admin-republier') {
+      const fresh = getGuild(interaction.guildId);
+      if (!fresh.partnerChannelId) {
+        return await interaction.editReply({
+          content: '❌ Aucun salon partenaires configuré. Utilise `/partenariat config-salon-partenaires` d\'abord.',
+          ephemeral: true,
+        });
+      }
+      const chan = interaction.guild.channels.cache.get(fresh.partnerChannelId);
+      if (!chan) {
+        return await interaction.editReply({
+          content: `❌ Salon partenaires introuvable (ID: \`${fresh.partnerChannelId}\`). Reconfigure-le.`,
+          ephemeral: true,
+        });
+      }
+      if (!fresh.partners.length) {
+        return await interaction.editReply({
+          content: '❌ Aucun partenaire à republier.',
+          ephemeral: true,
+        });
+      }
+
+      let posted = 0, failed = 0;
+      const errors = [];
+      for (const p of fresh.partners) {
+        try {
+          await chan.send({ embeds: [buildPartnerPubEmbed(p)] });
+          posted++;
+          // Petit délai pour éviter rate-limit
+          await new Promise(r => setTimeout(r, 500));
+        } catch (e) {
+          failed++;
+          if (errors.length < 5) errors.push(`${p.nom}: ${e?.message || 'erreur inconnue'}`);
+        }
+      }
+
+      return await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor(failed === 0 ? C_GREEN : C_GOLD)
+          .setTitle('🔁 Pubs partenaires republiées')
+          .setDescription([
+            `✅ **${posted}** pub(s) postée(s) dans ${chan}`,
+            failed ? `❌ **${failed}** échec(s)` : '',
+            errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n') : '',
+          ].filter(Boolean).join('\n'))
+          .setTimestamp()],
         ephemeral: true,
       });
     }
