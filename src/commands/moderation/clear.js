@@ -50,21 +50,43 @@ module.exports = {
     }
 
     // ── Exécution de la suppression ───────────────────────
-    await btnInteraction.deferUpdate();
+    await btnInteraction.deferUpdate().catch(() => {});
 
-    let messages = await interaction.channel.messages.fetch({ limit: nb + 1 });
-    messages = messages.filter(m => m.id !== interaction.id);
-    if (filter) messages = messages.filter(m => m.author.id === filter.id);
+    // ⚠️ FIX BUG : récupérer l'ID du message de confirmation pour l'EXCLURE de la suppression
+    let replyMessageId = null;
+    try {
+      const replyMsg = await interaction.fetchReply();
+      replyMessageId = replyMsg?.id;
+    } catch {}
 
-    const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-    const toDelete = messages.filter(m => m.createdTimestamp > twoWeeksAgo);
-
-    if (!toDelete.size) {
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setDescription('❌ Aucun message récent à supprimer (messages > 14 jours exclus).')], components: [] });
+    let messages;
+    try {
+      messages = await interaction.channel.messages.fetch({ limit: Math.min(nb + 5, 100) });
+    } catch (e) {
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription(`❌ Impossible de fetch les messages : ${e.message}`)], components: [] }).catch(() => {});
     }
 
-    const deleted = await interaction.channel.bulkDelete(toDelete, true).catch(() => null);
-    const count = deleted?.size ?? 0;
+    // Exclure : le message de confirmation du bot + filtrer par membre si spécifié
+    if (replyMessageId) messages = messages.filter(m => m.id !== replyMessageId);
+    if (filter) messages = messages.filter(m => m.author.id === filter.id);
+
+    // Limiter au nombre demandé
+    const sorted = [...messages.values()].sort((a, b) => b.createdTimestamp - a.createdTimestamp).slice(0, nb);
+
+    const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const toDelete = sorted.filter(m => m.createdTimestamp > twoWeeksAgo);
+
+    if (!toDelete.length) {
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#95A5A6').setDescription('❌ Aucun message récent à supprimer (messages > 14 jours exclus).')], components: [] }).catch(() => {});
+    }
+
+    let count = 0;
+    try {
+      const deleted = await interaction.channel.bulkDelete(toDelete, true);
+      count = deleted?.size ?? 0;
+    } catch (e) {
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#E74C3C').setDescription(`❌ Erreur suppression : ${e.message}`)], components: [] }).catch(() => {});
+    }
 
     await interaction.editReply({
       embeds: [new EmbedBuilder()
@@ -74,6 +96,6 @@ module.exports = {
         .setTimestamp()
       ],
       components: []
-    });
+    }).catch(() => {});
   }
 };

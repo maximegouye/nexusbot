@@ -51,6 +51,11 @@ const RTP_TARGETS = {
   'instant-grattage': 0.70,
   loto:         0.55,   // 55% (vraie loto FR)
   lotto:        0.55,
+  // Nouvelles machines (RTP réalistes)
+  aviator:      0.95,   // 95% (vrai Aviator Spribe = 97%, on tire un peu plus bas)
+  megaways:     0.94,   // 94% (Megaways high-volatility)
+  'wheel-mega': 0.94,   // 94% (Mega Wheel)
+  'treasure-hunt': 0.93, // 93% (style coffre)
   default:      0.95,
 };
 
@@ -77,6 +82,10 @@ const MAX_WIN_MULT = {
   'coffre-magique': 7,  // x7 max niveau
   grattage:     50000,  // vrai grattage, max 500k€ pour mise 10€
   scratch:      50000,
+  aviator:      1000,
+  megaways:     500,
+  'wheel-mega': 1000,
+  'treasure-hunt': 100,
   default:      100,
 };
 
