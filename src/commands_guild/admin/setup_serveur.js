@@ -2518,15 +2518,25 @@ module.exports = {
       await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const db = require('../../database/db');
 
-      // Trouver le rôle Nouveau (insensible à la casse + emojis)
-      const nouveauRole = guild.roles.cache.find(r =>
-        !r.managed && /^(🆕|🌱|👶)?\s*nouv(eau|elle|el)?$/i.test(r.name.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim())
-      );
+      // Helper : strip TOUS les emojis et caractères spéciaux pour comparaison
+      const stripAll = (s) => (s || '')
+        .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{FE00}-\u{FE0F}\u{200D}]+/gu, '')
+        .replace(/[┈・╭╰┆\s\W_]+/g, '')
+        .toLowerCase();
 
-      // Trouver le rôle Membre
-      const membreRole = guild.roles.cache.find(r =>
-        !r.managed && /^(💬|✅)?\s*membre$/i.test(r.name.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim())
-      );
+      // Trouver le rôle Nouveau (insensible à la casse + emojis)
+      const nouveauRole = guild.roles.cache.find(r => {
+        if (r.managed) return false;
+        const cleaned = stripAll(r.name);
+        return cleaned === 'nouveau' || cleaned === 'nouvel' || cleaned === 'nouvelle' || cleaned === 'new';
+      });
+
+      // Trouver le rôle Membre (juste "Membre" exact, pas "Membre validé")
+      const membreRole = guild.roles.cache.find(r => {
+        if (r.managed) return false;
+        const cleaned = stripAll(r.name);
+        return cleaned === 'membre' || cleaned === 'member';
+      });
 
       if (!membreRole) {
         return await interaction.editReply({
