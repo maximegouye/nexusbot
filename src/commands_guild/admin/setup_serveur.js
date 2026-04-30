@@ -321,38 +321,42 @@ module.exports = {
         if (!profile) continue;
 
         try {
-          // Applique permissions @everyone
-          const overrides = [
-            { id: everyone.id, allow: [], deny: [] },
-          ];
+          // Mode NON-DESTRUCTIF : on EDITE seulement les overrides @everyone, on ne touche PAS aux autres rôles/membres existants
+          const allowEveryone = [], denyEveryone = [];
           for (const [perm, val] of Object.entries(profile.everyone || {})) {
-            if (val === true) overrides[0].allow.push(perm);
-            else if (val === false) overrides[0].deny.push(perm);
+            if (val === true) allowEveryone.push(perm);
+            else if (val === false) denyEveryone.push(perm);
+          }
+          if (allowEveryone.length || denyEveryone.length) {
+            await ch.permissionOverwrites.edit(everyone.id, Object.fromEntries([
+              ...allowEveryone.map(p => [p, true]),
+              ...denyEveryone.map(p => [p, false]),
+            ])).catch(() => {});
           }
 
-          // Pour staffOnly : autorise admins
+          // Pour staffOnly / readOnly : on AJOUTE les admins (sans toucher aux autres overrides)
           if (matched.profile === 'staffOnly') {
             for (const [, ar] of adminRoles) {
-              overrides.push({ id: ar.id, allow: ['ViewChannel', 'SendMessages', 'ManageMessages'] });
+              await ch.permissionOverwrites.edit(ar.id, {
+                ViewChannel: true, SendMessages: true, ManageMessages: true,
+              }).catch(() => {});
             }
           }
-          // Pour readOnly : autorise admins à poster
           if (matched.profile === 'readOnly') {
             for (const [, ar] of adminRoles) {
-              overrides.push({ id: ar.id, allow: ['SendMessages', 'ManageMessages'] });
+              await ch.permissionOverwrites.edit(ar.id, {
+                SendMessages: true, ManageMessages: true,
+              }).catch(() => {});
             }
           }
 
-          // Applique
-          await ch.permissionOverwrites.set(overrides).catch(() => {});
-
-          // Topic
-          if (matched.topic && ch.topic !== matched.topic) {
+          // Topic — préserve si déjà défini (sauf si vide)
+          if (matched.topic && (!ch.topic || ch.topic.trim().length === 0)) {
             await ch.setTopic(matched.topic).catch(() => {});
           }
 
-          // Slowmode
-          if (profile.slowmode && ch.rateLimitPerUser !== profile.slowmode) {
+          // Slowmode — n'écrase pas si l'admin a déjà défini un slowmode différent
+          if (profile.slowmode && (ch.rateLimitPerUser === 0)) {
             await ch.setRateLimitPerUser(profile.slowmode).catch(() => {});
           }
 
