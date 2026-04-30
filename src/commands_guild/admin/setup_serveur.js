@@ -83,6 +83,9 @@ module.exports = {
     .addSubcommand(s => s.setName('apercu').setDescription("👁️ Aperçu du modèle"))
     .addSubcommand(s => s.setName('renommer').setDescription("🏷️ Renomme les salons avec le style ・"))
     .addSubcommand(s => s.setName('creer').setDescription("✨ Crée les catégories et salons manquants"))
+    .addSubcommand(s => s.setName('ajouter-nouveautes').setDescription("🆕 Ajoute SEULEMENT les nouvelles catégories (Casino, Jeux Fun, Événements, Communauté)"))
+    .addSubcommand(s => s.setName('nettoyer-roles').setDescription("🧹 Trouve et liste les rôles en doublon (suppression sur confirmation)")
+      .addBooleanOption(o => o.setName('supprimer').setDescription('true = supprime, false = liste seulement').setRequired(false)))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -127,6 +130,102 @@ module.exports = {
       const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
       return respFn({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✨ ・ Configuration terminée ・')
         .addFields({ name: '・ ✅ Créés', value: `**${created}**`, inline: true }, { name: '・ ✓ Existants', value: `**${existed}**`, inline: true }).setTimestamp()] });
+    }
+
+    // ─── 🆕 AJOUTE UNIQUEMENT LES NOUVELLES CATÉGORIES ─────────
+    if (sub === 'ajouter-nouveautes') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      // Catégories à ajouter (les NOUVELLES uniquement, pas celles qui existaient déjà)
+      const NEW_ONLY = TEMPLATE.filter(t =>
+        ['┈ ・ CASINO ・ ┈', '┈ ・ JEUX FUN ・ ┈', '┈ ・ ÉVÉNEMENTS ・ ┈', '┈ ・ COMMUNAUTÉ ・ ┈'].includes(t.category)
+      );
+      let created = 0, existed = 0;
+      for (const def of NEW_ONLY) {
+        let cat = guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name === def.category);
+        if (!cat) {
+          try { cat = await guild.channels.create({ name: def.category, type: ChannelType.GuildCategory }); created++; }
+          catch (e) { console.error('[setup-serveur] cat create err:', e.message); continue; }
+        } else { existed++; }
+        for (const chDef of def.channels) {
+          if (!guild.channels.cache.find(c => c.type === ChannelType.GuildText && c.name === chDef.name)) {
+            try { await guild.channels.create({ name: chDef.name, type: ChannelType.GuildText, parent: cat.id, topic: chDef.topic }); created++; }
+            catch (e) { console.error('[setup-serveur] chan create err:', e.message); }
+          } else { existed++; }
+        }
+      }
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('🆕 ・ Nouveautés ajoutées ・')
+        .setDescription('Seules les **4 nouvelles catégories** ont été ajoutées (Casino, Jeux Fun, Événements, Communauté). Tes catégories existantes n\'ont PAS été touchées.')
+        .addFields({ name: '✅ Créés', value: `**${created}** nouveau(x)`, inline: true }, { name: '✓ Existaient déjà', value: `**${existed}**`, inline: true })
+        .setTimestamp()] });
+    }
+
+    // ─── 🧹 NETTOYAGE RÔLES EN DOUBLON ─────────────────────────
+    if (sub === 'nettoyer-roles') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const supprimer = interaction.options.getBoolean('supprimer') === true;
+
+      // Groupe les rôles par nom (case-insensitive)
+      const byName = new Map();
+      for (const [, r] of guild.roles.cache) {
+        if (r.managed || r.id === guild.id) continue; // skip @everyone et rôles bots
+        const key = r.name.trim().toLowerCase();
+        if (!byName.has(key)) byName.set(key, []);
+        byName.get(key).push(r);
+      }
+      // Filtrer ceux avec ≥ 2 occurrences
+      const dupes = [];
+      for (const [name, roles] of byName) {
+        if (roles.length >= 2) dupes.push({ name, roles });
+      }
+
+      if (!dupes.length) {
+        const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+        return respFn({ content: '✅ Aucun rôle en doublon détecté !' });
+      }
+
+      const lines = dupes.slice(0, 25).map(d => `• **${d.roles[0].name}** : ${d.roles.length} copies`).join('\n');
+      const totalDupes = dupes.reduce((s, d) => s + (d.roles.length - 1), 0);
+
+      if (!supprimer) {
+        // Mode liste uniquement
+        const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+        return respFn({ embeds: [new EmbedBuilder().setColor('#F1C40F').setTitle('🧹 ・ Rôles en doublon détectés')
+          .setDescription(lines + `\n\n**Total à nettoyer : ${totalDupes} rôle(s)**\n\n⚠️ Utilise \`/setup-serveur nettoyer-roles supprimer:true\` pour supprimer les doublons. **L'ORIGINAL (le 1er créé) est gardé**, les copies sont supprimées.`)
+        ] });
+      }
+
+      // Mode suppression
+      let deleted = 0, failed = 0;
+      for (const { roles } of dupes) {
+        // Trie par date de création asc (le plus ancien = original)
+        roles.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+        // Garde le 1er, supprime les autres
+        for (let i = 1; i < roles.length; i++) {
+          try {
+            // Re-attribue les membres du rôle dupliqué à l'original avant suppression
+            const original = roles[0];
+            for (const [, member] of roles[i].members) {
+              try { await member.roles.add(original).catch(() => {}); } catch {}
+            }
+            await roles[i].delete('Doublon — nettoyage par /setup-serveur').catch(() => {});
+            deleted++;
+          } catch (e) {
+            console.error('[setup-serveur] delete role err:', e.message);
+            failed++;
+          }
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('🧹 ・ Rôles en doublon supprimés')
+        .addFields(
+          { name: '🗑️ Supprimés', value: `**${deleted}**`, inline: true },
+          { name: '❌ Échecs', value: `**${failed}**`, inline: true },
+          { name: '✅ Reste', value: `Originaux conservés`, inline: true }
+        )
+        .setFooter({ text: 'Les membres ont été re-attribués au rôle original avant suppression.' })
+        .setTimestamp()] });
     }
 
     if (sub === 'separateur') {
