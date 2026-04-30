@@ -691,12 +691,12 @@ module.exports = {
       // ── Catégories : renomme avec style ┈ ・ X ・ ┈ ──
       const CAT_RENAMES = [
         { test: /information|info/i,                         to: '┈ ・ INFORMATIONS ・ ┈' },
-        { test: /general|général/i,                          to: '┈ ・ GÉNÉRAL ・ ┈' },
+        { test: /general|général|chat/i,                          to: '┈ ・ GÉNÉRAL ・ ┈' },
         { test: /[eé]conomie|economy/i,                      to: '┈ ・ ÉCONOMIE ・ ┈' },
         { test: /casino/i,                                   to: '┈ ・ CASINO ・ ┈' },
         { test: /jeux.?fun|fun.?jeux|amusement/i,            to: '┈ ・ JEUX FUN ・ ┈' },
         { test: /[eé]v[eé]nement|event/i,                    to: '┈ ・ ÉVÉNEMENTS ・ ┈' },
-        { test: /communaut[eé]|community/i,                  to: '┈ ・ COMMUNAUTÉ ・ ┈' },
+        { test: /communaut[eé]|community|entraide|cr[eé]ativit[eé]|creativ/i,                  to: '┈ ・ COMMUNAUTÉ ・ ┈' },
         { test: /administration|admin|staff/i,               to: '┈ ・ ADMINISTRATION ・ ┈' },
         { test: /jeux|games/i,                               to: '┈ ・ JEUX ・ ┈' },
       ];
@@ -882,14 +882,14 @@ module.exports = {
 
       // Patterns par "fonction" — toutes les variantes possibles
       const CAT_PURPOSES = [
-        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil/i },
-        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général/i },
+        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil|important/i },
+        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général|chat/i },
         { id: 'ÉCONOMIE',       to: '┈ ・ ÉCONOMIE ・ ┈',        test: /[eé]conomie|economy/i },
         { id: 'CASINO',         to: '┈ ・ CASINO ・ ┈',           test: /casino/i },
         { id: 'JEUX FUN',       to: '┈ ・ JEUX FUN ・ ┈',         test: /jeux.?fun|fun.?jeux|amusement|fun$/i },
         { id: 'JEUX',           to: '┈ ・ JEUX ・ ┈',             test: /^[┈・\s]*jeux[┈・\s]*$|^games$/i },
         { id: 'ÉVÉNEMENTS',     to: '┈ ・ ÉVÉNEMENTS ・ ┈',       test: /[eé]v[eé]nements?|events?/i },
-        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community/i },
+        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community|entraide|cr[eé]ativit[eé]|creativ/i },
         { id: 'ADMINISTRATION', to: '┈ ・ ADMINISTRATION ・ ┈',   test: /administration|admin|staff/i },
       ];
 
@@ -995,14 +995,14 @@ module.exports = {
 
       // Patterns par fonction → nom NEW (qu'on veut garder)
       const CAT_TARGETS = [
-        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil/i },
-        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général/i },
+        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil|important/i },
+        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général|chat/i },
         { id: 'ÉCONOMIE',       to: '┈ ・ ÉCONOMIE ・ ┈',        test: /[eé]conomie|economy/i },
         { id: 'CASINO',         to: '┈ ・ CASINO ・ ┈',           test: /casino/i },
-        { id: 'JEUX FUN',       to: '┈ ・ JEUX FUN ・ ┈',         test: /jeux.?fun|fun.?jeux|amusement|^fun$/i },
+        { id: 'JEUX FUN',       to: '┈ ・ JEUX FUN ・ ┈',         test: /jeux.?fun|fun.?jeux|amusement|^fun$|gaming/i },
         { id: 'JEUX',           to: '┈ ・ JEUX ・ ┈',             test: /(^|\s)jeux(\s|$)|^games$/i },
         { id: 'ÉVÉNEMENTS',     to: '┈ ・ ÉVÉNEMENTS ・ ┈',       test: /[eé]v[eé]nements?|events?/i },
-        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community/i },
+        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community|entraide|cr[eé]ativit[eé]|creativ/i },
         { id: 'ADMINISTRATION', to: '┈ ・ ADMINISTRATION ・ ┈',   test: /administration|admin|staff/i },
       ];
 
@@ -1112,15 +1112,15 @@ module.exports = {
       // === ÉTAPE 1 : FUSION CATÉGORIES (garde nouvelles, déplace contenu) ===
       // 🎨 STYLE PREMIUM MODERNE — inspiré des plus gros serveurs Discord
       const CAT_TARGETS = [
-        { id: 'INFORMATIONS',   to: '╭─⋅ 📜 INFORMATIONS ⋅─╮',   test: /information|info|accueil/i },
-        { id: 'GÉNÉRAL',        to: '╭─⋅ 💬 GÉNÉRAL ⋅─╮',        test: /general|général/i },
+        { id: 'INFORMATIONS',   to: '╭─⋅ 📜 INFORMATIONS ⋅─╮',   test: /information|info|accueil|important/i },
+        { id: 'GÉNÉRAL',        to: '╭─⋅ 💬 GÉNÉRAL ⋅─╮',        test: /general|général|chat/i },
         { id: 'ÉCONOMIE',       to: '╭─⋅ 💰 ÉCONOMIE ⋅─╮',       test: /[eé]conomie|economy/i },
         { id: 'CASINO',         to: '╭─⋅ 🎰 CASINO ⋅─╮',          test: /casino/i },
-        { id: 'JEUX FUN',       to: '╭─⋅ 🎮 JEUX FUN ⋅─╮',        test: /jeux.?fun|fun.?jeux|amusement|^fun$/i },
+        { id: 'JEUX FUN',       to: '╭─⋅ 🎮 JEUX FUN ⋅─╮',        test: /jeux.?fun|fun.?jeux|amusement|^fun$|gaming/i },
         { id: 'JEUX',           to: '╭─⋅ 🎯 JEUX ⋅─╮',            test: /(^|\s)jeux(\s|$)|^games$/i },
         { id: 'ÉVÉNEMENTS',     to: '╭─⋅ 🎪 ÉVÉNEMENTS ⋅─╮',      test: /[eé]v[eé]nements?|events?/i },
-        { id: 'COMMUNAUTÉ',     to: '╭─⋅ 👥 COMMUNAUTÉ ⋅─╮',      test: /communaut[eé]|community/i },
-        { id: 'ADMINISTRATION', to: '╭─⋅ 🛡️ ADMINISTRATION ⋅─╮', test: /administration|^admin$|staff$/i },
+        { id: 'COMMUNAUTÉ',     to: '╭─⋅ 👥 COMMUNAUTÉ ⋅─╮',      test: /communaut[eé]|community|entraide|cr[eé]ativit[eé]|creativ/i },
+        { id: 'ADMINISTRATION', to: '╭─⋅ 🛡️ ADMINISTRATION ⋅─╮', test: /administration|^admin$|^staff$/i },
       ];
 
       const catGroups = {};
