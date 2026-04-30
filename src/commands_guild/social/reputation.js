@@ -5,12 +5,20 @@ try {
   const cols = db.db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
   if (!cols.includes('reputation')) db.db.prepare("ALTER TABLE users ADD COLUMN reputation INTEGER DEFAULT 0").run();
   if (!cols.includes('last_rep')) db.db.prepare("ALTER TABLE users ADD COLUMN last_rep INTEGER DEFAULT 0").run();
-  db.db.prepare(`CREATE TABLE IF NOT EXISTS rep_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id TEXT, from_id TEXT, to_id TEXT,
-    amount INTEGER DEFAULT 1, reason TEXT,
-    given_at INTEGER DEFAULT (strftime('%s','now'))
-  )`).run();
+  // Note : la table rep_log est créée par db.js avec schéma giver_id/receiver_id/message/created_at
+  // On ajoute les colonnes legacy from_id/to_id/amount/reason/given_at si on a déjà une vieille DB
+  const repCols = db.db.prepare('PRAGMA table_info(rep_log)').all().map(c => c.name);
+  if (repCols.length === 0) {
+    // Table n'existe pas encore — créer avec le schéma officiel db.js
+    db.db.prepare(`CREATE TABLE IF NOT EXISTS rep_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id    TEXT NOT NULL,
+      giver_id    TEXT NOT NULL,
+      receiver_id TEXT NOT NULL,
+      message     TEXT,
+      created_at  INTEGER DEFAULT (strftime('%s','now'))
+    )`).run();
+  }
 } catch {}
 
 module.exports = {
@@ -56,9 +64,10 @@ module.exports = {
       }
 
       db.getUser(target.id, guildId); // S'assurer que l'utilisateur existe
-      db.db.prepare('UPDATE users SET reputation = reputation + 1 WHERE user_id=? AND guild_id=?').run(target.id, guildId);
+      db.db.prepare('UPDATE users SET reputation = COALESCE(reputation,0) + 1 WHERE user_id=? AND guild_id=?').run(target.id, guildId);
       db.db.prepare('UPDATE users SET last_rep=? WHERE user_id=? AND guild_id=?').run(now, userId, guildId);
-      db.db.prepare('INSERT INTO rep_log (guild_id, from_id, to_id, amount, reason) VALUES (?,?,?,?,?)').run(guildId, userId, target.id, 1, raison);
+      // Schéma officiel : giver_id, receiver_id, message, created_at
+      db.db.prepare('INSERT INTO rep_log (guild_id, giver_id, receiver_id, message, created_at) VALUES (?,?,?,?,?)').run(guildId, userId, target.id, raison, now);
 
       // Petite récompense en coins pour celui qui reçoit
       db.addCoins(target.id, guildId, 50);
@@ -80,8 +89,9 @@ module.exports = {
       const target = interaction.options.getUser('membre');
       const montant = 1;
       db.getUser(target.id, guildId);
-      db.db.prepare('UPDATE users SET reputation = MAX(0, reputation - ?) WHERE user_id=? AND guild_id=?').run(montant, target.id, guildId);
-      db.db.prepare('INSERT INTO rep_log (guild_id, from_id, to_id, amount, reason) VALUES (?,?,?,?,?)').run(guildId, userId, target.id, -montant, 'Retrait staff');
+      // FIX SQLite : MAX() n'existe pas pour UPDATE — on utilise CASE WHEN
+      db.db.prepare(`UPDATE users SET reputation = CASE WHEN COALESCE(reputation,0) - ? < 0 THEN 0 ELSE COALESCE(reputation,0) - ? END WHERE user_id=? AND guild_id=?`).run(montant, montant, target.id, guildId);
+      db.db.prepare('INSERT INTO rep_log (guild_id, giver_id, receiver_id, message, created_at) VALUES (?,?,?,?,?)').run(guildId, userId, target.id, 'Retrait staff', now);
       return interaction.editReply({ content: `✅ **-${montant} réputation** retirée à <@${target.id}>.`, ephemeral: true });
     }
 
@@ -89,8 +99,8 @@ module.exports = {
       const target = interaction.options.getUser('membre') || interaction.user;
       const u = db.getUser(target.id, guildId);
       const rep = u.reputation || 0;
-      const repGiven = db.db.prepare('SELECT COUNT(*) as c FROM rep_log WHERE guild_id=? AND from_id=? AND amount>0').get(guildId, target.id);
-      const lastReceivers = db.db.prepare('SELECT to_id, given_at FROM rep_log WHERE guild_id=? AND from_id=? ORDER BY given_at DESC LIMIT 3').all(guildId, target.id);
+      const repGiven = db.db.prepare('SELECT COUNT(*) as c FROM rep_log WHERE guild_id=? AND giver_id=?').get(guildId, target.id);
+      const lastReceivers = db.db.prepare('SELECT receiver_id, created_at FROM rep_log WHERE guild_id=? AND giver_id=? ORDER BY created_at DESC LIMIT 3').all(guildId, target.id);
       const rank = db.db.prepare('SELECT COUNT(*) as c FROM users WHERE guild_id=? AND reputation > ?').get(guildId, rep);
 
       const stars = '⭐'.repeat(Math.min(rep, 5)) + (rep > 5 ? ` +${rep - 5}` : '');
@@ -121,13 +131,13 @@ module.exports = {
     }
 
     if (sub === 'historique') {
-      const history = db.db.prepare('SELECT * FROM rep_log WHERE guild_id=? AND to_id=? ORDER BY given_at DESC LIMIT 10').all(guildId, userId);
+      const history = db.db.prepare('SELECT * FROM rep_log WHERE guild_id=? AND receiver_id=? ORDER BY created_at DESC LIMIT 10').all(guildId, userId);
       if (!history.length) return interaction.editReply({ content: '❌ Aucun historique de réputation.', ephemeral: true });
 
       const desc = history.map(r => {
-        const emoji = r.amount > 0 ? '⭐' : '📉';
-        const date = `<t:${r.given_at}:R>`;
-        return `${emoji} ${r.amount > 0 ? '+' : ''}${r.amount} de <@${r.from_id}>${r.reason ? ` — *${r.reason}*` : ''} • ${date}`;
+        const emoji = '⭐';
+        const date = `<t:${r.created_at}:R>`;
+        return `${emoji} +1 de <@${r.giver_id}>${r.message ? ` — *${r.message}*` : ''} • ${date}`;
       }).join('\n');
 
       return interaction.editReply({ embeds: [

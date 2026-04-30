@@ -79,6 +79,7 @@ async function handleDonner(interaction) {
   }
 
   const now = Math.floor(Date.now() / 1000);
+  // ✅ SCHÉMA OFFICIEL db.js : giver_id, receiver_id, message, created_at
   const lastRep = db.db.prepare(
     `SELECT * FROM rep_log
      WHERE guild_id = ? AND giver_id = ? AND receiver_id = ? AND created_at > ?`
@@ -95,13 +96,16 @@ async function handleDonner(interaction) {
     });
   }
 
+  // S'assurer que la ligne user existe AVANT l'UPDATE
+  db.getUser(target.id, interaction.guildId);
+
   db.db.prepare(
     `INSERT INTO rep_log (guild_id, giver_id, receiver_id, message, created_at)
      VALUES (?, ?, ?, ?, ?)`
   ).run(interaction.guildId, interaction.user.id, target.id, message, now);
 
   db.db.prepare(
-    `UPDATE users SET reputation = reputation + 1
+    `UPDATE users SET reputation = COALESCE(reputation, 0) + 1
      WHERE user_id = ? AND guild_id = ?`
   ).run(target.id, interaction.guildId);
 
