@@ -93,6 +93,7 @@ module.exports = {
     .addSubcommand(s => s.setName('synchronisation-totale').setDescription("🔧 BÉTONNAGE complet : catégories + salons + permissions staff verrouillées"))
     .addSubcommand(s => s.setName('fusion-intelligente').setDescription("🧠 FUSIONNE catégories doublons : déplace salons dans l'original + supprime vides"))
     .addSubcommand(s => s.setName('garder-nouvelles').setDescription("⭐ GARDE les nouvelles catégories au format ┈・X・┈ + déplace contenu existant dedans + supprime anciennes vides"))
+    .addSubcommand(s => s.setName('tout-parfaire').setDescription("✨ TOUT EN UN : fusion + synchro + permissions + nettoyage rôles + suppression doublons (1 seule commande)"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -1093,6 +1094,227 @@ module.exports = {
         .setFooter({ text: 'Lance maintenant /setup-serveur synchronisation-totale pour finaliser visuel + perms.' })
         .setTimestamp();
       return respFn({ embeds: [embed] });
+    }
+
+    // ─── ✨ TOUT EN UN : la commande maître ───────────────────────
+    if (sub === 'tout-parfaire') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const everyone = guild.roles.everyone;
+
+      const STAFF_NAME_PATTERNS = /admin|mod[eé]rateur|moderator|propri[eé]taire|owner|d[eé]veloppeur|developer|staff|h[eé]bergeur|fondateur|founder|gestionnaire|manager/i;
+      const allRolesArr = [...guild.roles.cache.values()];
+      const adminRoles = allRolesArr.filter(r => !r.managed && r.id !== guild.id && (r.permissions.has(PermissionFlagsBits.Administrator) || STAFF_NAME_PATTERNS.test(r.name)));
+      const modRoles   = allRolesArr.filter(r => !r.managed && r.id !== guild.id && !adminRoles.includes(r) && (
+        r.permissions.has(PermissionFlagsBits.ManageMessages) || r.permissions.has(PermissionFlagsBits.KickMembers) || r.permissions.has(PermissionFlagsBits.BanMembers) || r.permissions.has(PermissionFlagsBits.ManageGuild)
+      ));
+      const botRoles = allRolesArr.filter(r => r.managed);
+
+      // === ÉTAPE 1 : FUSION CATÉGORIES (garde nouvelles, déplace contenu) ===
+      const CAT_TARGETS = [
+        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil/i },
+        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général/i },
+        { id: 'ÉCONOMIE',       to: '┈ ・ ÉCONOMIE ・ ┈',        test: /[eé]conomie|economy/i },
+        { id: 'CASINO',         to: '┈ ・ CASINO ・ ┈',           test: /casino/i },
+        { id: 'JEUX FUN',       to: '┈ ・ JEUX FUN ・ ┈',         test: /jeux.?fun|fun.?jeux|amusement|^fun$/i },
+        { id: 'JEUX',           to: '┈ ・ JEUX ・ ┈',             test: /(^|\s)jeux(\s|$)|^games$/i },
+        { id: 'ÉVÉNEMENTS',     to: '┈ ・ ÉVÉNEMENTS ・ ┈',       test: /[eé]v[eé]nements?|events?/i },
+        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community/i },
+        { id: 'ADMINISTRATION', to: '┈ ・ ADMINISTRATION ・ ┈',   test: /administration|^admin$|staff$/i },
+      ];
+
+      const catGroups = {};
+      for (const [, cat] of guild.channels.cache.filter(c => c.type === ChannelType.GuildCategory)) {
+        const stripped = cat.name.replace(/[┈・\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim();
+        for (const p of CAT_TARGETS) {
+          if (p.test.test(stripped) || p.test.test(cat.name)) {
+            if (!catGroups[p.id]) catGroups[p.id] = [];
+            catGroups[p.id].push({ cat, target: p.to });
+            break;
+          }
+        }
+      }
+
+      let movedChans = 0, deletedCats = 0, renamedCats = 0;
+      for (const [, items] of Object.entries(catGroups)) {
+        if (!items.length) continue;
+        const target = items[0].target;
+        let keep = items.find(i => i.cat.name === target)?.cat;
+        if (!keep) {
+          items.sort((a, b) => b.cat.createdTimestamp - a.cat.createdTimestamp);
+          keep = items[0].cat;
+          if (keep.name !== target) { try { await keep.setName(target); renamedCats++; } catch {} }
+        }
+        for (const i of items) {
+          if (i.cat.id === keep.id) continue;
+          const children = guild.channels.cache.filter(c => c.parentId === i.cat.id);
+          for (const [, ch] of children) { try { await ch.setParent(keep.id, { lockPermissions: false }); movedChans++; } catch {} }
+          try { await i.cat.delete('Doublon - tout-parfaire'); deletedCats++; } catch {}
+        }
+      }
+
+      // === ÉTAPE 2 : SYNCHRONISATION SALONS (renommage + topic + perms) ===
+      const PROFILES = {
+        readOnly:  { everyone: { ViewChannel: true,  SendMessages: false, AddReactions: true, ReadMessageHistory: true } },
+        staffOnly: { everyone: { ViewChannel: false, SendMessages: false, ReadMessageHistory: false } },
+        public:    { everyone: { ViewChannel: true,  SendMessages: true, AddReactions: true, ReadMessageHistory: true, AttachFiles: true, EmbedLinks: true } },
+        publicSlow:{ everyone: { ViewChannel: true,  SendMessages: true, AddReactions: true, ReadMessageHistory: true }, slowmode: 5 },
+        media:     { everyone: { ViewChannel: true,  SendMessages: true, AttachFiles: true, EmbedLinks: true, ReadMessageHistory: true } },
+      };
+      const RULES = [
+        { test: /règles?|rules?/i, profile: 'readOnly', topic: '📋 Règles du serveur.', rename: '・📋・règles' },
+        { test: /annonces?|announc/i, profile: 'readOnly', topic: '📣 Annonces officielles.', rename: '・📣・annonces' },
+        { test: /bienvenue|welcome/i, profile: 'readOnly', topic: '👋 Accueil des nouveaux.', rename: '・👋・bienvenue' },
+        { test: /partenaires?|partners?|partenariat/i, profile: 'readOnly', topic: '💎 Serveurs partenaires.', rename: '・💎・partenaires' },
+        { test: /classement|leaderboard|^top$/i, profile: 'readOnly', topic: '🏆 /top € /top xp', rename: '・🏆・classement' },
+        { test: /battle.?pass/i, profile: 'readOnly', topic: '🏆 /battlepass', rename: '・🏆・battle-pass' },
+        { test: /^badges?$/i, profile: 'readOnly', topic: '🏅 /badges voir', rename: '・🏅・badges' },
+        { test: /bot.?logs?|mod-?logs?/i, profile: 'staffOnly', topic: '🔒 STAFF.', rename: '・🔧・bot-logs' },
+        { test: /moderation|modération|mod-?chat/i, profile: 'staffOnly', topic: '👮 Modérateurs.', rename: '・👮・modération' },
+        { test: /^admin$|admin-?chat|staff-?admin/i, profile: 'staffOnly', topic: '🔒 Administrateurs.', rename: '・🔒・admin' },
+        { test: /^staff$|^equipe$|^team$/i, profile: 'staffOnly', topic: '🔒 Équipe.', rename: '・🔒・staff' },
+        { test: /^diagnostic$/i, profile: 'staffOnly', topic: '🔍 /diagnostic.', rename: '・🔍・diagnostic' },
+        { test: /^config|configuration|cfg$/i, profile: 'staffOnly', topic: '⚙️ Config.', rename: '・⚙️・config' },
+        { test: /tickets?-?logs?|tickets?-?staff/i, profile: 'staffOnly', topic: '🎫 Logs tickets.', rename: '・🎫・tickets-logs' },
+        { test: /audit/i, profile: 'staffOnly', topic: '📜 Audit.', rename: '・📜・audit' },
+        { test: /developer|dev-?chat|^d[eé]v$/i, profile: 'staffOnly', topic: '💻 Dev.', rename: '・💻・dev' },
+        { test: /m[eé]dias?|images?|gifs?|photos?/i, profile: 'media', topic: '🖼 Images & vidéos.', rename: '・🖼・médias' },
+        { test: /^slots?$|mega.?slots?/i, profile: 'publicSlow', topic: '🎰 /slots /mega-slots', rename: '・🎰・slots' },
+        { test: /roulette/i, profile: 'publicSlow', topic: '🎡 /roulette', rename: '・🎡・roulette' },
+        { test: /roue.?fortune|^roue$/i, profile: 'publicSlow', topic: '🎡 /roue-fortune', rename: '・🎡・roue-fortune' },
+        { test: /cartes?|blackjack|baccarat|poker|videopoker|war/i, profile: 'publicSlow', topic: '🃏 Cartes.', rename: '・🃏・cartes' },
+        { test: /^d[eé]s$|sicbo|craps/i, profile: 'publicSlow', topic: '🎲 /des /sicbo /craps', rename: '・🎲・dés' },
+        { test: /^mines$|crash|plinko|coffre/i, profile: 'publicSlow', topic: '⛏️ /mines /crash /plinko', rename: '・⛏️・mines' },
+        { test: /grattage|scratch/i, profile: 'publicSlow', topic: '🎫 /grattage', rename: '・🎫・grattage' },
+        { test: /^casino$/i, profile: 'publicSlow', topic: '🎰 Casino.', rename: '・🎲・casino' },
+        { test: /mystery|mystère/i, profile: 'publicSlow', topic: '🎁 /mystery ouvrir', rename: '・🎁・mystery-box' },
+        { test: /^spin$|spin.?roue/i, profile: 'publicSlow', topic: '🎡 /spin tourner', rename: '・🎡・spin-roue' },
+        { test: /animaux|^pets?$|^pet$/i, profile: 'publicSlow', topic: '🐾 /pet adopter', rename: '・🐾・animaux' },
+        { test: /mini.?jeux|^games?$|^jeux$/i, profile: 'publicSlow', topic: '🎯 /quiz /pendu', rename: '・🎯・mini-jeux' },
+        { test: /aventures?|donjon|chasse|^rpg$|ferme/i, profile: 'publicSlow', topic: '🗺️ /donjon /rpg', rename: '・🗺️・aventures' },
+        { test: /duels?|trivia/i, profile: 'publicSlow', topic: '⚔️ /duel', rename: '・⚔️・duels' },
+        { test: /immobilier|^immo$|maison|propri[eé]t[eé]/i, profile: 'publicSlow', topic: '🏠 /immobilier', rename: '・🏠・immobilier' },
+        { test: /banque|^bank$/i, profile: 'publicSlow', topic: '🏦 /banque', rename: '・🏦・banque' },
+        { test: /^march[eé]$|^market$/i, profile: 'publicSlow', topic: '📊 /market', rename: '・📊・marché' },
+        { test: /[eé]conomie|economy/i, profile: 'publicSlow', topic: '💰 /work /crime', rename: '・💰・économie' },
+        { test: /loto|lotto|loterie/i, profile: 'publicSlow', topic: '🎟️ /loto /lotto', rename: '・🎟️・loterie' },
+        { test: /quêtes?|quetes?|quests?/i, profile: 'publicSlow', topic: '🗺️ /quest /missions', rename: '・🗺️・quêtes' },
+        { test: /tournois?|tournaments?/i, profile: 'publicSlow', topic: '🎪 /tournoi', rename: '・🎪・tournois' },
+        { test: /profils?|profiles?/i, profile: 'publicSlow', topic: '👤 /profil', rename: '・👤・profils' },
+        { test: /mariages?|marriages?/i, profile: 'publicSlow', topic: '💕 /mariage', rename: '・💕・mariages' },
+        { test: /^famille$/i, profile: 'publicSlow', topic: '👨‍👩‍👧 /famille', rename: '・👨‍👩‍👧・famille' },
+        { test: /^clans?$/i, profile: 'publicSlow', topic: '🏰 /clans', rename: '・🏰・clans' },
+        { test: /r[eé]putation|^rep$/i, profile: 'publicSlow', topic: '💖 /rep', rename: '・💖・réputation' },
+        { test: /suggestions?|sugges/i, profile: 'publicSlow', topic: '💭 /suggestion', rename: '・💭・suggestions' },
+        { test: /humour|memes?|jokes?/i, profile: 'public', topic: '😂 Mèmes.', rename: '・😂・humour' },
+        { test: /liens?|links?/i, profile: 'public', topic: '🔗 Liens.', rename: '・🔗・liens' },
+        { test: /general|général|^chat$/i, profile: 'public', topic: '💬 Général.', rename: '・💬・général' },
+        { test: /r[oô]les?/i, profile: 'readOnly', topic: '🎫 Choisis tes rôles.', rename: '・🎫・rôles' },
+      ];
+
+      let renamedChans = 0, retopiced = 0, repermed = 0;
+      for (const [, ch] of guild.channels.cache.filter(c => c.type === ChannelType.GuildText)) {
+        let matched = null;
+        for (const r of RULES) { if (r.test.test(ch.name)) { matched = r; break; } }
+        if (!matched) continue;
+        const profile = PROFILES[matched.profile];
+        try {
+          if (matched.rename && ch.name !== matched.rename) { await ch.setName(matched.rename).catch(() => {}); renamedChans++; }
+          if (matched.topic && ch.topic !== matched.topic) { await ch.setTopic(matched.topic).catch(() => {}); retopiced++; }
+          if (profile.everyone) {
+            const ow = {}; for (const [p, v] of Object.entries(profile.everyone)) ow[p] = v;
+            await ch.permissionOverwrites.edit(everyone.id, ow).catch(() => {});
+            repermed++;
+          }
+          if (matched.profile === 'staffOnly') {
+            for (const ar of adminRoles) await ch.permissionOverwrites.edit(ar.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true, ManageMessages: true, AttachFiles: true, EmbedLinks: true }).catch(() => {});
+            for (const mr of modRoles) await ch.permissionOverwrites.edit(mr.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true, ManageMessages: true }).catch(() => {});
+            for (const br of botRoles) await ch.permissionOverwrites.edit(br.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }).catch(() => {});
+          }
+          if (matched.profile === 'readOnly') {
+            for (const ar of adminRoles) await ch.permissionOverwrites.edit(ar.id, { SendMessages: true, ManageMessages: true, AttachFiles: true, EmbedLinks: true }).catch(() => {});
+            for (const mr of modRoles) await ch.permissionOverwrites.edit(mr.id, { SendMessages: true, ManageMessages: true }).catch(() => {});
+          }
+          if (profile.slowmode && ch.rateLimitPerUser !== profile.slowmode) await ch.setRateLimitPerUser(profile.slowmode).catch(() => {});
+          else if (!profile.slowmode && matched.profile !== 'staffOnly' && ch.rateLimitPerUser !== 0) await ch.setRateLimitPerUser(0).catch(() => {});
+        } catch {}
+      }
+
+      // === ÉTAPE 3 : SUPPRIMER SALONS DOUBLONS VIDES ===
+      const PURPOSES = RULES.map(r => r.test);
+      const chanGroups = {};
+      for (const [, ch] of guild.channels.cache.filter(c => c.type === ChannelType.GuildText)) {
+        for (let i = 0; i < PURPOSES.length; i++) {
+          if (PURPOSES[i].test(ch.name) || PURPOSES[i].test(ch.name.replace(/[・\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim())) {
+            if (!chanGroups[i]) chanGroups[i] = [];
+            chanGroups[i].push(ch);
+            break;
+          }
+        }
+      }
+      let deletedChans = 0;
+      for (const [, chs] of Object.entries(chanGroups)) {
+        if (chs.length < 2) continue;
+        chs.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+        for (let i = 1; i < chs.length; i++) {
+          try {
+            const msgs = await chs[i].messages.fetch({ limit: 5 });
+            if (msgs.size === 0) { await chs[i].delete('Doublon vide - tout-parfaire'); deletedChans++; }
+          } catch {}
+        }
+      }
+
+      // === ÉTAPE 4 : NETTOYER RÔLES DOUBLONS ===
+      const byName = new Map();
+      for (const [, r] of guild.roles.cache) {
+        if (r.managed || r.id === guild.id) continue;
+        const k = r.name.trim().toLowerCase();
+        if (!byName.has(k)) byName.set(k, []);
+        byName.get(k).push(r);
+      }
+      let deletedRoles = 0;
+      for (const [, roles] of byName) {
+        if (roles.length < 2) continue;
+        roles.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+        for (let i = 1; i < roles.length; i++) {
+          try {
+            for (const [, m] of roles[i].members) await m.roles.add(roles[0]).catch(() => {});
+            await roles[i].delete('Doublon rôle - tout-parfaire').catch(() => {});
+            deletedRoles++;
+          } catch {}
+        }
+      }
+
+      // === RAPPORT FINAL ===
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor('#9B59B6').setTitle('✨ ・ TOUT PARFAIT ・ ✨')
+        .setDescription([
+          '**Serveur entièrement transformé en 1 commande :**',
+          '',
+          `🔍 **${adminRoles.length}** rôle(s) admin/staff détecté(s) : *${adminRoles.slice(0, 4).map(r => r.name).join(', ')}*`,
+          `🛡️ **${modRoles.length}** rôle(s) modération détecté(s)`,
+          `🤖 **${botRoles.length}** rôle(s) bot conservé(s)`,
+          '',
+          '✅ Catégories doublons FUSIONNÉES (contenu déplacé vers nouvelles `┈ ・ X ・ ┈`)',
+          '✅ Tous les salons RENOMMÉS au format `・emoji・nom`',
+          '✅ Topics descriptifs uniformes',
+          '✅ Permissions @everyone synchronisées',
+          '✅ Salons staff INVISIBLES sauf admin/mod/owner/dev/bots',
+          '✅ Salons doublons VIDES supprimés',
+          '✅ Rôles doublons supprimés (membres réattribués)',
+          '✅ Slowmode 5s sur jeux/casino',
+        ].join('\n'))
+        .addFields(
+          { name: '🗂️ Cat. fusionnées', value: `**${deletedCats}** anciennes → nouvelles`, inline: true },
+          { name: '📦 Salons déplacés', value: `**${movedChans}**`, inline: true },
+          { name: '🏷️ Cat. renommées', value: `**${renamedCats}**`, inline: true },
+          { name: '🏷️ Salons renommés', value: `**${renamedChans}**`, inline: true },
+          { name: '📝 Topics', value: `**${retopiced}**`, inline: true },
+          { name: '🔒 Permissions', value: `**${repermed}**`, inline: true },
+          { name: '🗑️ Salons vides suppr.', value: `**${deletedChans}**`, inline: true },
+          { name: '🗑️ Rôles doublons', value: `**${deletedRoles}**`, inline: true },
+        )
+        .setFooter({ text: 'Aucun salon utilisé, ni message, ni membre perdu. Vérifie ton serveur !' })
+        .setTimestamp()] });
     }
 
     if (sub === 'separateur') {
