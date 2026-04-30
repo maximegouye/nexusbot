@@ -2356,31 +2356,38 @@ module.exports = {
       const me = guild.members.me;
       const myTopPos = me?.roles?.highest?.position || 0;
 
+      // Helper : nettoie un nom de rôle (enlève emojis + espaces extras)
+      const cleanName = (n) => (n || '')
+        .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}]+/gu, '')
+        .replace(/[┈・╭╰┆]+/g, '')
+        .trim()
+        .toLowerCase();
+
       // Tiers ULTRA précis comme dans les serveurs pro (du plus haut au plus bas)
-      // Chaque pattern est testé dans l'ordre, le PREMIER matché gagne
+      // Les patterns matchent sur le NOM NETTOYÉ (sans emojis)
       const TIERS = [
         // === STAFF ULTRA HAUT ===
-        { tier: 1,  name: '👑 Propriétaire',         test: /^(👑|🦊)?\s*propri[eé]taire|^owner$|^fondateur$|^founder$/i },
-        { tier: 2,  name: '🤴 Co-Propriétaire',      test: /co.?propri[eé]taire|co.?owner|co.?fondateur|co.?founder/i },
-        { tier: 3,  name: '⚡ Administrateur',        test: /^(⚡|🛡|👮)?\s*administrateur|^admin$|^administrator$/i },
-        { tier: 4,  name: '💻 Hébergeur/Dev',         test: /^h[eé]bergeur|^d[eé]veloppeur|^developer|^dev$|^tech.?lead/i },
-        { tier: 5,  name: '🛡 Modérateur Senior',     test: /head.?mod|senior.?mod|mod.?senior|chef.?mod/i },
-        { tier: 6,  name: '🛡 Modérateur',            test: /^(🛡|👮)?\s*mod[eé]rateur|^moderator$|gestionnaire|^manager$/i },
-        { tier: 7,  name: '🆘 Helper/Support',        test: /^helper$|^support$/i },
-        { tier: 8,  name: '🎪 Animateur/Event',       test: /animateur|event.?manager|gestionnaire.?event/i },
-        { tier: 9,  name: '👥 Staff',                 test: /^(👥|👮)?\s*staff$|^équipe$|^team$/i },
-        { tier: 10, name: '🎓 Trial/Stagiaire',       test: /trial.?mod|stagiaire/i },
-        { tier: 11, name: '🤝 Partenaire',            test: /partenaire|partner/i },
-        { tier: 12, name: '🎬 Streamer/YouTuber',     test: /streamer|youtuber|content.?creator/i },
-        { tier: 13, name: '💎 VIP/Premium',           test: /^vip$|premium|donateur|donator/i },
-        { tier: 14, name: '🚀 Server Booster',        test: /server.?booster|booster|nitro.?boost/i },
-        { tier: 15, name: '✨ Actif/OG/Top',          test: /^actif$|^active$|^og$|^top$|^l[eé]gende$|legend|fid[eè]le/i },
-        { tier: 16, name: '🌟 Niveaux',               test: /^(niveau|level|lvl|lv|nv)\s*\d+|^lv\d+$|^lvl\d+$/i },
-        { tier: 17, name: '🎮 Gaming',                test: /gamer|gaming|^pro.?gamer|^semi.?pro/i },
-        { tier: 18, name: '📢 Événements',            test: /[eé]v[eé]nements?|events?/i },
-        { tier: 19, name: '🎨 Personnalité',          test: /senior|cr[eé]atif|creative|d[eé]v|dev/i },
-        { tier: 20, name: '✅ Membre validé',         test: /^membre$|^member$|^v[eé]rifi[eé]|^verified/i },
-        { tier: 21, name: '📋 Autres',                test: /.*/ },
+        { tier: 1,  name: '👑 Co-Propriétaire',      test: (n) => /^co.?propri[eé]taire|^co.?owner|^co.?fondateur|^co.?founder/i.test(n) },
+        { tier: 2,  name: '👑 Propriétaire',         test: (n) => /^propri[eé]taire$|^owner$|^fondateur$|^founder$/i.test(n) },
+        { tier: 3,  name: '⚡ Administrateur',        test: (n) => /^administrateur$|^admin$|^administrator$/i.test(n) },
+        { tier: 4,  name: '💻 Hébergeur/Dev',         test: (n) => /^h[eé]bergeur|^d[eé]veloppeur|^developer$|^dev$|^tech.?lead/i.test(n) },
+        { tier: 5,  name: '🛡 Modérateur Senior',     test: (n) => /head.?mod|senior.?mod|mod.?senior|chef.?mod/i.test(n) },
+        { tier: 6,  name: '🛡 Modérateur',            test: (n) => /^mod[eé]rateur|^moderator$|^gestionnaire$|^manager$/i.test(n) },
+        { tier: 7,  name: '🆘 Helper/Support',        test: (n) => /^helper$|^support$/i.test(n) },
+        { tier: 8,  name: '🎪 Animateur/Event',       test: (n) => /^animateur|^event.?manager/i.test(n) },
+        { tier: 9,  name: '👥 Staff',                 test: (n) => /^staff$|^équipe$|^team$/i.test(n) },
+        { tier: 10, name: '🎓 Trial/Stagiaire',       test: (n) => /trial.?mod|^stagiaire/i.test(n) },
+        { tier: 11, name: '🤝 Partenaire',            test: (n) => /^partenaire|^partner/i.test(n) },
+        { tier: 12, name: '🎬 Streamer/YouTuber',     test: (n) => /^streamer|^youtuber|^content.?creator/i.test(n) },
+        { tier: 13, name: '💎 VIP/Premium',           test: (n) => /^vip$|^premium|^donateur|^donator/i.test(n) },
+        { tier: 14, name: '🚀 Server Booster',        test: (n) => /server.?booster|^booster$|nitro.?boost/i.test(n) },
+        { tier: 15, name: '✨ Actif/OG/Top',          test: (n) => /^actif$|^active$|^og$|^top$|^l[eé]gende|^legend|^fid[eè]le/i.test(n) },
+        { tier: 16, name: '🌟 Niveaux',               test: (n) => /^(niveau|level|lvl|lv|nv)\s*\d+/i.test(n) },
+        { tier: 17, name: '🎮 Gaming',                test: (n) => /^gamer|^gaming|^pro.?gamer|^semi.?pro/i.test(n) },
+        { tier: 18, name: '📢 Événements',            test: (n) => /^[eé]v[eé]nements?|^events?/i.test(n) },
+        { tier: 19, name: '🎨 Personnalité',          test: (n) => /^senior|^cr[eé]atif|^creative|^musicien|^pionnier/i.test(n) },
+        { tier: 20, name: '✅ Membre validé',         test: (n) => /^membre$|^member$|^v[eé]rifi[eé]|^verified/i.test(n) },
+        { tier: 21, name: '📋 Autres',                test: () => true },
       ];
 
       // 1. Vérifier que le rôle Administrateur existe, sinon le créer
@@ -2434,7 +2441,8 @@ module.exports = {
       );
 
       const classified = allRoles.map(r => {
-        const tier = TIERS.find(t => t.test.test(r.name)) || TIERS[TIERS.length - 1];
+        const cleaned = cleanName(r.name);
+        const tier = TIERS.find(t => t.test(cleaned)) || TIERS[TIERS.length - 1];
         return { role: r, tier: tier.tier, tierName: tier.name };
       });
 
@@ -2444,29 +2452,31 @@ module.exports = {
         return a.role.name.localeCompare(b.role.name);
       });
 
-      // 3. Calculer les positions cibles : on commence juste en dessous du bot
-      const targetPositions = {};
-      let nextPos = myTopPos - 1;
+      // 3. Approche par setPosition individuel (plus robuste que bulk)
+      // On commence par le rôle qui doit être le plus haut, en allant vers myTopPos - 1
+      let success = 0, failed = 0;
+      const errorsList = [];
+      let targetPos = myTopPos - 1;
+
       for (const c of classified) {
         if (c.role.position >= myTopPos) continue; // skip rôles intouchables
-        targetPositions[c.role.id] = nextPos--;
-        if (nextPos < 1) break;
+        if (targetPos < 1) break;
+        try {
+          if (c.role.position !== targetPos) {
+            await c.role.setPosition(targetPos);
+          }
+          success++;
+        } catch (e) {
+          failed++;
+          if (errorsList.length < 5) errorsList.push(`${c.role.name}: ${e?.message?.slice(0, 40) || 'erreur'}`);
+        }
+        targetPos--;
+        // Petit délai pour respecter rate-limit
+        await new Promise(r => setTimeout(r, 150));
       }
 
-      // 4. Bulk setPositions
-      const positionsArray = Object.entries(targetPositions).map(([roleId, position]) => ({
-        role: roleId,
-        position: Math.max(1, position),
-      }));
-
-      let success = false;
-      let errorMsg = null;
-      try {
-        await guild.roles.setPositions(positionsArray);
-        success = true;
-      } catch (e) {
-        errorMsg = e?.message || 'Erreur';
-      }
+      const errorMsg = failed > 0 ? `${failed} rôle(s) en échec` : null;
+      const successCount = success;
 
       // 5. Préparer le résumé
       const skipped = classified.filter(c => c.role.position >= myTopPos).length;
@@ -2481,17 +2491,17 @@ module.exports = {
 
       const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
       return respFn({ embeds: [new EmbedBuilder()
-        .setColor(success ? '#9B59B6' : '#E74C3C')
+        .setColor(failed === 0 ? '#9B59B6' : '#E67E22')
         .setTitle('👑 ・ Hiérarchie PRO ・ Rapport')
         .setDescription([
-          createdAdmin ? '🆕 Rôle **⚡ Administrateur** créé (rouge, hoisted, mentionnable, perms admin sans ban/kick)' : '✅ Rôle **Administrateur** existant détecté',
-          success
-            ? `✅ **${positionsArray.length}** rôle(s) repositionné(s) selon la hiérarchie PRO`
-            : `❌ Erreur bulk setPositions : ${errorMsg}`,
+          createdAdmin ? '🆕 Rôle **⚡ Administrateur** créé (rouge, hoisted, perms admin sans ban/kick)' : '✅ Rôle **Administrateur** existant détecté',
+          `✅ **${successCount}** rôle(s) repositionné(s) selon la hiérarchie PRO`,
+          failed ? `⚠️ **${failed}** rôle(s) en échec` : '',
           skipped ? `🔒 **${skipped}** rôle(s) intouchable(s) (au-dessus de NexusBot)` : '',
           '',
           '**Hiérarchie pro appliquée (du plus haut au plus bas) :**',
           tierLines.slice(0, 2500),
+          errorsList.length ? '\n**Erreurs :**\n' + errorsList.map(e => `• ${e}`).join('\n') : '',
           '',
           '*NexusBot et autres rôles managés restent à leur position. Pour mettre NexusBot tout en haut → Paramètres → Rôles → glisser à la main.*',
         ].filter(Boolean).join('\n').slice(0, 4000))
