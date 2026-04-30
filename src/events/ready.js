@@ -256,6 +256,12 @@ module.exports = {
       antiInflation.ensureOwnerBalance(client).catch(e => console.error('[ownerSeed]', e.message));
     } catch (e) { console.log('[antiInflation] module load:', e.message); }
 
+    // ── Workers économie : Lucky Hour, Crypto Events, Tournament daily ──
+    try {
+      const economyEvents = require('../utils/economyEvents');
+      economyEvents.initEconomyEvents(client);
+    } catch (e) { console.error('[economyEvents init]', e.message); }
+
     // ── Avatar auto (si le bot a encore l'avatar par défaut) ──
     if (!client.user.avatar) {
       try {

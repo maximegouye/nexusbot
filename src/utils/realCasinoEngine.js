@@ -152,13 +152,30 @@ function capWin(game, mise, gain) {
  *
  * Utilisation simple : applyRtp(game, mise, gain) → gain ajusté
  */
-function applyRtp(game, mise, gain) {
+function applyRtp(game, mise, gain, opts = {}) {
   const rtp = getRTP(game);
-  // Si le jeu paie en moyenne 1× la mise (RTP=100%), on le tire vers RTP cible
-  // Le facteur d'ajustement est donc juste rtp (95% → on multiplie par 0.95)
-  // Mais on garde au moins 1€ pour pas insulter sur une victoire
   if (gain <= 0) return 0;
-  const adjusted = Math.floor(gain * rtp);
+  let adjusted = Math.floor(gain * rtp);
+
+  // Lucky Hour bonus : si guildId fourni et Lucky Hour actif → +50%
+  if (opts.guildId) {
+    try {
+      const { getLuckyMultiplier } = require('./economyEvents');
+      const luckyMult = getLuckyMultiplier(opts.guildId);
+      if (luckyMult > 1) {
+        adjusted = Math.floor(adjusted * luckyMult);
+      }
+    } catch {}
+  }
+
+  // Tracking tournoi quotidien
+  if (opts.guildId && opts.userId && adjusted > 0) {
+    try {
+      const { trackTournamentWin } = require('./economyEvents');
+      trackTournamentWin(opts.guildId, opts.userId, adjusted - mise);
+    } catch {}
+  }
+
   return Math.max(1, adjusted);
 }
 

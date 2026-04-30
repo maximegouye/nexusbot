@@ -93,27 +93,39 @@ module.exports = {
     let eventText = '';
     const eventRoll = Math.random();
     if (eventRoll < 0.05) {
-      // 5% : Promotion exceptionnelle (×3)
       earned = Math.floor(earned * 3);
       eventText = `\n🎉 **PROMOTION !** Ton patron t'a remarqué — salaire ×3 !`;
     } else if (eventRoll < 0.12) {
-      // 7% : Pourboire exceptionnel (+50%)
       earned = Math.floor(earned * 1.5);
       eventText = `\n💸 **Pourboire exceptionnel** — +50% !`;
     } else if (eventRoll < 0.22) {
-      // 10% : Heures sup (+25%)
       earned = Math.floor(earned * 1.25);
       eventText = `\n⏰ **Heures supplémentaires** — +25% !`;
     } else if (eventRoll < 0.27) {
-      // 5% : Accident léger (-30%)
       earned = Math.floor(earned * 0.7);
       eventText = `\n🤕 **Accident au travail** — perte de 30% du salaire en frais médicaux.`;
     } else if (eventRoll < 0.30) {
-      // 3% : Vol au bureau (-50%)
       earned = Math.floor(earned * 0.5);
       eventText = `\n🦹 **Tu as été volé sur le chemin du retour** — moitié du salaire perdue !`;
     }
-    // Sinon (70%) : journée normale, pas d'événement
+
+    // ── BONUS WEEKEND (samedi/dimanche : +30%) ──────────────────
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = dimanche, 6 = samedi
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      earned = Math.floor(earned * 1.3);
+      eventText += `\n🎊 **Bonus weekend** : +30% appliqué !`;
+    }
+
+    // ── BONUS SAISONNIER (Noël en décembre, Halloween en octobre) ────
+    const month = today.getMonth(); // 0=Jan, 9=Oct, 11=Déc
+    if (month === 11 && today.getDate() >= 20) {
+      earned = Math.floor(earned * 1.5);
+      eventText += `\n🎄 **Bonus de Noël** : +50% !`;
+    } else if (month === 9 && today.getDate() >= 25) {
+      earned = Math.floor(earned * 1.2);
+      eventText += `\n🎃 **Bonus Halloween** : +20% !`;
+    }
 
     const lastWorkDate  = lastWork > 0 ? new Date(lastWork * 1000).toDateString() : null;
     const yesterdayDate = new Date(Date.now() - 86400000).toDateString();
