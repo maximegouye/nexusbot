@@ -1,6 +1,7 @@
 #!/bin/sh
 # =========================================================
 # NexusBot — Script de démarrage (Railway / Discloud)
+# Build: 20260430_2140_FORCE
 # =========================================================
 
 # Déterminer le répertoire de travail (Discloud = /app, Railway = /app)
