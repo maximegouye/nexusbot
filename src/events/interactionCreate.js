@@ -234,56 +234,59 @@ module.exports = {
       }
 
       if (handler) {
+        // ═══════════════════════════════════════════════════════════
+        // 🛡️ V5 SIMPLE & ROBUSTE — pattern éprouvé
+        // ═══════════════════════════════════════════════════════════
+        // 1. Modal submits → auto-defer ephemeral (safe)
+        // 2. Boutons/menus → laisser le handler gérer
+        // 3. Try/catch propre, fallback graceful sur erreur
+        // 4. Pas de magie Promise.race qui peut casser au boot
         try {
-          // ═══════════════════════════════════════════════════════════
-          // 🛡️ STRATÉGIE BULLETPROOF V4 — ZÉRO ERREUR INTERACTION
-          // ═══════════════════════════════════════════════════════════
-          // 1. Modal submits : auto-defer ephemeral (safe, ne peut pas showModal)
-          // 2. Boutons/menus : laisser le handler gérer (reply/update/showModal/defer)
-          // 3. WATCHDOG : Promise.race avec timer 2.5s qui auto-ack si rien fait
-          //    → Discord timeout = 3s, on prend 500ms de marge
-          //    → Le handler continue son travail en background, l'user voit pas l'erreur
-          // 4. ensureAcked en fin : garantit ack final même si watchdog raté
           if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied) {
             try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
           }
 
-          // ── handleComponent en premier (boutons / menus / modals) ──────────
           if (typeof handler.handleComponent === 'function') {
-            const handlerPromise = handler.handleComponent(interaction, cid).catch(hcErr => {
-              logError(`COMPONENT ${cid}`, hcErr, { cid, userId: interaction.user?.id, guildId: interaction.guildId });
-              // Tenter d'envoyer une erreur visible, sinon swallow
-              return (async () => {
-                try {
-                  if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
-                  } else {
-                    await interaction.followUp({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
-                  }
-                } catch {}
-              })();
-            });
-
-            // 🛡️ WATCHDOG : si le handler tarde > 2.5s ET n'a rien ack, on défère auto
-            await withWatchdog(interaction, handlerPromise);
-            // ✅ ENSURE : ack final en safety net (idempotent si déjà ack)
-            await ensureAcked(interaction);
+            // Wrapper async pour catch sync errors aussi
+            try {
+              await handler.handleComponent(interaction, cid);
+            } catch (hcErr) {
+              console.error(`[COMPONENT ${cid}] crash:`, hcErr?.message || hcErr);
+              // Fallback réponse
+              try {
+                if (!interaction.replied && !interaction.deferred) {
+                  await interaction.reply({ content: `❌ Erreur: ${(hcErr?.message || 'Inconnue').slice(0, 200)}`, ephemeral: true });
+                } else {
+                  await interaction.followUp({ content: `❌ Erreur: ${(hcErr?.message || 'Inconnue').slice(0, 200)}`, ephemeral: true });
+                }
+              } catch {}
+            }
+            // Safety net : si rien n'a été ack, on défère silencieusement
+            if (!interaction.replied && !interaction.deferred) {
+              try {
+                if (interaction.isButton?.() || interaction.isAnySelectMenu?.() || interaction.isStringSelectMenu?.()) {
+                  await interaction.deferUpdate();
+                } else if (interaction.isChatInputCommand?.()) {
+                  await interaction.deferReply();
+                }
+              } catch {}
+            }
             return;
           } else if (!interaction.isModalSubmit()) {
-            // Bouton/menu sans handleComponent → collector expiré ou bouton orphelin
             const _respondExp = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
             await _respondExp({ content: '⏱️ Cette interaction a expiré. Relancez la commande.', ephemeral: true }).catch(() => {});
             return;
           }
-          // Modal sans handleComponent → laisser passer vers execute()
           await handler.execute(interaction);
         } catch (e) {
           console.error(`[COMPONENT ${cid}] Erreur:`, e?.message || e);
-          if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
-          } else {
-            await interaction.editReply({ content: 'Erreur composant.', ephemeral: true }).catch(() => {});
-          }
+          try {
+            if (!interaction.replied && !interaction.deferred) {
+              await interaction.reply({ content: 'Erreur composant.', ephemeral: true });
+            } else {
+              await interaction.followUp({ content: 'Erreur composant.', ephemeral: true });
+            }
+          } catch {}
         }
         return;
       }
