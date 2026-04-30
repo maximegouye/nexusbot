@@ -88,6 +88,8 @@ module.exports = {
       .addBooleanOption(o => o.setName('supprimer').setDescription('true = supprime, false = liste seulement').setRequired(false)))
     .addSubcommand(s => s.setName('perfectionner').setDescription("✨ Applique permissions+topics SANS écraser tes customs (mode safe)"))
     .addSubcommand(s => s.setName('tout-synchroniser').setDescription("🎨 FORCE la cohérence visuelle partout (renomme + topics + perms) — aucune suppression"))
+    .addSubcommand(s => s.setName('detecter-doublons-salons').setDescription("🔎 Détecte les salons qui font la même chose (par fonction)")
+      .addBooleanOption(o => o.setName('supprimer-vides').setDescription('true = supprime les doublons vides automatiquement').setRequired(false)))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -538,6 +540,123 @@ module.exports = {
           { name: '⏭️ Non concernés',  value: `**${skipped}**`, inline: true },
           { name: '❌ Erreurs',         value: `**${errors}**`, inline: true },
         )
+        .setTimestamp()] });
+    }
+
+    // ─── 🔎 DÉTECTER LES SALONS DOUBLONS PAR FONCTION ─────────
+    if (sub === 'detecter-doublons-salons') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const supprimer = interaction.options.getBoolean('supprimer-vides') === true;
+
+      // Mêmes patterns de reconnaissance que tout-synchroniser
+      const PURPOSES = [
+        { id: 'règles',        test: /règles?|rules?/i },
+        { id: 'annonces',      test: /annonces?|announc/i },
+        { id: 'bienvenue',     test: /bienvenue|welcome/i },
+        { id: 'partenaires',   test: /partenaires?|partners?|partenariat/i },
+        { id: 'classement',    test: /classement|leaderboard|^top$/i },
+        { id: 'badges',        test: /^badges?$/i },
+        { id: 'battle-pass',   test: /battle.?pass/i },
+        { id: 'bot-logs',      test: /bot.?logs?|mod-?logs?/i },
+        { id: 'modération',    test: /moderation|modération/i },
+        { id: 'admin',         test: /^admin$|^staff-admin$/i },
+        { id: 'diagnostic',    test: /^diagnostic$/i },
+        { id: 'config',        test: /^config|configuration|cfg$/i },
+        { id: 'tickets-logs',  test: /tickets?-?logs?/i },
+        { id: 'médias',        test: /^m[eé]dias?$|^images?$|^gifs?$|^photos?$/i },
+        { id: 'slots',         test: /^slots?$|mega.?slots?/i },
+        { id: 'roulette',      test: /^roulette$/i },
+        { id: 'roue-fortune',  test: /roue.?fortune|^roue$/i },
+        { id: 'cartes',        test: /^cartes?$|^blackjack$|^baccarat$|^poker$|^videopoker$|^war$/i },
+        { id: 'dés',           test: /^d[eé]s$|^sicbo$|^craps$/i },
+        { id: 'mines',         test: /^mines$|^crash$|^plinko$|^coffre/i },
+        { id: 'grattage',      test: /grattage|scratch/i },
+        { id: 'casino',        test: /^casino$|^salle-casino$/i },
+        { id: 'mystery-box',   test: /mystery|mystère|mystere|mystery.?box/i },
+        { id: 'spin-roue',     test: /^spin$|spin.?roue/i },
+        { id: 'animaux',       test: /^animaux$|^pets?$|^pet$/i },
+        { id: 'mini-jeux',     test: /mini.?jeux|^games?$|^jeux$/i },
+        { id: 'aventures',     test: /aventures?|^donjon$|^chasse$|^rpg$|^ferme$/i },
+        { id: 'duels',         test: /^duels?$|^trivia$/i },
+        { id: 'immobilier',    test: /immobilier|^immo$|^maison$|^propri[eé]t[eé]$/i },
+        { id: 'banque',        test: /^banque$|^bank$/i },
+        { id: 'marché',        test: /^march[eé]$|^market$/i },
+        { id: 'économie',      test: /[eé]conomie|economy/i },
+        { id: 'loterie',       test: /^loto$|^lotto$|^loterie$/i },
+        { id: 'quêtes',        test: /^quêtes?$|^quetes?$|^quests?$/i },
+        { id: 'tournois',      test: /^tournois?$|^tournaments?$/i },
+        { id: 'profils',       test: /^profils?$|^profiles?$/i },
+        { id: 'mariages',      test: /^mariages?$|^marriages?$/i },
+        { id: 'famille',       test: /^famille$/i },
+        { id: 'clans',         test: /^clans?$/i },
+        { id: 'réputation',    test: /^r[eé]putation$|^rep$/i },
+        { id: 'suggestions',   test: /^suggestions?$|^sugges/i },
+        { id: 'humour',        test: /^humour$|^memes?$|^jokes?$/i },
+        { id: 'liens',         test: /^liens?$|^links?$/i },
+        { id: 'général',       test: /^general$|^général$|^chat$/i },
+        { id: 'rôles',         test: /^r[oô]les?$/i },
+      ];
+
+      // Pour chaque purpose, trouve TOUS les salons qui matchent
+      const groups = {}; // purpose → [channel1, channel2, ...]
+      for (const [, ch] of guild.channels.cache.filter(c => c.type === ChannelType.GuildText)) {
+        // Strip des décorations (・, emojis) pour le matching pur
+        const stripped = ch.name.replace(/[・\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]+/gu, '').trim();
+        for (const p of PURPOSES) {
+          if (p.test.test(stripped) || p.test.test(ch.name)) {
+            if (!groups[p.id]) groups[p.id] = [];
+            groups[p.id].push(ch);
+            break;
+          }
+        }
+      }
+
+      // Filtre groupes ≥ 2 = doublons
+      const doublons = Object.entries(groups).filter(([_, chs]) => chs.length >= 2);
+
+      if (!doublons.length) {
+        const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+        return respFn({ content: '✅ Aucun salon doublon détecté. Ton serveur est propre !' });
+      }
+
+      let supprimés = 0, gardés = 0;
+      const lines = [];
+      for (const [purpose, chs] of doublons) {
+        // Trie par date création (plus ancien = original = à garder)
+        chs.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+        const original = chs[0];
+        const copies = chs.slice(1);
+        gardés++;
+
+        lines.push(`**${purpose}** : ${chs.length} salons`);
+        lines.push(`  ✅ Garder : <#${original.id}> (créé <t:${Math.floor(original.createdTimestamp/1000)}:R>)`);
+        for (const c of copies) {
+          // Compte les messages dans ce salon (limit 100 pour vitesse)
+          let msgCount = 0;
+          try {
+            const msgs = await c.messages.fetch({ limit: 100 });
+            msgCount = msgs.size;
+          } catch {}
+          const isEmpty = msgCount === 0;
+          const action = (supprimer && isEmpty) ? '🗑️ SUPPRIMÉ' : (isEmpty ? '🟡 vide' : `📝 ${msgCount}+ msg`);
+          lines.push(`  ${action} : <#${c.id}> (${c.name})`);
+          if (supprimer && isEmpty) {
+            try { await c.delete('Doublon vide — fusion par /setup-serveur'); supprimés++; } catch {}
+          }
+        }
+        lines.push('');
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      return respFn({ embeds: [new EmbedBuilder().setColor(supprimer ? '#E74C3C' : '#F1C40F')
+        .setTitle(supprimer ? '🗑️ ・ Doublons vides supprimés' : '🔎 ・ Doublons détectés')
+        .setDescription(lines.slice(0, 50).join('\n').slice(0, 4000))
+        .addFields(
+          { name: '📊 Groupes doublons',  value: `**${doublons.length}**`, inline: true },
+          { name: '✅ Originaux gardés',  value: `**${gardés}**`, inline: true },
+          { name: '🗑️ Supprimés (vides)', value: `**${supprimés}**`, inline: true },
+        )
+        .setFooter({ text: supprimer ? 'Seuls les salons VIDES ont été supprimés. Salons avec messages = INTACTS.' : 'Lance avec supprimer-vides:true pour supprimer les vides automatiquement.' })
         .setTimestamp()] });
     }
 
