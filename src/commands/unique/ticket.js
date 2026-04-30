@@ -1021,7 +1021,38 @@ module.exports = {
       .setDescription('📊 Dashboard temps réel des tickets ouverts avec stats live'))
     .addSubcommand(s => s
       .setName('staff-leaderboard')
-      .setDescription('🏆 Classement des staff par tickets traités cette semaine')),
+      .setDescription('🏆 Classement des staff par tickets traités cette semaine'))
+    .addSubcommand(s => s
+      .setName('priorite')
+      .setDescription('🚨 [STAFF] Changer la priorité d\'un ticket (dans le ticket même)')
+      .addStringOption(o => o.setName('niveau').setDescription('Niveau').setRequired(true)
+        .addChoices(
+          { name: '🟢 Faible',  value: 'faible' },
+          { name: '🟡 Normale', value: 'normale' },
+          { name: '🟠 Élevée',  value: 'elevee' },
+          { name: '🔴 Urgente', value: 'urgente' },
+        )))
+    .addSubcommand(s => s
+      .setName('tag')
+      .setDescription('🏷️ [STAFF] Ajouter ou retirer un tag à ce ticket')
+      .addStringOption(o => o.setName('action').setDescription('Action').setRequired(true)
+        .addChoices(
+          { name: '➕ Ajouter', value: 'add' },
+          { name: '➖ Retirer', value: 'remove' },
+          { name: '📋 Lister', value: 'list' },
+        ))
+      .addStringOption(o => o.setName('nom').setDescription('Nom du tag').setRequired(false).setMaxLength(30)))
+    .addSubcommand(s => s
+      .setName('reopen')
+      .setDescription('🔄 [STAFF] Rouvrir un ticket fermé par son ID')
+      .addIntegerOption(o => o.setName('id').setDescription('ID du ticket').setRequired(true)))
+    .addSubcommand(s => s
+      .setName('mes-tickets')
+      .setDescription('📋 Voir tes propres tickets (ouverts + historique)'))
+    .addSubcommand(s => s
+      .setName('note')
+      .setDescription('📝 [STAFF] Ajouter une note privée invisible à l\'auteur du ticket')
+      .addStringOption(o => o.setName('contenu').setDescription('Contenu de la note').setRequired(true).setMaxLength(500))),
   cooldown: 3,
 
   handleComponent,
@@ -1547,6 +1578,175 @@ module.exports = {
           .setTimestamp()
         ], ephemeral: true,
       });
+    }
+
+    // ══ NOUVEAU : Changer priorité d'un ticket ═══════════════════════════════
+    if (sub === 'priorite') {
+      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE channel_id=?').get(interaction.channelId);
+      if (!ticket) return reply({ content: '❌ Cette commande doit être utilisée DANS un ticket.', ephemeral: true });
+      const niveau = interaction.options.getString('niveau');
+      const pri = getPri(niveau);
+      db.db.prepare('UPDATE tickets SET priority=? WHERE id=?').run(niveau, ticket.id);
+      return reply({
+        embeds: [new EmbedBuilder().setColor(pri.color)
+          .setTitle(`${pri.label} • Priorité changée`)
+          .setDescription(`Ticket **#${ticket.id}** maintenant en priorité ${pri.label}.\nChangé par <@${interaction.user.id}>.`)
+          .setTimestamp()
+        ],
+      });
+    }
+
+    // ══ NOUVEAU : Tags d'un ticket ═══════════════════════════════════════════
+    if (sub === 'tag') {
+      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE channel_id=?').get(interaction.channelId);
+      if (!ticket) return reply({ content: '❌ Cette commande doit être utilisée DANS un ticket.', ephemeral: true });
+
+      let tags = [];
+      try { tags = JSON.parse(ticket.tags || '[]'); } catch {}
+      const action = interaction.options.getString('action');
+      const nom = interaction.options.getString('nom');
+
+      if (action === 'list') {
+        return reply({
+          embeds: [new EmbedBuilder().setColor('#5865F2').setTitle('🏷️ Tags du ticket')
+            .setDescription(tags.length ? tags.map(t => `• \`${t}\``).join('\n') : '*Aucun tag*')
+          ], ephemeral: true,
+        });
+      }
+      if (!nom) return reply({ content: '❌ Nom du tag requis.', ephemeral: true });
+      const cleanTag = nom.toLowerCase().slice(0, 30);
+
+      if (action === 'add') {
+        if (!tags.includes(cleanTag)) tags.push(cleanTag);
+        db.db.prepare('UPDATE tickets SET tags=? WHERE id=?').run(JSON.stringify(tags), ticket.id);
+        return reply({
+          embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`🏷️ Tag **${cleanTag}** ajouté.\nTags actuels : ${tags.map(t => `\`${t}\``).join(' ')}`)],
+        });
+      }
+      if (action === 'remove') {
+        tags = tags.filter(t => t !== cleanTag);
+        db.db.prepare('UPDATE tickets SET tags=? WHERE id=?').run(JSON.stringify(tags), ticket.id);
+        return reply({
+          embeds: [new EmbedBuilder().setColor('#E67E22').setDescription(`🏷️ Tag **${cleanTag}** retiré.\nTags restants : ${tags.length ? tags.map(t => `\`${t}\``).join(' ') : '*aucun*'}`)],
+        });
+      }
+    }
+
+    // ══ NOUVEAU : Rouvrir un ticket fermé ═════════════════════════════════════
+    if (sub === 'reopen') {
+      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      const ticketId = interaction.options.getInteger('id');
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=? AND guild_id=?').get(ticketId, interaction.guildId);
+      if (!ticket) return reply({ content: `❌ Ticket #${ticketId} introuvable.`, ephemeral: true });
+      if (ticket.status === 'open') return reply({ content: `⚠️ Ticket #${ticketId} déjà ouvert.`, ephemeral: true });
+
+      // Recréer le canal
+      const cat = getCat(ticket.category);
+      const member = await interaction.guild.members.fetch(ticket.user_id).catch(() => null);
+      if (!member) return reply({ content: '❌ L\'auteur du ticket n\'est plus sur le serveur.', ephemeral: true });
+
+      const cfg = db.getConfig(interaction.guildId) || {};
+      let parentId = null;
+      try {
+        const map = cfg.ticket_categories_map ? JSON.parse(cfg.ticket_categories_map) : {};
+        if (map[ticket.category]) parentId = String(map[ticket.category]);
+      } catch {}
+      if (!parentId && cfg.ticket_category) parentId = String(cfg.ticket_category);
+
+      const safeName = (member.user.username || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12) || 'user';
+      const me = interaction.guild.members.me;
+      const perms = [
+        { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+        { id: ticket.user_id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+        { id: me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ManageChannels] },
+      ];
+      if (cfg.ticket_staff_role) perms.push({ id: String(cfg.ticket_staff_role), allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] });
+
+      const ch = await interaction.guild.channels.create({
+        name: `🎫・${ticket.category}-${safeName}-r`,
+        type: ChannelType.GuildText,
+        topic: `ticket:${ticket.user_id}`,
+        parent: parentId || undefined,
+        permissionOverwrites: perms,
+      }).catch(e => { console.error('[reopen]', e); return null; });
+
+      if (!ch) return reply({ content: '❌ Impossible de recréer le canal.', ephemeral: true });
+
+      db.db.prepare("UPDATE tickets SET status='open', channel_id=?, closed_at=NULL, close_reason=NULL WHERE id=?").run(ch.id, ticket.id);
+
+      await ch.send({
+        content: `<@${ticket.user_id}>`,
+        embeds: [new EmbedBuilder().setColor(cat.color)
+          .setTitle(`🔄 Ticket #${ticket.id} rouvert`)
+          .setDescription(`Ce ticket a été **rouvert** par <@${interaction.user.id}>.\nUtilise ce salon pour continuer la conversation.`)
+          .setFooter({ text: `${cat.label} • Réouvert le ${new Date().toLocaleString('fr-FR')}` })
+        ],
+      }).catch(() => {});
+
+      return reply({ content: `✅ Ticket #${ticket.id} rouvert dans ${ch}.`, ephemeral: true });
+    }
+
+    // ══ NOUVEAU : Voir ses propres tickets ═══════════════════════════════════
+    if (sub === 'mes-tickets') {
+      const myTickets = db.db.prepare('SELECT * FROM tickets WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 25').all(interaction.guildId, interaction.user.id);
+      if (!myTickets.length) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor('#5865F2').setDescription('📋 Tu n\'as jamais ouvert de ticket sur ce serveur.')],
+          ephemeral: true,
+        });
+      }
+      const stats = {
+        open: myTickets.filter(t => t.status === 'open').length,
+        closed: myTickets.filter(t => t.status === 'closed').length,
+        avgRating: myTickets.filter(t => t.rating).reduce((a, t) => a + t.rating, 0) / Math.max(1, myTickets.filter(t => t.rating).length),
+      };
+      const lines = myTickets.slice(0, 10).map(t => {
+        const cat = getCat(t.category);
+        const status = t.status === 'open' ? '🟢' : '🔴';
+        const date = `<t:${t.created_at}:d>`;
+        return `${status} **#${t.id}** ${cat.emoji} ${cat.label.replace(/^\S+ /, '')} — ${date}`;
+      }).join('\n');
+
+      return reply({
+        embeds: [new EmbedBuilder().setColor('#5865F2')
+          .setTitle(`📋 Tes tickets (${myTickets.length})`)
+          .addFields(
+            { name: '🟢 Ouverts', value: `**${stats.open}**`, inline: true },
+            { name: '🔴 Fermés', value: `**${stats.closed}**`, inline: true },
+            { name: '⭐ Note moyenne', value: stats.avgRating ? `**${stats.avgRating.toFixed(1)}/5**` : '—', inline: true },
+            { name: '\n📋 Historique récent', value: lines, inline: false },
+          )
+          .setTimestamp()
+        ], ephemeral: true,
+      });
+    }
+
+    // ══ NOUVEAU : Note privée staff ═══════════════════════════════════════════
+    if (sub === 'note') {
+      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE channel_id=?').get(interaction.channelId);
+      if (!ticket) return reply({ content: '❌ Cette commande doit être utilisée DANS un ticket.', ephemeral: true });
+      const contenu = interaction.options.getString('contenu');
+      db.db.prepare('INSERT INTO ticket_notes (ticket_id, author_id, content) VALUES (?,?,?)').run(ticket.id, interaction.user.id, contenu);
+      // Envoyer dans le canal staff (modération)
+      const cfg = db.getConfig(interaction.guildId) || {};
+      const logCh = cfg.ticket_log_channel ? interaction.guild.channels.cache.get(cfg.ticket_log_channel) : null;
+      if (logCh) {
+        await logCh.send({
+          embeds: [new EmbedBuilder().setColor('#9B59B6')
+            .setTitle(`📝 Note staff — Ticket #${ticket.id}`)
+            .setDescription(contenu)
+            .addFields(
+              { name: '👤 Auteur', value: `<@${interaction.user.id}>`, inline: true },
+              { name: '🎫 Ticket', value: `<#${ticket.channel_id}>`, inline: true },
+            )
+            .setTimestamp()
+          ],
+        }).catch(() => {});
+      }
+      return reply({ content: '✅ Note privée enregistrée (visible que pour le staff dans bot-logs).', ephemeral: true });
     }
 
     if (sub === 'qr') {
