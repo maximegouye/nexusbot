@@ -1,7 +1,7 @@
 FROM node:20-slim
 
-# Cache-bust 2026-04-29T18:55 — force rebuild COMPLET (purge defi.js, chainemots.js, etc)
-ARG CACHEBUST=20260429_1855
+# Cache-bust 2026-04-30T10:15 — force redeploy pour synchroniser slash commands tout-parfaire
+ARG CACHEBUST=20260430_1015
 RUN echo "Cache bust: $CACHEBUST"
 
 # Outils pour compiler better-sqlite3 (module natif)
