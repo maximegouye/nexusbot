@@ -234,34 +234,11 @@ module.exports = {
 
       if (handler) {
         try {
-          // ── AUTO-DEFER pour MODAL SUBMIT ──────────────────────────────────
-          // Les modal submits ne peuvent pas ouvrir un autre modal, on peut donc
-          // auto-defer en safety net pour permettre editReply ensuite dans les handlers
+          // ── STRATÉGIE INTERACTION ROBUSTE V3 ──────────────────────────────────
+          // Pour les MODAL SUBMITS uniquement : auto-defer (safe car ne peut pas showModal)
+          // Pour les BOUTONS/MENUS : on laisse le handler gérer (il peut faire reply/update/showModal/deferReply selon)
+          // Après le handler : si rien n'a été ack, on fait deferUpdate() en fallback silencieux
           if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied) {
-            try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
-          }
-
-          // ── AUTO-DEFER pour BOUTONS et SELECT MENUS qui n'ouvrent PAS de modal
-          // Cela résout les bugs « interaction has not been acknowledged » dans les
-          // handlers handleComponent qui font editReply sans avoir d'abord déferré.
-          // On exclut les boutons connus qui ouvrent un modal (showModal interdit après defer).
-          const MODAL_OPENING_PATTERNS = [
-            /^rec_apply_/,                              // recrutement → modal candidature
-            /^rec_rej_(?!conf_)/,                       // recrutement refus (sauf confirmation)
-            /^part_demander_btn/,                       // bouton de demande de partenariat → modal
-            /^pet_create/,                              // pet creation → modal name
-            /^ticket_open_/,                            // ticket avec raison → modal
-            /^ticket_cat_/,                             // ticket catégorie → modal formulaire
-            /^ticket_close_(?!confirm_)/,               // ticket close (sauf confirmation submit)
-            /^suggestion_create/,                       // suggestion → modal
-            /^report_create/,                           // report → modal
-            /^banque_(dep|wit|tx|loan)/,                // banque → modaux dépôt/retrait/transfert/prêt
-            /_modal$/,                                  // suffixe convention
-            /_form$/,                                   // suffixe convention
-          ];
-          const opensModalBtn = MODAL_OPENING_PATTERNS.some(rx => rx.test(cid));
-          if ((interaction.isButton() || interaction.isAnySelectMenu?.() || interaction.isStringSelectMenu?.()) &&
-              !opensModalBtn && !interaction.deferred && !interaction.replied) {
             try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
           }
 
@@ -269,19 +246,23 @@ module.exports = {
           if (typeof handler.handleComponent === 'function') {
             try {
               await handler.handleComponent(interaction, cid);
-              // Toujours retourner après handleComponent — ne jamais appeler
-              // execute() ensuite, sinon execute() s'exécute sur un bouton avec
-              // des options null → double-traitement et affichage écrasé.
-              return;
             } catch (hcErr) {
               console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
-              if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}`, ephemeral: true }).catch(() => {});
-              } else {
-                await interaction.editReply({ content: `❌ Erreur: ${hcErr?.message || 'Erreur inconnue'}` }).catch(() => {});
-              }
-              return;
+              // Tenter de répondre proprement, fallback silencieux si déjà ack
+              try {
+                if (!interaction.replied && !interaction.deferred) {
+                  await interaction.reply({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
+                } else {
+                  await interaction.followUp({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
+                }
+              } catch {}
             }
+            // FALLBACK CRUCIAL : si après le handler l'interaction n'a TOUJOURS pas été ack,
+            // on fait deferUpdate() pour éviter "L'application ne répond plus" côté client.
+            if (!interaction.replied && !interaction.deferred) {
+              try { await interaction.deferUpdate(); } catch {}
+            }
+            return;
           } else if (!interaction.isModalSubmit()) {
             // Bouton/menu sans handleComponent → collector expiré ou bouton orphelin
             const _respondExp = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
