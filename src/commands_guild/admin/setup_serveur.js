@@ -98,6 +98,7 @@ module.exports = {
     .addSubcommand(s => s.setName('force-rename-salons').setDescription("🔥 FORCE le renommage de TOUS les salons au format ┆・nom (sans exception)"))
     .addSubcommand(s => s.setName('force-rename-categories').setDescription("🔥 FORCE le renommage de TOUTES les catégories au format ╭┈ EMOJI NOM"))
     .addSubcommand(s => s.setName('force-tout').setDescription("💎 FORCE renomme catégories + salons + topics + permissions (ULTIME)"))
+    .addSubcommand(s => s.setName('audit-total-360').setDescription("🛡️ AUDIT 360° : rôles + perms + hiérarchie + Staff global + salons accessibles"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -1581,6 +1582,305 @@ module.exports = {
           errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n').slice(0, 1200) : '',
         ].filter(Boolean).join('\n'))
         .setFooter({ text: 'Si rate-limit Discord, relance dans 10min — les renames non faits seront repris.' })
+        .setTimestamp();
+      return respFn({ embeds: [embed] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🛡️ AUDIT TOTAL 360° : rôles, perms, hiérarchie, Staff global, salons
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'audit-total-360') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const everyone = guild.roles.everyone;
+      const me = guild.members.me;
+      const myTopRolePos = me?.roles?.highest?.position || 0;
+      const reportLines = [];
+      const errors = [];
+
+      // ─── 1. Détection des rôles ───────────────────────────────────
+      const allRoles = [...guild.roles.cache.values()].filter(r => !r.managed && r.id !== guild.id);
+      const STAFF_NAME = /admin|mod[eé]rateur|moderator|propri[eé]taire|owner|d[eé]veloppeur|developer|staff|h[eé]bergeur|fondateur|founder|gestionnaire|manager/i;
+      const ADMIN_NAME = /admin|propri[eé]taire|owner|fondateur|founder|h[eé]bergeur|d[eé]veloppeur|developer/i;
+      const MOD_NAME   = /mod[eé]rateur|moderator|gestionnaire|manager|staff/i;
+
+      const adminRoles = allRoles.filter(r => r.permissions.has(PermissionFlagsBits.Administrator) || ADMIN_NAME.test(r.name));
+      const modRoles   = allRoles.filter(r => !adminRoles.includes(r) && (
+        MOD_NAME.test(r.name) || r.permissions.has(PermissionFlagsBits.ManageMessages) || r.permissions.has(PermissionFlagsBits.KickMembers) || r.permissions.has(PermissionFlagsBits.BanMembers)
+      ));
+      const botRoles = [...guild.roles.cache.values()].filter(r => r.managed);
+
+      reportLines.push(`🔍 **${adminRoles.length}** rôle(s) admin/owner • **${modRoles.length}** rôle(s) modération • **${botRoles.length}** rôle(s) bot`);
+
+      // ─── 2. Création/repérage du rôle "Staff" global ───────────────
+      let staffGlobal = guild.roles.cache.find(r => /^(@?staff|@?équipe|@?team)$/i.test(r.name) && !r.managed);
+      let createdStaff = false;
+      if (!staffGlobal) {
+        try {
+          staffGlobal = await guild.roles.create({
+            name: 'Staff',
+            color: '#3498DB',
+            mentionable: true,
+            hoist: true,
+            permissions: [],
+            reason: 'audit-total-360 — rôle global de mention staff',
+          });
+          createdStaff = true;
+          reportLines.push(`✅ Rôle **@Staff** créé (mentionnable, bleu, hoisted)`);
+        } catch (e) { errors.push(`Création @Staff : ${e.message}`); }
+      } else {
+        // Le rendre mentionnable s'il ne l'est pas
+        try {
+          if (!staffGlobal.mentionable) await staffGlobal.setMentionable(true, 'audit-total-360');
+          reportLines.push(`✅ Rôle **@${staffGlobal.name}** existant — mentionnable activé`);
+        } catch (e) { errors.push(`@Staff mentionnable : ${e.message}`); }
+      }
+
+      // Assigner @Staff à tous les membres avec un rôle admin/mod
+      let staffAssigned = 0;
+      if (staffGlobal && staffGlobal.position < myTopRolePos) {
+        const members = await guild.members.fetch().catch(() => null);
+        if (members) {
+          for (const [, m] of members) {
+            const isStaff = m.roles.cache.some(r => adminRoles.includes(r) || modRoles.includes(r));
+            if (isStaff && !m.roles.cache.has(staffGlobal.id)) {
+              try { await m.roles.add(staffGlobal, 'audit-total-360 - assignation staff global'); staffAssigned++; } catch {}
+            }
+          }
+        }
+      }
+      if (staffAssigned) reportLines.push(`👥 **${staffAssigned}** membre(s) staff reçoivent @Staff`);
+
+      // ─── 3. Configuration permissions admin/staff (tout sauf ban/kick) ──
+      // Permissions safe (tout sauf Administrator + KickMembers + BanMembers)
+      const ADMIN_SAFE_PERMS = [
+        PermissionFlagsBits.ManageGuild,
+        PermissionFlagsBits.ManageRoles,
+        PermissionFlagsBits.ManageChannels,
+        PermissionFlagsBits.ManageMessages,
+        PermissionFlagsBits.ManageThreads,
+        PermissionFlagsBits.ManageWebhooks,
+        PermissionFlagsBits.ManageEmojisAndStickers,
+        PermissionFlagsBits.ManageEvents,
+        PermissionFlagsBits.ManageNicknames,
+        PermissionFlagsBits.ViewAuditLog,
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.SendMessagesInThreads,
+        PermissionFlagsBits.CreatePublicThreads,
+        PermissionFlagsBits.CreatePrivateThreads,
+        PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions,
+        PermissionFlagsBits.UseExternalEmojis,
+        PermissionFlagsBits.UseExternalStickers,
+        PermissionFlagsBits.MentionEveryone,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak,
+        PermissionFlagsBits.Stream,
+        PermissionFlagsBits.UseVAD,
+        PermissionFlagsBits.MuteMembers,
+        PermissionFlagsBits.DeafenMembers,
+        PermissionFlagsBits.MoveMembers,
+        PermissionFlagsBits.PrioritySpeaker,
+        PermissionFlagsBits.UseApplicationCommands,
+        PermissionFlagsBits.ChangeNickname,
+        PermissionFlagsBits.ModerateMembers, // timeout — peut timeout mais pas ban/kick
+      ];
+      const STAFF_PERMS = [
+        PermissionFlagsBits.ManageRoles,       // staff peut gérer les rôles
+        PermissionFlagsBits.ManageMessages,
+        PermissionFlagsBits.ManageThreads,
+        PermissionFlagsBits.ManageNicknames,
+        PermissionFlagsBits.ViewAuditLog,
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.SendMessagesInThreads,
+        PermissionFlagsBits.CreatePublicThreads,
+        PermissionFlagsBits.CreatePrivateThreads,
+        PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions,
+        PermissionFlagsBits.UseExternalEmojis,
+        PermissionFlagsBits.UseExternalStickers,
+        PermissionFlagsBits.MentionEveryone,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak,
+        PermissionFlagsBits.Stream,
+        PermissionFlagsBits.UseVAD,
+        PermissionFlagsBits.MuteMembers,
+        PermissionFlagsBits.DeafenMembers,
+        PermissionFlagsBits.MoveMembers,
+        PermissionFlagsBits.UseApplicationCommands,
+        PermissionFlagsBits.ChangeNickname,
+        PermissionFlagsBits.ModerateMembers, // timeout
+      ];
+
+      // Configurer chaque rôle admin (tout sauf ban/kick)
+      let permsAdminFixed = 0, permsModFixed = 0;
+      for (const ar of adminRoles) {
+        if (ar.position >= myTopRolePos) continue; // bot trop bas dans la hiérarchie
+        // Si le rôle a Administrator, on le LAISSE (c'est l'owner). Sinon on set les perms safe.
+        if (ar.permissions.has(PermissionFlagsBits.Administrator)) {
+          // Skip - propriétaire/owner garde Admin (ne pas casser)
+          continue;
+        }
+        try {
+          await ar.setPermissions(ADMIN_SAFE_PERMS, 'audit-total-360 — admin sans ban/kick');
+          permsAdminFixed++;
+        } catch (e) { errors.push(`Perms admin ${ar.name} : ${e.message}`); }
+      }
+
+      // Configurer chaque rôle staff/mod (peut gérer rôles, mais pas ban/kick)
+      for (const mr of modRoles) {
+        if (mr.position >= myTopRolePos) continue;
+        try {
+          await mr.setPermissions(STAFF_PERMS, 'audit-total-360 — staff peut gérer rôles, sans ban/kick');
+          permsModFixed++;
+        } catch (e) { errors.push(`Perms mod ${mr.name} : ${e.message}`); }
+      }
+
+      // Le rôle Staff global lui-même : permissions de mod (peut mentionner @Staff partout)
+      if (staffGlobal && staffGlobal.position < myTopRolePos) {
+        try {
+          await staffGlobal.setPermissions(STAFF_PERMS, 'audit-total-360 — Staff global = perms staff');
+        } catch (e) { errors.push(`Perms @Staff : ${e.message}`); }
+      }
+
+      reportLines.push(`🔧 **${permsAdminFixed}** rôle(s) admin reconfiguré(s) (tout sauf ban/kick)`);
+      reportLines.push(`🔧 **${permsModFixed}** rôle(s) staff reconfiguré(s) (peut gérer rôles)`);
+
+      // ─── 4. Permissions @everyone propres ─────────────────────────
+      // @everyone = perms de base saines, pas de spam, pas de mention everyone
+      const EVERYONE_BASE = [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.SendMessagesInThreads,
+        PermissionFlagsBits.CreatePublicThreads,
+        PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.AttachFiles,
+        PermissionFlagsBits.AddReactions,
+        PermissionFlagsBits.UseExternalEmojis,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak,
+        PermissionFlagsBits.UseVAD,
+        PermissionFlagsBits.UseApplicationCommands,
+        PermissionFlagsBits.ChangeNickname,
+        PermissionFlagsBits.Stream,
+      ];
+      try {
+        await everyone.setPermissions(EVERYONE_BASE, 'audit-total-360 — @everyone permissions saines');
+        reportLines.push('✅ **@everyone** : permissions de base appliquées (sans MentionEveryone, sans Manage)');
+      } catch (e) { errors.push(`@everyone : ${e.message}`); }
+
+      // ─── 5. Hiérarchie : on n'inverse pas, mais on s'assure que Staff < Admin < Owner ──
+      // (On ne peut pas remonter au-dessus de notre top role)
+      let hierarchyFixed = 0;
+      try {
+        if (staffGlobal && staffGlobal.position < myTopRolePos) {
+          // Staff doit être au-dessus de @everyone, en dessous des admins
+          const minAdminPos = adminRoles.length ? Math.min(...adminRoles.map(r => r.position)) : myTopRolePos;
+          const targetPos = Math.max(1, Math.min(staffGlobal.position, minAdminPos - 1));
+          if (targetPos !== staffGlobal.position && targetPos < myTopRolePos) {
+            try { await staffGlobal.setPosition(targetPos, { reason: 'audit-total-360 hiérarchie' }); hierarchyFixed++; } catch {}
+          }
+        }
+      } catch {}
+      if (hierarchyFixed) reportLines.push(`📐 Hiérarchie ajustée (${hierarchyFixed})`);
+
+      // ─── 6. Audit salons : aucun salon inaccessible sans raison ────
+      let chanFixed = 0, chanInaccessible = 0;
+      const PUBLIC_CATS_RX = /information|général|economie|économie|casino|jeux|fun|événements|evenements|communaut|annonce|vocaux/i;
+      const STAFF_CATS_RX  = /admin|staff|moderation|modération|support|tickets/i;
+
+      for (const [, ch] of guild.channels.cache) {
+        if (ch.type === ChannelType.GuildCategory) continue;
+        try {
+          const parent = ch.parent;
+          const parentName = parent?.name || '';
+          const isStaffChannel = STAFF_CATS_RX.test(parentName) || /admin|staff|mod|bot.?logs?|diagnostic|config|dev|audit/i.test(ch.name);
+          const isPublicChannel = PUBLIC_CATS_RX.test(parentName);
+
+          // Garantir : @Staff voit TOUT (sauf si rien à voir)
+          if (staffGlobal) {
+            await ch.permissionOverwrites.edit(staffGlobal.id, {
+              ViewChannel: true, ReadMessageHistory: true, SendMessages: true,
+              ManageMessages: true, ManageThreads: true, AttachFiles: true, EmbedLinks: true,
+            }, { reason: 'audit-total-360 — Staff voit tout' }).catch(() => {});
+          }
+          // Admins voient TOUT
+          for (const ar of adminRoles) {
+            if (ar.position >= myTopRolePos) continue;
+            await ch.permissionOverwrites.edit(ar.id, {
+              ViewChannel: true, ReadMessageHistory: true, SendMessages: true,
+              ManageMessages: true, ManageThreads: true, AttachFiles: true, EmbedLinks: true,
+            }, { reason: 'audit-total-360 — Admin voit tout' }).catch(() => {});
+          }
+          // Bots gardent accès
+          for (const br of botRoles) {
+            await ch.permissionOverwrites.edit(br.id, {
+              ViewChannel: true, ReadMessageHistory: true, SendMessages: true,
+            }, { reason: 'audit-total-360 — Bots conservés' }).catch(() => {});
+          }
+          // Si salon est public mais @everyone ne peut pas le voir → corriger
+          if (isPublicChannel && !isStaffChannel) {
+            const owEv = ch.permissionOverwrites.cache.get(everyone.id);
+            if (owEv && owEv.deny.has(PermissionFlagsBits.ViewChannel)) {
+              await ch.permissionOverwrites.edit(everyone.id, { ViewChannel: true }, { reason: 'audit-total-360 — public débloqué' }).catch(() => {});
+              chanFixed++;
+            }
+          }
+          // Si salon staff : @everyone bloqué
+          if (isStaffChannel) {
+            await ch.permissionOverwrites.edit(everyone.id, {
+              ViewChannel: false, SendMessages: false, ReadMessageHistory: false,
+            }, { reason: 'audit-total-360 — staff only' }).catch(() => {});
+            chanInaccessible++;
+          }
+        } catch (e) {
+          if (errors.length < 15) errors.push(`#${ch.name} : ${e.message}`);
+        }
+      }
+      reportLines.push(`📺 **${chanFixed}** salons publics débloqués`);
+      reportLines.push(`🔒 **${chanInaccessible}** salons staff verrouillés correctement`);
+
+      // ─── 7. Vérifier la présence des systèmes essentiels ──────────
+      const hasTickets = guild.channels.cache.some(c => /tickets?/i.test(c.name));
+      const hasBotLogs = guild.channels.cache.some(c => /bot.?logs?/i.test(c.name));
+      const hasModLogs = guild.channels.cache.some(c => /mod.?logs?|modération/i.test(c.name));
+      const hasAudit   = guild.channels.cache.some(c => /audit/i.test(c.name));
+      const hasWelcome = guild.channels.cache.some(c => /bienvenue|welcome/i.test(c.name));
+      const hasRules   = guild.channels.cache.some(c => /r[èe]gles?|rules?/i.test(c.name));
+
+      reportLines.push('');
+      reportLines.push('**Systèmes détectés :**');
+      reportLines.push(`${hasTickets ? '✅' : '❌'} Tickets ${hasBotLogs ? '✅' : '❌'} Bot-logs ${hasModLogs ? '✅' : '❌'} Mod-logs`);
+      reportLines.push(`${hasAudit ? '✅' : '❌'} Audit ${hasWelcome ? '✅' : '❌'} Bienvenue ${hasRules ? '✅' : '❌'} Règles`);
+
+      // ─── 8. Rapport final ─────────────────────────────────────────
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      const embed = new EmbedBuilder()
+        .setColor(errors.length === 0 ? '#2ECC71' : '#E67E22')
+        .setTitle('🛡️ ・ AUDIT TOTAL 360° ・ Rapport ・')
+        .setDescription([
+          '**Configuration pro appliquée automatiquement :**',
+          '',
+          ...reportLines,
+          '',
+          '**Règles appliquées :**',
+          '• Admin = TOUT sauf ban/kick (Owner garde Admin)',
+          '• Staff = peut gérer rôles, messages, threads, timeout',
+          '• @Staff mentionnable, hoisted, bleu',
+          '• @everyone = perms de base saines (sans Manage, sans MentionEveryone)',
+          '• Salons publics débloqués si @everyone bloqué par erreur',
+          '• Salons staff invisibles à @everyone',
+          '• Tous les salons : @Staff + Admins voient TOUT',
+          createdStaff ? '🆕 Rôle @Staff créé.' : '',
+          errors.length ? `\n**Erreurs (${errors.length}) :**\n` + errors.slice(0, 10).map(e => `• ${e}`).join('\n').slice(0, 1500) : '',
+        ].filter(Boolean).join('\n').slice(0, 4000))
+        .setFooter({ text: 'Si certains rôles n\'ont pas été mis à jour, c\'est qu\'ils sont au-dessus du bot dans la hiérarchie. Remonte le bot pour les inclure.' })
         .setTimestamp();
       return respFn({ embeds: [embed] });
     }
