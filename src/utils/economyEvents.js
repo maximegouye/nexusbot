@@ -102,11 +102,11 @@ function startLuckyHourWorker(client) {
             db.db.prepare('UPDATE guild_config SET lucky_hour_active=0 WHERE guild_id=?').run(guildId);
             continue;
           }
-          // Si pas active, chance 5% par check de la déclencher (≈ 1 fois /10h)
-          if (cfg.lucky_hour_active !== 1 && Math.random() < 0.05) {
+          // Chance 3% par check (30min) → ≈ 1 fois /17h en moyenne (pas trop fréquent)
+          if (cfg.lucky_hour_active !== 1 && Math.random() < 0.03) {
             const until = now + 3600;
             db.db.prepare('UPDATE guild_config SET lucky_hour_active=1, lucky_hour_until=? WHERE guild_id=?').run(until, guildId);
-            // Annonce dans le salon casino si trouvé
+            // Annonce SANS ping dans le salon casino
             const casinoChan = guild.channels.cache.find(c => /casino/i.test(c.name) && c.type === 0);
             if (casinoChan) {
               casinoChan.send({
@@ -117,6 +117,7 @@ function startLuckyHourWorker(client) {
                   footer: { text: 'Lucky Hour expire automatiquement' },
                   timestamp: new Date().toISOString(),
                 }],
+                allowedMentions: { parse: [] },
               }).catch(() => {});
             }
           }
@@ -145,6 +146,7 @@ let cryptoEventTimer = null;
 function startCryptoEventWorker(client) {
   if (cryptoEventTimer) clearInterval(cryptoEventTimer);
   // Toutes les 4h, déclencher un event sur une crypto random
+  // 8h entre events crypto (au lieu de 4h) pour pas spammer
   cryptoEventTimer = setInterval(() => {
     try {
       // Récupérer toutes les guildes où crypto_market existe
@@ -179,12 +181,13 @@ function startCryptoEventWorker(client) {
                 footer: { text: 'Trade vite avec /crypto !' },
                 timestamp: new Date().toISOString(),
               }],
+              allowedMentions: { parse: [] },
             }).catch(() => {});
           }
         } catch {}
       }
     } catch {}
-  }, 4 * 60 * 60 * 1000); // 4h
+  }, 8 * 60 * 60 * 1000); // 8h entre crypto events
 }
 
 // ─── Tournament Daily Reset + Récompenses ──────────────────────────────────
@@ -193,7 +196,7 @@ let tournamentTimer = null;
 function startTournamentWorker(client) {
   if (tournamentTimer) clearInterval(tournamentTimer);
   // Vérifier toutes les heures si on est à minuit pour distribuer les récompenses
-  tournamentTimer = setInterval(() => {
+  tournamentTimer = setInterval(async () => {
     try {
       const now = new Date();
       // Distribuer les récompenses uniquement entre 0h et 1h
@@ -219,20 +222,27 @@ function startTournamentWorker(client) {
             const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i+1}.**`;
             try {
               db.addCoins(winner.user_id, guildId, REWARDS[i]);
-              lines.push(`${medal} <@${winner.user_id}> — **${winner.casino_won.toLocaleString('fr')}** gagnés • +${REWARDS[i].toLocaleString('fr')} ${emoji}`);
+              // Récupérer le username au lieu de mentionner pour éviter le ping
+              let displayName = `User#${winner.user_id.slice(-4)}`;
+              try {
+                const member = await guild.members.fetch(winner.user_id).catch(() => null);
+                if (member) displayName = member.displayName || member.user.username;
+              } catch {}
+              lines.push(`${medal} **${displayName}** — ${winner.casino_won.toLocaleString('fr')} gagnés • +${REWARDS[i].toLocaleString('fr')} ${emoji}`);
             } catch {}
           }
 
-          // Annonce
+          // Annonce SANS ping (juste username affiché, pas de mention)
           const annChan = guild.channels.cache.find(c => /casino|annonce/i.test(c.name) && c.type === 0);
           if (annChan && lines.length) {
             annChan.send({
               embeds: [{
                 color: 0xFFD700,
                 title: '🏆 TOURNOI CASINO QUOTIDIEN — RÉSULTATS',
-                description: `**Top 10 du ${yesterdayDate}** :\n\n${lines.join('\n')}\n\n*Bravo à tous !*`,
+                description: `**Top 10 du ${yesterdayDate}** :\n\n${lines.join('\n')}\n\n*Bravo à tous ! Récompenses créditées automatiquement.*`,
                 footer: { text: 'Le tournoi reset à minuit. Continue à jouer pour grimper !' },
               }],
+              allowedMentions: { parse: [] }, // pas de ping
             }).catch(() => {});
           }
 
