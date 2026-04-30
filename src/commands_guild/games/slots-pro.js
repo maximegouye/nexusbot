@@ -1,143 +1,129 @@
 // ============================================================
-// slots-pro.js — 🎰 SLOTS PRO : 6 machines thématiques avec features avancées
+// slots-pro.js — 🎰 SLOTS PRO V2 : 6 machines avec BOUTONS premium
 // ============================================================
-// Features ULTRA :
-//  - 6 thèmes : Classic Vegas / Pharaoh / Pirate / Diamond Royale / Christmas / Space
-//  - Symboles uniques par thème (pas que des fruits)
-//  - 3 lignes (haut/milieu/bas) → 3× chances de gagner
-//  - Wild ⭐ : remplace n'importe quel symbole
-//  - Scatter 🎁 : 3+ scatters = 5 free spins gratuits
-//  - Multiplier : wilds = ×2, ×3, ×5 multiplicateur
-//  - Jackpot progressif : 0.05% chance, mise×500
-//  - RTP 94% (calibré sur le moteur officiel)
-// ============================================================
-
 'use strict';
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../database/db');
 const { applyRtp, capWin } = require('../../utils/realCasinoEngine');
 
-// ─── DÉFINITION DES 6 MACHINES ─────────────────────────────────────────────
+// ─── 6 MACHINES THÉMATIQUES ────────────────────────────────────────────────
 const MACHINES = {
   vegas: {
-    label: '🎰 Classic Vegas',
+    label: 'Classic Vegas',
+    icon: '🎰',
     color: '#E91E63',
-    description: 'Le classique des classiques, lucky 7 jackpot',
+    style: ButtonStyle.Danger,
     symbols: [
-      // weight = poids dans le random, pay3 = gain pour 3 alignés (multi mise)
-      { e: '🍒', name: 'Cerise', w: 30, pay3: 1.5,  pay4: 4,   pay5: 10  },
-      { e: '🍋', name: 'Citron', w: 25, pay3: 2,    pay4: 5,   pay5: 12  },
-      { e: '🍊', name: 'Orange', w: 18, pay3: 3,    pay4: 7,   pay5: 18  },
-      { e: '🍇', name: 'Raisin', w: 12, pay3: 5,    pay4: 12,  pay5: 35  },
-      { e: '🔔', name: 'Cloche', w: 8,  pay3: 10,   pay4: 30,  pay5: 100 },
-      { e: '💎', name: 'Diamant',w: 4,  pay3: 25,   pay4: 80,  pay5: 250 },
-      { e: '7️⃣', name: 'Lucky 7',w: 2,  pay3: 50,   pay4: 200, pay5: 1000 },
+      { e: '🍒', name: 'Cerise',  w: 30, p3: 1.5,  p4: 4,   p5: 10  },
+      { e: '🍋', name: 'Citron',  w: 25, p3: 2,    p4: 5,   p5: 12  },
+      { e: '🍊', name: 'Orange',  w: 18, p3: 3,    p4: 7,   p5: 18  },
+      { e: '🍇', name: 'Raisin',  w: 12, p3: 5,    p4: 12,  p5: 35  },
+      { e: '🔔', name: 'Cloche',  w: 8,  p3: 10,   p4: 30,  p5: 100 },
+      { e: '💎', name: 'Diamant', w: 4,  p3: 25,   p4: 80,  p5: 250 },
+      { e: '7️⃣', name: 'Lucky 7', w: 2,  p3: 50,   p4: 200, p5: 1000 },
     ],
     wild: { e: '⭐', name: 'Wild', w: 1.5 },
-    scatter: { e: '🎁', name: 'Scatter', w: 0.7 }, // 3+ = free spins
+    scatter: { e: '🎁', name: 'Scatter', w: 0.7 },
   },
   pharaoh: {
-    label: '🏺 Pharaoh\'s Gold',
+    label: 'Pharaoh\'s Gold',
+    icon: '🏺',
     color: '#FFD700',
-    description: 'Trésor d\'Égypte avec sphinx jackpot',
+    style: ButtonStyle.Primary,
     symbols: [
-      { e: '🪲', name: 'Scarabée', w: 28, pay3: 1.5, pay4: 4,   pay5: 10  },
-      { e: '🦅', name: 'Faucon',   w: 22, pay3: 2,   pay4: 5,   pay5: 12  },
-      { e: '👁️', name: 'Œil',     w: 16, pay3: 3,   pay4: 7,   pay5: 20  },
-      { e: '🏺', name: 'Vase',     w: 12, pay3: 5,   pay4: 12,  pay5: 40  },
-      { e: '👑', name: 'Couronne', w: 7,  pay3: 12,  pay4: 35,  pay5: 120 },
-      { e: '🐍', name: 'Cobra',    w: 4,  pay3: 25,  pay4: 80,  pay5: 300 },
-      { e: '☀️', name: 'Sphinx',   w: 1.8,pay3: 60,  pay4: 250, pay5: 1500 },
+      { e: '🪲', name: 'Scarabée', w: 28, p3: 1.5, p4: 4,   p5: 10  },
+      { e: '🦅', name: 'Faucon',   w: 22, p3: 2,   p4: 5,   p5: 12  },
+      { e: '👁️', name: 'Œil',      w: 16, p3: 3,   p4: 7,   p5: 20  },
+      { e: '🏺', name: 'Vase',     w: 12, p3: 5,   p4: 12,  p5: 40  },
+      { e: '👑', name: 'Couronne', w: 7,  p3: 12,  p4: 35,  p5: 120 },
+      { e: '🐍', name: 'Cobra',    w: 4,  p3: 25,  p4: 80,  p5: 300 },
+      { e: '☀️', name: 'Sphinx',   w: 1.8,p3: 60,  p4: 250, p5: 1500 },
     ],
     wild: { e: '🪬', name: 'Wild', w: 1.5 },
     scatter: { e: '📜', name: 'Papyrus', w: 0.7 },
   },
   pirate: {
-    label: '🏴‍☠️ Pirate Treasure',
+    label: 'Pirate Treasure',
+    icon: '🏴‍☠️',
     color: '#5D4037',
-    description: 'Naviguez vers les coffres et trouvez le trésor',
+    style: ButtonStyle.Secondary,
     symbols: [
-      { e: '🦜', name: 'Perroquet', w: 28, pay3: 1.5, pay4: 4,   pay5: 10  },
-      { e: '🗡️', name: 'Épée',     w: 22, pay3: 2,   pay4: 5,   pay5: 12  },
-      { e: '🍺', name: 'Rhum',     w: 16, pay3: 3,   pay4: 7,   pay5: 20  },
-      { e: '⚓', name: 'Ancre',     w: 12, pay3: 5,   pay4: 12,  pay5: 40  },
-      { e: '🚢', name: 'Navire',    w: 7,  pay3: 12,  pay4: 35,  pay5: 120 },
-      { e: '☠️', name: 'Crâne',     w: 4,  pay3: 25,  pay4: 80,  pay5: 300 },
-      { e: '💰', name: 'Coffre',    w: 1.8,pay3: 60,  pay4: 250, pay5: 1500 },
+      { e: '🦜', name: 'Perroquet', w: 28, p3: 1.5, p4: 4,   p5: 10  },
+      { e: '🗡️', name: 'Épée',     w: 22, p3: 2,   p4: 5,   p5: 12  },
+      { e: '🍺', name: 'Rhum',     w: 16, p3: 3,   p4: 7,   p5: 20  },
+      { e: '⚓', name: 'Ancre',     w: 12, p3: 5,   p4: 12,  p5: 40  },
+      { e: '🚢', name: 'Navire',    w: 7,  p3: 12,  p4: 35,  p5: 120 },
+      { e: '☠️', name: 'Crâne',     w: 4,  p3: 25,  p4: 80,  p5: 300 },
+      { e: '💰', name: 'Coffre',    w: 1.8,p3: 60,  p4: 250, p5: 1500 },
     ],
     wild: { e: '🏴‍☠️', name: 'Wild', w: 1.5 },
     scatter: { e: '🗺️', name: 'Carte', w: 0.7 },
   },
   diamond: {
-    label: '💎 Diamond Royale',
+    label: 'Diamond Royale',
+    icon: '💎',
     color: '#00BCD4',
-    description: 'Luxe et diamants, jackpot rarissime',
+    style: ButtonStyle.Success,
     symbols: [
-      { e: '🔷', name: 'Saphir',   w: 28, pay3: 1.5, pay4: 4,    pay5: 10   },
-      { e: '🟢', name: 'Émeraude', w: 22, pay3: 2,   pay4: 5,    pay5: 12   },
-      { e: '🔴', name: 'Rubis',    w: 16, pay3: 3,   pay4: 7,    pay5: 20   },
-      { e: '🟡', name: 'Topaze',   w: 12, pay3: 5,   pay4: 12,   pay5: 40   },
-      { e: '👑', name: 'Couronne', w: 7,  pay3: 12,  pay4: 35,   pay5: 120  },
-      { e: '💎', name: 'Diamant',  w: 4,  pay3: 30,  pay4: 100,  pay5: 400  },
-      { e: '🏆', name: 'Trophée',  w: 1.5,pay3: 100, pay4: 500,  pay5: 3000 },
+      { e: '🔷', name: 'Saphir',   w: 28, p3: 1.5, p4: 4,    p5: 10   },
+      { e: '🟢', name: 'Émeraude', w: 22, p3: 2,   p4: 5,    p5: 12   },
+      { e: '🔴', name: 'Rubis',    w: 16, p3: 3,   p4: 7,    p5: 20   },
+      { e: '🟡', name: 'Topaze',   w: 12, p3: 5,   p4: 12,   p5: 40   },
+      { e: '👑', name: 'Couronne', w: 7,  p3: 12,  p4: 35,   p5: 120  },
+      { e: '💎', name: 'Diamant',  w: 4,  p3: 30,  p4: 100,  p5: 400  },
+      { e: '🏆', name: 'Trophée',  w: 1.5,p3: 100, p4: 500,  p5: 3000 },
     ],
     wild: { e: '✨', name: 'Wild', w: 1.5 },
     scatter: { e: '💍', name: 'Bague', w: 0.7 },
   },
   christmas: {
-    label: '🎄 Christmas Magic',
+    label: 'Christmas Magic',
+    icon: '🎄',
     color: '#C62828',
-    description: 'Esprit de Noël avec cadeaux et bonbons',
+    style: ButtonStyle.Danger,
     symbols: [
-      { e: '🍬', name: 'Bonbon',     w: 28, pay3: 1.5, pay4: 4,   pay5: 10  },
-      { e: '🧦', name: 'Chaussette', w: 22, pay3: 2,   pay4: 5,   pay5: 12  },
-      { e: '🦌', name: 'Renne',      w: 16, pay3: 3,   pay4: 7,   pay5: 20  },
-      { e: '⛄', name: 'Bonhomme',   w: 12, pay3: 5,   pay4: 12,  pay5: 40  },
-      { e: '🎄', name: 'Sapin',      w: 7,  pay3: 12,  pay4: 35,  pay5: 120 },
-      { e: '🎁', name: 'Cadeau',     w: 4,  pay3: 30,  pay4: 100, pay5: 400 },
-      { e: '🎅', name: 'Père Noël',  w: 1.5,pay3: 100, pay4: 500, pay5: 3000 },
+      { e: '🍬', name: 'Bonbon',     w: 28, p3: 1.5, p4: 4,   p5: 10  },
+      { e: '🧦', name: 'Chaussette', w: 22, p3: 2,   p4: 5,   p5: 12  },
+      { e: '🦌', name: 'Renne',      w: 16, p3: 3,   p4: 7,   p5: 20  },
+      { e: '⛄', name: 'Bonhomme',   w: 12, p3: 5,   p4: 12,  p5: 40  },
+      { e: '🎄', name: 'Sapin',      w: 7,  p3: 12,  p4: 35,  p5: 120 },
+      { e: '🎁', name: 'Cadeau',     w: 4,  p3: 30,  p4: 100, p5: 400 },
+      { e: '🎅', name: 'Père Noël',  w: 1.5,p3: 100, p4: 500, p5: 3000 },
     ],
     wild: { e: '❄️', name: 'Wild', w: 1.5 },
     scatter: { e: '🔔', name: 'Cloche', w: 0.7 },
   },
   space: {
-    label: '🚀 Space Galaxy',
+    label: 'Space Galaxy',
+    icon: '🚀',
     color: '#3F51B5',
-    description: 'Explorez la galaxie pour trouver les étoiles',
+    style: ButtonStyle.Primary,
     symbols: [
-      { e: '🌟', name: 'Étoile',    w: 28, pay3: 1.5, pay4: 4,   pay5: 10  },
-      { e: '🛸', name: 'OVNI',     w: 22, pay3: 2,   pay4: 5,   pay5: 12  },
-      { e: '🌍', name: 'Terre',    w: 16, pay3: 3,   pay4: 7,   pay5: 20  },
-      { e: '🌙', name: 'Lune',     w: 12, pay3: 5,   pay4: 12,  pay5: 40  },
-      { e: '☄️', name: 'Comète',  w: 7,  pay3: 12,  pay4: 35,  pay5: 120 },
-      { e: '🚀', name: 'Fusée',    w: 4,  pay3: 30,  pay4: 100, pay5: 400 },
-      { e: '👽', name: 'Alien',    w: 1.5,pay3: 100, pay4: 500, pay5: 3000 },
+      { e: '🌟', name: 'Étoile', w: 28, p3: 1.5, p4: 4,   p5: 10  },
+      { e: '🛸', name: 'OVNI',   w: 22, p3: 2,   p4: 5,   p5: 12  },
+      { e: '🌍', name: 'Terre',  w: 16, p3: 3,   p4: 7,   p5: 20  },
+      { e: '🌙', name: 'Lune',   w: 12, p3: 5,   p4: 12,  p5: 40  },
+      { e: '☄️', name: 'Comète', w: 7,  p3: 12,  p4: 35,  p5: 120 },
+      { e: '🚀', name: 'Fusée',  w: 4,  p3: 30,  p4: 100, p5: 400 },
+      { e: '👽', name: 'Alien',  w: 1.5,p3: 100, p4: 500, p5: 3000 },
     ],
     wild: { e: '🌌', name: 'Wild', w: 1.5 },
     scatter: { e: '🪐', name: 'Planète', w: 0.7 },
   },
 };
 
-// ─── MOTEUR DE JEU ─────────────────────────────────────────────────────────
+// ─── Helpers de spin ───────────────────────────────────────────────────────
 function spinSymbol(machine) {
-  const all = [
-    ...machine.symbols,
-    machine.wild,
-    machine.scatter,
-  ];
+  const all = [...machine.symbols, machine.wild, machine.scatter];
   const total = all.reduce((s, x) => s + x.w, 0);
   const r = Math.random() * total;
   let acc = 0;
-  for (const sym of all) {
-    acc += sym.w;
-    if (r < acc) return sym;
-  }
+  for (const sym of all) { acc += sym.w; if (r < acc) return sym; }
   return machine.symbols[0];
 }
 
 function spin3x5(machine) {
-  // 3 lignes × 5 colonnes = 15 symboles
   const grid = [];
   for (let r = 0; r < 3; r++) {
     const row = [];
@@ -147,60 +133,61 @@ function spin3x5(machine) {
   return grid;
 }
 
-function calcWin(grid, mise, machine) {
-  let totalWin = 0;
-  let bestCombo = null;
-  // Vérifier les 3 lignes horizontales
+function calcWin(grid, mise) {
+  let totalWin = 0, bestCombo = null;
   for (let r = 0; r < 3; r++) {
     const line = grid[r];
-    // Compter les symboles consécutifs depuis la gauche (avec wild)
-    let firstSym = null;
-    let count = 0;
+    let firstSym = null, count = 0;
     for (let c = 0; c < 5; c++) {
       const cur = line[c];
-      if (cur.name === 'Scatter') break; // scatter ne fait pas ligne
-      if (cur.name === 'Wild') {
-        count++;
-        continue;
-      }
-      if (firstSym === null) {
-        firstSym = cur;
-        count++;
-      } else if (cur.name === firstSym.name) {
-        count++;
-      } else {
-        break;
-      }
+      if (cur.name === 'Scatter') break;
+      if (cur.name === 'Wild') { count++; continue; }
+      if (firstSym === null) { firstSym = cur; count++; }
+      else if (cur.name === firstSym.name) count++;
+      else break;
     }
     if (count >= 3 && firstSym) {
-      const payKey = `pay${count}`;
-      const pay = firstSym[payKey] || 0;
+      const pay = firstSym[`p${count}`] || 0;
       const lineWin = Math.floor(mise * pay);
       totalWin += lineWin;
-      if (!bestCombo || lineWin > bestCombo.win) {
-        bestCombo = { sym: firstSym, count, win: lineWin };
-      }
+      if (!bestCombo || lineWin > bestCombo.win) bestCombo = { sym: firstSym, count, win: lineWin };
     }
   }
-  // Compter les scatters (sur toute la grille)
   const scatterCount = grid.flat().filter(s => s.name === 'Scatter').length;
   return { totalWin, bestCombo, scatterCount };
 }
 
 function renderGrid(grid) {
-  let out = '```\n';
-  for (const row of grid) {
-    out += row.map(s => s.e).join(' ') + '\n';
-  }
-  out += '```';
-  return out;
+  return '```\n' + grid.map(row => row.map(s => s.e).join(' ')).join('\n') + '\n```';
 }
 
-// ─── COMMANDE SLASH ────────────────────────────────────────────────────────
+// ─── Boutons de sélection (2 rangées de 3) ─────────────────────────────────
+function buildSelectButtons(mise) {
+  const keys = Object.keys(MACHINES);
+  const row1 = new ActionRowBuilder().addComponents(
+    keys.slice(0, 3).map(k => new ButtonBuilder()
+      .setCustomId(`slotspro_play_${k}_${mise}`)
+      .setLabel(MACHINES[k].label)
+      .setEmoji(MACHINES[k].icon)
+      .setStyle(MACHINES[k].style)
+    )
+  );
+  const row2 = new ActionRowBuilder().addComponents(
+    keys.slice(3, 6).map(k => new ButtonBuilder()
+      .setCustomId(`slotspro_play_${k}_${mise}`)
+      .setLabel(MACHINES[k].label)
+      .setEmoji(MACHINES[k].icon)
+      .setStyle(MACHINES[k].style)
+    )
+  );
+  return [row1, row2];
+}
+
+// ─── COMMAND ───────────────────────────────────────────────────────────────
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('slots-pro')
-    .setDescription('🎰 SLOTS PRO : 6 machines thématiques avec wilds, scatters et bonus !')
+    .setDescription('🎰 SLOTS PRO : 6 machines thématiques avec wilds et free spins')
     .addIntegerOption(o => o.setName('mise').setDescription('Mise (min 100)').setMinValue(100).setMaxValue(500000).setRequired(true)),
   cooldown: 4,
 
@@ -213,119 +200,100 @@ module.exports = {
       const mise = interaction.options.getInteger('mise');
       const cfg = db.getConfig(interaction.guildId);
       const emoji = cfg.currency_emoji || '€';
-      const name = cfg.currency_name || 'Euros';
       const u = db.getUser(interaction.user.id, interaction.guildId);
 
       if (u.balance < mise) {
         return interaction.editReply({ content: `❌ Tu as besoin de ${mise.toLocaleString('fr')} ${emoji}.` });
       }
 
-      // Affiche le menu de sélection de machine
-      const menu = new StringSelectMenuBuilder()
-        .setCustomId(`slotspro_select_${interaction.user.id}_${mise}`)
-        .setPlaceholder('🎰 Choisis ta machine...')
-        .addOptions(Object.entries(MACHINES).map(([k, m]) => ({
-          label: m.label,
-          description: m.description.slice(0, 100),
-          value: k,
-          emoji: m.label.split(' ')[0],
-        })));
-
       const embed = new EmbedBuilder()
         .setColor('#9B59B6')
         .setTitle('🎰 ・ SLOTS PRO ・ Choisis ta machine')
         .setDescription([
-          `💰 Ta mise : **${mise.toLocaleString('fr')} ${emoji}**`,
+          `💰 Mise : **${mise.toLocaleString('fr')} ${emoji}**`,
           '',
-          '**6 machines disponibles :**',
-          ...Object.values(MACHINES).map(m => `${m.label.split(' ')[0]} **${m.label.replace(/^\S+ /, '')}** — *${m.description}*`),
+          '**6 machines disponibles** — clique sur celle qui te plaît :',
           '',
-          '**Features de chaque machine :**',
-          '• Grille 3×5 (15 symboles, 3 lignes horizontales)',
-          '• ⭐ **Wild** : remplace n\'importe quel symbole',
-          '• 🎁 **Scatter** : 3+ déclenchent **5 free spins gratuits** !',
-          '• 🏆 **Top symbole** : jusqu\'à ×3000 sur la mise',
+          ...Object.values(MACHINES).map(m =>
+            `${m.icon} **${m.label}** — top ×${m.symbols[m.symbols.length - 1].p5}`
+          ),
           '',
-          '⏰ Tu as 30 secondes pour choisir ta machine.',
-        ].join('\n'))
-        .setFooter({ text: 'RTP 94% • Maximum mise/2 par session • Joue responsable' });
+          '**Features :** ⭐ Wilds • 🎁 Scatters (3+ = free spins) • Grille 3×5 (3 lignes)',
+          'RTP 94% • Pas de timeout : prends ton temps',
+        ].join('\n'));
 
       await interaction.editReply({
         embeds: [embed],
-        components: [new ActionRowBuilder().addComponents(menu)],
+        components: buildSelectButtons(mise),
       });
     } catch (err) {
-      console.error('[slots-pro] error:', err);
+      console.error('[slots-pro execute]', err);
       try { await interaction.editReply({ content: `❌ Erreur : ${err?.message}` }); } catch {}
     }
   },
 
   async handleComponent(interaction, customId) {
-    if (!customId.startsWith('slotspro_select_')) return false;
+    // Format : slotspro_play_<machineKey>_<mise>  OU  slotspro_replay_<machineKey>_<mise>
+    if (!customId.startsWith('slotspro_')) return false;
 
-    // Parse customId : slotspro_select_{userId}_{mise}
     const parts = customId.split('_');
-    const userId = parts[2];
+    const action = parts[1]; // 'play' ou 'replay'
+    const machineKey = parts[2];
     const mise = parseInt(parts[3], 10);
 
-    if (interaction.user.id !== userId) {
-      await interaction.reply({ content: '❌ Cette session de jeu n\'est pas pour toi !', ephemeral: true }).catch(() => {});
-      return true;
-    }
-
-    const machineKey = interaction.values[0];
     const machine = MACHINES[machineKey];
-    if (!machine) return true;
+    if (!machine || !mise || isNaN(mise)) return true;
 
-    // Defer update pour éditer le message
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferUpdate().catch(() => {});
-    }
+    // Pas de check userId — n'importe qui peut cliquer (mise prélevée à celui qui clique)
+    // Cela permet à l'user de cliquer même si les boutons étaient pour quelqu'un d'autre
+    const userId = interaction.user.id;
 
     try {
       const cfg = db.getConfig(interaction.guildId);
       const emoji = cfg.currency_emoji || '€';
-
-      // Vérifier balance
       const u = db.getUser(userId, interaction.guildId);
+
       if (u.balance < mise) {
-        return interaction.editReply({
-          embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle('❌ Solde insuffisant').setDescription(`Tu n'as plus assez de ${emoji}.`)],
-          components: [],
-        }).catch(() => {});
+        if (!interaction.deferred && !interaction.replied) {
+          await interaction.reply({ content: `❌ Tu as besoin de ${mise.toLocaleString('fr')} ${emoji} pour jouer.`, ephemeral: true }).catch(() => {});
+        }
+        return true;
       }
 
+      // Acquittement immédiat (deferUpdate pour éditer le message)
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferUpdate().catch(() => {});
+      }
+
+      // Retire la mise
       db.removeCoins(userId, interaction.guildId, mise);
 
-      // Animation : 2 frames de spinning
-      for (let f = 0; f < 2; f++) {
-        const fakeGrid = spin3x5(machine);
+      // Animation de spin (1 frame rapide)
+      try {
         await interaction.editReply({
           embeds: [new EmbedBuilder().setColor(machine.color)
-            .setTitle(`${machine.label} ・ Les rouleaux tournent...`)
-            .setDescription(renderGrid(fakeGrid))
+            .setTitle(`${machine.icon} ・ ${machine.label} ・ Spin...`)
+            .setDescription(renderGrid(spin3x5(machine)))
           ],
           components: [],
-        }).catch(() => {});
-        await new Promise(r => setTimeout(r, 600));
-      }
+        });
+      } catch {}
+      await new Promise(r => setTimeout(r, 700));
 
       // SPIN PRINCIPAL
       const grid = spin3x5(machine);
-      let { totalWin, bestCombo, scatterCount } = calcWin(grid, mise, machine);
+      let { totalWin, bestCombo, scatterCount } = calcWin(grid, mise);
       let bonusText = '';
 
       // Free Spins si 3+ scatters
-      let freeSpinsWin = 0;
       if (scatterCount >= 3) {
         const freeSpins = scatterCount === 3 ? 5 : scatterCount === 4 ? 10 : 15;
-        bonusText = `\n🎁 **${scatterCount} ${machine.scatter.name}** → **${freeSpins} FREE SPINS** !\n`;
+        let freeSpinsWin = 0;
         for (let s = 0; s < freeSpins; s++) {
-          const fsGrid = spin3x5(machine);
-          const fsRes = calcWin(fsGrid, mise, machine);
+          const fsRes = calcWin(spin3x5(machine), mise);
           freeSpinsWin += fsRes.totalWin;
         }
-        bonusText += `🎰 Free spins → **+${freeSpinsWin.toLocaleString('fr')} ${emoji}**`;
+        bonusText = `\n🎁 **${scatterCount}× ${machine.scatter.name}** → **${freeSpins} FREE SPINS** ! (+${freeSpinsWin.toLocaleString('fr')} ${emoji})`;
         totalWin += freeSpinsWin;
       }
 
@@ -338,40 +306,75 @@ module.exports = {
       }
 
       const profit = win - mise;
-      const isJackpot = bestCombo?.count === 5 && bestCombo?.sym?.pay5 >= 1000;
-      const isBigWin  = win >= mise * 10;
+      const isJackpot = bestCombo?.count === 5 && bestCombo?.sym?.p5 >= 1000;
+      const isBigWin = win >= mise * 10;
       const titleEmoji = isJackpot ? '💎' : isBigWin ? '🔥' : win > 0 ? '✅' : '💸';
-      const title = isJackpot ? `JACKPOT ${machine.label} !` : isBigWin ? 'GROS GAIN !' : win > 0 ? 'Gagné !' : 'Perdu...';
+      const title = isJackpot ? 'JACKPOT !' : isBigWin ? 'GROS GAIN !' : win > 0 ? 'Gagné !' : 'Perdu...';
 
       const finalEmbed = new EmbedBuilder()
         .setColor(isJackpot ? '#FFD700' : isBigWin ? '#E67E22' : win > 0 ? '#2ECC71' : '#95A5A6')
-        .setTitle(`${titleEmoji} ・ ${machine.label} ・ ${title}`)
+        .setTitle(`${titleEmoji} ・ ${machine.icon} ${machine.label} ・ ${title}`)
         .setDescription(renderGrid(grid) + bonusText)
         .addFields(
-          { name: '💰 Mise',  value: `${mise.toLocaleString('fr')} ${emoji}`, inline: true },
-          { name: '🎯 Combo', value: bestCombo ? `${bestCombo.count}× ${bestCombo.sym.e} ${bestCombo.sym.name}` : 'Aucune ligne', inline: true },
-          { name: '💵 Gain',  value: `${win.toLocaleString('fr')} ${emoji} (${profit >= 0 ? '+' : ''}${profit.toLocaleString('fr')})`, inline: true },
+          { name: '💰 Mise', value: `${mise.toLocaleString('fr')} ${emoji}`, inline: true },
+          { name: '🎯 Combo', value: bestCombo ? `${bestCombo.count}× ${bestCombo.sym.e}` : 'Aucune', inline: true },
+          { name: '💵 Gain', value: `${win.toLocaleString('fr')} ${emoji} (${profit >= 0 ? '+' : ''}${profit.toLocaleString('fr')})`, inline: true },
         )
-        .setFooter({ text: `${machine.label} • RTP 94% • Rejoue ou change de machine` });
+        .setFooter({ text: `${machine.label} • RTP 94% • Clique Rejouer ou Changer` });
 
-      // Bouton Rejouer (même mise même machine)
+      // Boutons post-spin : Rejouer même machine + Changer machine
       const replayRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`slotspro_replay_${userId}_${mise}_${machineKey}`)
-          .setLabel(`🔄 Rejouer (${mise.toLocaleString('fr')} ${emoji})`)
-          .setStyle(ButtonStyle.Primary),
+          .setCustomId(`slotspro_play_${machineKey}_${mise}`)
+          .setLabel(`Rejouer (${mise.toLocaleString('fr')} ${emoji})`)
+          .setEmoji('🔄')
+          .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
-          .setCustomId(`slotspro_change_${userId}_${mise}`)
-          .setLabel('🎰 Changer machine')
+          .setCustomId(`slotspro_choose_x_${mise}`)
+          .setLabel('Changer machine')
+          .setEmoji('🎰')
           .setStyle(ButtonStyle.Secondary),
       );
 
       await interaction.editReply({ embeds: [finalEmbed], components: [replayRow] }).catch(() => {});
       return true;
     } catch (err) {
-      console.error('[slots-pro select]', err);
-      try { await interaction.editReply({ content: `❌ Erreur : ${err?.message}`, components: [] }); } catch {}
+      console.error('[slots-pro handleComponent]', err);
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: `❌ Erreur : ${err?.message}`, ephemeral: true });
+        } else {
+          await interaction.followUp({ content: `❌ Erreur : ${err?.message}`, ephemeral: true });
+        }
+      } catch {}
       return true;
     }
   },
+};
+
+// Handler du bouton "Changer machine" qui réaffiche les 6 boutons
+const ORIGINAL_HANDLE = module.exports.handleComponent;
+module.exports.handleComponent = async function(interaction, customId) {
+  if (customId.startsWith('slotspro_choose_')) {
+    const mise = parseInt(customId.split('_')[3], 10);
+    if (!mise || isNaN(mise)) return true;
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferUpdate().catch(() => {});
+    }
+    const cfg = db.getConfig(interaction.guildId);
+    const emoji = cfg.currency_emoji || '€';
+    const embed = new EmbedBuilder()
+      .setColor('#9B59B6')
+      .setTitle('🎰 ・ SLOTS PRO ・ Choisis ta machine')
+      .setDescription([
+        `💰 Mise : **${mise.toLocaleString('fr')} ${emoji}**`,
+        '',
+        '**6 machines** — clique sur celle qui te plaît :',
+        '',
+        ...Object.values(MACHINES).map(m => `${m.icon} **${m.label}** — top ×${m.symbols[m.symbols.length - 1].p5}`),
+      ].join('\n'));
+    await interaction.editReply({ embeds: [embed], components: buildSelectButtons(mise) }).catch(() => {});
+    return true;
+  }
+  return ORIGINAL_HANDLE.call(this, interaction, customId);
 };

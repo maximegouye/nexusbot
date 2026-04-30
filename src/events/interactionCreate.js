@@ -43,6 +43,7 @@ const COMPONENT_ROUTES = {
   'hippo_':       'hippodrome',
   'slots_':       'slots',
   'cslot_':       'slots',   // Casino machine (casinoMachine.js buttons)
+  'slotspro_':    'slots-pro',  // Slots Pro 6 machines thématiques
   'bj_':          'blackjack',
   'cs_':          'casino-stats',
   'keno_':        'keno',
