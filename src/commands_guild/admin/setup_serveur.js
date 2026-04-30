@@ -1110,16 +1110,17 @@ module.exports = {
       const botRoles = allRolesArr.filter(r => r.managed);
 
       // === ÉTAPE 1 : FUSION CATÉGORIES (garde nouvelles, déplace contenu) ===
+      // 🎨 STYLE PREMIUM MODERNE — inspiré des plus gros serveurs Discord
       const CAT_TARGETS = [
-        { id: 'INFORMATIONS',   to: '┈ ・ INFORMATIONS ・ ┈',   test: /information|info|accueil/i },
-        { id: 'GÉNÉRAL',        to: '┈ ・ GÉNÉRAL ・ ┈',         test: /general|général/i },
-        { id: 'ÉCONOMIE',       to: '┈ ・ ÉCONOMIE ・ ┈',        test: /[eé]conomie|economy/i },
-        { id: 'CASINO',         to: '┈ ・ CASINO ・ ┈',           test: /casino/i },
-        { id: 'JEUX FUN',       to: '┈ ・ JEUX FUN ・ ┈',         test: /jeux.?fun|fun.?jeux|amusement|^fun$/i },
-        { id: 'JEUX',           to: '┈ ・ JEUX ・ ┈',             test: /(^|\s)jeux(\s|$)|^games$/i },
-        { id: 'ÉVÉNEMENTS',     to: '┈ ・ ÉVÉNEMENTS ・ ┈',       test: /[eé]v[eé]nements?|events?/i },
-        { id: 'COMMUNAUTÉ',     to: '┈ ・ COMMUNAUTÉ ・ ┈',       test: /communaut[eé]|community/i },
-        { id: 'ADMINISTRATION', to: '┈ ・ ADMINISTRATION ・ ┈',   test: /administration|^admin$|staff$/i },
+        { id: 'INFORMATIONS',   to: '╭─⋅ 📜 INFORMATIONS ⋅─╮',   test: /information|info|accueil/i },
+        { id: 'GÉNÉRAL',        to: '╭─⋅ 💬 GÉNÉRAL ⋅─╮',        test: /general|général/i },
+        { id: 'ÉCONOMIE',       to: '╭─⋅ 💰 ÉCONOMIE ⋅─╮',       test: /[eé]conomie|economy/i },
+        { id: 'CASINO',         to: '╭─⋅ 🎰 CASINO ⋅─╮',          test: /casino/i },
+        { id: 'JEUX FUN',       to: '╭─⋅ 🎮 JEUX FUN ⋅─╮',        test: /jeux.?fun|fun.?jeux|amusement|^fun$/i },
+        { id: 'JEUX',           to: '╭─⋅ 🎯 JEUX ⋅─╮',            test: /(^|\s)jeux(\s|$)|^games$/i },
+        { id: 'ÉVÉNEMENTS',     to: '╭─⋅ 🎪 ÉVÉNEMENTS ⋅─╮',      test: /[eé]v[eé]nements?|events?/i },
+        { id: 'COMMUNAUTÉ',     to: '╭─⋅ 👥 COMMUNAUTÉ ⋅─╮',      test: /communaut[eé]|community/i },
+        { id: 'ADMINISTRATION', to: '╭─⋅ 🛡️ ADMINISTRATION ⋅─╮', test: /administration|^admin$|staff$/i },
       ];
 
       const catGroups = {};
