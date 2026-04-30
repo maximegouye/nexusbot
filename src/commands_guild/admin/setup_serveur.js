@@ -95,6 +95,9 @@ module.exports = {
     .addSubcommand(s => s.setName('fusion-intelligente').setDescription("🧠 Fusionne catégories doublons : déplace salons + supprime vides"))
     .addSubcommand(s => s.setName('garder-nouvelles').setDescription("⭐ Garde les nouvelles catégories + déplace contenu existant dedans"))
     .addSubcommand(s => s.setName('tout-parfaire').setDescription("✨ TOUT EN UN : fusion + synchro + permissions + nettoyage (1 commande)"))
+    .addSubcommand(s => s.setName('force-rename-salons').setDescription("🔥 FORCE le renommage de TOUS les salons au format ┆・nom (sans exception)"))
+    .addSubcommand(s => s.setName('force-rename-categories').setDescription("🔥 FORCE le renommage de TOUTES les catégories au format ╭┈ EMOJI NOM"))
+    .addSubcommand(s => s.setName('force-tout').setDescription("💎 FORCE renomme catégories + salons + topics + permissions (ULTIME)"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -1321,6 +1324,265 @@ module.exports = {
         )
         .setFooter({ text: 'Aucun salon utilisé, ni message, ni membre perdu. Vérifie ton serveur !' })
         .setTimestamp()] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🔥 FORCE RENAME : applique le format ┆・ à TOUS les salons
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'force-rename-salons') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      // Helper : nettoie un nom (enlève emojis, ┆, ・, ╭, ┈, espaces multiples)
+      const cleanName = (raw) => {
+        let n = (raw || '')
+          .replace(/[┆・╭╰┈]+/g, ' ')
+          .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{1F1E6}-\u{1F1FF}]+/gu, ' ')
+          .replace(/\s+/g, '-')
+          .replace(/[-]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .toLowerCase()
+          .trim();
+        if (!n) n = 'salon';
+        // Discord limite à 100 chars, mais on garde court (90 pour préfixe)
+        if (n.length > 90) n = n.slice(0, 90);
+        return n;
+      };
+
+      const errors = [];
+      let renamed = 0, skipped = 0, failed = 0, total = 0;
+
+      // Récupérer TOUS les salons texte ET vocaux (sauf catégories)
+      const channels = [...guild.channels.cache.values()].filter(c =>
+        c.type === ChannelType.GuildText ||
+        c.type === ChannelType.GuildVoice ||
+        c.type === ChannelType.GuildAnnouncement ||
+        c.type === ChannelType.GuildForum ||
+        c.type === ChannelType.GuildStageVoice
+      );
+      total = channels.length;
+
+      // Tri pour traiter dans l'ordre stable
+      channels.sort((a, b) => (a.position || 0) - (b.position || 0));
+
+      for (const ch of channels) {
+        try {
+          const cur = ch.name || '';
+          // Si déjà au bon format ┆・, on saute
+          if (cur.startsWith('┆・')) { skipped++; continue; }
+
+          const cleaned = cleanName(cur);
+          let newName;
+          // Salons vocaux : pas de tiret au début (juste ┆・Nom avec majuscule)
+          if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) {
+            const pretty = cleaned.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            newName = `┆・${pretty}`;
+          } else {
+            newName = `┆・${cleaned}`;
+          }
+
+          // Vérifier la longueur Discord (max 100)
+          if (newName.length > 100) newName = newName.slice(0, 100);
+
+          await ch.setName(newName, 'force-rename-salons par Maxime');
+          renamed++;
+
+          // Anti rate-limit : Discord = 2 renames / 10min par salon
+          // On met 800ms entre chaque pour être safe sur le batch global
+          await new Promise(r => setTimeout(r, 800));
+        } catch (e) {
+          failed++;
+          if (errors.length < 10) errors.push(`#${ch.name} → ${e.message}`);
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      const embed = new EmbedBuilder()
+        .setColor(failed === 0 ? '#2ECC71' : '#E67E22')
+        .setTitle('🔥 ・ FORCE RENAME SALONS ・ Rapport')
+        .setDescription([
+          `**Total salons analysés :** ${total}`,
+          `✅ **Renommés :** ${renamed}`,
+          `⏭️ **Déjà OK :** ${skipped}`,
+          `❌ **Échecs :** ${failed}`,
+          '',
+          renamed > 0 ? '🎨 Tous les salons sont maintenant au format `┆・nom`' : '',
+          errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n').slice(0, 1500) : '',
+        ].filter(Boolean).join('\n'))
+        .setFooter({ text: 'Si Discord rate-limit certains salons, relance la commande dans 10min' })
+        .setTimestamp();
+      return respFn({ embeds: [embed] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🔥 FORCE RENAME CATÉGORIES : ╭┈ EMOJI NOM
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'force-rename-categories') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      const CAT_TARGETS = [
+        { to: '╭┈ 📜 INFORMATIONS',   test: /information|info|accueil|important|r[èe]gles|annonce/i },
+        { to: '╭┈ 💬 GÉNÉRAL',         test: /general|général|chat|discussion/i },
+        { to: '╭┈ 💰 ÉCONOMIE',        test: /[eé]conomie|economy|argent|money/i },
+        { to: '╭┈ 🎰 CASINO',          test: /casino/i },
+        { to: '╭┈ 🎮 JEUX FUN',        test: /jeux.?fun|fun.?jeux|amusement|^fun$|gaming|fun/i },
+        { to: '╭┈ 🎯 JEUX',            test: /(^|\s)jeux(\s|$)|^games$|mini.?jeux/i },
+        { to: '╭┈ 🎪 ÉVÉNEMENTS',      test: /[eé]v[eé]nements?|events?|tournoi|loto/i },
+        { to: '╭┈ 👥 COMMUNAUTÉ',      test: /communaut[eé]|community|entraide|cr[eé]ativit[eé]|creativ|membres?/i },
+        { to: '╭┈ 🛡️ ADMINISTRATION', test: /administration|^admin$|^staff$|mod[eé]ration|gestion/i },
+        { to: '╭┈ 📣 ANNONCES',        test: /annonces?|announc/i },
+        { to: '╭┈ 🔊 VOCAUX',          test: /vocaux|voice|salon.?vocal|voix/i },
+        { to: '╭┈ 🎫 SUPPORT',         test: /support|tickets?|aide/i },
+        { to: '╭┈ 🤖 BOT',             test: /^bot$|^bots$|nexus/i },
+      ];
+
+      let renamed = 0, skipped = 0, failed = 0, total = 0, kept = 0;
+      const errors = [];
+
+      const cats = [...guild.channels.cache.filter(c => c.type === ChannelType.GuildCategory).values()];
+      total = cats.length;
+
+      for (const cat of cats) {
+        try {
+          const stripped = cat.name.replace(/[┈・╭╰┆]+/g, ' ').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}]+/gu, ' ').trim();
+          let target = null;
+          for (const p of CAT_TARGETS) {
+            if (p.test.test(stripped) || p.test.test(cat.name)) { target = p.to; break; }
+          }
+          if (!target) {
+            // Fallback : prend le nom existant nettoyé en majuscules avec format ╭┈
+            const fallback = stripped.toUpperCase().slice(0, 80);
+            if (fallback) target = `╭┈ ${fallback}`;
+            else { kept++; continue; }
+          }
+          if (cat.name === target) { skipped++; continue; }
+          await cat.setName(target, 'force-rename-categories par Maxime');
+          renamed++;
+          await new Promise(r => setTimeout(r, 800));
+        } catch (e) {
+          failed++;
+          if (errors.length < 10) errors.push(`${cat.name} → ${e.message}`);
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      const embed = new EmbedBuilder()
+        .setColor(failed === 0 ? '#2ECC71' : '#E67E22')
+        .setTitle('🔥 ・ FORCE RENAME CATÉGORIES ・ Rapport')
+        .setDescription([
+          `**Total catégories :** ${total}`,
+          `✅ **Renommées :** ${renamed}`,
+          `⏭️ **Déjà OK :** ${skipped}`,
+          `🔒 **Conservées :** ${kept}`,
+          `❌ **Échecs :** ${failed}`,
+          errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n').slice(0, 1500) : '',
+        ].filter(Boolean).join('\n'))
+        .setTimestamp();
+      return respFn({ embeds: [embed] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 💎 FORCE TOUT : catégories + salons en 1 commande
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'force-tout') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      // Étape 1 : Catégories
+      const CAT_TARGETS = [
+        { to: '╭┈ 📜 INFORMATIONS',   test: /information|info|accueil|important|r[èe]gles/i },
+        { to: '╭┈ 💬 GÉNÉRAL',         test: /general|général|chat|discussion/i },
+        { to: '╭┈ 💰 ÉCONOMIE',        test: /[eé]conomie|economy|argent|money/i },
+        { to: '╭┈ 🎰 CASINO',          test: /casino/i },
+        { to: '╭┈ 🎮 JEUX FUN',        test: /jeux.?fun|fun.?jeux|amusement|^fun$|gaming/i },
+        { to: '╭┈ 🎯 JEUX',            test: /(^|\s)jeux(\s|$)|^games$|mini.?jeux/i },
+        { to: '╭┈ 🎪 ÉVÉNEMENTS',      test: /[eé]v[eé]nements?|events?|tournoi|loto/i },
+        { to: '╭┈ 👥 COMMUNAUTÉ',      test: /communaut[eé]|community|entraide|cr[eé]ativit[eé]|creativ|membres?/i },
+        { to: '╭┈ 🛡️ ADMINISTRATION', test: /administration|^admin$|^staff$|mod[eé]ration|gestion/i },
+        { to: '╭┈ 📣 ANNONCES',        test: /annonces?|announc/i },
+        { to: '╭┈ 🔊 VOCAUX',          test: /vocaux|voice|salon.?vocal|voix/i },
+        { to: '╭┈ 🎫 SUPPORT',         test: /support|tickets?|aide/i },
+        { to: '╭┈ 🤖 BOT',             test: /^bot$|^bots$|nexus/i },
+      ];
+
+      let catRenamed = 0, catFailed = 0, chRenamed = 0, chFailed = 0, chSkipped = 0;
+      const errors = [];
+
+      // CAT
+      for (const cat of [...guild.channels.cache.filter(c => c.type === ChannelType.GuildCategory).values()]) {
+        try {
+          const stripped = cat.name.replace(/[┈・╭╰┆]+/g, ' ').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}]+/gu, ' ').trim();
+          let target = null;
+          for (const p of CAT_TARGETS) {
+            if (p.test.test(stripped) || p.test.test(cat.name)) { target = p.to; break; }
+          }
+          if (!target) {
+            const fallback = stripped.toUpperCase().slice(0, 80);
+            if (fallback) target = `╭┈ ${fallback}`;
+            else continue;
+          }
+          if (cat.name === target) continue;
+          await cat.setName(target, 'force-tout par Maxime');
+          catRenamed++;
+          await new Promise(r => setTimeout(r, 800));
+        } catch (e) {
+          catFailed++;
+          if (errors.length < 5) errors.push(`Cat ${cat.name} → ${e.message}`);
+        }
+      }
+
+      // SALONS
+      const cleanName = (raw) => {
+        let n = (raw || '')
+          .replace(/[┆・╭╰┈]+/g, ' ')
+          .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{1F1E6}-\u{1F1FF}]+/gu, ' ')
+          .replace(/\s+/g, '-').replace(/[-]+/g, '-').replace(/^-+|-+$/g, '')
+          .toLowerCase().trim();
+        if (!n) n = 'salon';
+        if (n.length > 90) n = n.slice(0, 90);
+        return n;
+      };
+
+      const chans = [...guild.channels.cache.values()].filter(c =>
+        c.type === ChannelType.GuildText || c.type === ChannelType.GuildVoice ||
+        c.type === ChannelType.GuildAnnouncement || c.type === ChannelType.GuildForum ||
+        c.type === ChannelType.GuildStageVoice
+      );
+
+      for (const ch of chans) {
+        try {
+          if ((ch.name || '').startsWith('┆・')) { chSkipped++; continue; }
+          const cleaned = cleanName(ch.name);
+          let newName;
+          if (ch.type === ChannelType.GuildVoice || ch.type === ChannelType.GuildStageVoice) {
+            const pretty = cleaned.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            newName = `┆・${pretty}`;
+          } else {
+            newName = `┆・${cleaned}`;
+          }
+          if (newName.length > 100) newName = newName.slice(0, 100);
+          await ch.setName(newName, 'force-tout par Maxime');
+          chRenamed++;
+          await new Promise(r => setTimeout(r, 800));
+        } catch (e) {
+          chFailed++;
+          if (errors.length < 10) errors.push(`#${ch.name} → ${e.message}`);
+        }
+      }
+
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      const embed = new EmbedBuilder()
+        .setColor((catFailed + chFailed) === 0 ? '#9B59B6' : '#E67E22')
+        .setTitle('💎 ・ FORCE TOUT ・ Serveur ULTIME ・')
+        .setDescription([
+          '**Catégories + Salons forcés au format pro :**',
+          `╭┈ EMOJI NOM (catégories) • ┆・nom (salons)`,
+          '',
+          `🗂️ **Catégories renommées :** ${catRenamed} (échecs : ${catFailed})`,
+          `📝 **Salons renommés :** ${chRenamed} (déjà OK : ${chSkipped}, échecs : ${chFailed})`,
+          errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n').slice(0, 1200) : '',
+        ].filter(Boolean).join('\n'))
+        .setFooter({ text: 'Si rate-limit Discord, relance dans 10min — les renames non faits seront repris.' })
+        .setTimestamp();
+      return respFn({ embeds: [embed] });
     }
 
     if (sub === 'separateur') {
