@@ -339,3 +339,6 @@ async function handleComponent(interaction, customId) {
 
   return false;
 }
+
+// Désactivée pour libérer slot (limite 100 cmds Discord)
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;

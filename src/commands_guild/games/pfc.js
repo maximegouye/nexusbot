@@ -159,3 +159,6 @@ module.exports = {
   },
 };
 
+
+// Désactivée temporairement (limite 100 cmds Discord)
+if (module.exports && module.exports.data) module.exports._prefixOnly = true;
