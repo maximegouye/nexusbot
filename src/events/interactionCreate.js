@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../database/db');
+const { withWatchdog, ensureAcked, logError } = require('../utils/interactionGuard');
 
 // Routes des composants (boutons, menus, modals) vers la commande handler
 const COMPONENT_ROUTES = {
@@ -234,34 +235,39 @@ module.exports = {
 
       if (handler) {
         try {
-          // ── STRATÉGIE INTERACTION ROBUSTE V3 ──────────────────────────────────
-          // Pour les MODAL SUBMITS uniquement : auto-defer (safe car ne peut pas showModal)
-          // Pour les BOUTONS/MENUS : on laisse le handler gérer (il peut faire reply/update/showModal/deferReply selon)
-          // Après le handler : si rien n'a été ack, on fait deferUpdate() en fallback silencieux
+          // ═══════════════════════════════════════════════════════════
+          // 🛡️ STRATÉGIE BULLETPROOF V4 — ZÉRO ERREUR INTERACTION
+          // ═══════════════════════════════════════════════════════════
+          // 1. Modal submits : auto-defer ephemeral (safe, ne peut pas showModal)
+          // 2. Boutons/menus : laisser le handler gérer (reply/update/showModal/defer)
+          // 3. WATCHDOG : Promise.race avec timer 2.5s qui auto-ack si rien fait
+          //    → Discord timeout = 3s, on prend 500ms de marge
+          //    → Le handler continue son travail en background, l'user voit pas l'erreur
+          // 4. ensureAcked en fin : garantit ack final même si watchdog raté
           if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied) {
             try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
           }
 
           // ── handleComponent en premier (boutons / menus / modals) ──────────
           if (typeof handler.handleComponent === 'function') {
-            try {
-              await handler.handleComponent(interaction, cid);
-            } catch (hcErr) {
-              console.error(`[COMPONENT ${cid}] handleComponent crash:`, hcErr?.message || hcErr);
-              // Tenter de répondre proprement, fallback silencieux si déjà ack
-              try {
-                if (!interaction.replied && !interaction.deferred) {
-                  await interaction.reply({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
-                } else {
-                  await interaction.followUp({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
-                }
-              } catch {}
-            }
-            // FALLBACK CRUCIAL : si après le handler l'interaction n'a TOUJOURS pas été ack,
-            // on fait deferUpdate() pour éviter "L'application ne répond plus" côté client.
-            if (!interaction.replied && !interaction.deferred) {
-              try { await interaction.deferUpdate(); } catch {}
-            }
+            const handlerPromise = handler.handleComponent(interaction, cid).catch(hcErr => {
+              logError(`COMPONENT ${cid}`, hcErr, { cid, userId: interaction.user?.id, guildId: interaction.guildId });
+              // Tenter d'envoyer une erreur visible, sinon swallow
+              return (async () => {
+                try {
+                  if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
+                  } else {
+                    await interaction.followUp({ content: `❌ Erreur: ${hcErr?.message?.slice(0, 200) || 'Erreur inconnue'}`, ephemeral: true });
+                  }
+                } catch {}
+              })();
+            });
+
+            // 🛡️ WATCHDOG : si le handler tarde > 2.5s ET n'a rien ack, on défère auto
+            await withWatchdog(interaction, handlerPromise);
+            // ✅ ENSURE : ack final en safety net (idempotent si déjà ack)
+            await ensureAcked(interaction);
             return;
           } else if (!interaction.isModalSubmit()) {
             // Bouton/menu sans handleComponent → collector expiré ou bouton orphelin
