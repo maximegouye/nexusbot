@@ -100,6 +100,7 @@ module.exports = {
     .addSubcommand(s => s.setName('force-tout').setDescription("💎 FORCE renomme catégories + salons + topics + permissions (ULTIME)"))
     .addSubcommand(s => s.setName('audit-total-360').setDescription("🛡️ AUDIT 360° : rôles + perms + hiérarchie + Staff global + salons accessibles"))
     .addSubcommand(s => s.setName('audit-rapide').setDescription("⚡ AUDIT 360° v2 OPTIMISÉ : 30s — perms en parallèle + bulk overwrites"))
+    .addSubcommand(s => s.setName('autoconfig').setDescription("🤖 AUTOCONFIG : détecte les bons salons et configure tout (welcome/logs/levels/etc)"))
     .addSubcommand(s => s.setName('separateur').setDescription("➖ Ajoute un salon séparateur")
       .addStringOption(o => o.setName('nom').setDescription('Nom du séparateur').setRequired(true))),
 
@@ -2053,6 +2054,112 @@ module.exports = {
           errors.length ? '\n**Erreurs :**\n' + errors.map(e => `• ${e}`).join('\n') : '',
         ].filter(Boolean).join('\n').slice(0, 4000))
         .setFooter({ text: 'Audit en parallèle • Si rôle plus haut que bot, monter NexusBot dans la hiérarchie.' })
+        .setTimestamp()] });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🤖 AUTOCONFIG : détecte les bons salons et configure tout
+    // ═══════════════════════════════════════════════════════════════
+    if (sub === 'autoconfig') {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
+      const db = require('../../database/db');
+
+      // Helper : trouve un salon par regex sur le nom
+      const findChan = (regex) => {
+        return [...guild.channels.cache.values()].find(c =>
+          c.type === ChannelType.GuildText && regex.test(c.name)
+        );
+      };
+
+      const detected = {};
+      const skipped = [];
+      const set = (key, regex) => {
+        const ch = findChan(regex);
+        if (ch) {
+          try {
+            db.setConfig(guild.id, key, ch.id);
+            detected[key] = `<#${ch.id}>`;
+          } catch (e) {
+            skipped.push(`${key}: ${e.message}`);
+          }
+        } else {
+          skipped.push(`${key}: aucun salon correspondant trouvé`);
+        }
+      };
+
+      // 1. Welcome → #bienvenue
+      set('welcome_channel', /bienvenue|welcome|arriv[eé]/i);
+      // 2. Leave → même salon (départs)
+      set('leave_channel', /bienvenue|welcome|arriv[eé]|d[eé]part/i);
+      // 3. Mod log → #bot-logs ou #modération
+      set('mod_log_channel', /bot.?logs?|mod.?logs?|mod[eé]ration|audit/i);
+      // 4. Log général → idem
+      set('log_channel', /bot.?logs?|logs?|audit/i);
+      // 5. Level-up → #niveaux
+      set('level_channel', /niveaux|levels?|level.?up/i);
+      // 6. Quest channel → #quêtes
+      set('quest_channel', /qu[eê]tes?|quests?|missions/i);
+      // 7. Boost channel → #annonces
+      set('boost_channel', /annonces?|boosts?|announc/i);
+      // 8. Birthday channel → #annonces
+      set('birthday_channel', /anniv|birth|annonces?/i);
+      // 9. Ticket log → #bot-logs (différent canal pour audit tickets)
+      set('ticket_log_channel', /bot.?logs?|tickets?-?logs?/i);
+
+      // 10. Configuration des messages welcome/leave par défaut
+      try {
+        db.setConfig(guild.id, 'welcome_msg', '👋 Bienvenue {user} sur **{server}** ! Lis les règles dans <#1499359067414724718> et réagis pour avoir accès au reste !');
+        detected.welcome_msg = '✅ Configuré';
+      } catch (e) {
+        skipped.push('welcome_msg: ' + e.message);
+      }
+
+      // 11. Couleur par défaut harmonisée
+      try {
+        const cfg = db.getConfig(guild.id);
+        if (!cfg.color || cfg.color === '#7B2FBE') {
+          db.setConfig(guild.id, 'color', '#9B59B6'); // violet
+          detected.color = '#9B59B6 (violet harmonisé)';
+        }
+      } catch {}
+
+      // 12. Vérifier que XP est activé
+      try {
+        const cfg = db.getConfig(guild.id);
+        if (cfg.xp_enabled === 0 || cfg.xp_enabled === false) {
+          // Note: on ne force pas l'XP si désactivé exprès, juste signaler
+          skipped.push('xp_enabled: actuellement désactivé (vérifie /setup xp)');
+        } else {
+          detected.xp_enabled = '✅ Activé';
+        }
+      } catch {}
+
+      // 13. Currency_emoji et name si pas définis
+      try {
+        const cfg = db.getConfig(guild.id);
+        if (!cfg.currency_name) db.setConfig(guild.id, 'currency_name', 'Euros');
+        if (!cfg.currency_emoji) db.setConfig(guild.id, 'currency_emoji', '€');
+        detected.currency = `${cfg.currency_emoji || '€'} ${cfg.currency_name || 'Euros'}`;
+      } catch {}
+
+      // RAPPORT
+      const respFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
+      const detectedEntries = Object.entries(detected).map(([k, v]) => `✅ **${k}** → ${v}`);
+      const lines = [
+        '**Configurations détectées et appliquées :**',
+        '',
+        ...detectedEntries.slice(0, 25),
+        '',
+        skipped.length ? `**Non configurés (${skipped.length}) :**\n` + skipped.slice(0, 8).map(s => `⚠️ ${s}`).join('\n') : '',
+        '',
+        '**Note :** Aucun auto-rôle n\'est configuré pour préserver le système de validation par réaction sur le règlement.',
+      ].filter(Boolean).join('\n');
+
+      return respFn({ embeds: [new EmbedBuilder()
+        .setColor(skipped.length === 0 ? '#2ECC71' : '#F39C12')
+        .setTitle('🤖 ・ AUTOCONFIG ・ Rapport')
+        .setDescription(lines.slice(0, 4000))
+        .setFooter({ text: 'Vérifie /setup voir pour confirmer • Personnaliser : /setup <sous-commande>' })
         .setTimestamp()] });
     }
 
