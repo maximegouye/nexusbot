@@ -1015,7 +1015,13 @@ module.exports = {
           { name: '🎯 Recrutement', value: 'recrutement' },
           { name: '📋 Autre', value: 'autre' },
         ))
-      .addChannelOption(o => o.setName('categorie').setDescription('Catégorie Discord').addChannelTypes(ChannelType.GuildCategory).setRequired(true))),
+      .addChannelOption(o => o.setName('categorie').setDescription('Catégorie Discord').addChannelTypes(ChannelType.GuildCategory).setRequired(true)))
+    .addSubcommand(s => s
+      .setName('dashboard')
+      .setDescription('📊 Dashboard temps réel des tickets ouverts avec stats live'))
+    .addSubcommand(s => s
+      .setName('staff-leaderboard')
+      .setDescription('🏆 Classement des staff par tickets traités cette semaine')),
   cooldown: 3,
 
   handleComponent,
@@ -1464,6 +1470,81 @@ module.exports = {
           .setColor('#2ECC71')
           .setTitle('✅ Catégorie associée')
           .setDescription(`Tickets de type **${type}** iront dans **${cat.name}**.`)
+        ], ephemeral: true,
+      });
+    }
+
+    // ══ NOUVEAU : Dashboard live des tickets ═══════════════════════════════════
+    if (sub === 'dashboard') {
+      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      const open = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND status='open' ORDER BY created_at DESC").all(interaction.guildId);
+      const today = ts() - 86400;
+      const closedToday = db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='closed' AND closed_at>?").get(interaction.guildId, today).c;
+      const avgRating = db.db.prepare("SELECT AVG(rating) as a, COUNT(rating) as n FROM tickets WHERE guild_id=? AND rating IS NOT NULL").get(interaction.guildId);
+      const unclaimed = open.filter(t => !t.claimed_by).length;
+      const oldestAge = open.length ? Math.floor((ts() - Math.min(...open.map(t => t.created_at))) / 60) : 0;
+
+      const lines = open.slice(0, 10).map(t => {
+        const cat = getCat(t.category);
+        const ageMin = Math.floor((ts() - t.created_at) / 60);
+        const ageStr = ageMin < 60 ? `${ageMin}min` : `${Math.floor(ageMin/60)}h${ageMin%60}m`;
+        const claimedBy = t.claimed_by ? `<@${t.claimed_by}>` : '🔓 *Disponible*';
+        return `${cat.emoji} **#${t.id}** • <#${t.channel_id}> • <@${t.user_id}> • ⏱️ ${ageStr} • ${claimedBy}`;
+      }).join('\n');
+
+      return reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#5865F2')
+          .setTitle('📊 Dashboard Tickets — Live')
+          .addFields(
+            { name: '🟢 Ouverts',           value: `**${open.length}**`,                                           inline: true },
+            { name: '🔓 Non-claim',          value: `**${unclaimed}**`,                                             inline: true },
+            { name: '⏰ Plus vieux',         value: oldestAge ? `${Math.floor(oldestAge/60)}h${oldestAge%60}m` : '—', inline: true },
+            { name: '✅ Fermés (24h)',       value: `**${closedToday}**`,                                           inline: true },
+            { name: '⭐ Note moyenne',       value: avgRating?.a ? `**${avgRating.a.toFixed(1)}/5** (${avgRating.n} avis)` : '—', inline: true },
+            { name: '📈 Tickets traités tot.', value: `**${db.db.prepare("SELECT COUNT(*) as c FROM tickets WHERE guild_id=? AND status='closed'").get(interaction.guildId).c}**`, inline: true },
+            { name: '\n📋 Tickets ouverts (top 10)', value: lines || '*Aucun ticket ouvert*', inline: false },
+          )
+          .setFooter({ text: '🔄 Actualiser : relance /ticket dashboard' })
+          .setTimestamp()
+        ], ephemeral: true,
+      });
+    }
+
+    // ══ NOUVEAU : Leaderboard staff ═══════════════════════════════════════════
+    if (sub === 'staff-leaderboard') {
+      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
+      const weekAgo = ts() - 7 * 86400;
+      const leaders = db.db.prepare(`
+        SELECT claimed_by, COUNT(*) as count, AVG(rating) as avgRating
+        FROM tickets
+        WHERE guild_id=? AND status='closed' AND closed_at > ? AND claimed_by IS NOT NULL
+        GROUP BY claimed_by
+        ORDER BY count DESC
+        LIMIT 10
+      `).all(interaction.guildId, weekAgo);
+
+      if (!leaders.length) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor('#5865F2').setTitle('🏆 Leaderboard Staff')
+            .setDescription('Aucun ticket pris en charge cette semaine.')
+          ], ephemeral: true,
+        });
+      }
+
+      const desc = leaders.map((s, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i+1}.**`;
+        const stars = s.avgRating ? ` • ⭐ ${s.avgRating.toFixed(1)}` : '';
+        return `${medal} <@${s.claimed_by}> — **${s.count}** ticket(s)${stars}`;
+      }).join('\n');
+
+      return reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('🏆 Leaderboard Staff — 7 derniers jours')
+          .setDescription(desc)
+          .setFooter({ text: 'Le staff le plus actif sur les tickets' })
+          .setTimestamp()
         ], ephemeral: true,
       });
     }
