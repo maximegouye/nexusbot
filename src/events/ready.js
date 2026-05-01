@@ -592,6 +592,13 @@ module.exports = {
       console.log('✅ Monthly Theme : démarré (vérif quotidienne)');
     } catch (e) { console.log('⚠️  Monthly Theme error:', e.message); }
 
+    // Conversation Starter — prompts spontanés pour réveiller le chat
+    try {
+      const conversationStarter = require('../utils/conversationStarter');
+      conversationStarter.startConversationScheduler(client);
+      console.log('✅ Conversation Starter : démarré (prompts 10h-23h Paris)');
+    } catch (e) { console.log('⚠️  Conversation Starter error:', e.message); }
+
     // Daily Highlight — re-post le meilleur message du jour à 22h Paris
     try {
       const dailyHighlight = require('../utils/dailyHighlight');

@@ -27,9 +27,10 @@ setInterval(() => {
   }
 }, 300_000); // Exécute toutes les 5 minutes
 
-// 🎯 Bonus FIRST MESSAGE du jour — récompense la connexion quotidienne pour
-// favoriser une activité régulière. Bonus : +50 XP + 100 € (vs +5-15 XP / +1 €
-// d'un message normal). Premier message après minuit local du jour.
+// 🎯 Bonus FIRST MESSAGE du jour + STREAK QUOTIDIEN
+// Le streak (jours consécutifs) est le plus gros driver de retention sur
+// les apps sociales. Chaque jour consécutif augmente le bonus. 1 jour
+// raté = streak reset à 1. Affichage motivant avec milestones (7, 30, 100, 365).
 const _firstMsgCache = new Map(); // userId-guildId → 'YYYY-MM-DD'
 async function handleFirstMessageOfDay(message) {
   try {
@@ -37,11 +38,16 @@ async function handleFirstMessageOfDay(message) {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const key = `${message.author.id}-${message.guild.id}`;
 
-    // Cache mémoire d'abord (rapide)
     if (_firstMsgCache.get(key) === today) return;
 
-    // DB : on stocke le dernier jour de premier message dans guild_config
-    // par utilisateur (table users si elle a un champ last_active_day)
+    // Auto-migration des colonnes de streak si absentes
+    try {
+      const cols = db.db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
+      if (!cols.includes('last_first_msg_day')) db.db.prepare('ALTER TABLE users ADD COLUMN last_first_msg_day TEXT').run();
+      if (!cols.includes('daily_streak'))       db.db.prepare('ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0').run();
+      if (!cols.includes('best_streak'))        db.db.prepare('ALTER TABLE users ADD COLUMN best_streak INTEGER DEFAULT 0').run();
+    } catch {}
+
     const u = db.getUser(message.author.id, message.guild.id);
     if (!u) return;
     if (u.last_first_msg_day === today) {
@@ -49,34 +55,69 @@ async function handleFirstMessageOfDay(message) {
       return;
     }
 
-    // Premier message du jour ! Bonus
-    const bonusXP    = 50;
-    const bonusCoins = 100;
+    // Calcul streak : si la veille était le dernier jour actif → streak +1
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    let streak = (u.daily_streak || 0);
+    let streakReset = false;
+    let welcomeBackDays = 0;
+
+    if (u.last_first_msg_day === yesterday) {
+      streak += 1;
+    } else if (u.last_first_msg_day) {
+      // Calcule depuis combien de temps il/elle est absent(e)
+      const lastDate = new Date(u.last_first_msg_day);
+      const now = new Date();
+      welcomeBackDays = Math.floor((now - lastDate) / 86_400_000);
+      streakReset = streak >= 3;
+      streak = 1;
+    } else {
+      streak = 1;
+    }
+    const bestStreak = Math.max(streak, u.best_streak || 0);
+
+    // Bonus croissants selon streak (cap à 7×)
+    const streakMult = Math.min(1 + (streak - 1) * 0.15, 7); // J1=1×, J2=1.15×, J7=1.9×, J30=cap 7×
+    const bonusXP    = Math.round(50 * streakMult);
+    const bonusCoins = Math.round(100 * streakMult);
+
     db.addXP(message.author.id, message.guild.id, bonusXP);
     db.addCoins(message.author.id, message.guild.id, bonusCoins);
 
-    // Marque le jour comme traité (DB + cache)
     try {
-      db.db.prepare('UPDATE users SET last_first_msg_day = ? WHERE user_id = ? AND guild_id = ?')
-        .run(today, message.author.id, message.guild.id);
-    } catch (_) {
-      // Si la colonne n'existe pas, on la crée puis retry
-      try {
-        db.db.prepare('ALTER TABLE users ADD COLUMN last_first_msg_day TEXT').run();
-        db.db.prepare('UPDATE users SET last_first_msg_day = ? WHERE user_id = ? AND guild_id = ?')
-          .run(today, message.author.id, message.guild.id);
-      } catch (_) {}
-    }
+      db.db.prepare('UPDATE users SET last_first_msg_day = ?, daily_streak = ?, best_streak = ? WHERE user_id = ? AND guild_id = ?')
+        .run(today, streak, bestStreak, message.author.id, message.guild.id);
+    } catch {}
     _firstMsgCache.set(key, today);
 
-    // Réaction discrète sur le message pour signaler le bonus
     const cfg = db.getConfig(message.guild.id);
     const coin = cfg?.currency_emoji || '€';
+
+    // Milestone celebrations
+    let milestoneText = '';
+    if (streak === 7)   milestoneText = '\n🏅 **Streak 7 jours !** Tu es régulier — chapeau.';
+    else if (streak === 30)  milestoneText = '\n🏆 **Streak 30 jours !** Bonus mensuel : +5000 € 🎉';
+    else if (streak === 100) milestoneText = '\n👑 **Streak 100 jours !** Tu es légendaire. +25 000 € 🌟';
+    else if (streak === 365) milestoneText = '\n💎 **Streak 365 jours !** UN AN COMPLET. +100 000 € 💎';
+    if (streak === 30)  db.addCoins(message.author.id, message.guild.id, 5_000);
+    if (streak === 100) db.addCoins(message.author.id, message.guild.id, 25_000);
+    if (streak === 365) db.addCoins(message.author.id, message.guild.id, 100_000);
+
+    const fireEmoji = streak >= 100 ? '👑' : streak >= 30 ? '💎' : streak >= 7 ? '🔥' : '✨';
+    const resetText = streakReset ? `\n💔 *Ton streak a été réinitialisé après une absence...*` : '';
+
+    // 🎉 WELCOME BACK : bonus de retour si absent ≥ 7 jours
+    let welcomeBackText = '';
+    if (welcomeBackDays >= 7) {
+      const returnBonus = Math.min(welcomeBackDays * 200, 10_000); // 200€/jour absent, cap 10k
+      db.addCoins(message.author.id, message.guild.id, returnBonus);
+      welcomeBackText = `\n🎉 **Bon retour !** Absent depuis **${welcomeBackDays} jours** — bonus de retour : **+${returnBonus.toLocaleString('fr-FR')} ${coin}** 💝`;
+      message.react('💝').catch(() => {});
+    }
+
     message.react('🎁').catch(() => {});
-    // Petit message éphémère qui se supprime après 8 secondes
     message.channel.send({
-      content: `🎁 <@${message.author.id}> **Premier message du jour !** +${bonusXP} XP & +${bonusCoins} ${coin} 🌟`,
-    }).then(m => setTimeout(() => m.delete().catch(() => {}), 8000)).catch(() => {});
+      content: `🎁 <@${message.author.id}> **Premier message du jour !** +${bonusXP} XP & +${bonusCoins.toLocaleString('fr-FR')} ${coin}\n${fireEmoji} **Streak : ${streak} jour${streak > 1 ? 's' : ''}** consécutifs (record perso : ${bestStreak})${milestoneText}${resetText}${welcomeBackText}`,
+    }).then(m => setTimeout(() => m.delete().catch(() => {}), 14000)).catch(() => {});
   } catch {}
 }
 

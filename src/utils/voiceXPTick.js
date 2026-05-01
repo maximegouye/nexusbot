@@ -1,9 +1,26 @@
 const db = require('../database/db');
 const { checkActivityRoles } = require('./activityRoleCheck');
 
+// 🎉 Bonus Vocal Weekend : ×2 du vendredi 18h au dimanche minuit (Paris)
+// pour pousser les membres à se connecter en vocal pendant le weekend.
+function isVocalBoostActive() {
+  const now = new Date();
+  const parisOffset = now.getMonth() >= 2 && now.getMonth() <= 9 ? 2 : 1;
+  const parisHour = (now.getUTCHours() + parisOffset) % 24;
+  const day = now.getUTCDay(); // 0=Sun, 5=Fri, 6=Sat
+  // Vendredi à partir de 18h Paris
+  if (day === 5 && parisHour >= 18) return true;
+  // Samedi toute la journée
+  if (day === 6) return true;
+  // Dimanche jusqu'à minuit (toute la journée)
+  if (day === 0) return true;
+  return false;
+}
+
 module.exports = async (client) => {
   // Créditer 1 min de XP/coins aux membres actuellement en vocal
   const now = Math.floor(Date.now() / 1000);
+  const vocalBoost = isVocalBoostActive() ? 2 : 1;
 
   for (const guild of client.guilds.cache.values()) {
     try {
@@ -15,8 +32,8 @@ module.exports = async (client) => {
           if (member.user.bot) continue;
           if (member.voice.selfMute && member.voice.selfDeaf) continue; // AFK
 
-          const xpGain    = 3 * (cfg.xp_multiplier || 1);
-          const coinsGain = 2;
+          const xpGain    = 3 * (cfg.xp_multiplier || 1) * vocalBoost;
+          const coinsGain = 2 * vocalBoost;
 
           db.addXP(member.id, guild.id, xpGain);
           db.addCoins(member.id, guild.id, coinsGain);
