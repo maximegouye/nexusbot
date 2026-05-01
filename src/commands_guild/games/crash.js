@@ -91,6 +91,68 @@ function altitudeBar(current, crashPoint) {
   return bars.join('');
 }
 
+// ─── Trajectory graph ASCII (real-time mult over time) ────
+// trajectory: [{ mult, t }, ...] — captured every tick during the game
+// Renders a 2D ASCII line plot showing the rocket trajectory.
+function buildTrajectoryGraph(trajectory, currentMult, crashPoint, crashed = false) {
+  const COLS  = 28;  // largeur du graphe
+  const ROWS  = 7;   // hauteur du graphe
+  if (trajectory.length === 0) return '`──────────────────────────────`';
+
+  // Cap pour l'axe Y : on prend le max entre la valeur courante, le dernier
+  // point de la trajectoire, et un seuil mini de 2.0 pour avoir un graphe
+  // lisible même au début.
+  const maxMult = Math.max(currentMult, ...trajectory.map(p => p.mult), 2.0);
+  const minMult = 1.0;
+
+  // Échantillonne la trajectoire pour qu'elle tienne dans COLS colonnes
+  const samples = [];
+  for (let c = 0; c < COLS; c++) {
+    const idx = Math.floor((c / (COLS - 1)) * (trajectory.length - 1));
+    samples.push(trajectory[idx].mult);
+  }
+
+  // Mappe chaque sample vers une row (0 = top, ROWS-1 = bottom)
+  const grid = [];
+  for (let r = 0; r < ROWS; r++) grid.push(Array(COLS).fill(' '));
+
+  for (let c = 0; c < COLS; c++) {
+    const m = samples[c];
+    const norm = (m - minMult) / (maxMult - minMult);
+    const r = ROWS - 1 - Math.floor(norm * (ROWS - 1));
+    // Dessin courbe : ╱ pour montée, ─ pour stable
+    if (c > 0) {
+      const prevM = samples[c - 1];
+      const prevR = ROWS - 1 - Math.floor(((prevM - minMult) / (maxMult - minMult)) * (ROWS - 1));
+      const dr = r - prevR;
+      // Remplit les rows entre prev et current pour une courbe continue
+      const lo = Math.min(prevR, r);
+      const hi = Math.max(prevR, r);
+      for (let rr = lo; rr <= hi; rr++) {
+        if (grid[rr][c] === ' ') {
+          grid[rr][c] = (dr === 0) ? '─' : (rr === r ? '╱' : '│');
+        }
+      }
+    }
+    // Marqueur final : la fusée à la position courante
+    if (c === COLS - 1) {
+      grid[r][c] = crashed ? '💥' : rocketEmoji(currentMult);
+    }
+  }
+
+  // Ajoute axe Y avec valeurs (×N.N) sur chaque ligne
+  const lines = grid.map((row, r) => {
+    const yVal = maxMult - (r / (ROWS - 1)) * (maxMult - minMult);
+    const yStr = `×${yVal.toFixed(1)}`.padStart(5);
+    return `${yStr} │${row.join('')}`;
+  });
+  // Axe X
+  lines.push(`      └${'─'.repeat(COLS)}`);
+  lines.push(`        ${' '.repeat(Math.floor(COLS/2)-3)}Temps →`);
+
+  return '```\n' + lines.join('\n') + '\n```';
+}
+
 // ─── Crash animation (explosion dramatique avec 6+ frames) ──
 async function animateCrash(msg) {
   const crashFlashes = [
@@ -142,6 +204,10 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
   let cashedOut    = false;
   let cashoutMult  = null;
   let gameLoop     = null;
+  // Trajectoire : array des paires {t, mult} capturée à chaque tick.
+  // Utilisé pour dessiner le graphe ASCII en temps réel.
+  const trajectory = [{ t: 0, mult: 1.0 }];
+  let tickCount = 0;
 
   function buildCrashEmbed(crashed = false) {
     const color = crashed ? '#E74C3C' : cashedOut ? '#2ECC71' : multColor(current);
@@ -152,6 +218,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     const bar    = graphBar(current, crashPoint);
     const rocket = rocketEmoji(current);
     const alt    = altitudeBar(current, crashPoint);
+    const trajGraph = buildTrajectoryGraph(trajectory, current, crashPoint, crashed);
 
     // Affichage dramatique du multiplicateur avec styling amélioré
     const multDisplay = `# ×${current.toFixed(2)}`.padStart(8);
@@ -180,6 +247,7 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
           value: `## ×${current.toFixed(2)}${warningText}`,
           inline: false,
         },
+        { name: '📈 Trajectoire', value: trajGraph, inline: false },
         { name: '✈️ Altitude', value: '`' + alt + '`', inline: false },
         { name: '📊 Danger', value: '`' + bar + '`', inline: false },
         { name: '💰 Mise', value: `${mise} ${coin}`, inline: true },
@@ -252,6 +320,10 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     if (cashedOut) {
       // Continuer a afficher mais cash-out deja pris
       current = parseFloat((current + INCREMENT + current * 0.02).toFixed(2));
+    tickCount++;
+    trajectory.push({ t: tickCount, mult: current });
+    // Limite la mémoire : on garde max 60 points
+    if (trajectory.length > 60) trajectory.shift();
 
       if (current >= crashPoint) {
         clearInterval(gameLoop);
@@ -279,6 +351,10 @@ async function playCrash(source, userId, guildId, mise, autoCashout = null) {
     }
 
     current = parseFloat((current + INCREMENT + current * 0.02).toFixed(2));
+    tickCount++;
+    trajectory.push({ t: tickCount, mult: current });
+    // Limite la mémoire : on garde max 60 points
+    if (trajectory.length > 60) trajectory.shift();
 
     // Auto cash-out
     if (autoCashout && current >= autoCashout && !cashedOut) {
