@@ -222,11 +222,28 @@ module.exports = {
 
     // Texte : system_messages.content > cfg.welcome_msg > défaut
     const rawText = (sysMsg && sysMsg.content) || cfg.welcome_msg || defaultMsg;
-    const msg = rawText
+
+    // 🛡️ Auto-réparation des références salon cassées (`# inconnu`)
+    // Si le welcome_msg contient un <#ID> dont le salon n'existe plus
+    // (config obsolète après suppression/recréation), on remplace par le
+    // salon des règles ou de vérification actuel s'il existe, sinon par
+    // un texte fallback. Évite l'embarrassant "Lis les règles dans #inconnu".
+    const fallbackChannelId = cfg.rules_channel || cfg.verification_channel
+      || guild.channels.cache.find(c => /règles|rules|reglement/i.test(c.name))?.id
+      || guild.channels.cache.find(c => /v[ée]rif/i.test(c.name))?.id
+      || null;
+    const repairedText = rawText.replace(/<#(\d+)>/g, (match, channelId) => {
+      if (guild.channels.cache.has(channelId)) return match;
+      if (fallbackChannelId) return `<#${fallbackChannelId}>`;
+      return 'le salon dédié';
+    });
+
+    const msg = repairedText
       .replace(/\{user\}/g,     `<@${user.id}>`)
       .replace(/\{username\}/g, user.username)
       .replace(/\{server\}/g,   guild.name)
-      .replace(/\{count\}/g,    memberCount.toLocaleString('fr-FR'));
+      .replace(/\{count\}/g,    memberCount.toLocaleString('fr-FR'))
+      .replace(/\{rules\}/g,    fallbackChannelId ? `<#${fallbackChannelId}>` : 'le salon des règles');
 
     // Si un embed JSON custom est défini dans system_messages, on l'utilise tel quel
     let customEmbedData = sysMsg && sysMsg.embed_json
