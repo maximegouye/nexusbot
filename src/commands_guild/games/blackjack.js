@@ -140,27 +140,52 @@ function isBlackjack(hand) { return hand.length === 2 && handValue(hand) === 21;
 function isSoft17(hand)    { return handValue(hand) === 17 && hand.some(c => c.value === 'A'); }
 
 // ─── Cartes ASCII PREMIUM (style Vegas) ───────────────────
+// Discord supporte les codes ANSI dans les code blocks ```ansi```.
+// Couleurs : 31=rouge (♥♦), 37=blanc (♣♠), 1=bold, 0=reset.
+const ANSI_RESET = '[0m';
+const ANSI_RED   = '[1;31m';
+const ANSI_WHITE = '[1;37m';
+const ANSI_GOLD  = '[1;33m';
+
+function suitColor(suit) {
+  return (suit === '♥' || suit === '♦') ? ANSI_RED : ANSI_WHITE;
+}
+
 function cardDisplayAscii(card) {
-  const suits_map = {
-    '♠': '♠', '♥': '♥', '♦': '♦', '♣': '♣'
-  };
-  const suit = suits_map[card.suit] || card.suit;
+  const suit = card.suit;
   const val = card.value === '10' ? '10' : card.value;
   const padding = val.length === 1 ? ' ' : '';
+  const c = suitColor(suit);
 
+  // Carte avec valeur et couleur colorées en ANSI, bordures dorées
   return (
-    `┌─────┐\n` +
-    `│${val}${padding}   │\n` +
-    `│  ${suit}  │\n` +
-    `│   ${padding}${val}│\n` +
-    `└─────┘`
+    `${ANSI_GOLD}┌─────┐${ANSI_RESET}\n` +
+    `${ANSI_GOLD}│${c}${val}${padding}   ${ANSI_GOLD}│${ANSI_RESET}\n` +
+    `${ANSI_GOLD}│${c}  ${suit}  ${ANSI_GOLD}│${ANSI_RESET}\n` +
+    `${ANSI_GOLD}│${c}   ${padding}${val}${ANSI_GOLD}│${ANSI_RESET}\n` +
+    `${ANSI_GOLD}└─────┘${ANSI_RESET}`
+  );
+}
+
+// Dos de carte (cachée) — bordures dorées avec motif au centre
+function cardBackDisplay() {
+  return (
+    `${ANSI_GOLD}┌─────┐\n` +
+    `│░░░░░│\n` +
+    `│░░♣░░│\n` +
+    `│░░░░░│\n` +
+    `└─────┘${ANSI_RESET}`
   );
 }
 
 // ─── Afficher une main de cartes côte à côte ──────────────
-function displayHandCards(hand) {
+function displayHandCards(hand, hideSecond = false) {
   if (hand.length === 0) return '(pas de cartes)';
-  const cardLines = hand.map(c => cardDisplayAscii(c).split('\n'));
+  const cardLines = hand.map((c, i) =>
+    (hideSecond && i === 1)
+      ? cardBackDisplay().split('\n')
+      : cardDisplayAscii(c).split('\n')
+  );
   const maxRows = Math.max(...cardLines.map(l => l.length));
   let result = '';
   for (let row = 0; row < maxRows; row++) {
@@ -226,17 +251,18 @@ function buildEmbed(state, status = '') {
     .setTitle('🃏 ・ BLACKJACK TABLE ・ 🃏')
     .setDescription('```\n' + '═'.repeat(40) + '\n   CASINO ALMOSNI - 6 Decks ・ S17\n' + '═'.repeat(40) + '\n```');
 
-  // Affichage dealer avec cartes si révélé
+  // Affichage dealer avec cartes si révélé (couleurs ANSI : ♥♦ rouge, ♣♠ blanc)
   if (state.revealed) {
     embed.addFields({
       name: `🎩 Dealer (${dealerVal})`,
-      value: `${'```\n' + displayHandCards(state.dealer) + '\n```'}`,
+      value: '```ansi\n' + displayHandCards(state.dealer) + '\n```',
       inline: false
     });
   } else {
+    // Cartes dealer : 1ère visible, 2ème (et plus) cachées en dos doré
     embed.addFields({
       name: `🎩 Dealer`,
-      value: `${'```\n' + cardDisplayAscii(state.dealer[0]) + '\n```   🂠 (caché)'}`,
+      value: '```ansi\n' + displayHandCards(state.dealer, true) + '\n```',
       inline: false
     });
   }
@@ -244,7 +270,7 @@ function buildEmbed(state, status = '') {
   // Affichage joueur
   embed.addFields({
     name: `🎮 Vous (Total: ${playerVal})`,
-    value: `${'```\n' + displayHandCards(state.player) + '\n```'}`,
+    value: '```ansi\n' + displayHandCards(state.player) + '\n```',
     inline: false
   });
 
@@ -252,7 +278,7 @@ function buildEmbed(state, status = '') {
   if (state.split && state.split.length > 0) {
     embed.addFields({
       name: `🎮 Main 2 (Total: ${handValue(state.split)})`,
-      value: `${'```\n' + displayHandCards(state.split) + '\n```'}`,
+      value: '```ansi\n' + displayHandCards(state.split) + '\n```',
       inline: false
     });
   }

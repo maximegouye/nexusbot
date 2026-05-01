@@ -19,7 +19,9 @@ function baccaratVal(card) {
 function handTotal(hand) {
   return hand.reduce((s, c) => s + baccaratVal(c), 0) % 10;
 }
-function cardStr(card) { return `\`${card.value}${card.suit}\``; }
+// Sans backticks → Discord rend les ♥️/♦️ en rouge et ♣️/♠️ en noir natif
+// (les SUITS sont déjà avec VS16 pour forcer le rendu emoji).
+function cardStr(card) { return `**${card.value}**${card.suit}`; }
 
 const SUITS  = ['♠️','♥️','♦️','♣️'];
 const VALUES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];

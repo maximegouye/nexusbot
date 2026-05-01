@@ -405,28 +405,30 @@ async function playRoulette(source, userId, guildId, mise, betString, mode = 'eu
     let gifBuffer = null;
     try {
       gifBuffer = await wheelImage.generateRouletteGif(WHEEL_ORDER, resultIdx, {
-        size: 420, frames: 28, rotations: 5, holdFrames: 8,
+        size: 440, frames: 36, rotations: 6, holdFrames: 16,
       });
     } catch (e) { console.error('[roulette] GIF gen error:', e.message); }
 
     if (gifBuffer) {
       const file = new AttachmentBuilder(gifBuffer, { name: 'roulette.gif' });
       const spinEmbed = new EmbedBuilder()
-        .setColor('#1A5276')
+        .setColor('#8B0000')
         .setTitle('🎡 ROULETTE ROYALE — LA BILLE TOURNE !')
         .setDescription([
           header(mode),
           '🎬 *La bille file autour du cylindre...*',
+          '🎯 *Friction... rebonds sur les séparateurs... suspense...*',
           '',
           `**Paris :** ${betLabels}`,
           `**Mise totale :** ${chipDisplay(totalMise, coin)}`,
         ].join('\n'))
         .setImage('attachment://roulette.gif')
-        .setFooter({ text: 'Roulette · Image animée temps réel' });
+        .setFooter({ text: '🎰 Casino Almosni · Roulette en temps réel' });
 
       await msg.edit({ embeds: [spinEmbed], files: [file] }).catch(() => {});
-      // Durée du GIF : 28 frames + 8 hold ≈ ~6.2 sec total
-      await sleep(6500);
+      // Durée du GIF : 36 spin frames + 16 hold ≈ ~8.7 sec total
+      // Le hold final dure 1.2s pour laisser le joueur lire le résultat.
+      await sleep(8800);
       frameIdx = resultIdx; // math : la GIF s'arrête sur resultIdx
     } else {
       // GIF a échoué → fallback ASCII

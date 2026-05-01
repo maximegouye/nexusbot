@@ -17,8 +17,30 @@ function isAvailable() {
   return !!(createCanvas && GIFEncoder);
 }
 
-// ─── Easing cubic ease-out ────────────────────────────────────
+// ─── Easings ──────────────────────────────────────────────────
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+// Bounce dramatique en fin de course : la roue dépasse légèrement sa cible
+// puis rebondit avant de s'arrêter — donne une vraie impression de bille
+// qui résiste à la friction (style casino réel).
+function easeOutBounce(t) {
+  const n1 = 7.5625;
+  const d1 = 2.75;
+  if (t < 1 / d1)         return n1 * t * t;
+  if (t < 2 / d1) { t -= 1.5 / d1;  return n1 * t * t + 0.75; }
+  if (t < 2.5 / d1) { t -= 2.25 / d1; return n1 * t * t + 0.9375; }
+  t -= 2.625 / d1; return n1 * t * t + 0.984375;
+}
+// Mix : majoritairement cubic (rotation rapide qui décélère) avec un léger
+// bounce en fin de course (~15 % de l'amplitude). Évite les rebonds trop
+// caricaturaux mais ajoute la sensation de friction réelle.
+function easeOutCubicWithBounce(t) {
+  const cubic = easeOutCubic(t);
+  if (t < 0.85) return cubic;
+  // Sur les 15 % finaux, on superpose un mini bounce d'amplitude 0.5°
+  const localT = (t - 0.85) / 0.15;
+  const bounce = easeOutBounce(localT) - 1; // -1..0
+  return cubic + bounce * 0.008; // amplitude réduite — léger overshoot/recul
+}
 
 // ─── Helper: lighten/darken hex color ─────────────────────────
 function shadeColor(hex, percent) {
@@ -147,16 +169,18 @@ async function generateWheelGif(segments, finalIdx, options = {}) {
   if (!isAvailable()) return null;
 
   // Tailles optimisées pour Discord : ~600KB à 1.2MB max, gen <1sec
-  const size = options.size || 360;
-  const frames = options.frames || 24;
-  const rotations = options.rotations || 4;
-  const holdFrames = options.holdFrames || 6;
+  const size = options.size || 380;
+  const frames = options.frames || 32;
+  const rotations = options.rotations || 5;
+  const holdFrames = options.holdFrames || 14;
 
-  // 'neuquant' = palette optimisée, 'octree' = plus rapide mais moins fluide
-  const enc = new GIFEncoder(size, size, 'octree', true, frames + holdFrames);
+  // 'neuquant' = palette optimisée (couleurs plus fidèles, idéal casino),
+  // 'octree' = plus rapide mais moins fluide. On choisit neuquant pour les
+  // GIFs casino car la palette rouge/noir/vert mérite une fidélité couleur.
+  const enc = new GIFEncoder(size, size, 'neuquant', true, frames + holdFrames);
   enc.start();
   enc.setRepeat(-1); // ne joue qu'une fois (pas de loop)
-  enc.setQuality(20); // 20 = compromis taille/qualité (1=meilleure, 30=plus petite)
+  enc.setQuality(15); // 15 = couleurs plus fidèles (1=meilleure, 30=plus petite)
 
   const N = segments.length;
 
@@ -168,10 +192,11 @@ async function generateWheelGif(segments, finalIdx, options = {}) {
   const finalAngle = -finalIdx * segAngle;
   const totalAngle = (-rotations * 2 * Math.PI) + finalAngle; // tourne dans le sens horaire
 
-  // Animation : ease-out cubic
+  // Animation : ease-out cubic + léger bounce en fin de course (sensation de
+  // friction réelle, comme une vraie bille qui résiste avant de se poser).
   for (let f = 1; f <= frames; f++) {
     const t = f / frames;
-    const e = easeOutCubic(t);
+    const e = easeOutCubicWithBounce(t);
     const rotation = totalAngle * e;
 
     const c = createCanvas(size, size);
@@ -190,7 +215,11 @@ async function generateWheelGif(segments, finalIdx, options = {}) {
     enc.addFrame(ctx);
   }
 
-  // Hold sur le segment final pour bien voir le résultat
+  // Hold sur le segment final — séquence dramatique :
+  // 1. Frame fixe sans flash (la bille s'est posée)
+  // 2. Flash blanc rapide (révélation)
+  // 3. Pulses dorés alternés (célébration)
+  // 4. Frame finale stable (le joueur peut lire confortablement)
   for (let h = 0; h < holdFrames; h++) {
     const c = createCanvas(size, size);
     const ctx = c.getContext('2d');
@@ -199,16 +228,30 @@ async function generateWheelGif(segments, finalIdx, options = {}) {
     drawWheel(ctx, segments, totalAngle, size);
     drawPointer(ctx, size);
 
-    // Flash effect : alterne couleur de fond
-    if (h % 2 === 0) {
+    // Phase 1 : flash blanc bref sur la 2e frame du hold (reveal moment)
+    if (h === 1) {
       ctx.save();
-      ctx.globalCompositeOperation = 'overlay';
-      ctx.fillStyle = 'rgba(255,215,0,0.15)';
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.fillRect(0, 0, size, size);
       ctx.restore();
+      enc.setDelay(80);
+    }
+    // Phase 2 : pulses dorés alternés (frames 2-7) — effet "winner glow"
+    else if (h >= 2 && h <= 7) {
+      const pulseIntensity = h % 2 === 0 ? 0.28 : 0.10;
+      ctx.save();
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.fillStyle = `rgba(255,215,0,${pulseIntensity})`;
+      ctx.fillRect(0, 0, size, size);
+      ctx.restore();
+      enc.setDelay(140);
+    }
+    // Phase 3 : pause finale stable (les frames de fin) — lecture confort
+    else {
+      enc.setDelay(h === holdFrames - 1 ? 1200 : 320);
     }
 
-    enc.setDelay(220);
     enc.addFrame(ctx);
   }
 
@@ -234,9 +277,9 @@ async function generateRouletteGif(wheelOrder, resultIdx, options = {}) {
 
   return generateWheelGif(segments, resultIdx, {
     size: options.size || 420,
-    frames: options.frames || 28,
-    rotations: options.rotations || 5,
-    holdFrames: options.holdFrames || 8,
+    frames: options.frames || 36,
+    rotations: options.rotations || 6,
+    holdFrames: options.holdFrames || 16,
   });
 }
 

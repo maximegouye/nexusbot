@@ -147,10 +147,10 @@ async function playRoueFortune(source, userId, guildId, mise) {
       color: s.color,
     }));
     gifPromise = wheelImage.generateWheelGif(drawSegs, finalIdx, {
-      size: 380,
-      frames: 26,
-      rotations: 4,
-      holdFrames: 7,
+      size: 400,
+      frames: 32,
+      rotations: 5,
+      holdFrames: 14,
     }).catch(err => { console.error('[roue-fortune] GIF gen error:', err.message); return null; });
   }
 
@@ -187,9 +187,9 @@ async function playRoueFortune(source, userId, guildId, mise) {
 
     await msg.edit({ embeds: [spinEmbed], files: [file] }).catch(() => {});
 
-    // Durée du GIF: 26 frames + 7 hold ≈ ~5.5 sec d'animation + flash
-    // Délais : ease-out 40-260ms + hold 220ms × 7 = ~5.4s total
-    await sleep(5800);
+    // Durée du GIF: 32 spin frames + 14 hold ≈ ~7.8 sec total
+    // (cubic+bounce easing 40-260ms + hold flash/pulses/stable + lecture finale 1.2s)
+    await sleep(7900);
   } else {
     // ── FALLBACK ASCII : ancienne animation textuelle ──
     for (const [cnt, col] of [['3️⃣','#FF4500'],['2️⃣','#FF8C00'],['1️⃣','#FFD700']]) {
