@@ -135,12 +135,37 @@ function buildGridComponents(state) {
   return rows;
 }
 
+// Génère une barre de danger visuelle : vert → jaune → orange → rouge
+// selon le ratio (cases restantes / mines). Plus on s'approche du seuil
+// dangereux, plus la barre devient rouge.
+function dangerBar(safeRevealed, totalCells, minesCount) {
+  const safeRemaining = (totalCells - minesCount) - safeRevealed;
+  const dangerPct = safeRemaining > 0
+    ? Math.min(1, safeRevealed / (totalCells - minesCount))
+    : 1;
+  const filled = Math.round(dangerPct * 12);
+  let block;
+  if (dangerPct < 0.4)      block = '🟢';
+  else if (dangerPct < 0.7) block = '🟡';
+  else if (dangerPct < 0.9) block = '🟠';
+  else                       block = '🔴';
+  return block.repeat(filled) + '⬛'.repeat(12 - filled);
+}
+
+// Couleur d'embed dynamique selon multiplicateur (vert→or→rouge)
+function multColor(mult) {
+  if (mult < 1.5)  return '#27AE60';
+  if (mult < 3)    return '#F39C12';
+  if (mult < 7)    return '#E67E22';
+  return '#E74C3C';
+}
+
 function buildEmbed(state, status = '') {
   const coin = (db.getConfig ? db.getConfig(state.guildId) : null)?.currency_emoji || '€';
   const mult  = calcMult(TOTAL_CELLS, state.minesCount, state.safeRevealed);
-  const color = status === 'win'  ? '#2ECC71'
-              : status === 'lose' ? '#E74C3C'
-              : '#2C3E50';
+  const color = status === 'win'  ? '#FFD700'  // or pour la victoire
+              : status === 'lose' ? '#8B0000'  // rouge sombre pour la défaite
+              : multColor(mult);                // dynamique pendant la partie
 
   // Calculer les stats pour le jeu en cours
   const safeCells = TOTAL_CELLS - state.minesCount;
@@ -163,9 +188,11 @@ function buildEmbed(state, status = '') {
 
   // Ajouter les stats en temps réel si la partie est en cours
   if (!status) {
+    const bar = dangerBar(state.safeRevealed, TOTAL_CELLS, state.minesCount);
     e.addFields(
       { name: '🎯 Prochaine case sûre', value: `${nextSafePct}% de probabilité`, inline: true },
-      { name: '📊 Cellules restantes', value: `${cellsRemaining}`, inline: true }
+      { name: '📊 Cellules restantes', value: `${cellsRemaining}`, inline: true },
+      { name: '🌡️ Niveau de tension', value: bar, inline: false }
     );
   }
 

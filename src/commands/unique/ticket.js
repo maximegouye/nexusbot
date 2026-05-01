@@ -207,6 +207,8 @@ function buildControlRows(ticketId) {
     new ButtonBuilder().setCustomId(`ticket_transfer_${ticketId}`).setLabel('Transférer').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`ticket_note_${ticketId}`).setLabel('Note privée').setEmoji('📝').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`ticket_info_${ticketId}`).setLabel('Infos ticket').setEmoji('ℹ️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`ticket_add_member_${ticketId}`).setLabel('Ajouter membre').setEmoji('➕').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`ticket_remind_${ticketId}`).setLabel('Rappel').setEmoji('🔔').setStyle(ButtonStyle.Secondary),
   );
   return [row1, row2];
 }
@@ -817,6 +819,146 @@ async function handleComponent(interaction, customId) {
         .setTitle(`ℹ️ Ticket #${ticket.id}`)
         .addFields(...fields).setTimestamp()
       ], ephemeral: true });
+    } catch (err) {
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+    }
+    return true;
+  }
+
+  // ─── ticket_add_member_{id} → Ajouter un membre au ticket ─────────────────
+  if (customId.startsWith('ticket_add_member_')) {
+    try {
+      const ticketId = customId.replace('ticket_add_member_', '');
+      const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
+      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true }).catch(() => {});
+      // Modal pour saisir l'ID ou la mention
+      const modal = new ModalBuilder()
+        .setCustomId(`ticket_add_member_modal_${ticketId}`)
+        .setTitle('➕ Ajouter un membre au ticket')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('user_input')
+              .setLabel('ID Discord OU @mention du membre')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(100)
+              .setPlaceholder('Ex : 123456789012345678 ou colle l\'ID utilisateur')
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('reason')
+              .setLabel('Raison (optionnel)')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(200)
+              .setPlaceholder('Ex : Pour avis technique')
+          )
+        );
+      return interaction.showModal(modal).then(() => true).catch(() => true);
+    } catch (err) {
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+    }
+    return true;
+  }
+
+  // ─── ticket_add_member_modal_{id} → Soumission modal ──────────────────────
+  if (customId.startsWith('ticket_add_member_modal_') && interaction.isModalSubmit && interaction.isModalSubmit()) {
+    try {
+      const ticketId = customId.replace('ticket_add_member_modal_', '');
+      const raw = interaction.fields.getTextInputValue('user_input').trim();
+      const reason = interaction.fields.getTextInputValue('reason')?.trim() || '';
+      // Extrait l'ID (mention ou ID brut)
+      const userId = (raw.match(/\d{15,22}/) || [])[0];
+      if (!userId) {
+        return interaction.editReply({ content: '❌ ID/mention invalide.', ephemeral: true }).catch(() => {});
+      }
+      const member = await interaction.guild.members.fetch(userId).catch(() => null);
+      if (!member) {
+        return interaction.editReply({ content: '❌ Membre introuvable sur ce serveur.', ephemeral: true }).catch(() => {});
+      }
+      // Donne accès au salon
+      await interaction.channel.permissionOverwrites.edit(member.id, {
+        ViewChannel: true, SendMessages: true, ReadMessageHistory: true, AttachFiles: true,
+      }).catch(() => {});
+      await interaction.channel.send({ embeds: [new EmbedBuilder().setColor('#3498DB')
+        .setTitle('➕ Membre ajouté au ticket')
+        .setDescription(`<@${member.id}> a été ajouté au ticket par <@${interaction.user.id}>${reason ? `\n\n📋 **Raison** : ${reason}` : ''}`)
+        .setTimestamp()
+      ] }).catch(() => {});
+      return interaction.editReply({ content: `✅ <@${member.id}> ajouté au ticket.`, ephemeral: true }).catch(() => {});
+    } catch (err) {
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+    }
+    return true;
+  }
+
+  // ─── ticket_remind_{id} → Planifier un rappel ─────────────────────────────
+  if (customId.startsWith('ticket_remind_')) {
+    try {
+      const ticketId = customId.replace('ticket_remind_', '');
+      const modal = new ModalBuilder()
+        .setCustomId(`ticket_remind_modal_${ticketId}`)
+        .setTitle('🔔 Planifier un rappel')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('hours')
+              .setLabel('Dans combien d\'heures te rappeler ?')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(4)
+              .setPlaceholder('Ex : 2 (entre 1 et 168 = 7j)')
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('note')
+              .setLabel('Note du rappel (optionnel)')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false)
+              .setMaxLength(500)
+              .setPlaceholder('Ex : Vérifier si le membre a répondu, sinon fermer.')
+          )
+        );
+      return interaction.showModal(modal).then(() => true).catch(() => true);
+    } catch (err) {
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+    }
+    return true;
+  }
+
+  // ─── ticket_remind_modal_{id} → Soumission rappel ─────────────────────────
+  if (customId.startsWith('ticket_remind_modal_') && interaction.isModalSubmit && interaction.isModalSubmit()) {
+    try {
+      const ticketId = customId.replace('ticket_remind_modal_', '');
+      const hoursRaw = interaction.fields.getTextInputValue('hours').trim();
+      const note = interaction.fields.getTextInputValue('note')?.trim() || '';
+      const hours = parseInt(hoursRaw);
+      if (!hours || hours < 1 || hours > 168) {
+        return interaction.editReply({ content: '❌ Délai invalide (1 à 168 heures).', ephemeral: true }).catch(() => {});
+      }
+      const ms = hours * 3600 * 1000;
+      const channelId = interaction.channelId;
+      const userId = interaction.user.id;
+      // setTimeout in-memory : suffit pour des rappels < 24h. Pour des durées
+      // plus longues, idéalement persister en DB et resync au boot. Ici on
+      // documente la limitation : si le bot redémarre, le rappel est perdu.
+      setTimeout(async () => {
+        try {
+          const ch = await interaction.client.channels.fetch(channelId).catch(() => null);
+          if (ch) {
+            await ch.send({ content: `🔔 <@${userId}>`, embeds: [new EmbedBuilder().setColor('#F39C12')
+              .setTitle('🔔 Rappel ticket')
+              .setDescription(`Tu avais demandé un rappel sur ce ticket il y a **${hours}h**.${note ? `\n\n📝 **Note** : ${note}` : ''}`)
+              .setTimestamp()
+            ] }).catch(() => {});
+          }
+        } catch {}
+      }, ms);
+      return interaction.editReply({
+        content: `✅ Rappel planifié dans **${hours}h**.${note ? `\n📝 Note : *${note.slice(0,200)}*` : ''}`,
+        ephemeral: true
+      }).catch(() => {});
     } catch (err) {
       if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
