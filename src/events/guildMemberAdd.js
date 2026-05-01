@@ -303,6 +303,28 @@ module.exports = {
 
     await channel.send(payload).catch(() => {});
 
+    // 🎯 Welcome public dans #général — encourage les membres à dire bonjour.
+    // Le 1er membre qui salue gagne un bonus.
+    try {
+      const generalChannel = guild.channels.cache.find(c =>
+        ['général', 'general', 'chat', 'discussion'].includes(c.name) && c.isTextBased && c.isTextBased()
+      );
+      if (generalChannel && generalChannel.id !== channel.id) {
+        const greetEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('👋 Nouveau venu !')
+          .setDescription([
+            `Faites un coucou à <@${user.id}> qui vient de rejoindre **${guild.name}** ! 🎉`,
+            '',
+            '🎁 **Bonus :** Le premier qui dit bonjour gagne **+50 €** !',
+          ].join('\n'))
+          .setThumbnail(user.displayAvatarURL({ size: 128 }))
+          .setFooter({ text: `Membre n°${memberCount} · L'accueil compte 💛` })
+          .setTimestamp();
+        await generalChannel.send({ content: `<@${user.id}>`, embeds: [greetEmbed] }).catch(() => {});
+      }
+    } catch {}
+
     // ── DM de bienvenue au nouveau membre ──────────────
     const dmEmbed = new EmbedBuilder()
       .setColor(cfg.color || '#7B2FBE')

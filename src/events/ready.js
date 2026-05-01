@@ -571,6 +571,13 @@ module.exports = {
       console.log('✅ Lucky Hour : démarré (1min interval, déclenche 1x/jour)');
     } catch (e) { console.log('⚠️  Lucky Hour error:', e.message); }
 
+    // Daily Question — engagement : 1 question/jour à midi Paris dans #général
+    try {
+      const dailyQuestion = require('../utils/dailyQuestion');
+      dailyQuestion.startDailyQuestionScheduler(client);
+      console.log('✅ Daily Question : démarrée (post auto à midi Paris)');
+    } catch (e) { console.log('⚠️  Daily Question error:', e.message); }
+
     // Wealth Roles — auto-attribution des rôles selon richesse (toutes les 5min)
     try {
       const wealthRoles = require('../utils/wealthRoles');

@@ -27,6 +27,59 @@ setInterval(() => {
   }
 }, 300_000); // Exécute toutes les 5 minutes
 
+// 🎯 Bonus FIRST MESSAGE du jour — récompense la connexion quotidienne pour
+// favoriser une activité régulière. Bonus : +50 XP + 100 € (vs +5-15 XP / +1 €
+// d'un message normal). Premier message après minuit local du jour.
+const _firstMsgCache = new Map(); // userId-guildId → 'YYYY-MM-DD'
+async function handleFirstMessageOfDay(message) {
+  try {
+    if (!message.guild) return;
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const key = `${message.author.id}-${message.guild.id}`;
+
+    // Cache mémoire d'abord (rapide)
+    if (_firstMsgCache.get(key) === today) return;
+
+    // DB : on stocke le dernier jour de premier message dans guild_config
+    // par utilisateur (table users si elle a un champ last_active_day)
+    const u = db.getUser(message.author.id, message.guild.id);
+    if (!u) return;
+    if (u.last_first_msg_day === today) {
+      _firstMsgCache.set(key, today);
+      return;
+    }
+
+    // Premier message du jour ! Bonus
+    const bonusXP    = 50;
+    const bonusCoins = 100;
+    db.addXP(message.author.id, message.guild.id, bonusXP);
+    db.addCoins(message.author.id, message.guild.id, bonusCoins);
+
+    // Marque le jour comme traité (DB + cache)
+    try {
+      db.db.prepare('UPDATE users SET last_first_msg_day = ? WHERE user_id = ? AND guild_id = ?')
+        .run(today, message.author.id, message.guild.id);
+    } catch (_) {
+      // Si la colonne n'existe pas, on la crée puis retry
+      try {
+        db.db.prepare('ALTER TABLE users ADD COLUMN last_first_msg_day TEXT').run();
+        db.db.prepare('UPDATE users SET last_first_msg_day = ? WHERE user_id = ? AND guild_id = ?')
+          .run(today, message.author.id, message.guild.id);
+      } catch (_) {}
+    }
+    _firstMsgCache.set(key, today);
+
+    // Réaction discrète sur le message pour signaler le bonus
+    const cfg = db.getConfig(message.guild.id);
+    const coin = cfg?.currency_emoji || '€';
+    message.react('🎁').catch(() => {});
+    // Petit message éphémère qui se supprime après 8 secondes
+    message.channel.send({
+      content: `🎁 <@${message.author.id}> **Premier message du jour !** +${bonusXP} XP & +${bonusCoins} ${coin} 🌟`,
+    }).then(m => setTimeout(() => m.delete().catch(() => {}), 8000)).catch(() => {});
+  } catch {}
+}
+
 async function handleMessageXP(message) {
   try {
     if (!message.guild) return;
@@ -403,6 +456,9 @@ module.exports = {
 
     // ── XP par message (tous les messages, pas seulement les commandes) ──
     handleMessageXP(message).catch(() => {});
+
+    // ── Bonus First Message du Jour : encourage la connexion quotidienne ──
+    handleFirstMessageOfDay(message).catch(() => {});
 
     // ── Commandes préfixe & ──────────────────────────────────────────
     if (!message.content.startsWith(PREFIX)) return;
