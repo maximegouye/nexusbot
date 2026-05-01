@@ -368,31 +368,41 @@ async function generatePlinkoGif(path, mults, options = {}) {
     }
   }
 
-  function drawBall(ctx, x, y) {
-    // Trail
+  function drawBall(ctx, x, y, alpha = 1, radius = 8) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.beginPath();
-    ctx.arc(x, y, 8, 0, 2 * Math.PI);
-    const grad = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, 8);
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    const grad = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, radius);
     grad.addColorStop(0, '#FFFFFF');
     grad.addColorStop(0.5, '#FFD700');
     grad.addColorStop(1, '#B8860B');
     ctx.fillStyle = grad;
     ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    if (alpha > 0.5) {
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
-  const totalFrames = ROWS * 3 + 8; // ~3 frames par row + hold final
+  const totalFrames = ROWS * 3 + 12; // ~3 frames par row + hold final plus long
   const finalSlot = path[path.length - 1];
 
-  const enc = new GIFEncoder(W, H, 'octree', true, totalFrames);
+  // Palette neuquant pour fidélité couleur (cohérent avec roulette/wheel)
+  const enc = new GIFEncoder(W, H, 'neuquant', true, totalFrames);
   enc.start();
   enc.setRepeat(-1);
-  enc.setQuality(20);
+  enc.setQuality(15);
 
   // Animation : la bille parcourt path[] en interpolant entre chaque rangée
+  // Trail effect : on garde l'historique des 4 dernières positions pour
+  // dessiner des "fantômes" de la bille qui s'estompent (plus immersif).
   const stepsPerRow = 3;
+  const trailHistory = []; // [{x, y}, ...] — max 4 positions
+  const TRAIL_MAX = 4;
+
   for (let r = 0; r < ROWS; r++) {
     const colA = path[r];
     const colB = path[r + 1];
@@ -411,15 +421,35 @@ async function generatePlinkoGif(path, mults, options = {}) {
       const c = createCanvas(W, H);
       const ctx = c.getContext('2d');
       drawBoard(ctx);
+
+      // Dessine d'abord le trail (du plus ancien au plus récent), avec
+      // alpha décroissant et taille un peu réduite. Ça crée l'illusion
+      // d'une bille qui laisse une traînée lumineuse.
+      for (let i = 0; i < trailHistory.length; i++) {
+        const ghost = trailHistory[i];
+        const ghostAge = trailHistory.length - i; // 1 = récent, N = ancien
+        const alpha = 0.55 / ghostAge;
+        const radius = Math.max(3, 8 - ghostAge);
+        drawBall(ctx, ghost.x, ghost.y, alpha, radius);
+      }
+      // Puis la bille principale par-dessus
       drawBall(ctx, x, y);
+
+      // Met à jour l'historique du trail
+      trailHistory.push({ x, y });
+      if (trailHistory.length > TRAIL_MAX) trailHistory.shift();
 
       enc.setDelay(60);
       enc.addFrame(ctx);
     }
   }
 
-  // Hold final : bille atterrit dans le slot, flash sur le slot gagnant
-  for (let h = 0; h < 8; h++) {
+  // Hold final : bille atterrit dans le slot, séquence de flashs dramatique
+  // h=0 : bille pose, pas de flash (laisser voir)
+  // h=1 : flash blanc reveal
+  // h=2-7 : pulses dorés alternés
+  // h=8-11 : stable + frame finale longue pour lecture confort
+  for (let h = 0; h < 12; h++) {
     const c = createCanvas(W, H);
     const ctx = c.getContext('2d');
     drawBoard(ctx);
@@ -429,15 +459,26 @@ async function generatePlinkoGif(path, mults, options = {}) {
     const slotH = padBottom - 15;
     const x = pegX(finalSlot) - colSpacing / 2 + 2;
     const w = colSpacing - 4;
-    if (h % 2 === 0) {
+
+    if (h === 1) {
+      // Reveal flash sur tout le slot
       ctx.save();
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.fillRect(x, slotY, w, slotH);
       ctx.restore();
+      enc.setDelay(80);
+    } else if (h >= 2 && h <= 7) {
+      // Pulses dorés alternés
+      ctx.save();
+      ctx.fillStyle = h % 2 === 0 ? 'rgba(255,215,0,0.45)' : 'rgba(255,215,0,0.18)';
+      ctx.fillRect(x, slotY, w, slotH);
+      ctx.restore();
+      enc.setDelay(140);
+    } else {
+      enc.setDelay(h === 11 ? 1200 : 320);
     }
 
     drawBall(ctx, pegX(finalSlot), H - padBottom + slotH / 2);
-    enc.setDelay(220);
     enc.addFrame(ctx);
   }
 
