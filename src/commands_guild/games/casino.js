@@ -231,30 +231,32 @@ async function handleCasinoLobby(source, userId, guildId) {
     .setTimestamp();
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SELECT MENU CATEGORIÉS
+  // SELECT MENU UNIFIÉ (Discord limite à 5 ActionRows par message — on tient
+  // dans 2 rows : 1 select + 1 boutons. Toutes les catégories sont fusionnées
+  // dans un seul select menu, avec l'emoji de catégorie comme préfixe de label.)
+  // Discord limite aussi un select menu à 25 options ; on a 20 jeux, OK.
   // ──────────────────────────────────────────────────────────────────────────
 
-  const selectMenus = [];
-  const categories = Object.entries(GAMES_BY_CATEGORY);
-
-  for (let i = 0; i < categories.length; i += 1) {
-    const [catKey, catData] = categories[i];
-    const options = catData.games.map(g => ({
-      label: g.label,
-      value: `game_${g.value}`,
-      description: g.desc,
-      emoji: catData.label.split(' ')[0],
-    }));
-
-    const selectMenu = new StringSelectMenuBuilder()
-      .setCustomId(`casino_select_${i}`)
-      .setPlaceholder(catData.label)
-      .addOptions(options)
-      .setMinValues(0)
-      .setMaxValues(1);
-
-    selectMenus.push(new ActionRowBuilder().addComponents(selectMenu));
+  const allOptions = [];
+  for (const catData of Object.values(GAMES_BY_CATEGORY)) {
+    const catEmoji = catData.label.split(' ')[0];
+    for (const g of catData.games) {
+      allOptions.push({
+        label: `${catEmoji} ${g.label}`.slice(0, 100),
+        value: `game_${g.value}`,
+        description: (g.desc || '').slice(0, 100),
+      });
+    }
   }
+
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId('casino_select_all')
+    .setPlaceholder('🎰 Choisis un jeu (toutes catégories)…')
+    .addOptions(allOptions.slice(0, 25))
+    .setMinValues(0)
+    .setMaxValues(1);
+
+  const selectRow = new ActionRowBuilder().addComponents(selectMenu);
 
   // ──────────────────────────────────────────────────────────────────────────
   // BOUTONS D'ACTION
@@ -276,10 +278,10 @@ async function handleCasinoLobby(source, userId, guildId) {
   );
 
   // ──────────────────────────────────────────────────────────────────────────
-  // ENVOI
+  // ENVOI (max 5 ActionRows — ici on en a 2 : select + boutons)
   // ──────────────────────────────────────────────────────────────────────────
 
-  const components = [actionRow, ...selectMenus];
+  const components = [selectRow, actionRow];
 
   if (isInteraction) {
     return source.editReply({

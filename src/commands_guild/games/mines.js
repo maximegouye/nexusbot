@@ -103,7 +103,7 @@ function buildGridComponents(state) {
     rows.push(rowBuilder);
   }
 
-  // Bouton cash-out
+  // Bouton cash-out (en partie : 4 grid rows + 1 cash-out = 5 rows max)
   if (!state.ended) {
     const cashRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -114,16 +114,21 @@ function buildGridComponents(state) {
     );
     rows.push(cashRow);
   } else {
-    // Rejouer + Changer la mise + difficulty presets
-    const replayRow = makeGameRow('mines', state.userId, state.mise, `${state.minesCount}`);
-    rows.push(replayRow);
-    // Quick difficulty change (même mise, difficulté différente)
+    // Fin de partie : Discord limite à 5 ActionRows. La grille en occupe 4,
+    // donc on consolide replay + difficulty presets en UNE SEULE row de 5 boutons.
+    // (Avant : 2 rows = replay + 5 presets = 6 rows au total → erreur Discord.)
     rows.push(new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_3_${state.mise}`).setLabel('🟢 3 mines').setStyle(state.minesCount === 3 ? ButtonStyle.Success : ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_5_${state.mise}`).setLabel('🟡 5 mines').setStyle(state.minesCount === 5 ? ButtonStyle.Primary : ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_10_${state.mise}`).setLabel('🟠 10 mines').setStyle(state.minesCount === 10 ? ButtonStyle.Primary : ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_15_${state.mise}`).setLabel('🔴 15 mines').setStyle(state.minesCount === 15 ? ButtonStyle.Danger : ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_20_${state.mise}`).setLabel('☠️ 20 mines').setStyle(state.minesCount === 20 ? ButtonStyle.Danger : ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(`mines_replay_${state.userId}_${state.mise}_${state.minesCount}`)
+        .setLabel('🔄 Rejouer')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`mines_changemise_${state.userId}_${state.minesCount}`)
+        .setLabel('💰 Mise')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_3_${state.mise}`).setLabel('🟢 3').setStyle(state.minesCount === 3 ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_10_${state.mise}`).setLabel('🟠 10').setStyle(state.minesCount === 10 ? ButtonStyle.Primary : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`mines_preset_${state.userId}_20_${state.mise}`).setLabel('☠️ 20').setStyle(state.minesCount === 20 ? ButtonStyle.Danger : ButtonStyle.Secondary),
     ));
   }
 
