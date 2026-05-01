@@ -631,7 +631,8 @@ async function handleComponent(interaction) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Bouton non autorisé.', ephemeral: true });
+      // Bouton non déféré → reply() (pas editReply)
+      return interaction.reply({ content: '❌ Bouton non autorisé.', ephemeral: true }).catch(() => {});
     }
     await interaction.showModal(changeMiseModal('bj', userId));
     return true;
@@ -642,13 +643,15 @@ async function handleComponent(interaction) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: '❌ Modal non autorisé.', ephemeral: true });
+      // Modal submit auto-déféré par interactionCreate → editReply (pas reply)
+      return interaction.editReply({ content: '❌ Modal non autorisé.' }).catch(() => {});
     }
     const rawMise = interaction.fields.getTextInputValue('newmise');
     const u       = db.getUser(userId, interaction.guildId);
     const newMise = parseMise(rawMise, u?.balance || 0);
     if (!newMise || newMise < 10) {
-      return interaction.reply({ content: '❌ Mise invalide (min 10).', ephemeral: true });
+      // Modal submit auto-déféré → editReply
+      return interaction.editReply({ content: '❌ Mise invalide (min 10).' }).catch(() => {});
     }
     if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false }).catch(() => {});
     await startGame(interaction, userId, interaction.guildId, newMise);
@@ -660,19 +663,22 @@ async function handleComponent(interaction) {
     const parts  = customId.split('_');
     const userId = parts[2];
     if (interaction.user.id !== userId) {
-      return interaction.editReply({ content: '❌ Bouton non autorisé.', ephemeral: true });
+      return interaction.reply({ content: '❌ Bouton non autorisé.', ephemeral: true }).catch(() => {});
+    }
+    // Defer ephemeral pour pouvoir editReply ensuite (bouton non auto-déféré)
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true }).catch(() => {});
     }
     const st = getSession(userId);
     if (!st) {
-      return interaction.editReply({ content: '❌ Pas de partie en cours.', ephemeral: true });
+      return interaction.editReply({ content: '❌ Pas de partie en cours.' }).catch(() => {});
     }
     const playerTotal = handValue(st.player);
     const dealerCard = st.dealer[0];
     const advice = getBasicAdvice(playerTotal, dealerCard);
     return interaction.editReply({
       content: `**💡 Conseil Stratégie Basique:**\n\nTa main: ${handStr(st.player)} = **${playerTotal}**\nCarte dealer: ${cardStr(dealerCard)}\n\n→ ${advice}`,
-      ephemeral: true
-    });
+    }).catch(() => {});
   }
 
   // ── Boutons in-game ───────────────────────────────────────

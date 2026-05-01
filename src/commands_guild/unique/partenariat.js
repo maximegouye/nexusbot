@@ -210,6 +210,10 @@ module.exports = {
     } catch { return false; }
   },
 
+  // Demande au routeur global de défer en ephemeral (toutes les réponses
+  // partenariat sont privées par design — admin ou utilisateur perso).
+  ephemeral: true,
+
   // ============================================================
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

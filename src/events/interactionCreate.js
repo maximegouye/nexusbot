@@ -110,8 +110,19 @@ module.exports = {
         } catch (_) { willOpenModal = false; }
       }
 
+      // Une commande peut déclarer `ephemeral: true` (booléen ou fn(interaction))
+      // pour que l'auto-defer global respecte sa préférence d'ephémérité.
+      let wantsEphemeral = false;
+      if (command.ephemeral) {
+        try {
+          wantsEphemeral = typeof command.ephemeral === 'function'
+            ? !!command.ephemeral(interaction)
+            : !!command.ephemeral;
+        } catch (_) { wantsEphemeral = false; }
+      }
+
       if (!willOpenModal && !interaction.deferred && !interaction.replied) {
-        try { await interaction.deferReply({ ephemeral: false }); } catch (_) {}
+        try { await interaction.deferReply({ ephemeral: wantsEphemeral }); } catch (_) {}
       }
 
       try {

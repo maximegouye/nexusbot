@@ -428,7 +428,7 @@ async function handleComponent(interaction, customId) {
         )));
     } catch (err) {
       console.error('[ticket_close] error:', err?.message);
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -581,7 +581,7 @@ async function handleComponent(interaction, customId) {
         ephemeral: true,
       });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -598,7 +598,7 @@ async function handleComponent(interaction, customId) {
         .setDescription(`🎯 Priorité changée en **${pri.label}** par <@${interaction.user.id}>`).setTimestamp()
       ]}).catch(() => {});
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -622,7 +622,7 @@ async function handleComponent(interaction, customId) {
         .setTimestamp()
       ]});
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -654,7 +654,7 @@ async function handleComponent(interaction, customId) {
         ephemeral: true,
       });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -711,7 +711,7 @@ async function handleComponent(interaction, customId) {
             .setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(20).setPlaceholder('ID Discord (18-19 chiffres)')
         )));
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -760,7 +760,7 @@ async function handleComponent(interaction, customId) {
             .setPlaceholder('Informations internes, suivi, contexte...')
         )));
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -780,7 +780,7 @@ async function handleComponent(interaction, customId) {
         .setFooter({ text: '🔒 Visible uniquement par le staff' }).setTimestamp()
       ], ephemeral: true });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
@@ -818,7 +818,7 @@ async function handleComponent(interaction, customId) {
         .addFields(...fields).setTimestamp()
       ], ephemeral: true });
     } catch (err) {
-      if (!interaction.replied && !interaction.deferred) await interaction.editReply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) await interaction.reply({ content: '❌ Erreur.', ephemeral: true }).catch(() => {});
     }
     return true;
   }
