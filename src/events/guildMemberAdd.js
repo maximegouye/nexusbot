@@ -152,8 +152,17 @@ module.exports = {
       if (role) member.roles.add(role).catch(() => {});
     }
 
+    // 🛑 KILL-SWITCH GLOBAL — désactive le système de vérification anti-bot.
+    // Mis en place en période de pub payante : le mode cybersécurité Discord
+    // bloque les DM des nouveaux arrivants, ils ne peuvent pas cliquer le
+    // bouton "Je suis humain" et finissent kick automatiquement après 10 min.
+    // Mettre à `false` pour réactiver. Pendant ce temps, l'autorole (cfg.autorole)
+    // donne accès direct au serveur, ce qui est suffisant pour des arrivées
+    // organiques de pub payante.
+    const VERIFICATION_GLOBALLY_DISABLED = true;
+
     // ── Vérification anti-bot (si configurée) ─────────────────
-    if (cfg.verification_role) {
+    if (!VERIFICATION_GLOBALLY_DISABLED && cfg.verification_role) {
       const unverifiedRole = guild.roles.cache.get(cfg.verification_role);
       if (unverifiedRole) {
         try { await member.roles.add(unverifiedRole); } catch {}

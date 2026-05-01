@@ -70,7 +70,14 @@ async function applyAction(message, cfg, reason) {
   } catch {}
 }
 
+// 🛑 KILL-SWITCH GLOBAL — désactive entièrement l'automod sur tous les guilds.
+// Utile en période de pub payante pour éviter les faux positifs qui bloquent
+// les nouveaux arrivants (anti-liens, anti-spam, anti-caps, anti-invites...).
+// Mettre à `false` pour réactiver le système classique cfg-based.
+const AUTOMOD_GLOBALLY_DISABLED = true;
+
 async function handleAutomod(message) {
+  if (AUTOMOD_GLOBALLY_DISABLED) return;
   if (!message.guild || message.author.bot) return;
 
   // Ignorer les modérateurs
