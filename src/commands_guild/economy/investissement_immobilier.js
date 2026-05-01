@@ -58,7 +58,7 @@ module.exports = {
         .setDescription('Investissez dans des propriétés virtuelles et collectez des loyers !')
         .addFields(PROPERTIES.map(p => ({
           name: `${p.name} (#${p.id})`,
-          value: `💰 Prix : **${p.price.toLocaleString()}** 🪙\n🏡 Loyer : **${p.rent}** 🪙 / ${p.rentCooldown >= 3600 ? Math.round(p.rentCooldown/3600)+'h' : p.rentCooldown+'min'}\n📊 Rendement : ${((p.rent / p.price) * (86400/p.rentCooldown) * 100).toFixed(1)}%/jour`,
+          value: `💰 Prix : **${p.price.toLocaleString()}** €\n🏡 Loyer : **${p.rent}** € / ${p.rentCooldown >= 3600 ? Math.round(p.rentCooldown/3600)+'h' : p.rentCooldown+'min'}\n📊 Rendement : ${((p.rent / p.price) * (86400/p.rentCooldown) * 100).toFixed(1)}%/jour`,
           inline: true,
         })));
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
@@ -73,7 +73,7 @@ module.exports = {
       if (already) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu possèdes déjà cette propriété !' });
 
       const user = db.getUser(userId, guildId);
-      if ((user.balance || 0) < prop.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${(user.balance||0).toLocaleString()}** 🪙. Il te faut **${prop.price.toLocaleString()}** 🪙.` });
+      if ((user.balance || 0) < prop.price) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Tu n'as que **${(user.balance||0).toLocaleString()}** €. Il te faut **${prop.price.toLocaleString()}** €.` });
 
       db.removeCoins(userId, guildId, prop.price);
       db.db.prepare('INSERT INTO immo_portfolio (user_id, guild_id, property_id, bought_at, buy_price) VALUES (?,?,?,?,?)').run(userId, guildId, propId, now, prop.price);
@@ -81,7 +81,7 @@ module.exports = {
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle(`🏠 Propriété Achetée !`)
-        .setDescription(`Tu possèdes maintenant **${prop.name}** !\n\n💰 Achat : **${prop.price.toLocaleString()}** 🪙\n🏡 Loyer : **${prop.rent}** 🪙 toutes les ${Math.round(prop.rentCooldown/3600)}h\n\nCollecte avec \`/immo loyer\``)
+        .setDescription(`Tu possèdes maintenant **${prop.name}** !\n\n💰 Achat : **${prop.price.toLocaleString()}** €\n🏡 Loyer : **${prop.rent}** € toutes les ${Math.round(prop.rentCooldown/3600)}h\n\nCollecte avec \`/immo loyer\``)
       ]});
     }
 
@@ -103,12 +103,12 @@ module.exports = {
 
         embed.addFields({
           name: `${prop.name}`,
-          value: `🏡 Loyer : **${prop.rent}** 🪙\n${canCollect ? '✅ **Loyer disponible !**' : `⏳ Prochain loyer : <t:${item.last_collect + prop.rentCooldown}:R>`}\n📊 ${item.rentals} locations au total`,
+          value: `🏡 Loyer : **${prop.rent}** €\n${canCollect ? '✅ **Loyer disponible !**' : `⏳ Prochain loyer : <t:${item.last_collect + prop.rentCooldown}:R>`}\n📊 ${item.rentals} locations au total`,
           inline: true,
         });
       }
 
-      embed.setFooter({ text: `Valeur totale : ${totalValue.toLocaleString()} 🪙 | Revenu quotidien ~${totalDailyRent.toLocaleString()} 🪙` });
+      embed.setFooter({ text: `Valeur totale : ${totalValue.toLocaleString()} € | Revenu quotidien ~${totalDailyRent.toLocaleString()} €` });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
@@ -135,7 +135,7 @@ module.exports = {
         db.addCoins(userId, guildId, prop.rent);
         db.db.prepare('UPDATE immo_portfolio SET last_collect=?, rentals=rentals+1 WHERE user_id=? AND guild_id=? AND property_id=?').run(now, userId, guildId, item.property_id);
         totalCollected += prop.rent;
-        collected.push(`✅ **${prop.name}** — +**${prop.rent}** 🪙`);
+        collected.push(`✅ **${prop.name}** — +**${prop.rent}** €`);
       }
 
       if (collected.length === 0) {
@@ -146,7 +146,7 @@ module.exports = {
         .setColor('#27ae60')
         .setTitle('🏡 Loyers Collectés !')
         .setDescription(collected.join('\n'))
-        .addFields({ name: '💰 Total collecté', value: `**${totalCollected.toLocaleString()}** 🪙`, inline: true })
+        .addFields({ name: '💰 Total collecté', value: `**${totalCollected.toLocaleString()}** €`, inline: true })
       ]});
     }
 
@@ -170,9 +170,9 @@ module.exports = {
         .setColor(profit >= 0 ? '#2ecc71' : '#e74c3c')
         .setTitle(`📉 Propriété Vendue — ${prop.name}`)
         .addFields(
-          { name: '💰 Prix d\'achat', value: `${item.buy_price.toLocaleString()} 🪙`,    inline: true },
-          { name: '💵 Prix de vente', value: `${sellPrice.toLocaleString()} 🪙`,          inline: true },
-          { name: profit >= 0 ? '📈 Plus-value' : '📉 Moins-value', value: `${profit >= 0 ? '+' : ''}${profit.toLocaleString()} 🪙`, inline: true },
+          { name: '💰 Prix d\'achat', value: `${item.buy_price.toLocaleString()} €`,    inline: true },
+          { name: '💵 Prix de vente', value: `${sellPrice.toLocaleString()} €`,          inline: true },
+          { name: profit >= 0 ? '📈 Plus-value' : '📉 Moins-value', value: `${profit >= 0 ? '+' : ''}${profit.toLocaleString()} €`, inline: true },
           { name: '🏡 Loyers encaissés', value: `${item.rentals}`,                        inline: true },
         )
       ]});

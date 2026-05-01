@@ -13,6 +13,7 @@ data_seed/
 *.zip
 *.tar.gz
 *.bak
+*.bak[0-9]*
 *.backup
 *.orig
 *.tmp

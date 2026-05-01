@@ -66,7 +66,7 @@ module.exports = {
       let name;
       try { const u = await interaction.client.users.fetch(r.user_id); name = u.username; } catch { name = `Utilisateur inconnu`; }
       const medal = medals[i] || `**${i+1}.**`;
-      return `${medal} **${name}** — ${r.amount?.toLocaleString('fr-FR') ?? 0} 🪙`;
+      return `${medal} **${name}** — ${r.amount?.toLocaleString('fr-FR') ?? 0} €`;
     }));
 
     // Rang du joueur actuel

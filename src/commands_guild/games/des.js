@@ -44,7 +44,7 @@ const ROLL_PHASES = [
 async function playDice(source, userId, guildId, mise, betStr, numDice = 1) {
   const isInteraction = !!source.editReply;
   const u    = db.getUser(userId, guildId);
-  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '🪙';
+  const coin = (db.getConfig ? db.getConfig(guildId) : null)?.currency_emoji || '€';
 
   if (!u || u.balance < mise) {
     const err = `❌ Solde insuffisant. Tu as **${u?.balance || 0} ${coin}**.`;

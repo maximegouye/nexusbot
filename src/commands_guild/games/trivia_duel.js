@@ -71,7 +71,7 @@ module.exports = {
 
       if (mise > 0) {
         const user = db.getUser(userId, guildId);
-        if (user.coins < mise) return interaction.editReply({ content: `❌ Pas assez de coins ! Tu as **${user.coins}** 🪙`, ephemeral: true });
+        if (user.coins < mise) return interaction.editReply({ content: `❌ Pas assez de coins ! Tu as **${user.coins}** €`, ephemeral: true });
       }
 
       const accept = new ButtonBuilder().setCustomId(`trivia_accept_${userId}_${opponent.id}`).setLabel('✅ Accepter').setStyle(ButtonStyle.Success);
@@ -251,7 +251,7 @@ module.exports = {
         .setColor('#f39c12')
         .setTitle('🎯 Trivia Solo — Résultat !')
         .setDescription(`**${interaction.user.username}** a obtenu **${score}/${nbQ}** !`)
-        .addFields({ name: '🪙 Récompense', value: `+**${coins}** coins (${score} × 30)`, inline: true })
+        .addFields({ name: '€ Récompense', value: `+**${coins}** coins (${score} × 30)`, inline: true })
       ]}).catch(() => {});
     }
     } catch (err) {

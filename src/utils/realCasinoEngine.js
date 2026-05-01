@@ -208,7 +208,7 @@ function rollJackpot(game, mise) {
 function scratchResult(mise, type = 'classic') {
   const r = Math.random();
   if (r < 0.50) return { payout: 0, label: 'Perdu', emoji: '😢' };
-  if (r < 0.80) return { payout: mise, label: 'Remboursé', emoji: '🪙' };
+  if (r < 0.80) return { payout: mise, label: 'Remboursé', emoji: '💶' };
   if (r < 0.92) {
     const m = 2 + Math.floor(Math.random() * 4); // ×2 à ×5
     return { payout: mise * m, label: `Petit gain ×${m}`, emoji: '✨' };

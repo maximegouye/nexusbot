@@ -39,13 +39,13 @@ module.exports = {
       .addIntegerOption(o => o.setName('slot').setDescription('Numéro du slot (1, 2 ou 3)').setMinValue(1).setMaxValue(3).setRequired(true))
       .addStringOption(o => o.setName('culture').setDescription('Type de culture').setRequired(true)
         .addChoices(
-          { name: '🌾 Blé (1h → 80🪙)', value: 'ble' },
-          { name: '🥕 Carotte (2h → 150🪙)', value: 'carotte' },
-          { name: '🍅 Tomate (3h → 250🪙)', value: 'tomate' },
-          { name: '🌽 Maïs (4h → 350🪙)', value: 'maïs' },
-          { name: '🍓 Fraise (6h → 500🪙)', value: 'fraise' },
-          { name: '🎃 Citrouille (12h → 1000🪙)', value: 'citrouille' },
-          { name: '💎 Diamant (24h → 5000🪙)', value: 'diamant' },
+          { name: '🌾 Blé (1h → 80€)', value: 'ble' },
+          { name: '🥕 Carotte (2h → 150€)', value: 'carotte' },
+          { name: '🍅 Tomate (3h → 250€)', value: 'tomate' },
+          { name: '🌽 Maïs (4h → 350€)', value: 'maïs' },
+          { name: '🍓 Fraise (6h → 500€)', value: 'fraise' },
+          { name: '🎃 Citrouille (12h → 1000€)', value: 'citrouille' },
+          { name: '💎 Diamant (24h → 5000€)', value: 'diamant' },
         )))
     .addSubcommand(s => s.setName('recolter').setDescription('🌾 Récolter toutes les cultures prêtes'))
     .addSubcommand(s => s.setName('cultures').setDescription('📋 Voir toutes les cultures disponibles')),

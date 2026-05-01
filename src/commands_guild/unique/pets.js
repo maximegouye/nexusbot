@@ -85,7 +85,7 @@ module.exports = {
       .addUserOption(o => o.setName('membre').setDescription('Voir l\'animal d\'un autre membre')))
     .addSubcommand(s => s.setName('nourrir').setDescription('🍖 Nourrir votre animal')
       .addStringOption(o => o.setName('nourriture').setDescription('Type de nourriture').setRequired(true)
-        .addChoices(...Object.entries(FOODS).map(([k,v]) => ({ name: `${k} (${v.price}🪙 +${v.hunger} faim)`, value: k })))))
+        .addChoices(...Object.entries(FOODS).map(([k,v]) => ({ name: `${k} (${v.price}€ +${v.hunger} faim)`, value: k })))))
     .addSubcommand(s => s.setName('jouer').setDescription('🎾 Jouer avec votre animal (+bonheur)'))
     .addSubcommand(s => s.setName('entrainer').setDescription('⚔️ Entraîner votre animal (+ATK/DEF)'))
     .addSubcommand(s => s.setName('combat').setDescription('⚔️ Défier l\'animal d\'un autre membre')
@@ -103,7 +103,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
     const now = Math.floor(Date.now() / 1000);
 
     if (sub === 'adopter') {

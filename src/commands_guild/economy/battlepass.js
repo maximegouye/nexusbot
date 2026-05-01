@@ -158,7 +158,7 @@ module.exports = {
           name: `Niveaux ${chunk[0].level}–${chunk[chunk.length-1].level}`,
           value: chunk.map(r => {
             const status = claimed.includes(r.level) ? '✅' : bp.level >= r.level ? '📬' : '🔒';
-            return `${status} **Niv.${r.level}** ${r.emoji} ${r.label} — ${r.coins}🪙${r.xp > 0 ? ` +${r.xp}XP` : ''}`;
+            return `${status} **Niv.${r.level}** ${r.emoji} ${r.label} — ${r.coins}€${r.xp > 0 ? ` +${r.xp}XP` : ''}`;
           }).join('\n'),
           inline: false,
         });
@@ -191,8 +191,8 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#2ecc71')
         .setTitle('🎉 Récompenses réclamées !')
-        .setDescription(unclaimed.map(r => `${r.emoji} **Niveau ${r.level}** — ${r.label} : +${r.coins}🪙${r.xp > 0 ? ` +${r.xp}XP` : ''}`).join('\n'))
-        .setFooter({ text: `Total : +${totalCoins} 🪙${totalXP > 0 ? ` +${totalXP} XP` : ''}` });
+        .setDescription(unclaimed.map(r => `${r.emoji} **Niveau ${r.level}** — ${r.label} : +${r.coins}€${r.xp > 0 ? ` +${r.xp}XP` : ''}`).join('\n'))
+        .setFooter({ text: `Total : +${totalCoins} €${totalXP > 0 ? ` +${totalXP} XP` : ''}` });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 

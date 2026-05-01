@@ -76,10 +76,10 @@ module.exports = {
         .setTitle(`🔨 Enchère #${id} — ${item}`)
         .setDescription(desc || 'Pas de description')
         .addFields(
-          { name: '💰 Prix de départ',    value: `${start} 🪙`,                                     inline: true },
+          { name: '💰 Prix de départ',    value: `${start} €`,                                     inline: true },
           { name: '⏱️ Fin',              value: `<t:${endsAt}:R>`,                                  inline: true },
           { name: '👤 Vendeur',           value: `<@${userId}>`,                                     inline: true },
-          { name: '⚡ Achat immédiat',    value: buyout ? `${buyout} 🪙` : 'Non disponible',        inline: true },
+          { name: '⚡ Achat immédiat',    value: buyout ? `${buyout} €` : 'Non disponible',        inline: true },
         )
         .setFooter({ text: `Misez avec /enchere miser ${id}` });
 
@@ -177,15 +177,15 @@ module.exports = {
         .setTitle(`🔨 Enchère #${id} — ${enc.item_name}`)
         .setDescription(enc.description || 'Aucune description')
         .addFields(
-          { name: '💰 Mise actuelle',    value: `**${enc.current_bid} 🪙**`,                    inline: true },
+          { name: '💰 Mise actuelle',    value: `**${enc.current_bid} €**`,                    inline: true },
           { name: '👑 Meilleur enchérisseur', value: enc.bidder_id ? `<@${enc.bidder_id}>` : 'Aucun', inline: true },
           { name: '⏱️ Statut',          value: enc.status === 'active' ? `Fin <t:${enc.ends_at}:R>` : '⏹️ Terminé', inline: true },
           { name: '👤 Vendeur',          value: `<@${enc.seller_id}>`,                          inline: true },
-          { name: '⚡ Achat immédiat',   value: enc.buyout_price ? `${enc.buyout_price} 🪙` : 'Non', inline: true },
+          { name: '⚡ Achat immédiat',   value: enc.buyout_price ? `${enc.buyout_price} €` : 'Non', inline: true },
         );
 
       if (history.length) {
-        embed.addFields({ name: '📜 Historique', value: history.map(h => `<@${h.bidder_id}> — **${h.amount} 🪙** <t:${h.bid_at}:R>`).join('\n'), inline: false });
+        embed.addFields({ name: '📜 Historique', value: history.map(h => `<@${h.bidder_id}> — **${h.amount} €** <t:${h.bid_at}:R>`).join('\n'), inline: false });
       }
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
@@ -196,7 +196,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#f39c12')
         .setTitle('🔨 Enchères Actives')
-        .setDescription(list.map(e => `**#${e.id}** — **${e.item_name}** — Mise actuelle : **${e.current_bid} 🪙** — Fin <t:${e.ends_at}:R>`).join('\n'));
+        .setDescription(list.map(e => `**#${e.id}** — **${e.item_name}** — Mise actuelle : **${e.current_bid} €** — Fin <t:${e.ends_at}:R>`).join('\n'));
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });
     }
 
@@ -206,10 +206,10 @@ module.exports = {
 
       const embed = new EmbedBuilder().setColor('#9b59b6').setTitle('👤 Mes Enchères');
       if (mySales.length) {
-        embed.addFields({ name: '📦 Mes Ventes', value: mySales.map(e => `**#${e.id}** ${e.item_name} — ${e.current_bid} 🪙 — ${e.status === 'active' ? `Fin <t:${e.ends_at}:R>` : e.status}`).join('\n'), inline: false });
+        embed.addFields({ name: '📦 Mes Ventes', value: mySales.map(e => `**#${e.id}** ${e.item_name} — ${e.current_bid} € — ${e.status === 'active' ? `Fin <t:${e.ends_at}:R>` : e.status}`).join('\n'), inline: false });
       }
       if (myBids.length) {
-        embed.addFields({ name: '💰 Mes Enchères', value: myBids.map(e => `**#${e.id}** ${e.item_name} — Ma mise : ${e.current_bid} 🪙 — Fin <t:${e.ends_at}:R>`).join('\n'), inline: false });
+        embed.addFields({ name: '💰 Mes Enchères', value: myBids.map(e => `**#${e.id}** ${e.item_name} — Ma mise : ${e.current_bid} € — Fin <t:${e.ends_at}:R>`).join('\n'), inline: false });
       }
       if (!mySales.length && !myBids.length) embed.setDescription('Aucune enchère pour le moment.');
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [embed] });

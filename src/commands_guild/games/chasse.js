@@ -43,7 +43,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const userId = interaction.user.id;
     const cfg = db.getConfig(guildId);
-    const coin = cfg.currency_emoji || '🪙';
+    const coin = cfg.currency_emoji || '€';
     const now = Math.floor(Date.now() / 1000);
 
     let c = db.db.prepare('SELECT * FROM chasse WHERE guild_id=? AND user_id=?').get(guildId, userId);

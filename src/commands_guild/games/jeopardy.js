@@ -150,7 +150,7 @@ module.exports = {
           db.addCoins(msg.author.id, guildId, val);
           await channel.send({ embeds: [new EmbedBuilder()
             .setColor('#2ecc71')
-            .setDescription(`✅ **${msg.author.username}** a la bonne réponse !\nRéponse : **${qData.a}**\n+**${val}** points & +**${val}** 🪙 !`)
+            .setDescription(`✅ **${msg.author.username}** a la bonne réponse !\nRéponse : **${qData.a}**\n+**${val}** points & +**${val}** € !`)
           ]});
         }
       });
