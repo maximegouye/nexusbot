@@ -578,6 +578,20 @@ module.exports = {
       console.log('✅ Daily Question : démarrée (post auto à midi Paris)');
     } catch (e) { console.log('⚠️  Daily Question error:', e.message); }
 
+    // Weekly Leaderboard — top 10 actifs chaque lundi midi
+    try {
+      const weeklyLeaderboard = require('../utils/weeklyLeaderboard');
+      weeklyLeaderboard.startWeeklyLeaderboardScheduler(client);
+      console.log('✅ Weekly Leaderboard : démarré (post chaque lundi midi)');
+    } catch (e) { console.log('⚠️  Weekly Leaderboard error:', e.message); }
+
+    // Monthly Theme — bannière thématique selon le mois
+    try {
+      const monthlyTheme = require('../utils/monthlyTheme');
+      monthlyTheme.startMonthlyThemeScheduler(client);
+      console.log('✅ Monthly Theme : démarré (vérif quotidienne)');
+    } catch (e) { console.log('⚠️  Monthly Theme error:', e.message); }
+
     // Wealth Roles — auto-attribution des rôles selon richesse (toutes les 5min)
     try {
       const wealthRoles = require('../utils/wealthRoles');

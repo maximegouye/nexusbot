@@ -99,6 +99,12 @@ async function handleMessageXP(message) {
     const before = db.addXP(message.author.id, message.guild.id, xpGain);
     db.addCoins(message.author.id, message.guild.id, coinsGain);
 
+    // Tracking pour le classement hebdomadaire
+    try {
+      const wlb = require('../utils/weeklyLeaderboard');
+      wlb.incrementWeeklyXP(message.guild.id, message.author.id, xpGain);
+    } catch {}
+
     // Level-up ?
     const newLevel = db.checkLevelUp(message.author.id, message.guild.id);
     if (newLevel && before) {
