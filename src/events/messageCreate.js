@@ -105,6 +105,39 @@ async function handleMessageXP(message) {
       wlb.incrementWeeklyXP(message.guild.id, message.author.id, xpGain);
     } catch {}
 
+    // Streak quotidien : incrémente 1× par jour, annonce les paliers
+    try {
+      const streak = require('../utils/dailyStreak');
+      const info = streak.updateStreak(message.guild.id, message.author.id);
+      if (info && info.streakChanged) {
+        streak.announceStreakMilestone(message, info).catch(() => {});
+      }
+    } catch {}
+
+    // Achievements : incrémente le compteur de messages et débloque les badges
+    try {
+      const ach = require('../utils/achievements');
+      ach.addStat(message.author.id, message.guild.id, 'messages_sent', 1);
+      const newBadges = ach.checkAchievements(message.author.id, message.guild.id);
+      if (newBadges.length > 0) {
+        const { EmbedBuilder } = require('discord.js');
+        for (const b of newBadges) {
+          const emb = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle(`🏆 Achievement débloqué !`)
+            .setDescription([
+              `<@${message.author.id}> a débloqué **${b.emoji} ${b.name}**`,
+              '',
+              `*${b.desc}*`,
+              '',
+              `🎁 +${b.reward.toLocaleString('fr-FR')} €`,
+            ].join('\n'))
+            .setTimestamp();
+          message.channel.send({ embeds: [emb] }).catch(() => {});
+        }
+      }
+    } catch {}
+
     // Level-up ?
     const newLevel = db.checkLevelUp(message.author.id, message.guild.id);
     if (newLevel && before) {

@@ -592,6 +592,13 @@ module.exports = {
       console.log('✅ Monthly Theme : démarré (vérif quotidienne)');
     } catch (e) { console.log('⚠️  Monthly Theme error:', e.message); }
 
+    // Daily Highlight — re-post le meilleur message du jour à 22h Paris
+    try {
+      const dailyHighlight = require('../utils/dailyHighlight');
+      dailyHighlight.startDailyHighlightScheduler(client);
+      console.log('✅ Daily Highlight : démarré (post chaque jour à 22h)');
+    } catch (e) { console.log('⚠️  Daily Highlight error:', e.message); }
+
     // Wealth Roles — auto-attribution des rôles selon richesse (toutes les 5min)
     try {
       const wealthRoles = require('../utils/wealthRoles');
