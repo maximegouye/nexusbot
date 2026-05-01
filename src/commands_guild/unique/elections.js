@@ -83,8 +83,8 @@ module.exports = {
       if (!elec) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
       if (elec.status !== 'active' || now > elec.end_time) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Cette élection est terminée.', ephemeral: true });
 
-      const candidats = JSON.parse(elec.candidates);
-      const votes = JSON.parse(elec.votes || '{}');
+      let candidats = []; try { candidats = JSON.parse(elec.candidates || '[]'); } catch { candidats = []; }
+      let votes = {}; try { votes = JSON.parse(elec.votes || '{}'); } catch { votes = {}; }
 
       if (votes[userId]) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Vous avez déjà voté dans cette élection.', ephemeral: true });
 
@@ -108,8 +108,8 @@ module.exports = {
       const elec = db.db.prepare('SELECT * FROM elections WHERE id=? AND guild_id=?').get(id, guildId);
       if (!elec) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Élection #${id} introuvable.`, ephemeral: true });
 
-      const candidats = JSON.parse(elec.candidates);
-      const votes = JSON.parse(elec.votes || '{}');
+      let candidats = []; try { candidats = JSON.parse(elec.candidates || '[]'); } catch { candidats = []; }
+      let votes = {}; try { votes = JSON.parse(elec.votes || '{}'); } catch { votes = {}; }
       const totalVotes = Object.keys(votes).length;
 
       const scores = {};
@@ -158,8 +158,8 @@ module.exports = {
 
       db.db.prepare('UPDATE elections SET status=? WHERE id=?').run('terminee', id);
 
-      const votes = JSON.parse(elec.votes || '{}');
-      const candidats = JSON.parse(elec.candidates);
+      let votes = {}; try { votes = JSON.parse(elec.votes || '{}'); } catch { votes = {}; }
+      let candidats = []; try { candidats = JSON.parse(elec.candidates || '[]'); } catch { candidats = []; }
       const scores = {};
       candidats.forEach(c => scores[c] = 0);
       Object.values(votes).forEach(v => { if (scores[v] !== undefined) scores[v]++; });

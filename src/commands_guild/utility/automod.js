@@ -45,7 +45,7 @@ module.exports = {
     const cfg = db.getConfig(guildId);
 
     if (sub === 'voir') {
-      const words = cfg.automod_words ? JSON.parse(cfg.automod_words) : [];
+      const words = (() => { try { return cfg.automod_words ? JSON.parse(cfg.automod_words) : []; } catch { return []; } })();
       return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#E74C3C').setTitle('🤖 Configuration AutoMod')
           .addFields(
@@ -87,7 +87,7 @@ module.exports = {
 
     if (sub === 'mots') {
       const action = interaction.options.getString('action');
-      let words = cfg.automod_words ? JSON.parse(cfg.automod_words) : [];
+      let words = (() => { try { return cfg.automod_words ? JSON.parse(cfg.automod_words) : []; } catch { return []; } })();
 
       if (action === 'voir') {
         return interaction.editReply({ embeds: [

@@ -701,13 +701,18 @@ module.exports = {
 // FONCTIONS INTERNES
 // ============================================================
 
+// Helper safe pour récupérer un field optionnel (Discord.js peut throw si absent)
+function safeField(interaction, key) {
+  try { return interaction.fields.getTextInputValue(key); } catch { return null; }
+}
+
 // Soumission de demande via modal
 async function submitDemande(interaction) {
-  const nom         = interaction.fields.getTextInputValue('nom').trim();
-  const invite      = interaction.fields.getTextInputValue('invite').trim();
-  const pub         = interaction.fields.getTextInputValue('pub').trim();
-  const description = interaction.fields.getTextInputValue('description').trim();
-  const membres     = interaction.fields.getTextInputValue('membres')?.trim() || null;
+  const nom         = (safeField(interaction, 'nom') || '').trim();
+  const invite      = (safeField(interaction, 'invite') || '').trim();
+  const pub         = (safeField(interaction, 'pub') || '').trim();
+  const description = (safeField(interaction, 'description') || '').trim();
+  const membres     = (safeField(interaction, 'membres') || '').trim() || null;
 
   if (!invite.includes('discord.gg/') && !invite.includes('discord.com/invite/')) {
     return interaction.editReply({ content: '❌ Le lien doit être un lien Discord valide (discord.gg/...).', ephemeral: true });
@@ -924,7 +929,8 @@ async function submitPub(interaction) {
   const pubChan = interaction.guild.channels.cache.get(g.pubChannelId);
   if (!partner || !pubChan) return interaction.editReply({ content: '❌ Impossible d\'envoyer la pub.', ephemeral: true });
 
-  const message = interaction.fields.getTextInputValue('message').trim();
+  const message = (safeField(interaction, 'message') || '').trim();
+  if (!message) return interaction.editReply({ content: '❌ Le message est vide.', ephemeral: true });
   await pubChan.send({ embeds: [new EmbedBuilder()
     .setColor(0x9B59B6)
     .setTitle(`📢 ${partner.nom}`)
@@ -942,7 +948,8 @@ async function submitPub(interaction) {
 
 // Modal pour définir notre pub
 async function submitNotrePub(interaction) {
-  const pub = interaction.fields.getTextInputValue('pub').trim();
+  const pub = (safeField(interaction, 'pub') || '').trim();
+  if (!pub) return interaction.editReply({ content: '❌ La pub est vide.', ephemeral: true });
   updateGuild(interaction.guildId, { notrePub: pub });
   return interaction.editReply({
     embeds: [new EmbedBuilder()
@@ -956,11 +963,11 @@ async function submitNotrePub(interaction) {
 
 // Modal ajout direct par admin
 async function submitAjouter(interaction) {
-  const nom   = interaction.fields.getTextInputValue('nom').trim();
-  const invite = interaction.fields.getTextInputValue('invite').trim();
-  const pub   = interaction.fields.getTextInputValue('pub').trim();
-  const description = interaction.fields.getTextInputValue('description')?.trim() || '';
-  const repId = interaction.fields.getTextInputValue('representant_id')?.trim() || null;
+  const nom   = (safeField(interaction, 'nom') || '').trim();
+  const invite = (safeField(interaction, 'invite') || '').trim();
+  const pub   = (safeField(interaction, 'pub') || '').trim();
+  const description = (safeField(interaction, 'description') || '').trim();
+  const repId = (safeField(interaction, 'representant_id') || '').trim() || null;
 
   const g = getGuild(interaction.guildId);
   if (g.partners.some(p => p.nom.toLowerCase() === nom.toLowerCase())) {

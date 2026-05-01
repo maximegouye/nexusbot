@@ -143,7 +143,7 @@ module.exports = {
         }
       }
 
-      const questions = JSON.parse(form.questions || '[]');
+      let questions = []; try { questions = JSON.parse(form.questions || '[]'); } catch { questions = []; }
 
       if (!texte) {
         const desc = questions.length
@@ -199,7 +199,7 @@ module.exports = {
         }
       }
 
-      const questions = JSON.parse(form.questions || '[]');
+      let questions = []; try { questions = JSON.parse(form.questions || '[]'); } catch { questions = []; }
       if (num < 0 || num >= questions.length) {
         if (interaction.deferred || interaction.replied) {
           return interaction.editReply({ content: '❌ Numéro invalide.', ephemeral: true });
@@ -321,7 +321,7 @@ async function handleApplication(interaction, guildId, userId, nom) {
     }
   }
 
-  const questions = JSON.parse(form.questions || '[]');
+  let questions = []; try { questions = JSON.parse(form.questions || '[]'); } catch { questions = []; }
   if (!questions.length) {
     if (interaction.deferred || interaction.replied) {
       return interaction.editReply({ content: '❌ Ce formulaire n\'a pas encore de questions.', ephemeral: true });
