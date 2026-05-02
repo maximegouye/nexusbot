@@ -19,8 +19,9 @@ if (!token)    { console.error('❌ TOKEN manquant dans .env'); process.exit(1);
 if (!clientId) { console.error('❌ CLIENT_ID manquant dans .env'); process.exit(1); }
 console.log(`ℹ️  CLIENT_ID: ${clientId} | GUILD: ${guildId}`);
 
-// Catégories exclues du guild (déjà disponibles en global via src/commands/)
-const GUILD_SKIP_DIRS = ['games', 'economy', 'social', 'unique', 'fun'];
+// Ordre de priorité pour le chargement des guild commands (les premières catégories
+// sont garanties d'être dans les 100 — les dernières sont coupées si dépassement)
+const GUILD_PRIORITY = ['admin', 'utility', 'games', 'economy', 'social', 'unique', 'fun'];
 
 function loadCmds(dir, skipDirs = []) {
   const result = [];
@@ -61,20 +62,38 @@ const rest = new REST({ version: '10' }).setToken(token);
   }
 
   // ── Guild commands (src/commands_guild/) ─────────────────
-  // GUILD_SKIP_DIRS: ces catégories sont servies en global (src/commands/)
-  const guildCmds = loadCmds(path.join(__dirname, 'src', 'commands_guild'), GUILD_SKIP_DIRS);
-  console.log(`🏠 Guild:  ${guildCmds.length} commandes`);
-  if (guildCmds.length > 100) {
-    console.error(`❌ ERREUR: ${guildCmds.length} guild commands > limite 100 !`);
-    process.exit(1);
+  // Chargement par ordre de priorité: admin > utility > games > economy > social > unique > fun
+  // → garantit que les commandes critiques passent en premier dans la limite de 100
+  const guildBasePath = path.join(__dirname, 'src', 'commands_guild');
+  const rawGuildCmds = [];
+  const seenNames = new Set();
+
+  for (const dir of GUILD_PRIORITY) {
+    const dirPath = path.join(guildBasePath, dir);
+    const dirCmds = loadCmds(dirPath);
+    for (const cmd of dirCmds) {
+      if (!seenNames.has(cmd.name)) {
+        seenNames.add(cmd.name);
+        rawGuildCmds.push(cmd);
+      } else {
+        console.log(`  ℹ️  Doublon ignoré: ${cmd.name} (déjà chargé depuis priorité plus haute)`);
+      }
+    }
   }
 
-  // Vérifier doublons dans chaque groupe
-  const guildNames = guildCmds.map(c => c.name);
+  console.log(`🏠 Guild total chargé: ${rawGuildCmds.length} commandes`);
+
+  // Limiter à 100 (Discord limit)
+  const guildCmds = rawGuildCmds.slice(0, 100);
+  if (rawGuildCmds.length > 100) {
+    const omitted = rawGuildCmds.slice(100).map(c => c.name);
+    console.log(`⚠️  Limite 100 atteinte — ${omitted.length} commandes omises du guild (disponibles en global): ${omitted.join(', ')}`);
+  }
+  console.log(`🏠 Guild:  ${guildCmds.length} commandes`);
+
+  // Vérifier doublons dans global
   const globalNames = globalCmds.map(c => c.name);
-  const guildDupes  = guildNames.filter((n,i) => guildNames.indexOf(n) !== i);
   const globalDupes = globalNames.filter((n,i) => globalNames.indexOf(n) !== i);
-  if (guildDupes.length)  { console.error(`❌ Doublons guild: ${guildDupes}`); process.exit(1); }
   if (globalDupes.length) { console.error(`❌ Doublons global: ${globalDupes}`); process.exit(1); }
 
   // ── Enregistrement GUILD ──────────────────────────────────

@@ -34,6 +34,7 @@ function getAutomodCfg(guildId) {
 }
 
 module.exports = {
+  _prefixOnly: true, // DISABLED: replaced by commands_guild/utility/automod.js (new v3 with subcommands)
   data: new SlashCommandBuilder()
     .setName('automod')
     .setDescription('🛡️ Configurer l\'auto-modération avancée du serveur')
