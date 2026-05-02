@@ -149,7 +149,20 @@ module.exports = {
   ephemeral: true,
 
   async execute(interaction) {
-    const sub    = interaction.options.getSubcommand();
+    // Normalisation : aliases pour compatibilité avec les anciennes commandes Discord enregistrées
+    const _rawSub = interaction.options.getSubcommand();
+    const _aliases = {
+      'statut':       'voir',
+      'antispam':     'spam',
+      'anticaps':     'caps',
+      'antiinvites':  'invites',
+      'antiliens':    'liens',
+      'antimentions': 'mentions',
+      'antiemojis':   'emojis',
+      'antiflood':    'flood',
+      'antizalgo':    'zalgo',
+    };
+    const sub     = _aliases[_rawSub] ?? _rawSub;
     const guildId = interaction.guildId;
 
     try {
