@@ -428,36 +428,99 @@ module.exports = {
       // ════════════════════════════════════════════════════════
       if (sub === 'stats') {
         const targetUser = interaction.options.getUser('utilisateur');
+        const reasonIcons = { spam: '🚫', caps: '🔠', invites: '🔗', liens: '🌐', mots: '🤬', mentions: '📣', emojis: '😂', flood: '♻️', zalgo: '👾' };
+        const allReasons  = ['spam', 'caps', 'invites', 'liens', 'mots', 'mentions', 'emojis', 'flood', 'zalgo'];
 
-        let totalRows, byReason, topOffenders, recent;
+        const nowSec = Math.floor(Date.now() / 1000);
+        const h24    = nowSec - 86400;
+        const d7     = nowSec - 604800;
+
+        let totalRows, total24h, total7d, byReason, topOffenders, recent;
+
         if (targetUser) {
-          totalRows   = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND user_id=?').get(guildId, targetUser.id);
-          byReason    = db.db.prepare('SELECT reason, COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND user_id=? GROUP BY reason ORDER BY c DESC').all(guildId, targetUser.id);
-          recent      = db.db.prepare('SELECT * FROM automod_infractions WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 5').all(guildId, targetUser.id);
+          totalRows = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND user_id=?').get(guildId, targetUser.id);
+          total24h  = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND user_id=? AND created_at>?').get(guildId, targetUser.id, h24);
+          total7d   = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND user_id=? AND created_at>?').get(guildId, targetUser.id, d7);
+          byReason  = db.db.prepare('SELECT reason, COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND user_id=? GROUP BY reason ORDER BY c DESC').all(guildId, targetUser.id);
+          recent    = db.db.prepare('SELECT * FROM automod_infractions WHERE guild_id=? AND user_id=? ORDER BY created_at DESC LIMIT 5').all(guildId, targetUser.id);
         } else {
-          totalRows   = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=?').get(guildId);
-          byReason    = db.db.prepare('SELECT reason, COUNT(*) as c FROM automod_infractions WHERE guild_id=? GROUP BY reason ORDER BY c DESC LIMIT 8').all(guildId);
+          totalRows    = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=?').get(guildId);
+          total24h     = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND created_at>?').get(guildId, h24);
+          total7d      = db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND created_at>?').get(guildId, d7);
+          byReason     = db.db.prepare('SELECT reason, COUNT(*) as c FROM automod_infractions WHERE guild_id=? GROUP BY reason ORDER BY c DESC').all(guildId);
           topOffenders = db.db.prepare('SELECT user_id, COUNT(*) as c FROM automod_infractions WHERE guild_id=? GROUP BY user_id ORDER BY c DESC LIMIT 5').all(guildId);
-          recent      = db.db.prepare('SELECT * FROM automod_infractions WHERE guild_id=? ORDER BY created_at DESC LIMIT 5').all(guildId);
+          recent       = db.db.prepare('SELECT * FROM automod_infractions WHERE guild_id=? ORDER BY created_at DESC LIMIT 5').all(guildId);
         }
 
-        const total = totalRows?.c || 0;
-        const reasonIcons = { spam: '🚫', caps: '🔠', invites: '🔗', liens: '🌐', mots: '🤬', mentions: '📣', emojis: '😂', flood: '♻️', zalgo: '👾' };
+        const total    = totalRows?.c  || 0;
+        const count24h = total24h?.c   || 0;
+        const count7d  = total7d?.c    || 0;
+
+        // Map reason → count pour lookup O(1)
+        const reasonMap = {};
+        for (const r of byReason) reasonMap[r.reason] = r.c;
+
+        // Toutes les catégories, même celles à 0
+        const byTypeLines = allReasons.map(r => {
+          const n = reasonMap[r] || 0;
+          const bar = n > 0 ? '`' + n + '`' : '`—`';
+          return `${reasonIcons[r]} **${r}** ${bar}`;
+        }).join('\n');
 
         const embed = new EmbedBuilder()
-          .setColor('#E74C3C')
-          .setTitle(targetUser ? `📊 Infractions de ${targetUser.username}` : '📊 Statistiques AutoMod')
-          .setDescription(`**${total}** infraction(s) enregistrée(s)${targetUser ? ' pour cet utilisateur' : ' sur ce serveur'}.`)
-          .setTimestamp();
+          .setColor(total > 0 ? '#E74C3C' : '#2ECC71')
+          .setTitle(targetUser ? `📊 Infractions — ${targetUser.username}` : '📊 Statistiques AutoMod')
+          .setDescription(
+            total === 0
+              ? '✅ **Aucune infraction enregistrée** — le serveur est propre !'
+              : `**${total}** infraction${total > 1 ? 's' : ''} enregistrée${total > 1 ? 's' : ''}${targetUser ? ` pour ${targetUser.username}` : ' sur ce serveur'}.`
+          )
+          .addFields(
+            {
+              name: '📆 Résumé temporel',
+              value: [
+                `**Dernières 24h :** ${count24h > 0 ? `**${count24h}**` : '`0`'} infraction${count24h > 1 ? 's' : ''}`,
+                `**Derniers 7 jours :** ${count7d  > 0 ? `**${count7d}**`  : '`0`'} infraction${count7d  > 1 ? 's' : ''}`,
+                `**Total :** ${total > 0 ? `**${total}**` : '`0`'} infraction${total > 1 ? 's' : ''}`,
+              ].join('\n'),
+              inline: false,
+            },
+            {
+              name: '📋 Infractions par type',
+              value: byTypeLines,
+              inline: true,
+            },
+          )
+          .setTimestamp()
+          .setFooter({ text: targetUser ? `ID : ${targetUser.id}` : 'AutoMod — NexusBot' });
 
-        if (byReason.length) {
-          embed.addFields({ name: '📋 Par type', value: byReason.map(r => `${reasonIcons[r.reason] || '🔹'} **${r.reason}** — ${r.c} fois`).join('\n'), inline: true });
+        // Top contrevenants (serveur global uniquement)
+        if (!targetUser && topOffenders?.length > 0) {
+          embed.addFields({
+            name: '🎯 Top contrevenants',
+            value: topOffenders.map((o, i) => {
+              const medal = ['🥇','🥈','🥉'][i] || `**${i + 1}.**`;
+              return `${medal} <@${o.user_id}> — \`${o.c}\` infraction${o.c > 1 ? 's' : ''}`;
+            }).join('\n'),
+            inline: true,
+          });
         }
-        if (topOffenders?.length) {
-          embed.addFields({ name: '🎯 Top contrevenants', value: topOffenders.map((o, i) => `**${i + 1}.** <@${o.user_id}> — ${o.c} fois`).join('\n'), inline: true });
-        }
-        if (recent?.length) {
-          embed.addFields({ name: '⏱️ Récentes', value: recent.map(r => `<@${r.user_id}> — **${r.reason}** <t:${r.created_at}:R>`).join('\n'), inline: false });
+
+        // 5 dernières infractions
+        if (recent?.length > 0) {
+          embed.addFields({
+            name: '🕐 5 dernières infractions',
+            value: recent.map(r =>
+              `${reasonIcons[r.reason] || '🔹'} <@${r.user_id}> — **${r.reason}** <t:${r.created_at}:R>`
+            ).join('\n'),
+            inline: false,
+          });
+        } else {
+          embed.addFields({
+            name: '💡 Aucune infraction récente',
+            value: 'Les infractions apparaîtront ici dès que l\'automod en détectera une.\nActivez les modules avec `/automod spam`, `/automod caps`, etc.',
+            inline: false,
+          });
         }
 
         return interaction.editReply({ embeds: [embed] });
