@@ -189,7 +189,7 @@ module.exports = {
       .addSubcommand(s => s.setName('creer').setDescription('Créer un événement économique')
         .addStringOption(o => o.setName('nom').setDescription('Nom de l\'événement').setRequired(true))
         .addStringOption(o => o.setName('type').setDescription('Type d\'événement').setRequired(true).addChoices(
-          { name: '💎 Double Coins', value: 'double_coins' },
+          { name: '💎 Double €', value: 'double_coins' },
           { name: '⚡ Triple XP', value: 'triple_xp' },
           { name: '📅 Double Daily', value: 'double_daily' },
           { name: '💬 Bonus Messages', value: 'msg_bonus' },
@@ -723,7 +723,7 @@ module.exports = {
               { name: '💰 Monnaie', value: `${freshCfg.currency_emoji || '€'} ${freshCfg.currency_name || '€'}`, inline: true },
               { name: '📅 Daily', value: `${(freshCfg.daily_amount||200).toLocaleString()} ${freshCfg.currency_emoji||'€'}`, inline: true },
               { name: '⚡ Multiplicateur XP', value: `×${freshCfg.xp_multiplier || 1}`, inline: true },
-              { name: '💬 Coins/message', value: `${freshCfg.coins_per_msg || 5}`, inline: true },
+              { name: '💬 €/message', value: `${freshCfg.coins_per_msg || 5}`, inline: true },
               { name: '👋 Bienvenue', value: freshCfg.welcome_channel ? `<#${freshCfg.welcome_channel}>` : 'Non configuré', inline: true },
               { name: '🚪 Au revoir', value: freshCfg.leave_channel ? `<#${freshCfg.leave_channel}>` : 'Non configuré', inline: true },
               { name: '📋 Logs', value: freshCfg.log_channel ? `<#${freshCfg.log_channel}>` : 'Non configuré', inline: true },
@@ -902,7 +902,7 @@ module.exports = {
         ).run(guildId, nom, type, endsAt);
 
         const typeLabels = {
-          double_coins: '💎 Double Coins',
+          double_coins: '💎 Double €',
           triple_xp:    '⚡ Triple XP',
           double_daily: '📅 Double Daily',
           msg_bonus:    '💬 Bonus Messages',

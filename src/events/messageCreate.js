@@ -138,7 +138,19 @@ async function handleMessageXP(message) {
 
     // XP aléatoire entre 5 et 15
     const xpGain    = Math.floor(Math.random() * 11) + 5;
-    const coinsGain = 1;
+    const baseCoins = cfg.coins_per_msg || 1;
+    // Multiplicateur d'événement actif (Double €, Triple €)
+    const _eventMult = (() => {
+      try {
+        const _now = Math.floor(Date.now() / 1000);
+        const _row = db.db.prepare(
+          `SELECT MAX(multiplier) as m FROM eco_events WHERE guild_id=? AND active=1
+           AND type IN ('double_coins','triple_coins') AND COALESCE(end_time,ends_at)>?`
+        ).get(message.guild.id, _now);
+        return _row?.m || 1;
+      } catch { return 1; }
+    })();
+    const coinsGain = Math.round(baseCoins * _eventMult);
 
     const before = db.addXP(message.author.id, message.guild.id, xpGain);
     db.addCoins(message.author.id, message.guild.id, coinsGain);

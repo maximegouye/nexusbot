@@ -110,9 +110,9 @@ const MINI_EVENTS = [
   { type: 'fact',     emoji: '💡', title: 'Stratégie', text: 'Sur la `/roue-fortune`, le segment JACKPOT donne **×50** ta mise. Mise petit pour tester ! 🎡' },
   { type: 'challenge', emoji: '🎯', title: 'Mini-défi rapide', text: 'Le premier qui gagne **+10 000€** dans les 30 prochaines minutes via `/slots` reçoit **+5 000€** bonus ! ⚡' },
   { type: 'challenge', emoji: '🎯', title: 'Mini-défi rapide', text: 'Tente ta chance sur la `/roue-fortune` — qui sera le premier à toucher le JACKPOT cette heure ? 🌟' },
-  { type: 'reminder',  emoji: '⏰', title: 'Rappel quotidien', text: 'Tu n\'as pas encore fait ton `/daily` aujourd\'hui ? File chercher tes coins gratuits ! 💰' },
+  { type: 'reminder',  emoji: '⏰', title: 'Rappel quotidien', text: 'Tu n\'as pas encore fait ton `/daily` aujourd\'hui ? File chercher tes euros gratuits ! 💰' },
   { type: 'reminder',  emoji: '⏰', title: 'Bourse active', text: 'Les cryptos bougent en temps réel ! Tape `/bourse` ou `/crypto` pour voir les prix. 📈' },
-  { type: 'reminder',  emoji: '⏰', title: 'Travail = Argent', text: 'Pas de coins ? Tape `/work` toutes les heures pour gagner sans risque. 💼' },
+  { type: 'reminder',  emoji: '⏰', title: 'Travail = Argent', text: 'Pas d\'euros ? Tape `/work` toutes les heures pour gagner sans risque. 💼' },
   { type: 'fact',     emoji: '💡', title: 'Top Joueurs', text: 'Tape `/leaderboard` pour voir les plus riches du serveur. Vise le top 10 ! 🏆' },
   { type: 'fact',     emoji: '💡', title: 'Achievements', text: 'Tape `/achievements` pour voir les défis à débloquer et leurs récompenses. 🎖️' },
 ];

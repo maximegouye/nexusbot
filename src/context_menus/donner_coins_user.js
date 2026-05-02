@@ -2,7 +2,7 @@ const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, ModalBu
 
 module.exports = {
   data: new ContextMenuCommandBuilder()
-    .setName('🎁 Donner des Coins')
+    .setName('🎁 Donner des €')
     .setType(ApplicationCommandType.User),
 
   async execute(interaction) {
@@ -13,7 +13,7 @@ module.exports = {
 
       const modal = new ModalBuilder()
         .setCustomId(`give_coins_ctx_${target.id}`)
-        .setTitle(`🎁 Donner des Coins à ${target.username}`);
+        .setTitle(`🎁 Donner des € à ${target.username}`);
 
       const montant = new TextInputBuilder()
         .setCustomId('montant')

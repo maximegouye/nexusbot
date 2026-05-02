@@ -336,7 +336,7 @@ module.exports = {
       .addFields(
         { name: '📋 Règles du serveur',    value: 'Pense à lire les règles pour profiter d\'une ambiance agréable.', inline: false },
         { name: '🎫 Besoin d\'aide ?',      value: 'Ouvre un ticket depuis le salon support — notre équipe est là pour toi.', inline: false },
-        { name: '🏆 Système de niveaux',    value: 'Plus tu participes, plus tu montes en grade et tu gagnes de la monnaie virtuelle !', inline: false },
+        { name: '🏆 Système de niveaux',    value: 'Plus tu participes, plus tu montes en grade et tu gagnes des euros !', inline: false },
       )
       .setThumbnail(guild.iconURL())
       .setFooter({ text: `${guild.name} · On espère te voir souvent !` })

@@ -7,6 +7,19 @@ function trackMission(userId, guildId, type, amount = 1) {
   try { require('../../commands_guild/unique/missions').progressMission(userId, guildId, type, amount); } catch {}
 }
 
+// Retourne le multiplicateur d'événement actif pour le daily
+function getDailyEventMultiplier(guildId) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const row = db.db.prepare(
+      `SELECT MAX(multiplier) as m FROM eco_events WHERE guild_id=? AND active=1
+       AND type IN ('double_coins','triple_coins','double_daily')
+       AND COALESCE(end_time,ends_at)>?`
+    ).get(guildId, now);
+    return row?.m || 1;
+  } catch { return 1; }
+}
+
 module.exports = {
   name: 'daily',
   aliases: ['quotidien', 'jour'],
@@ -108,7 +121,9 @@ module.exports = {
 
     // Boost Daily depuis boutique
     const dailyMult = (user.boost_daily_mult || 1) > 1 ? (user.boost_daily_mult) : 1;
-    const total     = Math.floor((base + streakBonus + milestone + comebackBonus) * dailyMult);
+    // Multiplicateur d'événement actif (Double €, Triple €, Daily ×2)
+    const eventMult = getDailyEventMultiplier(interaction.guildId);
+    const total     = Math.floor((base + streakBonus + milestone + comebackBonus) * dailyMult * eventMult);
 
     db.addCoins(interaction.user.id, interaction.guildId, total);
     db.db.prepare('UPDATE users SET last_daily = ?, streak = ? WHERE user_id = ? AND guild_id = ?')
@@ -143,6 +158,7 @@ module.exports = {
     if (newStreak === 200) specialMsg = `\n🌌 **200 jours !** Bonus MYTHIQUE : ${milestones[200].toLocaleString('fr-FR')}${symbol}.`;
     if (newStreak === 365) specialMsg = `\n🌟 **1 AN ENTIER !** Bonus DIVIN : ${milestones[365].toLocaleString('fr-FR')}${symbol}.`;
     if (comebackBonus > 0) specialMsg += `\n🚪 **Bon retour !** Tu étais absent ${comebackDays} jour${comebackDays>1?'s':''} → bonus comeback : **+${comebackBonus.toLocaleString('fr-FR')}${symbol}**.`;
+    if (eventMult > 1)    specialMsg += `\n🎊 **Événement actif ×${eventMult}** — tous tes gains sont multipliés !`;
 
     const flames = '🔥'.repeat(Math.min(newStreak, 7));
 

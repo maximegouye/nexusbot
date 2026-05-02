@@ -7,6 +7,19 @@ function trackMission(userId, guildId, type, amount = 1) {
   try { require('../../commands_guild/unique/missions').progressMission(userId, guildId, type, amount); } catch {}
 }
 
+// Retourne le multiplicateur actif (double/triple coins ou salaire) pour le serveur
+function getWorkEventMultiplier(guildId) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const row = db.db.prepare(
+      `SELECT MAX(multiplier) as m FROM eco_events WHERE guild_id=? AND active=1
+       AND type IN ('double_coins','triple_coins','double_salary')
+       AND COALESCE(end_time,ends_at)>?`
+    ).get(guildId, now);
+    return row?.m || 1;
+  } catch { return 1; }
+}
+
 // Salaires raisonnables (anti-inflation)
 const JOBS = [
   { name: 'Développeur',    emoji: '💻', min: 180, max: 450 },
@@ -134,7 +147,9 @@ module.exports = {
     // Boost Travail depuis boutique
     const workBoostActive = (user.boost_work_until || 0) > Math.floor(Date.now() / 1000);
     const workMult = workBoostActive ? 2 : 1;
-    const total = Math.floor((earned + streakBonus) * workMult);
+    // Multiplicateur d'événement actif (Double €, Triple €, Salaire ×2)
+    const eventMult = getWorkEventMultiplier(interaction.guildId);
+    const total = Math.floor((earned + streakBonus) * workMult * eventMult);
 
     // ── Animation de travail ──────────────────────────────
     const replyFn = (interaction.deferred || interaction.replied) ? interaction.editReply.bind(interaction) : interaction.reply.bind(interaction);
@@ -170,10 +185,11 @@ module.exports = {
     trackMission(interaction.user.id, interaction.guildId, 'work');
     trackMission(interaction.user.id, interaction.guildId, 'earn_coins', total);
 
+    const eventMultText = eventMult > 1 ? `\n🎊 **Événement actif ×${eventMult}** appliqué !` : '';
     const embed = new EmbedBuilder()
       .setColor(cfg.color || '#7B2FBE')
       .setTitle(`${job.emoji} Journée terminée !`)
-      .setDescription(`${phrase} **${total.toLocaleString('fr-FR')}${symbol}**${streakBonus > 0 ? ` *(+${streakBonus}${symbol} bonus streak 🔥)*` : ''}${eventText}`)
+      .setDescription(`${phrase} **${total.toLocaleString('fr-FR')}${symbol}**${streakBonus > 0 ? ` *(+${streakBonus}${symbol} bonus streak 🔥)*` : ''}${eventText}${eventMultText}`)
       .addFields(
         { name: '💼 Métier',        value: `${job.emoji} **${job.name}**`,                          inline: true },
         { name: `${symbol} Gagné`,  value: `**+${total.toLocaleString('fr-FR')}${symbol}**`,        inline: true },

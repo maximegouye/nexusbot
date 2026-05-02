@@ -11,11 +11,19 @@ try {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     guild_id TEXT, name TEXT, type TEXT,
     multiplier REAL DEFAULT 2.0,
-    start_time INTEGER, end_time INTEGER,
+    start_time INTEGER, end_time INTEGER, ends_at INTEGER,
     created_by TEXT, active INTEGER DEFAULT 1,
     channel_announced TEXT,
     created_at INTEGER DEFAULT (strftime('%s','now'))
   )`).run();
+  // Migration : ajoute les colonnes manquantes si la table a été créée par une autre version
+  const _cols = db.db.prepare('PRAGMA table_info(eco_events)').all().map(c => c.name);
+  if (!_cols.includes('start_time'))        db.db.prepare('ALTER TABLE eco_events ADD COLUMN start_time INTEGER').run();
+  if (!_cols.includes('end_time'))          db.db.prepare('ALTER TABLE eco_events ADD COLUMN end_time INTEGER').run();
+  if (!_cols.includes('ends_at'))           db.db.prepare('ALTER TABLE eco_events ADD COLUMN ends_at INTEGER').run();
+  if (!_cols.includes('created_by'))        db.db.prepare('ALTER TABLE eco_events ADD COLUMN created_by TEXT').run();
+  if (!_cols.includes('channel_announced')) db.db.prepare('ALTER TABLE eco_events ADD COLUMN channel_announced TEXT').run();
+  if (!_cols.includes('multiplier'))        db.db.prepare('ALTER TABLE eco_events ADD COLUMN multiplier REAL DEFAULT 2.0').run();
 } catch {}
 
 module.exports = {
@@ -29,9 +37,9 @@ module.exports = {
       .addStringOption(o => o.setName('type').setDescription('Type d\'événement').setRequired(true)
         .addChoices(
           { name: '⭐ Double XP',       value: 'double_xp' },
-          { name: '💰 Double Coins',    value: 'double_coins' },
+          { name: '💰 Double €',         value: 'double_coins' },
           { name: '🎯 XP x3',          value: 'triple_xp' },
-          { name: '💎 Coins x3',       value: 'triple_coins' },
+          { name: '💎 € x3',           value: 'triple_coins' },
           { name: '📅 Daily x2',       value: 'double_daily' },
           { name: '💼 Salaire x2',     value: 'double_salary' },
           { name: '🛒 Réduction boutique 50%', value: 'shop_discount' },
@@ -55,9 +63,9 @@ module.exports = {
 
     const typeLabels = {
       double_xp: { emoji:'⭐', label:'Double XP', desc:'Tous les gains d\'XP sont ×2' },
-      double_coins: { emoji:'💰', label:'Double Coins', desc:'Tous les gains de coins sont ×2' },
+      double_coins: { emoji:'💰', label:'Double €', desc:'Tous les gains d\'€ sont ×2' },
       triple_xp: { emoji:'🌟', label:'XP ×3', desc:'Tous les gains d\'XP sont ×3' },
-      triple_coins: { emoji:'💎', label:'Coins ×3', desc:'Tous les gains de coins sont ×3' },
+      triple_coins: { emoji:'💎', label:'€ ×3', desc:'Tous les gains d\'€ sont ×3' },
       double_daily: { emoji:'📅', label:'Daily ×2', desc:'Le daily rapporte le double' },
       double_salary: { emoji:'💼', label:'Salaire ×2', desc:'Tous les salaires sont doublés' },
       shop_discount: { emoji:'🛒', label:'-50% Boutique', desc:'Tous les articles coûtent moitié prix' },
@@ -76,9 +84,9 @@ module.exports = {
       db.db.prepare('UPDATE eco_events SET active=0 WHERE guild_id=? AND type=? AND active=1').run(guildId, type);
 
       const result = db.db.prepare(`
-        INSERT INTO eco_events (guild_id,name,type,start_time,end_time,created_by,channel_announced)
-        VALUES(?,?,?,?,?,?,?)
-      `).run(guildId, nom, type, now, endTime, interaction.user.id, annoncer?.id ?? null);
+        INSERT INTO eco_events (guild_id,name,type,start_time,end_time,ends_at,created_by,channel_announced)
+        VALUES(?,?,?,?,?,?,?,?)
+      `).run(guildId, nom, type, now, endTime, endTime, interaction.user.id, annoncer?.id ?? null);
 
       const embed = new EmbedBuilder().setColor('#F59E0B')
         .setTitle(`🎊 ÉVÉNEMENT — ${info.emoji} ${nom}`)
@@ -108,11 +116,11 @@ module.exports = {
     }
 
     if (sub === 'liste') {
-      const events = db.db.prepare('SELECT * FROM eco_events WHERE guild_id=? AND active=1 AND end_time>? ORDER BY end_time ASC').all(guildId, now);
+      const events = db.db.prepare('SELECT * FROM eco_events WHERE guild_id=? AND active=1 AND COALESCE(end_time,ends_at)>? ORDER BY COALESCE(end_time,ends_at) ASC').all(guildId, now);
       if (!events.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '📋 Aucun événement actif.', ephemeral: true });
       const lines = events.map(e => {
         const info = typeLabels[e.type] || { emoji:'🎊', label:e.type };
-        return `**#${e.id}** ${info.emoji} **${e.name}** (${info.label}) — Fin : <t:${e.end_time}:R>`;
+        return `**#${e.id}** ${info.emoji} **${e.name}** (${info.label}) — Fin : <t:${e.end_time || e.ends_at}:R>`;
       });
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('#F59E0B')
         .setTitle('🎊 Événements actifs')

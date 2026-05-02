@@ -154,7 +154,7 @@ module.exports = {
             .setDescription(scores.length
               ? scores.slice(0,5).map(([id,pts],i) => `${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} <@${id}> — **${pts} pts**`).join('\n')
               : 'Personne n\'a répondu...')
-            .setFooter({ text: '🥇 +200 coins | 🥈 +100 coins | 🥉 +50 coins' })
+            .setFooter({ text: '🥇 +200 € | 🥈 +100 € | 🥉 +50 €' })
           ]}).catch(() => {});
           return;
         }
