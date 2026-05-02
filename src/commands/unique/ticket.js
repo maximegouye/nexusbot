@@ -373,7 +373,7 @@ async function createTicket(interaction, catValue, formData) {
   await ch.send({
     content: `${member}${staffRole ? ' ' + staffRole : ''}`,
     embeds: formFields.length
-      ? [welcomeEmbed, new EmbedBuilder().setColor(cat.color).setTitle('📋 Formulaire complété').addFields(...formFields.slice(0,10))]
+      ? [welcomeEmbed, new EmbedBuilder().setColor(cat.color).setTitle('📋 Formulaire complété').addFields(formFields.slice(0,10))]
       : [welcomeEmbed],
     components: [row1, row2],
   });
@@ -1126,11 +1126,6 @@ module.exports = {
         ))
     )
     .addSubcommand(s => s
-      .setName('note')
-      .setDescription('📝 Ajouter une note privée staff à ce ticket')
-      .addStringOption(o => o.setName('texte').setDescription('Contenu de la note').setRequired(true).setMaxLength(1000))
-    )
-    .addSubcommand(s => s
       .setName('lock')
       .setDescription('🔐 Verrouiller/déverrouiller ce ticket (Staff)')
     )
@@ -1142,11 +1137,6 @@ module.exports = {
     .addSubcommand(s => s.setName('info').setDescription('ℹ️ Voir les détails de ce ticket'))
     .addSubcommand(s => s.setName('liste').setDescription('📋 Liste des tickets ouverts'))
     .addSubcommand(s => s.setName('stats').setDescription('📊 Statistiques des tickets (Staff only)'))
-    .addSubcommand(s => s
-      .setName('reopen')
-      .setDescription('🔓 Rouvrir le dernier ticket fermé d\'un membre (Staff)')
-      .addUserOption(o => o.setName('membre').setDescription('Membre').setRequired(true))
-    )
     .addSubcommand(s => s
       .setName('blacklist')
       .setDescription('🚫 Blacklist — gérer les accès aux tickets (Staff)')
@@ -1385,18 +1375,6 @@ module.exports = {
     }
 
     // ══ NOTE ═══════════════════════════════════════════════════════════════════
-    if (sub === 'note') {
-      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
-      const ticket = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND channel_id=?").get(interaction.guildId, interaction.channelId);
-      if (!ticket) return reply({ content: '❌ Ce salon n\'est pas un ticket.', ephemeral: true });
-      const texte = interaction.options.getString('texte');
-      db.db.prepare('INSERT INTO ticket_notes (ticket_id, author_id, content, created_at) VALUES (?,?,?,?)').run(ticket.id, interaction.user.id, texte, ts());
-      return reply({ embeds: [new EmbedBuilder().setColor('#F39C12').setTitle('📝 Note privée enregistrée')
-        .setDescription(`> *${texte.slice(0,500)}*`)
-        .setFooter({ text: '🔒 Visible uniquement par le staff' }).setTimestamp()
-      ], ephemeral: true });
-    }
-
     // ══ LOCK ═══════════════════════════════════════════════════════════════════
     if (sub === 'lock') {
       if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
@@ -1482,49 +1460,6 @@ module.exports = {
           ...(topStaff.length ? [{ name: '🏆 Top Staff', value: topStaff.map(s => `<@${s.claimed_by}>: \`${s.c}\``).join('\n'), inline: false }] : []),
         ).setTimestamp()
       ]});
-    }
-
-    // ══ REOPEN ═════════════════════════════════════════════════════════════════
-    if (sub === 'reopen') {
-      if (!isStaff()) return reply({ content: '❌ Réservé au staff.', ephemeral: true });
-      const target = interaction.options.getMember('membre');
-      const lastClosed = db.db.prepare("SELECT * FROM tickets WHERE guild_id=? AND user_id=? AND status='closed' ORDER BY closed_at DESC LIMIT 1")
-        .get(interaction.guildId, target.id);
-      if (!lastClosed) return reply({ content: `❌ Aucun ticket fermé trouvé pour ${target}.`, ephemeral: true });
-      if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: true }).catch(() => {});
-      }
-      const cat = getCat(lastClosed.category);
-      const perms = [
-        { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-        { id: target.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
-      ];
-      const bot = interaction.guild.members.me;
-      if (bot) perms.push({ id: bot.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageMessages] });
-      const staffRole = cfg.ticket_staff_role ? interaction.guild.roles.cache.get(String(cfg.ticket_staff_role)) : null;
-      if (staffRole) perms.push({ id: staffRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] });
-      const safeName = (target.user.username||'user').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12)||'user';
-      let ch;
-      try {
-        ch = await interaction.guild.channels.create({
-          name: `🔓・${lastClosed.category}-${safeName}`,
-          type: ChannelType.GuildText,
-          topic: `ticket:${target.id}`,
-          parent: cfg.ticket_category ? String(cfg.ticket_category) : undefined,
-          permissionOverwrites: perms,
-        });
-      } catch (err) {
-        return interaction.editReply({ content: `❌ Impossible de créer le salon: ${err?.message}` });
-      }
-      const newId = db.db.prepare('INSERT INTO tickets (guild_id, user_id, channel_id, status, category, priority, created_at, last_activity, form_data) VALUES (?,?,?,?,?,?,?,?,?)')
-        .run(interaction.guildId, target.id, ch.id, 'open', lastClosed.category, lastClosed.priority||'normale', ts(), ts(), lastClosed.form_data||'{}').lastInsertRowid;
-      const [r1, r2] = buildControlRows(newId);
-      await ch.send({ content: `${target}${staffRole ? ' '+staffRole : ''}`, embeds: [new EmbedBuilder().setColor(cat.color)
-        .setTitle(`🔓 Ticket #${newId} rouvert — ${cat.label}`)
-        .setDescription(`Ce ticket a été rouvert par <@${interaction.user.id}>.\nTicket précédent : #${lastClosed.id}`)
-        .setThumbnail(target.user.displayAvatarURL({ size: 256 })).setTimestamp()
-      ], components: [r1, r2] });
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setDescription(`✅ Ticket rouvert pour ${target} dans ${ch}`)] });
     }
 
     // ══ BLACKLIST ══════════════════════════════════════════════════════════════
