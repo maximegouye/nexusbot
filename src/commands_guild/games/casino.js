@@ -384,7 +384,7 @@ async function handleComponent(interaction, customId) {
     }
 
     const BET_AMOUNTS = [50, 200, 500, 1000, 5000];
-    const betRow = new ActionRowBuilder().addComponents(
+    const betRow1 = new ActionRowBuilder().addComponents(
       ...BET_AMOUNTS.map(a =>
         new ButtonBuilder()
           .setCustomId(`casino_bet_${gameKey}_${a}`)
@@ -392,11 +392,17 @@ async function handleComponent(interaction, customId) {
           .setStyle(ButtonStyle.Primary)
       )
     );
+    const betRow2 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`casino_bet_${gameKey}_max`)
+        .setLabel('💥 Tout miser')
+        .setStyle(ButtonStyle.Danger)
+    );
 
     return interaction.editReply({
       content: `🎮 **${gameInfo.label}** — Choisis ta mise :`,
       embeds: [],
-      components: [betRow],
+      components: [betRow1, betRow2],
     }).then(() => true).catch(() => true);
   }
 
@@ -408,10 +414,26 @@ async function handleComponent(interaction, customId) {
     const afterPrefix = customId.replace('casino_bet_', '');
     const lastUnderscore = afterPrefix.lastIndexOf('_');
     const gameKey = afterPrefix.substring(0, lastUnderscore);
-    const amount = parseInt(afterPrefix.substring(lastUnderscore + 1));
+    const amountStr = afterPrefix.substring(lastUnderscore + 1);
 
-    if (!gameKey || isNaN(amount)) {
+    if (!gameKey) {
       return interaction.editReply({ content: `❌ Mise invalide.` }).then(() => true).catch(() => true);
+    }
+
+    let amount;
+    if (amountStr === 'max') {
+      const u = db.getUser ? db.getUser(userId, guildId) : null;
+      amount = u?.balance || 0;
+      if (!amount || amount <= 0) {
+        return interaction.editReply({
+          content: `❌ Tu n'as pas d'euros à miser ! Fais \`/daily\` ou \`/work\` pour en gagner.`,
+        }).then(() => true).catch(() => true);
+      }
+    } else {
+      amount = parseInt(amountStr);
+      if (isNaN(amount)) {
+        return interaction.editReply({ content: `❌ Mise invalide.` }).then(() => true).catch(() => true);
+      }
     }
 
     // Pari par défaut pour les jeux qui nécessitent un type de pari

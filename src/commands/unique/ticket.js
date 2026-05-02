@@ -388,6 +388,16 @@ async function createTicket(interaction, catValue, formData) {
 // ── handleComponent ───────────────────────────────────────────────────────────
 async function handleComponent(interaction, customId) {
 
+  // ─── ticket_category_select (StringSelectMenu du panel) → Redirige vers ticket_cat_ ─
+  if (customId === 'ticket_category_select') {
+    const selected = interaction.values?.[0]; // ex: 'ticket_cat_support'
+    if (!selected?.startsWith('ticket_cat_')) {
+      return interaction.reply({ content: '❌ Sélection invalide.', ephemeral: true });
+    }
+    // Réutilise le handler ticket_cat_ existant en passant le customId extrait
+    return handleComponent(interaction, selected);
+  }
+
   // ─── ticket_cat_{cat} → Afficher le modal formulaire ────────────────────────
   if (customId.startsWith('ticket_cat_')) {
     const catValue = customId.replace('ticket_cat_', '');
@@ -1030,49 +1040,64 @@ async function handleComponent(interaction, customId) {
 function buildPanelEmbed(guild, openCount, totalCount) {
   const ratingRows = db.db.prepare("SELECT AVG(rating) as avg FROM tickets WHERE guild_id=? AND rating IS NOT NULL").get(guild.id);
   const avg = ratingRows?.avg ? (Math.round(ratingRows.avg * 10) / 10).toFixed(1) : '5.0';
+  const avgStars = avg >= 4.5 ? '⭐⭐⭐⭐⭐' : avg >= 3.5 ? '⭐⭐⭐⭐' : avg >= 2.5 ? '⭐⭐⭐' : '⭐⭐';
 
   const lines = [
-    `> Notre équipe est à votre disposition **7j/7 · 24h/24** dans un espace **100% privé & sécurisé**.`,
+    `> **Besoin d'aide ?** Notre équipe est disponible **7j/7 · 24h/24** dans un espace **100 % privé & sécurisé**.`,
     ``,
-    `**Choisissez le type de votre demande ci-dessous :**`,
+    `Sélectionne la catégorie qui correspond à ta demande dans le menu ci-dessous :`,
     ``,
-    `> 💬  **Support général** — Questions & aide générale`,
-    `> 🐛  **Bug technique** — Problèmes & dysfonctionnements`,
-    `> 🤝  **Partenariat** — Demandes de collaboration`,
-    `> 🚨  **Signalement** — Comportements à signaler`,
-    `> 💰  **Achat / Premium** — Questions boutique & abonnements`,
-    `> 🎯  **Recrutement** — Candidatures & suivi staff`,
-    `> 📋  **Autre** — Toute autre demande`,
+    `\`💬\` **Support général** — Question ou aide générale`,
+    `\`🐛\` **Bug technique** — Problème ou dysfonctionnement`,
+    `\`🤝\` **Partenariat** — Demande de collaboration`,
+    `\`🚨\` **Signalement** — Comportement à signaler`,
+    `\`💰\` **Achat / Premium** — Boutique & abonnements`,
+    `\`🎯\` **Recrutement** — Candidature & suivi staff`,
+    `\`📋\` **Autre** — Toute autre demande`,
     ``,
-    `*Appuyez sur le bouton correspondant — votre ticket sera créé instantanément.*`,
+    `-# 🔒 Chaque ticket est privé — seul toi et le staff peuvent le voir.`,
   ];
 
   return new EmbedBuilder()
     .setColor('#5865F2')
     .setAuthor({ name: `${guild.name}  ·  Support & Assistance`, iconURL: guild.iconURL({ size: 256 }) || undefined })
-    .setTitle('🎟️  Ouvrir un ticket')
+    .setTitle('🎫  Centre d\'assistance')
     .setDescription(lines.join('\n'))
     .addFields(
-      { name: '🟢 En ligne',         value: `\`7j/7 · 24h/24\``, inline: true },
-      { name: '📬 Tickets ouverts',  value: `\`${openCount}\``,   inline: true },
-      { name: '⭐ Satisfaction',     value: `\`${avg} / 5\``,     inline: true },
+      { name: '🟢 Disponibilité',    value: `\`7j/7 · 24h/24\``,       inline: true },
+      { name: '📬 En cours',         value: `\`${openCount} ticket${openCount > 1 ? 's' : ''}\``, inline: true },
+      { name: `${avgStars} Note`,    value: `\`${avg} / 5\``,           inline: true },
+      { name: '📊 Total traités',    value: `\`${totalCount} ticket${totalCount > 1 ? 's' : ''}\``, inline: true },
+      { name: '⚡ Délai moyen',      value: `\`< 2 heures\``,           inline: true },
+      { name: '🔒 Confidentialité',  value: `\`100 % privé\``,          inline: true },
     )
     .setImage(guild.bannerURL({ size: 1024 }) || null)
-    .setFooter({ text: `${guild.name} · Confidentialité totale garantie`, iconURL: guild.iconURL() || undefined })
+    .setFooter({ text: `${guild.name} · Ton ticket restera confidentiel`, iconURL: guild.iconURL() || undefined })
     .setTimestamp();
 }
 
 function buildPanelRows() {
-  const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_cat_support').setLabel('Support').setEmoji('💬').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('ticket_cat_bug').setLabel('Bug').setEmoji('🐛').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('ticket_cat_partenariat').setLabel('Partenariat').setEmoji('🤝').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('ticket_cat_signalement').setLabel('Signalement').setEmoji('🚨').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('ticket_cat_achat').setLabel('Achat').setEmoji('💰').setStyle(ButtonStyle.Secondary),
-  );
+  // StringSelectMenu — plus visuel que les boutons, montre emoji + description
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId('ticket_category_select')
+    .setPlaceholder('📂  Sélectionne le type de ta demande…')
+    .addOptions([
+      { label: 'Support général',    description: 'Question ou aide générale',                   emoji: '💬', value: 'ticket_cat_support' },
+      { label: 'Bug technique',      description: 'Problème ou dysfonctionnement',                emoji: '🐛', value: 'ticket_cat_bug' },
+      { label: 'Partenariat',        description: 'Demande de collaboration',                     emoji: '🤝', value: 'ticket_cat_partenariat' },
+      { label: 'Signalement',        description: 'Comportement inapproprié à signaler',          emoji: '🚨', value: 'ticket_cat_signalement' },
+      { label: 'Achat / Premium',    description: 'Questions boutique & abonnements',             emoji: '💰', value: 'ticket_cat_achat' },
+      { label: 'Recrutement',        description: 'Candidature ou suivi staff',                   emoji: '🎯', value: 'ticket_cat_recrutement' },
+      { label: 'Autre demande',      description: 'Toute autre demande',                          emoji: '📋', value: 'ticket_cat_autre' },
+    ]);
+
+  const row1 = new ActionRowBuilder().addComponents(selectMenu);
+
+  // Bouton rapide "Support" pour les cas les plus fréquents
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_cat_recrutement').setLabel('Recrutement').setEmoji('🎯').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('ticket_cat_autre').setLabel('Autre').setEmoji('📋').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('ticket_cat_support').setLabel('Support rapide').setEmoji('⚡').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('ticket_cat_bug').setLabel('Signaler un bug').setEmoji('🐛').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('ticket_cat_signalement').setLabel('Signalement').setEmoji('🚨').setStyle(ButtonStyle.Secondary),
   );
   return [row1, row2];
 }

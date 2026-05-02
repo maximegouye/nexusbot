@@ -310,16 +310,27 @@ module.exports = {
         ['général', 'general', 'chat', 'discussion'].includes(c.name) && c.isTextBased && c.isTextBased()
       );
       if (generalChannel && generalChannel.id !== channel.id) {
+        // Numéro ordinal stylé (1er, 2e, 3e...)
+        const ordinal = memberCount === 1 ? '1er' : `${memberCount}e`;
+        // Tier de hype selon le nombre de membres
+        const hype = memberCount % 100 === 0 ? `🎊 **WOW — cap des ${memberCount} membres franchi !**\n` : '';
+
         const greetEmbed = new EmbedBuilder()
-          .setColor('#FFD700')
-          .setTitle('👋 Nouveau venu !')
-          .setDescription([
-            `Faites un coucou à <@${user.id}> qui vient de rejoindre **${guild.name}** ! 🎉`,
-            '',
-            '🎁 **Bonus :** Le premier qui dit bonjour gagne **+50 €** !',
-          ].join('\n'))
-          .setThumbnail(user.displayAvatarURL({ size: 128 }))
-          .setFooter({ text: `Membre n°${memberCount} · L'accueil compte 💛` })
+          .setColor('#7B2FBE')
+          .setAuthor({
+            name: `${user.username} rejoint ${guild.name} !`,
+            iconURL: user.displayAvatarURL({ size: 128 }),
+          })
+          .setTitle('🎉 Un nouveau membre débarque !')
+          .setDescription(
+            `${hype}` +
+            `Bienvenue <@${user.id}> parmi nous ! 🫶\n\n` +
+            `> Tu es le **${ordinal} membre** de ce serveur.\n` +
+            `> **+5 000 €** ont été crédités sur ton compte.\n\n` +
+            `💬 Dis bonjour — **le premier qui répond gagne +50 €** !`
+          )
+          .setThumbnail(user.displayAvatarURL({ size: 256 }))
+          .setFooter({ text: `${guild.name} · Membre n°${memberCount.toLocaleString('fr-FR')}`, iconURL: guild.iconURL() || undefined })
           .setTimestamp();
         await generalChannel.send({ content: `<@${user.id}>`, embeds: [greetEmbed] }).catch(() => {});
       }
@@ -328,18 +339,21 @@ module.exports = {
     // ── DM de bienvenue au nouveau membre ──────────────
     const dmEmbed = new EmbedBuilder()
       .setColor(cfg.color || '#7B2FBE')
+      .setAuthor({ name: guild.name, iconURL: guild.iconURL({ size: 128 }) || undefined })
       .setTitle(`👋 Bienvenue sur ${guild.name} !`)
       .setDescription(
-        `Salut **${user.username}**, on est ravis de t'accueillir 🎉\n\n` +
-        `Voici quelques informations pour bien démarrer :`
+        `Salut **${user.username}** ! On est vraiment ravis de t'accueillir 🎉\n\n` +
+        `**5 000 €** t'ont déjà été offerts pour commencer — voici comment en profiter :`
       )
       .addFields(
-        { name: '📋 Règles du serveur',    value: 'Pense à lire les règles pour profiter d\'une ambiance agréable.', inline: false },
-        { name: '🎫 Besoin d\'aide ?',      value: 'Ouvre un ticket depuis le salon support — notre équipe est là pour toi.', inline: false },
-        { name: '🏆 Système de niveaux',    value: 'Plus tu participes, plus tu montes en grade et tu gagnes des euros !', inline: false },
+        { name: '💰 Gagner des euros',      value: '`/daily` chaque jour · `/work` toutes les heures · `/casino` pour les plus aventureux', inline: false },
+        { name: '📈 Progresser',            value: 'Chatte dans les salons pour gagner de l\'XP et monter de niveau automatiquement', inline: false },
+        { name: '🎫 Besoin d\'aide ?',      value: 'Ouvre un ticket — le staff est disponible **7j/7, 24h/24**', inline: false },
+        { name: '🏆 Classements',           value: '`/classement` pour voir les plus riches du serveur — tu es déjà dedans !', inline: false },
       )
-      .setThumbnail(guild.iconURL())
-      .setFooter({ text: `${guild.name} · On espère te voir souvent !` })
+      .setThumbnail(user.displayAvatarURL({ size: 256 }))
+      .setImage(guild.bannerURL({ size: 1024 }) || null)
+      .setFooter({ text: `${guild.name} · On espère te voir souvent !`, iconURL: guild.iconURL() || undefined })
       .setTimestamp();
 
     user.send({ embeds: [dmEmbed] }).catch(() => {}); // Ignore si DM bloqués
