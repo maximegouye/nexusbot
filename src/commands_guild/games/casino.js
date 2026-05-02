@@ -304,7 +304,9 @@ async function handleComponent(interaction, customId) {
   if (!customId.startsWith('casino_')) return false;
 
   if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply({ ephemeral: true }).catch(() => {});
+    // casino_bet_ lance un vrai jeu → réponse publique
+    const ephem = !customId.startsWith('casino_bet_');
+    await interaction.deferReply({ ephemeral: ephem }).catch(() => {});
   }
 
   const guildId = interaction.guildId;
@@ -344,17 +346,12 @@ async function handleComponent(interaction, customId) {
       .setDescription(gameInfo.desc)
       .addFields(
         {
-          name: 'Commande Slash',
-          value: `\`${gameInfo.slash}\``,
-          inline: true,
-        },
-        {
           name: 'Status',
           value: '✅ Disponible',
           inline: true,
         }
       )
-      .setFooter({ text: 'Clique sur "Jouer maintenant" ou tape la commande slash' })
+      .setFooter({ text: 'Clique sur "Jouer maintenant" pour choisir ta mise' })
       .setTimestamp();
 
     const playButton = new ActionRowBuilder().addComponents(
@@ -371,7 +368,7 @@ async function handleComponent(interaction, customId) {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // BOUTON "JOUER MAINTENANT" → Envoie le slash command
+  // BOUTON "JOUER MAINTENANT" → Affiche les boutons de mise
   // ──────────────────────────────────────────────────────────────────────────
 
   if (customId.startsWith('casino_play_')) {
@@ -383,16 +380,94 @@ async function handleComponent(interaction, customId) {
     }
 
     if (!gameInfo) {
+      return interaction.editReply({ content: `❌ Impossible de trouver le jeu.` }).then(() => true).catch(() => true);
+    }
+
+    const BET_AMOUNTS = [50, 200, 500, 1000, 5000];
+    const betRow = new ActionRowBuilder().addComponents(
+      ...BET_AMOUNTS.map(a =>
+        new ButtonBuilder()
+          .setCustomId(`casino_bet_${gameKey}_${a}`)
+          .setLabel(`${a.toLocaleString('fr-FR')} €`)
+          .setStyle(ButtonStyle.Primary)
+      )
+    );
+
+    return interaction.editReply({
+      content: `🎮 **${gameInfo.label}** — Choisis ta mise :`,
+      embeds: [],
+      components: [betRow],
+    }).then(() => true).catch(() => true);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // BOUTON MISE → Lance le jeu directement sans commande slash
+  // ──────────────────────────────────────────────────────────────────────────
+
+  if (customId.startsWith('casino_bet_')) {
+    const afterPrefix = customId.replace('casino_bet_', '');
+    const lastUnderscore = afterPrefix.lastIndexOf('_');
+    const gameKey = afterPrefix.substring(0, lastUnderscore);
+    const amount = parseInt(afterPrefix.substring(lastUnderscore + 1));
+
+    if (!gameKey || isNaN(amount)) {
+      return interaction.editReply({ content: `❌ Mise invalide.` }).then(() => true).catch(() => true);
+    }
+
+    // Pari par défaut pour les jeux qui nécessitent un type de pari
+    const DEFAULT_PARI = {
+      baccarat: 'joueur',
+      craps: 'pass',
+      des: 'pair',
+      roulette: 'rouge',
+      sicbo: 'small',
+    };
+
+    // Charge le module du jeu dynamiquement
+    const nodePath = require('path');
+    const gamePath = nodePath.join(__dirname, `${gameKey}.js`);
+    let gameModule;
+    try {
+      gameModule = require(gamePath);
+    } catch (e) {
       return interaction.editReply({
-        content: `❌ Impossible de trouver le jeu.`,
+        content: `❌ Jeu "${gameKey}" introuvable ou non disponible.`,
       }).then(() => true).catch(() => true);
     }
 
-    return interaction.editReply({
-      content: `🎮 **${gameInfo.label}**\n\nLance le jeu avec:\n\`${gameInfo.slash}\``,
-      embeds: [],
-      components: [],
-    }).then(() => true).catch(() => true);
+    if (typeof gameModule.execute !== 'function') {
+      return interaction.editReply({ content: `❌ Ce jeu ne peut pas être lancé depuis le casino.` }).then(() => true).catch(() => true);
+    }
+
+    // Patch interaction.options pour injecter la mise et le pari par défaut
+    const origOptions = interaction.options;
+    interaction.options = {
+      getInteger: (name) => {
+        if (name === 'mise') return amount;
+        return null; // sidebet, des, valeur → null (valeurs optionnelles)
+      },
+      getString: (name) => {
+        if (name === 'pari') return DEFAULT_PARI[gameKey] || null;
+        return null; // mode → null (valeur optionnelle)
+      },
+      getBoolean: () => null,
+      getUser: () => null,
+      getNumber: (name) => name === 'mise' ? amount : null,
+    };
+
+    try {
+      await gameModule.execute(interaction);
+    } catch (err) {
+      console.error(`[casino_bet] Erreur ${gameKey}:`, err?.message || err);
+      try {
+        const errMsg = { content: `❌ Erreur lors du lancement du jeu: ${err?.message || 'Erreur inconnue'}`, ephemeral: true };
+        if (interaction.deferred || interaction.replied) await interaction.editReply(errMsg).catch(() => {});
+        else await interaction.reply(errMsg).catch(() => {});
+      } catch {}
+    } finally {
+      interaction.options = origOptions;
+    }
+    return true;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
