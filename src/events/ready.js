@@ -647,6 +647,39 @@ module.exports = {
       safeWorker('Auto Badge Worker',           startAutoBadgeWorker, client);
     } catch (e) { console.log('[autoBadge] worker init error:', e.message); }
 
+    // 🎫 Auto-configure ticket system si pas encore configuré
+    try {
+      const norm = s => String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9 ]/g,'').trim();
+      for (const guild of client.guilds.cache.values()) {
+        const cfg = db.getConfig(guild.id) || {};
+        if (cfg.ticket_staff_role) continue; // Déjà configuré
+
+        const channels = guild.channels.cache;
+        const roles    = guild.roles.cache;
+
+        // Trouver rôle Staff
+        const staffRole = roles.find(r => norm(r.name) === 'STAFF' || norm(r.name).includes('STAFF'));
+        // Trouver salon panel (ouvrir-un-ticket ou ticket)
+        const panelCh = channels.find(c => c.type === 0 && (norm(c.name).includes('OUVRIR') || norm(c.name) === 'TICKET'));
+        // Trouver salon logs (gestion-tickets ou logs-bot)
+        const logsCh  = channels.find(c => c.type === 0 && (norm(c.name).includes('GESTION') && norm(c.name).includes('TICKET') || norm(c.name).includes('LOGS') && norm(c.name).includes('BOT')));
+        // Trouver rôle Modérateur
+        const modRole = roles.find(r => norm(r.name).includes('MOD') && !norm(r.name).includes('MODIF'));
+
+        if (!staffRole || !panelCh) {
+          console.log(`⚠️  Auto-config tickets: rôle staff ou salon panel introuvable pour "${guild.name}"`);
+          continue;
+        }
+
+        db.setConfig(guild.id, 'ticket_staff_role', staffRole.id);
+        db.setConfig(guild.id, 'ticket_channel',    panelCh.id);
+        db.setConfig(guild.id, 'ticket_max_open',   1);
+        if (logsCh)  db.setConfig(guild.id, 'ticket_log_channel', logsCh.id);
+
+        console.log(`✅ Auto-config tickets "${guild.name}": staff=${staffRole.name}, panel=#${panelCh.name}${logsCh ? ', logs=#'+logsCh.name : ''}`);
+      }
+    } catch (e) { console.log('⚠️  Auto-config tickets error:', e.message); }
+
     console.log('✅ Tous les workers automatiques ont été démarrés');
   },
 };

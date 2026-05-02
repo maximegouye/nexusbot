@@ -339,24 +339,23 @@ async function createTicket(interaction, catValue, formData) {
 
   const welcomeEmbed = new EmbedBuilder()
     .setColor(cat.color)
-    .setAuthor({ name: `Ticket #${ticketId} — ${cat.label}`, iconURL: guild.iconURL({ size: 128 }) || undefined })
-    .setTitle(subject.slice(0, 256))
+    .setAuthor({ name: `${member.user.tag}  ·  Ticket #${ticketId}`, iconURL: member.user.displayAvatarURL({ size: 128 }) })
+    .setTitle(`${cat.emoji}  ${subject.slice(0, 256)}`)
     .setDescription(
-      (descText ? `> *${descText.slice(0,400)}*\n\n` : '') +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `**Comment être aidé rapidement :**\n` +
-      `➤ Fournis un **maximum de détails**\n` +
-      `➤ **Reste disponible** pour répondre au staff\n` +
-      `➤ Un seul ticket à la fois\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+      (descText ? `> ${descText.slice(0,400)}\n\n` : '') +
+      `**Bienvenue, ${member} !**\n` +
+      `Le staff va prendre en charge ta demande dans les plus brefs délais.\n\n` +
+      `— Fournis un **maximum de détails** dès maintenant\n` +
+      `— Reste **disponible** pour répondre aux questions\n` +
+      `— Utilise les boutons ci-dessous pour gérer le ticket`
     )
     .addFields(
-      { name: `${cat.emoji} Catégorie`, value: `\`${cat.label.replace(/^\S+ /,'')}\``, inline: true },
-      { name: '🟡 Priorité',            value: '`Normale`',                             inline: true },
-      { name: '⏱️ Réponse estimée',     value: '`< 2 heures`',                          inline: true },
+      { name: `${cat.emoji} Type`,       value: `\`${cat.label.replace(/^\S+ /,'')}\``, inline: true },
+      { name: '🟡 Priorité',             value: '`Normale`',                             inline: true },
+      { name: '⚡ Temps de réponse',     value: '`< 2 heures`',                          inline: true },
     )
-    .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
-    .setFooter({ text: `${guild.name} • Support Premium & Confidentiel`, iconURL: guild.iconURL() || undefined })
+    .setThumbnail(guild.iconURL({ size: 128 }) || null)
+    .setFooter({ text: `${guild.name} · Ticket confidentiel`, iconURL: guild.iconURL() || undefined })
     .setTimestamp();
 
   // Embed formulaire (champs supplémentaires)
@@ -380,9 +379,9 @@ async function createTicket(interaction, catValue, formData) {
   });
 
   // Confirmer à l'utilisateur
-  await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#2ECC71').setTitle('✅ Ticket ouvert !')
-    .setDescription(`Ton ticket a été créé dans ${ch}.\n\nUn membre du staff va te répondre sous peu ! 🚀`)
-    .setFooter({ text: 'Tu recevras une mention dès qu\'un staff répond ✨' })
+  await interaction.editReply({ embeds: [new EmbedBuilder().setColor('#57F287').setTitle('✅ Ticket créé !')
+    .setDescription(`Ton ticket a été ouvert dans ${ch}.\n\nNotre staff va te répondre **sous peu** — reste disponible !`)
+    .setFooter({ text: `${guild.name} · Tu seras mentionné dès qu'un staff répond` })
   ], ephemeral: true }).catch(() => {});
 }
 
@@ -1026,49 +1025,48 @@ async function handleComponent(interaction, customId) {
 // ── Panel embed ───────────────────────────────────────────────────────────────
 function buildPanelEmbed(guild, openCount, totalCount) {
   const ratingRows = db.db.prepare("SELECT AVG(rating) as avg FROM tickets WHERE guild_id=? AND rating IS NOT NULL").get(guild.id);
-  const avg = ratingRows?.avg ? Math.round(ratingRows.avg * 10) / 10 : 5.0;
-  const stars = '⭐'.repeat(Math.round(avg));
+  const avg = ratingRows?.avg ? (Math.round(ratingRows.avg * 10) / 10).toFixed(1) : '5.0';
+
+  const lines = [
+    `> Notre équipe est à votre disposition **7j/7 · 24h/24** dans un espace **100% privé & sécurisé**.`,
+    ``,
+    `**Choisissez le type de votre demande ci-dessous :**`,
+    ``,
+    `> 💬  **Support général** — Questions & aide générale`,
+    `> 🐛  **Bug technique** — Problèmes & dysfonctionnements`,
+    `> 🤝  **Partenariat** — Demandes de collaboration`,
+    `> 🚨  **Signalement** — Comportements à signaler`,
+    `> 💰  **Achat / Premium** — Questions boutique & abonnements`,
+    `> 🎯  **Recrutement** — Candidatures & suivi staff`,
+    `> 📋  **Autre** — Toute autre demande`,
+    ``,
+    `*Appuyez sur le bouton correspondant — votre ticket sera créé instantanément.*`,
+  ];
 
   return new EmbedBuilder()
-    .setColor('#2B2D31')
-    .setAuthor({ name: `${guild.name} — Assistance officielle`, iconURL: guild.iconURL({ size: 128 }) || undefined })
-    .setTitle("🌟  CENTRE D'ASSISTANCE OFFICIEL  🌟")
-    .setDescription(
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `Vous méritez une aide **rapide**, **personnelle** et **de qualité**.\n` +
-      `Chaque demande est traitée avec le plus grand soin, dans un cadre **entièrement confidentiel**.\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `**📋 Sélectionnez la nature de votre demande :**\n\n` +
-      CATEGORIES.map(c =>
-        `${c.emoji}  **${c.label.replace(/^\S+ /,'')}**\n` +
-        `┗ *${c.description}*`
-      ).join('\n\n') +
-      `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `⏱️  Réponse garantie en **moins de 2h**\n` +
-      `🔒  Espace privé — **Confidentialité totale**\n` +
-      `⭐  Satisfaction : **${stars} ${avg}/5**\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `Cliquez sur le bouton correspondant à votre demande pour ouvrir un ticket.`
-    )
+    .setColor('#5865F2')
+    .setAuthor({ name: `${guild.name}  ·  Support & Assistance`, iconURL: guild.iconURL({ size: 256 }) || undefined })
+    .setTitle('🎟️  Ouvrir un ticket')
+    .setDescription(lines.join('\n'))
     .addFields(
-      { name: '📬 Tickets ouverts',  value: `\`${openCount}\``,  inline: true },
-      { name: '📊 Tickets traités',  value: `\`${totalCount}\``, inline: true },
-      { name: '🕐 Disponibilité',    value: '`7j/7 — 24h/24`',  inline: true },
+      { name: '🟢 En ligne',         value: `\`7j/7 · 24h/24\``, inline: true },
+      { name: '📬 Tickets ouverts',  value: `\`${openCount}\``,   inline: true },
+      { name: '⭐ Satisfaction',     value: `\`${avg} / 5\``,     inline: true },
     )
-    .setThumbnail(guild.iconURL({ size: 256 }) || null)
-    .setFooter({ text: `${guild.name} • Support Premium & Confidentiel`, iconURL: guild.iconURL() || undefined })
+    .setImage(guild.bannerURL({ size: 1024 }) || null)
+    .setFooter({ text: `${guild.name} · Confidentialité totale garantie`, iconURL: guild.iconURL() || undefined })
     .setTimestamp();
 }
 
 function buildPanelRows() {
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('ticket_cat_support').setLabel('Support').setEmoji('💬').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('ticket_cat_bug').setLabel('Bug Technique').setEmoji('🐛').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('ticket_cat_bug').setLabel('Bug').setEmoji('🐛').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId('ticket_cat_partenariat').setLabel('Partenariat').setEmoji('🤝').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId('ticket_cat_signalement').setLabel('Signalement').setEmoji('🚨').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('ticket_cat_achat').setLabel('Achat').setEmoji('💰').setStyle(ButtonStyle.Secondary),
   );
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_cat_achat').setLabel('Achat / Premium').setEmoji('💰').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('ticket_cat_recrutement').setLabel('Recrutement').setEmoji('🎯').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('ticket_cat_autre').setLabel('Autre').setEmoji('📋').setStyle(ButtonStyle.Secondary),
   );
