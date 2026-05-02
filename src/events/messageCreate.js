@@ -12,6 +12,9 @@ const PREFIX = '&';
 // Cooldown par utilisateur pour éviter le spam (60 secondes)
 const _xpCooldown = new Map(); // key: `${userId}-${guildId}`
 
+// ── AutoMod cache (spam + flood détection) ────────────────
+const _automodCache = new Map();
+
 // Cleanup des cooldowns expirés toutes les 5 minutes
 setInterval(() => {
   const now = Date.now();
@@ -539,6 +542,154 @@ module.exports = {
 
     // ── Bonus First Message du Jour : encourage la connexion quotidienne ──
     handleFirstMessageOfDay(message).catch(() => {});
+
+    // ── AutoMod avancé (/automod — guild_config) ─────────────────────
+    try {
+      const cfg = db.getConfig(message.guild.id);
+      const { guild, author, channel } = message;
+      const msgContent = message.content || '';
+
+      // Vérifier exemptions
+      let automodExempt = false;
+      if (message.member?.permissions.has(PermissionFlagsBits.Administrator)) automodExempt = true;
+      if (!automodExempt && cfg.automod_exempt_channels) {
+        try { if (JSON.parse(cfg.automod_exempt_channels).includes(channel.id)) automodExempt = true; } catch {}
+      }
+      if (!automodExempt && cfg.automod_exempt_roles && message.member) {
+        try { if (JSON.parse(cfg.automod_exempt_roles).some(r => message.member.roles.cache.has(r))) automodExempt = true; } catch {}
+      }
+
+      if (!automodExempt) {
+        // Helper : appliquer l'action et logger
+        const applyInfraction = async (reason, warnText) => {
+          try { db.db.prepare('INSERT INTO automod_infractions (guild_id,user_id,reason,action) VALUES(?,?,?,?)').run(guild.id, author.id, reason, cfg.automod_action||'delete'); } catch {}
+          await message.delete().catch(() => {});
+          const action = cfg.automod_action || 'delete';
+          if (action !== 'delete') {
+            const threshold = cfg.automod_warn_threshold || 3;
+            const recentCount = (() => { try { return db.db.prepare('SELECT COUNT(*) as c FROM automod_infractions WHERE guild_id=? AND user_id=? AND created_at>?').get(guild.id, author.id, Math.floor(Date.now()/1000)-3600)?.c || 0; } catch { return 0; } })();
+            const warnEmbed = new EmbedBuilder().setColor('#E67E22')
+              .setAuthor({ name: author.tag || author.username, iconURL: author.displayAvatarURL() })
+              .setTitle('⚠️ Avertissement AutoMod')
+              .setDescription(warnText.replace('{user}', `<@${author.id}>`))
+              .setFooter({ text: action === 'mute' ? `Infraction ${recentCount}/${threshold} avant mute` : `Raison : ${reason}` })
+              .setTimestamp();
+            const w = await channel.send({ embeds: [warnEmbed] }).catch(() => null);
+            if (w) setTimeout(() => w.delete().catch(() => {}), 8000);
+            if (action === 'mute' && recentCount >= threshold) {
+              try {
+                await message.member?.timeout((cfg.automod_mute_min||10)*60000, `AutoMod — ${reason}`);
+                const muteEmbed = new EmbedBuilder().setColor('#E74C3C').setTitle('🔇 Mute automatique')
+                  .setDescription(`<@${author.id}> mis en sourdine **${cfg.automod_mute_min||10} min** pour infractions répétées (\`${reason}\`).`).setTimestamp();
+                await channel.send({ embeds: [muteEmbed] }).catch(() => {});
+              } catch {}
+            }
+          }
+          if (cfg.automod_log) {
+            const logCh = guild.channels.cache.get(cfg.automod_log);
+            if (logCh) logCh.send({ embeds: [new EmbedBuilder().setColor('#E74C3C').setTitle(`🛡️ AutoMod — ${reason}`)
+              .addFields(
+                { name: '👤 Utilisateur', value: `<@${author.id}> (\`${author.tag||author.username}\`)`, inline: true },
+                { name: '💬 Salon',       value: `<#${channel.id}>`, inline: true },
+                { name: '⚡ Action',      value: cfg.automod_action||'delete', inline: true },
+                { name: '💬 Contenu',     value: `\`\`\`${msgContent.slice(0,200)}\`\`\``, inline: false }
+              ).setTimestamp()] }).catch(() => {});
+          }
+          return true;
+        };
+
+        // 1. Anti-spam
+        if (cfg.automod_spam) {
+          const key = `spam:${author.id}:${guild.id}`;
+          const threshold = cfg.automod_spam_threshold || 5;
+          const msgs = _automodCache.get(key) || [];
+          msgs.push(Date.now());
+          const recent = msgs.filter(t => Date.now()-t < 5000);
+          _automodCache.set(key, recent);
+          if (recent.length >= threshold) {
+            _automodCache.delete(key);
+            if (await applyInfraction('spam', `🚫 {user} Stop le spam ! (${recent.length} messages en 5s)`)) return;
+          }
+        }
+
+        // 2. Anti-caps
+        if (cfg.automod_caps && msgContent.length >= 8) {
+          const letters = msgContent.replace(/[^a-zA-Z]/g, '');
+          if (letters.length >= 6 && (msgContent.replace(/[^A-Z]/g, '').length / letters.length) > 0.7) {
+            if (await applyInfraction('caps', '🔠 {user} Évite les messages en MAJUSCULES excessives.')) return;
+          }
+        }
+
+        // 3. Anti-invitations
+        if (cfg.automod_invites && /discord\.gg\/|discord\.com\/invite\//i.test(msgContent)) {
+          if (await applyInfraction('invites', '🔗 {user} Les invitations Discord ne sont pas autorisées.')) return;
+        }
+
+        // 4. Anti-liens (avec whitelist)
+        if (cfg.automod_links && /https?:\/\/[^\s]+/i.test(msgContent)) {
+          let blocked = true;
+          try {
+            const whitelist = cfg.automod_whitelist ? JSON.parse(cfg.automod_whitelist) : [];
+            if (whitelist.length > 0) {
+              const m = msgContent.match(/https?:\/\/([^\s/]+)/i);
+              if (m) { const d = m[1].toLowerCase().replace(/^www\./, ''); if (whitelist.some(w => d===w || d.endsWith('.'+w))) blocked = false; }
+            }
+          } catch {}
+          if (blocked && await applyInfraction('liens', '🌐 {user} Les liens externes ne sont pas autorisés ici.')) return;
+        }
+
+        // 5. Anti-mots interdits
+        if (cfg.automod_words) {
+          try {
+            const badWords = JSON.parse(cfg.automod_words);
+            if (badWords.length > 0 && badWords.some(w => msgContent.toLowerCase().includes(w))) {
+              if (await applyInfraction('mots', '🤬 {user} Ce message contient un mot interdit.')) return;
+            }
+          } catch {}
+        }
+
+        // 6. Anti-mentions
+        if (cfg.automod_mentions) {
+          const max = cfg.automod_mentions_max || 5;
+          const count = (message.mentions.users.size||0) + (message.mentions.roles.size||0) + (message.mentions.everyone ? 1 : 0);
+          if (count > max) {
+            if (await applyInfraction('mentions', `📣 {user} Trop de mentions (${count}/${max} max).`)) return;
+          }
+        }
+
+        // 7. Anti-emojis
+        if (cfg.automod_emojis) {
+          const max = cfg.automod_emojis_max || 10;
+          const total = (msgContent.match(/\p{Emoji_Presentation}/gu)||[]).length + (msgContent.match(/<a?:[a-z0-9_]+:\d+>/gi)||[]).length;
+          if (total > max) {
+            if (await applyInfraction('emojis', `😂 {user} Trop d'emojis (${total}/${max} max).`)) return;
+          }
+        }
+
+        // 8. Anti-flood
+        if (cfg.automod_flood) {
+          const max = cfg.automod_flood_max || 3;
+          const key = `flood:${author.id}:${guild.id}`;
+          const data = _automodCache.get(key) || { content: '', count: 0, ts: 0 };
+          const norm = msgContent.trim().toLowerCase();
+          const now = Date.now();
+          if (norm === data.content && (now-data.ts) < 30000) {
+            data.count++; data.ts = now; _automodCache.set(key, data);
+            if (data.count >= max) {
+              _automodCache.delete(key);
+              if (await applyInfraction('flood', `♻️ {user} Arrête d'envoyer le même message en boucle.`)) return;
+            }
+          } else { _automodCache.set(key, { content: norm, count: 1, ts: now }); }
+        }
+
+        // 9. Anti-zalgo
+        if (cfg.automod_zalgo) {
+          if ((msgContent.match(/[̀-ͯ҉᷀-᷿⃐-⃿︠-︯]/g)||[]).length > 8) {
+            if (await applyInfraction('zalgo', '👾 {user} Le texte corrompu/zalgo n\'est pas autorisé.')) return;
+          }
+        }
+      }
+    } catch (automodErr) { /* ne pas bloquer pour une erreur automod */ }
 
     // ── Commandes préfixe & ──────────────────────────────────────────
     if (!message.content.startsWith(PREFIX)) return;

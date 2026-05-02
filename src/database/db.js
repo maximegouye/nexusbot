@@ -1001,6 +1001,21 @@ const migrations = [
   // guild_config — canaux workers (leaderboard + events)
   { table: 'guild_config', column: 'leaderboard_channel', sql: "ALTER TABLE guild_config ADD COLUMN leaderboard_channel TEXT" },
   { table: 'guild_config', column: 'events_channel',      sql: "ALTER TABLE guild_config ADD COLUMN events_channel TEXT" },
+
+  // automod avancé v2 — nouvelles colonnes (mentions, emojis, flood, zalgo, whitelist, action, mute, exemptions)
+  { table: 'guild_config', column: 'automod_mentions',        sql: "ALTER TABLE guild_config ADD COLUMN automod_mentions INTEGER DEFAULT 0" },
+  { table: 'guild_config', column: 'automod_mentions_max',    sql: "ALTER TABLE guild_config ADD COLUMN automod_mentions_max INTEGER DEFAULT 5" },
+  { table: 'guild_config', column: 'automod_emojis',          sql: "ALTER TABLE guild_config ADD COLUMN automod_emojis INTEGER DEFAULT 0" },
+  { table: 'guild_config', column: 'automod_emojis_max',      sql: "ALTER TABLE guild_config ADD COLUMN automod_emojis_max INTEGER DEFAULT 10" },
+  { table: 'guild_config', column: 'automod_flood',           sql: "ALTER TABLE guild_config ADD COLUMN automod_flood INTEGER DEFAULT 0" },
+  { table: 'guild_config', column: 'automod_flood_max',       sql: "ALTER TABLE guild_config ADD COLUMN automod_flood_max INTEGER DEFAULT 3" },
+  { table: 'guild_config', column: 'automod_zalgo',           sql: "ALTER TABLE guild_config ADD COLUMN automod_zalgo INTEGER DEFAULT 0" },
+  { table: 'guild_config', column: 'automod_whitelist',       sql: "ALTER TABLE guild_config ADD COLUMN automod_whitelist TEXT" },
+  { table: 'guild_config', column: 'automod_action',          sql: "ALTER TABLE guild_config ADD COLUMN automod_action TEXT DEFAULT 'delete'" },
+  { table: 'guild_config', column: 'automod_mute_min',        sql: "ALTER TABLE guild_config ADD COLUMN automod_mute_min INTEGER DEFAULT 10" },
+  { table: 'guild_config', column: 'automod_warn_threshold',  sql: "ALTER TABLE guild_config ADD COLUMN automod_warn_threshold INTEGER DEFAULT 3" },
+  { table: 'guild_config', column: 'automod_exempt_roles',    sql: "ALTER TABLE guild_config ADD COLUMN automod_exempt_roles TEXT" },
+  { table: 'guild_config', column: 'automod_exempt_channels', sql: "ALTER TABLE guild_config ADD COLUMN automod_exempt_channels TEXT" },
 ];
 
 for (const m of migrations) {
