@@ -19,17 +19,20 @@ if (!token)    { console.error('❌ TOKEN manquant dans .env'); process.exit(1);
 if (!clientId) { console.error('❌ CLIENT_ID manquant dans .env'); process.exit(1); }
 console.log(`ℹ️  CLIENT_ID: ${clientId} | GUILD: ${guildId}`);
 
-function loadCmds(dir) {
+// Catégories exclues du guild (déjà disponibles en global via src/commands/)
+const GUILD_SKIP_DIRS = ['games', 'economy', 'social', 'unique', 'fun'];
+
+function loadCmds(dir, skipDirs = []) {
   const result = [];
   if (!fs.existsSync(dir)) return result;
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!entry.name.includes('.disabled') && !entry.name.includes('disabled')) {
-        result.push(...loadCmds(full));
+      if (!entry.name.includes('.disabled') && !entry.name.includes('disabled') && !skipDirs.includes(entry.name)) {
+        result.push(...loadCmds(full, skipDirs));
       }
-    } else if (entry.name.endsWith('.js') && !entry.name.includes('.disabled')) {
+    } else if (entry.name.endsWith('.js') && !entry.name.includes('.disabled') && !entry.name.endsWith('.test.js')) {
       try {
         delete require.cache[require.resolve(full)];
         const cmd = require(full);
@@ -58,7 +61,8 @@ const rest = new REST({ version: '10' }).setToken(token);
   }
 
   // ── Guild commands (src/commands_guild/) ─────────────────
-  const guildCmds = loadCmds(path.join(__dirname, 'src', 'commands_guild'));
+  // GUILD_SKIP_DIRS: ces catégories sont servies en global (src/commands/)
+  const guildCmds = loadCmds(path.join(__dirname, 'src', 'commands_guild'), GUILD_SKIP_DIRS);
   console.log(`🏠 Guild:  ${guildCmds.length} commandes`);
   if (guildCmds.length > 100) {
     console.error(`❌ ERREUR: ${guildCmds.length} guild commands > limite 100 !`);
