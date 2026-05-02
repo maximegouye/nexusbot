@@ -1098,7 +1098,13 @@ const helpers = {
       'ticket_welcome_msg', 'ticket_max_open', 'ticket_categories_map', 'currency_name',
       'currency_emoji', 'daily_amount', 'xp_rate', 'coins_per_msg', 'quest_channel', 'birthday_channel',
       'birthday_role', 'health_channel', 'tempvoice_creator', 'verification_role',
-      'boost_channel', 'stats_members_ch', 'stats_bots_ch', 'stats_boosts_ch', 'stats_channels_ch'];
+      'boost_channel', 'stats_members_ch', 'stats_bots_ch', 'stats_boosts_ch', 'stats_channels_ch',
+      'automod_spam', 'automod_spam_threshold', 'automod_caps', 'automod_invites',
+      'automod_links', 'automod_words', 'automod_log',
+      'automod_mentions', 'automod_mentions_max', 'automod_emojis', 'automod_emojis_max',
+      'automod_flood', 'automod_flood_max', 'automod_zalgo', 'automod_whitelist',
+      'automod_action', 'automod_mute_min', 'automod_warn_threshold',
+      'automod_exempt_roles', 'automod_exempt_channels'];
     if (!allowedKeys.includes(key)) throw new Error(`Invalid config key: ${key}`);
     db.prepare(`UPDATE guild_config SET ${key} = ? WHERE guild_id = ?`).run(value, guildId);
   },

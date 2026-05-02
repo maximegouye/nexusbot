@@ -146,9 +146,9 @@ module.exports = {
       .setName('reset')
       .setDescription('♻️ Remettre toute la configuration automod à zéro')),
 
-  async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+  ephemeral: true,
 
+  async execute(interaction) {
     const sub    = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
 
