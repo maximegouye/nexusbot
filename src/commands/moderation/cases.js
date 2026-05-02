@@ -51,14 +51,14 @@ module.exports = {
       query += ' ORDER BY id DESC LIMIT 20';
 
       const cases = db.db.prepare(query).all(...params);
-      if (!cases.length) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@${target.id}> n'a aucun antécédent${type ? ` de type ${type}` : ''}.`)], ephemeral: true });
+      if (!cases.length) return interaction.editReply.bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ <@${target.id}> n'a aucun antécédent${type ? ` de type ${type}` : ''}.`)], ephemeral: true });
 
       const lines = cases.map(c => {
         const icon = Object.entries(TYPE_ICONS).find(([k]) => c.reason?.toLowerCase().includes(k))?.[1] || '📋';
         return `**#${c.id}** ${icon} | <t:${c.timestamp}:R> | <@${c.mod_id}> | ${c.reason?.slice(0, 80) || 'Aucune raison'}`;
       }).join('\n');
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
+      return interaction.editReply.bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle(`📋 Historique de ${target.username} (${cases.length} cas)`)
         .setThumbnail(target.displayAvatarURL())
@@ -70,9 +70,9 @@ module.exports = {
     if (sub === 'info') {
       const id = interaction.options.getInteger('id');
       const c  = db.db.prepare('SELECT * FROM warnings WHERE id=? AND guild_id=?').get(id, interaction.guildId);
-      if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
+      if (!c) return interaction.editReply.bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
       const icon = Object.entries(TYPE_ICONS).find(([k]) => c.reason?.toLowerCase().includes(k))?.[1] || '📋';
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
+      return interaction.editReply.bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle(`${icon} Cas #${c.id}`)
         .addFields(
@@ -88,17 +88,17 @@ module.exports = {
       const id     = interaction.options.getInteger('id');
       const raison = interaction.options.getString('raison');
       const c      = db.db.prepare('SELECT * FROM warnings WHERE id=? AND guild_id=?').get(id, interaction.guildId);
-      if (!c) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
+      if (!c) return interaction.editReply.bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
       db.db.prepare('UPDATE warnings SET reason=? WHERE id=?').run(raison, id);
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Cas **#${id}** mis à jour.`)], ephemeral: true });
+      return interaction.editReply.bind(interaction)({ embeds: [new EmbedBuilder().setColor('Green').setDescription(`✅ Cas **#${id}** mis à jour.`)], ephemeral: true });
     }
 
     if (sub === 'supprimer') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Admin requis.', ephemeral: true });
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return interaction.editReply.bind(interaction)({ content: '❌ Admin requis.', ephemeral: true });
       const id = interaction.options.getInteger('id');
       const r  = db.db.prepare('DELETE FROM warnings WHERE id=? AND guild_id=?').run(id, interaction.guildId);
-      if (!r.changes) return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Cas **#${id}** supprimé.`)], ephemeral: true });
+      if (!r.changes) return interaction.editReply.bind(interaction)({ content: `❌ Cas #${id} introuvable.`, ephemeral: true });
+      return interaction.editReply.bind(interaction)({ embeds: [new EmbedBuilder().setColor('Red').setDescription(`🗑️ Cas **#${id}** supprimé.`)], ephemeral: true });
     }
 
     if (sub === 'stats') {
@@ -107,7 +107,7 @@ module.exports = {
       const topMod = db.db.prepare('SELECT mod_id, COUNT(*) as c FROM warnings WHERE guild_id=? GROUP BY mod_id ORDER BY c DESC LIMIT 1').get(interaction.guildId);
       const topUser = db.db.prepare('SELECT user_id, COUNT(*) as c FROM warnings WHERE guild_id=? GROUP BY user_id ORDER BY c DESC LIMIT 1').get(interaction.guildId);
 
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [new EmbedBuilder()
+      return interaction.editReply.bind(interaction)({ embeds: [new EmbedBuilder()
         .setColor('#7B2FBE')
         .setTitle('📊 Stats de Modération')
         .addFields(

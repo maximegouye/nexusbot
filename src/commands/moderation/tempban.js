@@ -17,7 +17,7 @@ module.exports = {
     }
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers))
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
+      return interaction.editReply.bind(interaction)({ content: '❌ Permission insuffisante.', ephemeral: true });
 
     const target  = interaction.options.getUser('membre');
     const duree   = interaction.options.getInteger('duree');
@@ -25,10 +25,10 @@ module.exports = {
     const member  = interaction.guild.members.cache.get(target.id);
 
     if (target.id === interaction.user.id)
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas te bannir toi-même.', ephemeral: true });
+      return interaction.editReply.bind(interaction)({ content: '❌ Tu ne peux pas te bannir toi-même.', ephemeral: true });
 
     if (member && member.roles.highest.position >= interaction.member.roles.highest.position)
-      return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: '❌ Tu ne peux pas bannir ce membre (rôle supérieur ou égal).', ephemeral: true });
+      return interaction.editReply.bind(interaction)({ content: '❌ Tu ne peux pas bannir ce membre (rôle supérieur ou égal).', ephemeral: true });
 
     const expiresAt = Math.floor(Date.now() / 1000) + duree * 3600;
 
@@ -72,7 +72,7 @@ module.exports = {
         }).catch(() => {});
       }
 
-      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
+      await interaction.editReply.bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#E74C3C')
           .setDescription(`✅ **${target.tag}** a été banni pour **${duree}h**.\n📋 Raison : ${raison}\n🔓 Débannissement : <t:${expiresAt}:R>`)
@@ -80,7 +80,7 @@ module.exports = {
       });
 
     } catch (e) {
-      await (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ content: `❌ Impossible de bannir ce membre : ${e.message}`, ephemeral: true });
+      await interaction.editReply.bind(interaction)({ content: `❌ Impossible de bannir ce membre : ${e.message}`, ephemeral: true });
     }
   }
 };
