@@ -1107,7 +1107,7 @@ async function handleComponent(interaction) {
     const maxMise = parseInt(parts[3]);
     const lines   = parseInt(parts[4]) || 1;
     if (ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});
@@ -1121,7 +1121,7 @@ async function handleComponent(interaction) {
     const parts = cid.split('_');
     const ownerId = parts[2];
     if (ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     const newMise  = parseInt(parts[3]);
@@ -1172,7 +1172,7 @@ async function handleComponent(interaction) {
     const ownerId = parts[2];
     const amount  = parseInt(parts[3]);
     if (ownerId !== userId) {
-      await interaction.editReply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: '❌ Ce bouton n\'est pas pour toi.', ephemeral: true }).catch(() => {});
       return true;
     }
     await interaction.deferUpdate().catch(() => {});

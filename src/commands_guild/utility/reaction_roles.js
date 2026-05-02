@@ -216,6 +216,8 @@ module.exports = {
 async function handleComponent(interaction, customId) {
   if (!customId.startsWith('rr_')) return false;
 
+  if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
   const roleId = customId.replace('rr_', '');
   const role   = interaction.guild.roles.cache.get(roleId);
 
