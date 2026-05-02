@@ -591,6 +591,7 @@ async function handleComponent(interaction, customId) {
   // ─── ticket_pri_{id} → Sélecteur de priorité ────────────────────────────────
   if (customId.startsWith('ticket_pri_') && !customId.startsWith('ticket_pri_select_')) {
     try {
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const ticketId = customId.replace('ticket_pri_', '');
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
@@ -630,6 +631,7 @@ async function handleComponent(interaction, customId) {
   // ─── ticket_lock_{id} → Verrouiller / Déverrouiller ─────────────────────────
   if (customId.startsWith('ticket_lock_')) {
     try {
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const ticketId = customId.replace('ticket_lock_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
       if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
@@ -654,6 +656,7 @@ async function handleComponent(interaction, customId) {
   // ─── ticket_qr_{id} → Menu réponses rapides ──────────────────────────────────
   if (customId.startsWith('ticket_qr_') && !customId.startsWith('ticket_qr_select_')) {
     try {
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const ticketId = customId.replace('ticket_qr_', '');
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
@@ -726,7 +729,7 @@ async function handleComponent(interaction, customId) {
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
       await interaction.showModal(new ModalBuilder()
         .setCustomId(`ticket_transfer_confirm_${ticketId}`)
         .setTitle('🔄 Transférer le ticket')
@@ -774,7 +777,7 @@ async function handleComponent(interaction, customId) {
       const cfg = db.getConfig(interaction.guildId) || {};
       const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)
         || (cfg.ticket_staff_role && interaction.member.roles.cache.has(cfg.ticket_staff_role));
-      if (!isStaff) return interaction.editReply({ content: '❌ Réservé au staff.', ephemeral: true });
+      if (!isStaff) return interaction.reply({ content: '❌ Réservé au staff.', ephemeral: true });
       await interaction.showModal(new ModalBuilder()
         .setCustomId(`ticket_note_sub_${ticketId}`)
         .setTitle('📝 Ajouter une note privée')
@@ -812,6 +815,7 @@ async function handleComponent(interaction, customId) {
   // ─── ticket_info_{id} → Infos ticket ────────────────────────────────────────
   if (customId.startsWith('ticket_info_')) {
     try {
+      if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: true }).catch(() => {});
       const ticketId = customId.replace('ticket_info_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
       if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true });
@@ -852,7 +856,7 @@ async function handleComponent(interaction, customId) {
     try {
       const ticketId = customId.replace('ticket_add_member_', '');
       const ticket = db.db.prepare('SELECT * FROM tickets WHERE id=?').get(ticketId);
-      if (!ticket) return interaction.editReply({ content: '❌ Ticket introuvable.', ephemeral: true }).catch(() => {});
+      if (!ticket) return interaction.reply({ content: '❌ Ticket introuvable.', ephemeral: true }).catch(() => {});
       // Modal pour saisir l'ID ou la mention
       const modal = new ModalBuilder()
         .setCustomId(`ticket_add_member_modal_${ticketId}`)
