@@ -441,8 +441,19 @@ module.exports = {
       // ════════════════════════════════════════════════════════
       if (sub === 'stats') {
         const targetUser = interaction.options.getUser('utilisateur');
-        const reasonIcons = { spam: '🚫', caps: '🔠', invites: '🔗', liens: '🌐', mots: '🤬', mentions: '📣', emojis: '😂', flood: '♻️', zalgo: '👾' };
-        const allReasons  = ['spam', 'caps', 'invites', 'liens', 'mots', 'mentions', 'emojis', 'flood', 'zalgo'];
+
+        // Labels & icônes des types d'infraction
+        const CATEGORIES = [
+          { key: 'spam',    icon: '🚫', label: 'Anti-Spam'     },
+          { key: 'mentions',icon: '📣', label: 'Anti-Mentions'  },
+          { key: 'flood',   icon: '♻️', label: 'Anti-Flood'     },
+          { key: 'zalgo',   icon: '👾', label: 'Anti-Zalgo'     },
+          { key: 'caps',    icon: '🔠', label: 'Anti-Caps'      },
+          { key: 'emojis',  icon: '😂', label: 'Anti-Emojis'    },
+          { key: 'invites', icon: '🔗', label: 'Anti-Invites'   },
+          { key: 'liens',   icon: '🌐', label: 'Anti-Liens'     },
+          { key: 'mots',    icon: '🤬', label: 'Mots interdits' },
+        ];
 
         const nowSec = Math.floor(Date.now() / 1000);
         const h24    = nowSec - 86400;
@@ -465,73 +476,98 @@ module.exports = {
           recent       = db.db.prepare('SELECT * FROM automod_infractions WHERE guild_id=? ORDER BY created_at DESC LIMIT 5').all(guildId);
         }
 
-        const total    = totalRows?.c  || 0;
-        const count24h = total24h?.c   || 0;
-        const count7d  = total7d?.c    || 0;
+        const total    = totalRows?.c || 0;
+        const count24h = total24h?.c  || 0;
+        const count7d  = total7d?.c   || 0;
 
-        // Map reason → count pour lookup O(1)
+        // Map reason → count O(1)
         const reasonMap = {};
         for (const r of byReason) reasonMap[r.reason] = r.c;
 
-        // Toutes les catégories, même celles à 0
-        const byTypeLines = allReasons.map(r => {
-          const n = reasonMap[r] || 0;
-          const bar = n > 0 ? '`' + n + '`' : '`—`';
-          return `${reasonIcons[r]} **${r}** ${bar}`;
-        }).join('\n');
+        // Barre visuelle compacte : █ rempli, ░ vide (max 5 blocs)
+        function bar(n, max) {
+          if (max === 0 || n === 0) return '░░░░░';
+          const filled = Math.round((n / max) * 5);
+          return '█'.repeat(filled) + '░'.repeat(5 - filled);
+        }
+
+        const maxCount = Math.max(1, ...CATEGORIES.map(c => reasonMap[c.key] || 0));
+
+        // Deux colonnes compactes : 5 à gauche, 4 à droite
+        const col1 = CATEGORIES.slice(0, 5);
+        const col2 = CATEGORIES.slice(5);
+
+        const fmtCol = (cats) => cats.map(({ key, icon, label }) => {
+          const n = reasonMap[key] || 0;
+          const b = bar(n, maxCount);
+          const count = n > 0 ? `\`${n}\`` : '`0`';
+          return `${icon} **${label}**\n\`${b}\` ${count}`;
+        }).join('\n\n');
+
+        // ── Embed principal ───────────────────────────────────
+        const accentColor = total === 0 ? '#2ECC71' : (total < 10 ? '#F39C12' : '#E74C3C');
 
         const embed = new EmbedBuilder()
-          .setColor(total > 0 ? '#E74C3C' : '#2ECC71')
-          .setTitle(targetUser ? `📊 Infractions — ${targetUser.username}` : '📊 Statistiques AutoMod')
-          .setDescription(
-            total === 0
-              ? '✅ **Aucune infraction enregistrée** — le serveur est propre !'
-              : `**${total}** infraction${total > 1 ? 's' : ''} enregistrée${total > 1 ? 's' : ''}${targetUser ? ` pour ${targetUser.username}` : ' sur ce serveur'}.`
-          )
+          .setColor(accentColor)
+          .setTitle(targetUser
+            ? `🔍 Rapport d'infractions — ${targetUser.displayName || targetUser.username}`
+            : '📊 Tableau de Bord AutoMod')
+          .setDescription(total === 0
+            ? '✅ **Aucune infraction détectée.** Le serveur est propre — l\'AutoMod fait son travail silencieusement.'
+            : `> **${total}** infraction${total > 1 ? 's' : ''} enregistrée${total > 1 ? 's' : ''}${targetUser ? ` pour **${targetUser.displayName || targetUser.username}**` : ' sur ce serveur'}.`)
           .addFields(
+            // ── Résumé temporel ──────────────────────────────
             {
-              name: '📆 Résumé temporel',
+              name: '⏱️ Activité récente',
               value: [
-                `**Dernières 24h :** ${count24h > 0 ? `**${count24h}**` : '`0`'} infraction${count24h > 1 ? 's' : ''}`,
-                `**Derniers 7 jours :** ${count7d  > 0 ? `**${count7d}**`  : '`0`'} infraction${count7d  > 1 ? 's' : ''}`,
-                `**Total :** ${total > 0 ? `**${total}**` : '`0`'} infraction${total > 1 ? 's' : ''}`,
+                `\`24h  \` ${count24h  > 0 ? `**${count24h}**`  : '`0`'} infraction${count24h  > 1 ? 's' : ''}`,
+                `\`7j   \` ${count7d   > 0 ? `**${count7d}**`   : '`0`'} infraction${count7d   > 1 ? 's' : ''}`,
+                `\`Total\` ${total     > 0 ? `**${total}**`     : '`0`'} infraction${total     > 1 ? 's' : ''}`,
               ].join('\n'),
               inline: false,
             },
+            // ── Colonne gauche ───────────────────────────────
             {
-              name: '📋 Infractions par type',
-              value: byTypeLines,
+              name: '📋 Infractions par module',
+              value: fmtCol(col1) || '—',
+              inline: true,
+            },
+            // ── Colonne droite ───────────────────────────────
+            {
+              name: '​',
+              value: fmtCol(col2) || '—',
               inline: true,
             },
           )
           .setTimestamp()
-          .setFooter({ text: targetUser ? `ID : ${targetUser.id}` : 'AutoMod — NexusBot' });
+          .setFooter({ text: targetUser ? `ID utilisateur : ${targetUser.id}` : `AutoMod — NexusBot  •  Données en temps réel` });
 
-        // Top contrevenants (serveur global uniquement)
+        // ── Top contrevenants (global uniquement) ────────────
         if (!targetUser && topOffenders?.length > 0) {
+          const MEDALS = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
           embed.addFields({
             name: '🎯 Top contrevenants',
-            value: topOffenders.map((o, i) => {
-              const medal = ['🥇','🥈','🥉'][i] || `**${i + 1}.**`;
-              return `${medal} <@${o.user_id}> — \`${o.c}\` infraction${o.c > 1 ? 's' : ''}`;
-            }).join('\n'),
-            inline: true,
+            value: topOffenders.map((o, i) =>
+              `${MEDALS[i] || `**${i + 1}.**`} <@${o.user_id}> — **${o.c}** infraction${o.c > 1 ? 's' : ''}`
+            ).join('\n'),
+            inline: false,
           });
         }
 
-        // 5 dernières infractions
+        // ── 5 dernières infractions ──────────────────────────
         if (recent?.length > 0) {
+          const iconMap = Object.fromEntries(CATEGORIES.map(c => [c.key, c.icon]));
           embed.addFields({
-            name: '🕐 5 dernières infractions',
+            name: '🕐 Dernières infractions',
             value: recent.map(r =>
-              `${reasonIcons[r.reason] || '🔹'} <@${r.user_id}> — **${r.reason}** <t:${r.created_at}:R>`
+              `${iconMap[r.reason] || '🔹'} <@${r.user_id}> · **${r.reason}** · <t:${r.created_at}:R>`
             ).join('\n'),
             inline: false,
           });
         } else {
           embed.addFields({
             name: '💡 Aucune infraction récente',
-            value: 'Les infractions apparaîtront ici dès que l\'automod en détectera une.\nActivez les modules avec `/automod spam`, `/automod caps`, etc.',
+            value: 'Les infractions s\'afficheront ici dès que l\'AutoMod en détecte une.\n*Modules actifs : spam, mentions — configurables via `/automod`*',
             inline: false,
           });
         }
