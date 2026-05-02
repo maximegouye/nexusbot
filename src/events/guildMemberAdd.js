@@ -303,38 +303,7 @@ module.exports = {
 
     await channel.send(payload).catch(() => {});
 
-    // 🎯 Welcome public dans #général — encourage les membres à dire bonjour.
-    // Le 1er membre qui salue gagne un bonus.
-    try {
-      const generalChannel = guild.channels.cache.find(c =>
-        ['général', 'general', 'chat', 'discussion'].includes(c.name) && c.isTextBased && c.isTextBased()
-      );
-      if (generalChannel && generalChannel.id !== channel.id) {
-        // Numéro ordinal stylé (1er, 2e, 3e...)
-        const ordinal = memberCount === 1 ? '1er' : `${memberCount}e`;
-        // Tier de hype selon le nombre de membres
-        const hype = memberCount % 100 === 0 ? `🎊 **WOW — cap des ${memberCount} membres franchi !**\n` : '';
-
-        const greetEmbed = new EmbedBuilder()
-          .setColor('#7B2FBE')
-          .setAuthor({
-            name: `${user.username} rejoint ${guild.name} !`,
-            iconURL: user.displayAvatarURL({ size: 128 }),
-          })
-          .setTitle('🎉 Un nouveau membre débarque !')
-          .setDescription(
-            `${hype}` +
-            `Bienvenue <@${user.id}> parmi nous ! 🫶\n\n` +
-            `> Tu es le **${ordinal} membre** de ce serveur.\n` +
-            `> **+5 000 €** ont été crédités sur ton compte.\n\n` +
-            `💬 Dis bonjour — **le premier qui répond gagne +50 €** !`
-          )
-          .setThumbnail(user.displayAvatarURL({ size: 256 }))
-          .setFooter({ text: `${guild.name} · Membre n°${memberCount.toLocaleString('fr-FR')}`, iconURL: guild.iconURL() || undefined })
-          .setTimestamp();
-        await generalChannel.send({ content: `<@${user.id}>`, embeds: [greetEmbed] }).catch(() => {});
-      }
-    } catch {}
+    // (pas de message supplémentaire dans #général — le canal de bienvenue gère tout)
 
     // ── DM de bienvenue au nouveau membre ──────────────
     const dmEmbed = new EmbedBuilder()

@@ -55,15 +55,14 @@ module.exports = {
     const cooldown  = cfg.crime_cooldown > 0 ? cfg.crime_cooldown : 21600;
 
     if (now - lastCrime < cooldown) {
-      const remaining = cooldown - (now - lastCrime);
-      const h = Math.floor(remaining / 3600);
-      const m = Math.floor((remaining % 3600) / 60);
+      const nextCrime = lastCrime + cooldown;
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
-          .setTitle('🚔 Trop risqué !')
-          .setDescription(`La police surveille ! Attends **${h}h ${m}min** avant ta prochaine tentative.`)
-          .setFooter({ text: 'Utilise /work ou /daily en attendant' })
+          .setTitle('🚔 La police surveille !')
+          .setDescription(`Tu es sous surveillance. Attends <t:${nextCrime}:R> *(le <t:${nextCrime}:t>)* avant de retenter.`)
+          .addFields({ name: '💡 En attendant', value: '`/work` · `/daily` · `/casino`', inline: true })
+          .setFooter({ text: 'Joue avec modération — le crime ne paie pas toujours !' })
         ], ephemeral: true
       });
     }
@@ -101,17 +100,20 @@ module.exports = {
       db.addCoins(interaction.user.id, interaction.guildId, earned);
 
       const msg = SUCCESS_MSGS[Math.floor(Math.random() * SUCCESS_MSGS.length)];
+      const nextCrimeTs = now + cooldown;
       await interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#2ECC71')
+        .setAuthor({ name: `${interaction.user.username} · Activité illégale`, iconURL: interaction.user.displayAvatarURL({ size: 64 }) })
         .setTitle(`${crime.emoji} ${crime.name} — Réussi !`)
         .setDescription(`> *${msg}*`)
         .addFields(
-          { name: '💰 Butin',          value: `**+${earned.toLocaleString('fr-FR')}${symbol}**`,            inline: true },
-          { name: '🎲 Crime',          value: crime.name,                                                   inline: true },
-          { name: '📊 Risque pris',    value: `${Math.round(crime.risk * 100)}%`,                           inline: true },
-          { name: `${symbol} Solde`,   value: `**${(user.balance + earned).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+          { name: '💰 Butin',            value: `**+${earned.toLocaleString('fr-FR')}${symbol}**`,                  inline: true },
+          { name: '🎲 Crime',            value: crime.name,                                                         inline: true },
+          { name: '📊 Risque pris',      value: `${Math.round(crime.risk * 100)}%`,                                 inline: true },
+          { name: `${symbol} Nouveau solde`, value: `**${(user.balance + earned).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+          { name: '⏰ Prochain crime',   value: `<t:${nextCrimeTs}:R>`,                                              inline: true },
         )
-        .setFooter({ text: 'Prochain crime dans 6h • Joue avec modération !' })
+        .setFooter({ text: 'Joue avec modération — le crime ne paie pas toujours !' })
         .setTimestamp()
       ]}).catch(() => {});
     } else {
@@ -119,17 +121,20 @@ module.exports = {
       db.removeCoins(interaction.user.id, interaction.guildId, fine);
 
       const msg = CAUGHT_MSGS[Math.floor(Math.random() * CAUGHT_MSGS.length)];
+      const nextCrimeTs = now + cooldown;
       await interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor('#E74C3C')
+        .setAuthor({ name: `${interaction.user.username} · Arrestation`, iconURL: interaction.user.displayAvatarURL({ size: 64 }) })
         .setTitle(`🚔 ${crime.name} — Arrêté !`)
         .setDescription(`> *${msg}*`)
         .addFields(
-          { name: '💸 Amende',         value: `**-${fine.toLocaleString('fr-FR')}${symbol}**`,              inline: true },
-          { name: '🎲 Crime',          value: crime.name,                                                   inline: true },
-          { name: '📊 Risque',         value: `${Math.round(crime.risk * 100)}%`,                           inline: true },
-          { name: `${symbol} Solde`,   value: `**${Math.max(0, user.balance - fine).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+          { name: '💸 Amende',               value: `**-${fine.toLocaleString('fr-FR')}${symbol}**`,                          inline: true },
+          { name: '🎲 Crime',                value: crime.name,                                                                inline: true },
+          { name: '📊 Risque',               value: `${Math.round(crime.risk * 100)}%`,                                       inline: true },
+          { name: `${symbol} Nouveau solde`, value: `**${Math.max(0, user.balance - fine).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+          { name: '⏰ Prochain crime',        value: `<t:${nextCrimeTs}:R>`,                                                    inline: true },
         )
-        .setFooter({ text: 'Prochain crime dans 6h' })
+        .setFooter({ text: 'La prochaine fois, tu feras mieux !' })
         .setTimestamp()
       ]}).catch(() => {});
     }

@@ -82,26 +82,46 @@ module.exports = {
 
     const netWorth = user.balance + user.bank + cryptoValue;
     const percentile = totalMembers > 1 ? Math.round((1 - (rank - 1) / totalMembers) * 100) : 100;
+    const topPct = 100 - percentile + 1;
+
+    // Rang coloré selon position
+    const rankColor = rank === 1 ? '#FFD700' : rank <= 3 ? '#C0C0C0' : rank <= 10 ? '#CD7F32' : cfg.color || '#7B2FBE';
+
+    // Barre de richesse relative (par rapport au #1)
+    let barStr = '';
+    try {
+      const top1 = db.db.prepare(
+        'SELECT MAX(balance + COALESCE(bank,0)) as mx FROM users WHERE guild_id=?'
+      ).get(interaction.guildId)?.mx || 1;
+      const pct = Math.min(Math.round((netWorth / top1) * 10), 10);
+      barStr = `\`${'█'.repeat(pct)}${'░'.repeat(10 - pct)}\`  ${topPct <= 10 ? `🔥 Top ${topPct}%` : `Top ${topPct}%`}`;
+    } catch {}
+
+    // Streak daily
+    const streak = user.streak || 0;
+    const flames = streak > 0 ? ` · ${'🔥'.repeat(Math.min(streak, 5))} ${streak}j de série` : '';
 
     const embed = new EmbedBuilder()
-      .setColor(cfg.color || '#7B2FBE')
-      .setTitle(`💶 Portefeuille — ${target.username}`)
+      .setColor(rankColor)
+      .setAuthor({ name: `${target.username} · Portefeuille`, iconURL: target.displayAvatarURL({ size: 64 }) })
+      .setDescription(
+        `**Fortune totale : ${netWorth.toLocaleString('fr-FR')} ${symbol}**\n${barStr || ''}`
+      )
       .setThumbnail(target.displayAvatarURL({ size: 256 }))
       .addFields(
-        { name: '👛 Liquide',           value: `**${user.balance.toLocaleString('fr-FR')}${symbol}**`,  inline: true },
-        { name: '🏦 Banque',            value: `**${user.bank.toLocaleString('fr-FR')}${symbol}**`,     inline: true },
-        { name: '💹 Crypto',            value: `**${cryptoValue.toLocaleString('fr-FR')}${symbol}**`,   inline: true },
-        { name: '💎 Fortune totale',    value: `**${netWorth.toLocaleString('fr-FR')}${symbol}**`,      inline: false },
-        { name: '📈 Total gagné',       value: `**${user.total_earned.toLocaleString('fr-FR')}${symbol}**`, inline: true },
-        { name: '🏆 Classement',        value: `**#${rank}** sur ${totalMembers} membres`,           inline: true },
-        { name: '📊 Percentile',        value: `**Top ${100 - percentile + 1}%**`,                   inline: true },
+        { name: '👛 Liquide',       value: `**${user.balance.toLocaleString('fr-FR')}${symbol}**`,  inline: true },
+        { name: '🏦 Banque',        value: `**${user.bank.toLocaleString('fr-FR')}${symbol}**`,     inline: true },
+        { name: '💹 Crypto',        value: `**${cryptoValue.toLocaleString('fr-FR')}${symbol}**`,   inline: true },
+        { name: '🏆 Classement',    value: `**#${rank}** / ${totalMembers}`,                        inline: true },
+        { name: '📈 Total gagné',   value: `**${(user.total_earned || 0).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+        { name: '📅 Fidélité',      value: `**${streak} jour${streak > 1 ? 's' : ''}**${flames}`,  inline: true },
       );
 
     if (cryptoLines) {
-      embed.addFields({ name: '💰 Détails crypto', value: cryptoLines.slice(0, 1000), inline: false });
+      embed.addFields({ name: '💱 Détails crypto', value: cryptoLines.slice(0, 1000), inline: false });
     }
 
-    embed.setFooter({ text: `💡 /daily · /work · /crime · /crypto · /casino pour jouer !` })
+    embed.setFooter({ text: `${name} · /daily · /work · /casino pour en gagner plus !` })
       .setTimestamp();
 
     // Boutons d'action rapide (uniquement si l'utilisateur consulte son propre profil)

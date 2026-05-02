@@ -82,15 +82,17 @@ module.exports = {
     const cooldown = cfg.work_cooldown > 0 ? cfg.work_cooldown : 3600;
 
     if (now - lastWork < cooldown) {
-      const remaining = cooldown - (now - lastWork);
-      const h = Math.floor(remaining / 3600);
-      const m = Math.floor((remaining % 3600) / 60);
+      const nextWork = lastWork + cooldown;
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setTitle('😴 Tu es fatigué !')
-          .setDescription(`Repose-toi encore **${h > 0 ? h + 'h ' : ''}${m}min** avant de retravailler.`)
-          .setFooter({ text: '💡 Utilise /daily et /crime pour gagner plus !' })
+          .setDescription(`Tu pourras retravailler <t:${nextWork}:R> *(le <t:${nextWork}:t>)*`)
+          .addFields(
+            { name: '🔥 Streak actuel', value: `**${user.work_streak || 0}** jour${(user.work_streak||0) > 1 ? 's' : ''} d'affilée`, inline: true },
+            { name: '💡 En attendant', value: '`/daily` · `/crime` · `/casino`', inline: true },
+          )
+          .setFooter({ text: 'Le travail paye — reviens bientôt !' })
         ], ephemeral: true
       });
     }
@@ -186,16 +188,33 @@ module.exports = {
     trackMission(interaction.user.id, interaction.guildId, 'earn_coins', total);
 
     const eventMultText = eventMult > 1 ? `\n🎊 **Événement actif ×${eventMult}** appliqué !` : '';
+    const nextWorkTs = now + cooldown;
+    const newBalance = user.balance + total;
+
+    // Couleur selon performance
+    const perfColor = total >= 1000 ? '#FFD700' : total >= 500 ? '#57F287' : cfg.color || '#7B2FBE';
+
     const embed = new EmbedBuilder()
-      .setColor(cfg.color || '#7B2FBE')
+      .setColor(perfColor)
+      .setAuthor({ name: `${interaction.user.username} · Fiche de paie`, iconURL: interaction.user.displayAvatarURL({ size: 64 }) })
       .setTitle(`${job.emoji} Journée terminée !`)
-      .setDescription(`${phrase} **${total.toLocaleString('fr-FR')}${symbol}**${streakBonus > 0 ? ` *(+${streakBonus}${symbol} bonus streak 🔥)*` : ''}${eventText}${eventMultText}`)
-      .addFields(
-        { name: '💼 Métier',        value: `${job.emoji} **${job.name}**`,                          inline: true },
-        { name: `${symbol} Gagné`,  value: `**+${total.toLocaleString('fr-FR')}${symbol}**`,        inline: true },
-        { name: '🔥 Streak',        value: `${workStreak} jour${workStreak > 1 ? 's' : ''}`,        inline: true },
+      .setDescription(
+        `${phrase} **${total.toLocaleString('fr-FR')}${symbol}**` +
+        (streakBonus > 0 ? ` *(dont +${streakBonus}${symbol} bonus streak 🔥)*` : '') +
+        (eventText || '') + (eventMultText || '')
       )
-      .setFooter({ text: `Prochain travail disponible dans 1h • Solde: ${(user.balance + total).toLocaleString('fr-FR')}${symbol}` });
+      .addFields(
+        { name: '💼 Métier',          value: `${job.emoji} **${job.name}**`,                                inline: true },
+        { name: `💰 Gagné`,           value: `**+${total.toLocaleString('fr-FR')}${symbol}**`,              inline: true },
+        { name: '🔥 Streak',          value: `**${workStreak}** jour${workStreak > 1 ? 's' : ''} de suite`, inline: true },
+        { name: '🏦 Nouveau solde',   value: `**${newBalance.toLocaleString('fr-FR')}${symbol}**`,          inline: true },
+        { name: '⏰ Prochain travail', value: `<t:${nextWorkTs}:R>`,                                        inline: true },
+        { name: '📈 Total gagné',      value: `**${((user.total_earned||0) + total).toLocaleString('fr-FR')}${symbol}**`, inline: true },
+      )
+      .setFooter({ text: `${cfg.currency_name || 'Économie'} · /daily et /crime pour gagner plus !` })
+      .setTimestamp();
+
+    if (workBoostActive) embed.addFields({ name: '⚡ Boost actif', value: 'Salaire ×2 en cours !', inline: true });
 
     await interaction.editReply({ embeds: [embed] }).catch(() => {});
   },
