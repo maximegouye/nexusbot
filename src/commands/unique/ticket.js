@@ -271,19 +271,42 @@ async function createTicket(interaction, catValue, formData) {
 
   const safeName = (member.user.username||'user').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12)||'user';
 
-  // 🆕 Sélection intelligente de la catégorie Discord :
-  // 1. Si une catégorie spécifique au type est configurée, l'utiliser
-  // 2. Sinon, fallback sur la catégorie globale ticket_category
+  // Sélection intelligente de la catégorie Discord :
+  // 1. Carte explicite en DB (ticket_categories_map)
+  // 2. Auto-détection par nom de catégorie Discord
+  // 3. Fallback sur catégorie globale ticket_category
+  const TYPE_TO_CATNAME = {
+    support:     'TICKETS SUPPORT',
+    bug:         'TICKETS BUGS',
+    partenariat: 'TICKETS PARTENARIATS',
+    signalement: 'TICKETS SIGNALEMENTS',
+    achat:       'TICKETS ACHATS',
+    recrutement: 'TICKETS RECRUTEMENT',
+    autre:       'TICKETS DIVERS',
+  };
+
   let parentCategoryId = null;
   try {
     const catMap = cfg.ticket_categories_map ? JSON.parse(cfg.ticket_categories_map) : {};
     if (catMap[catValue]) {
       parentCategoryId = String(catMap[catValue]);
-      // Vérifier que la catégorie existe encore
       const catCheck = guild.channels.cache.get(parentCategoryId);
       if (!catCheck || catCheck.type !== ChannelType.GuildCategory) parentCategoryId = null;
     }
   } catch {}
+
+  // Auto-détection : cherche la catégorie Discord dont le nom correspond au type
+  if (!parentCategoryId) {
+    const keyword = TYPE_TO_CATNAME[catValue];
+    if (keyword) {
+      const autocat = guild.channels.cache.find(c =>
+        c.type === ChannelType.GuildCategory &&
+        c.name.toUpperCase().replace(/[^A-Z ]/g, '').trim().includes(keyword.toUpperCase().replace(/[^A-Z ]/g, '').trim())
+      );
+      if (autocat) parentCategoryId = autocat.id;
+    }
+  }
+
   if (!parentCategoryId && cfg.ticket_category) {
     parentCategoryId = String(cfg.ticket_category);
   }
@@ -1039,13 +1062,14 @@ function buildPanelEmbed(guild, openCount, totalCount) {
 
 function buildPanelRows() {
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_cat_support').setLabel('Support Général').setEmoji('💬').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('ticket_cat_bug').setLabel('Problème Technique').setEmoji('🐛').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('ticket_cat_support').setLabel('Support').setEmoji('💬').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('ticket_cat_bug').setLabel('Bug Technique').setEmoji('🐛').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId('ticket_cat_partenariat').setLabel('Partenariat').setEmoji('🤝').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('ticket_cat_signalement').setLabel('Signalement').setEmoji('🚨').setStyle(ButtonStyle.Secondary),
   );
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_cat_signalement').setLabel('Signalement').setEmoji('🚨').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('ticket_cat_achat').setLabel('Achat / Premium').setEmoji('💰').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('ticket_cat_recrutement').setLabel('Recrutement').setEmoji('🎯').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('ticket_cat_autre').setLabel('Autre').setEmoji('📋').setStyle(ButtonStyle.Secondary),
   );
   return [row1, row2];
