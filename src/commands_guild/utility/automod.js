@@ -1,3 +1,4 @@
+// automod.js — v3.1 — sous-commandes: voir, spam, caps, invites, liens, mots, mentions, emojis, flood, zalgo, whitelist, action, logs, exempt, reset, stats
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../../database/db');
 

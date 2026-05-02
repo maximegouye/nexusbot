@@ -8,11 +8,16 @@ const fs   = require('fs');
 const path = require('path');
 
 const token    = process.env.TOKEN || process.env.DISCORD_TOKEN || process.env.BOT_TOKEN;
-const clientId = process.env.CLIENT_ID || process.env.APPLICATION_ID;
+// CLIENT_ID peut être absent du .env sur Railway (dockerignore) — on l'extrait du TOKEN
+let clientId = process.env.CLIENT_ID || process.env.APPLICATION_ID;
+if (!clientId && token) {
+  try { clientId = Buffer.from(token.split('.')[0], 'base64').toString(); } catch (_) {}
+}
 const guildId  = process.env.HOME_GUILD_ID || process.env.GUILD_ID || '1492886135159128227';
 
 if (!token)    { console.error('❌ TOKEN manquant dans .env'); process.exit(1); }
 if (!clientId) { console.error('❌ CLIENT_ID manquant dans .env'); process.exit(1); }
+console.log(`ℹ️  CLIENT_ID: ${clientId} | GUILD: ${guildId}`);
 
 function loadCmds(dir) {
   const result = [];
