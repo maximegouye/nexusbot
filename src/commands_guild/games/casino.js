@@ -10,6 +10,9 @@ const {
   StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require('discord.js');
 const db = require('../../database/db');
 
@@ -22,6 +25,102 @@ const GAMES_BY_CATEGORY = {
   slots: {
     label: '🎰 MACHINES À SOUS',
     games: [
+      {
+        value: 'gonzo', label: 'Gonzo\'s Quest', desc: '🗿 Avalanche · Cascades × ×1→×5 · Free Falls Aztèques',
+        art: [
+          '╔═══════════════════════════╗',
+          '║  🗿  G O N Z O \'S  Q U E S T  ║',
+          '╠═══════════════════════════╣',
+          '║  🗿  🦅  💎  🌀  🌕      ║',
+          '║ [🦅  🗿  🌀  💥  💎]     ║  ← EXPLOSION',
+          '║  🌕  🌀  🗿  💎  🦅      ║',
+          '╠═══════════════════════════╣',
+          '║  ×1 → ×2 → ×3 → ×5       ║',
+          '║  Cascades consécutives    ║',
+          '╚═══════════════════════════╝',
+        ],
+        rules: '**Mécanique AVALANCHE** : les symboles gagnants explosent 💥, de nouveaux tombent d\'en haut, et les cascades consécutives multiplient les gains.\n×1 → ×2 → ×3 → ×5 à chaque cascade d\'affilée.\n🌟 3 Scatter = **10 Free Falls** avec multiplicateur de base ×3 !',
+        rtp: '96%', maxWin: '×250', tip: '💡 Les cascades font tout ! Une bonne position de départ peut déclencher 4-5 cascades.',
+        slash: '/gonzo', pari: null,
+      },
+      {
+        value: 'gates-olympus', label: 'Gates of Olympus', desc: '⚡ Cluster Pays · Multiplicateurs Zeus · 6×5 · RTP 96.5%',
+        art: [
+          '╔═══════════════════════════╗',
+          '║ ⚡  GATES  OF  OLYMPUS  ⚡  ║',
+          '╠═══════════════════════════╣',
+          '║ ⚡ 🏺 🦅 💎 🌿 🌕       ║',
+          '║ 🏺 ⚡ 🍷 🏺 🦅 🏺       ║  cluster!',
+          '║ 💎 🌕 ⚔️  💎 🏺 🌿       ║',
+          '║ 🏺 🦅 🏺 ⚡ 🌿 ⚔️         ║',
+          '║ ⚡ 🏺 💎 🏺 ⚡ 🏺         ║',
+          '╠═══════════════════════════╣',
+          '║  8+ symboles = CLUSTER   ║',
+          '║  Zeus ⚡ multiplie tout  ║',
+          '╚═══════════════════════════╝',
+        ],
+        rules: '**Cluster Pays sur grille 6×5** — pas de paylines, 8+ symboles identiques adjacents = GAGNÉ.\nZeus ⚡ envoie des **multiplicateurs ×2 à ×10** qui s\'appliquent à tous tes gains.\n4+ Scatter = **15 Free Spins** avec multiplicateurs garantis !',
+        rtp: '96.5%', maxWin: '×5000', tip: '💡 Plus grand est le cluster, plus le gain est élevé — vise 15+ symboles !',
+        slash: '/gates-olympus', pari: null,
+      },
+      {
+        value: 'sweet-bonanza', label: 'Sweet Bonanza', desc: '🍭 Cluster Pays 6×5 · Bombes ×100 · Free Spins sucrés',
+        art: [
+          '╔═══════════════════════════╗',
+          '║  🍭  S W E E T  B O N A N Z A  ║',
+          '╠═══════════════════════════╣',
+          '║ 🍬 🍒 🍇 🍭 🍉 🍑       ║',
+          '║ 🍋 🍬 🍒 🍬 🍇 🍬       ║  ← cluster!',
+          '║ 🍭 🍋 🍬 🍒 🍬 🍉       ║',
+          '║ 🍇 🍬 🍋 🍬 🍒 🍬       ║',
+          '║ 💗 🍭 🍒 🍬 🍭 🍋       ║',
+          '╠═══════════════════════════╣',
+          '║ 4+ 🍭 BOMBES = FREE SPINS║',
+          '║   Multiplicateurs ×100 ! ║',
+          '╚═══════════════════════════╝',
+        ],
+        rules: '**Cluster Pays 6×5** — 8+ bonbons identiques adjacents = GAGNÉ, cascades automatiques.\n4+ Bombes 🍭 = **10 Free Spins** pendant lesquels des multiplicateurs ×2 à ×100 apparaissent et s\'ACCUMULENT tous ensemble !',
+        rtp: '96.5%', maxWin: '×21000', tip: '💡 Les free spins avec accumulation de multiplicateurs peuvent rapporter ×100+ sur un seul spin !',
+        slash: '/sweet-bonanza', pari: null,
+      },
+      {
+        value: 'book-of-ra', label: 'Book of Ra', desc: '📖 Égypte · Symbole expandant · 10 Free Spins mystiques',
+        art: [
+          '╔═══════════════════════════╗',
+          '║  📖   B O O K  O F  R A   📖  ║',
+          '╠═══════════════════════════╣',
+          '║  🏺  🦅  📖  🐍  🪲      ║',
+          '║  🦅  📖  🏺  🪲  🏺      ║',
+          '║  📖  🐍  🦅  🏺  📖      ║',
+          '╠═══════════════════════════╣',
+          '║   📖📖📖 = 10 FREE SPINS  ║',
+          '║  Symbole choisi EXPANDS   ║',
+          '║  🦅🦅🦅🦅🦅 = JACKPOT ! ║',
+          '╚═══════════════════════════╝',
+        ],
+        rules: '5×3 grille, 9 paylines classiques. 📖 est à la fois **Wild** et **Scatter**.\n3+ Livres = **10 Free Spins** avec UN symbole tiré au sort qui peut **s\'étendre sur un rouleau entier** → compte sur toutes les lignes si il est présent !',
+        rtp: '96%', maxWin: '×500', tip: '💡 Prie pour que le Pharaon 🏺 soit choisi comme symbole expandant — c\'est le plus payant !',
+        slash: '/book-of-ra', pari: null,
+      },
+      {
+        value: 'starburst', label: 'Starburst', desc: '⭐ Gemmes · Wilds expandants · Re-Spins · DEUX SENS · RTP 96.1%',
+        art: [
+          '╔═══════════════════════════╗',
+          '║  ⭐   S T A R B U R S T   ⭐   ║',
+          '╠═══════════════════════════╣',
+          '║  💜  💙 [⭐] 💛  🔴      ║',
+          '║  💚  💜 [⭐] 💙  💛      ║  ← WILD!',
+          '║  🔴  💚 [⭐] 🔴  💜      ║',
+          '╠═══════════════════════════╣',
+          '║  ← GAINS DEUX SENS →     ║',
+          '║  Wild ⭐ = REEL ENTIER   ║',
+          '║  + RE-SPIN GRATUIT !     ║',
+          '╚═══════════════════════════╝',
+        ],
+        rules: '5×3 gemmes, gains **dans les deux sens** (gauche→droite ET droite←gauche).\n⭐ Wild expandant : couvre tout son rouleau + déclenche un **Re-Spin** gratuit (jusqu\'à 3 re-spins chaînés si plusieurs wilds). Aucune free spin, mais les re-spins peuvent chaîner !',
+        rtp: '96.1%', maxWin: '×500', tip: '💡 3 wilds simultanés = 3 re-spins avec rouleaux couverts = gain colossal !',
+        slash: '/starburst', pari: null,
+      },
       {
         value: 'slots', label: 'Slots Classiques', desc: '5 rouleaux · Wilds · Free Spins · Jackpot · RTP 96%',
         art: [
@@ -521,11 +620,80 @@ async function handleCasinoLobby(source, userId, guildId) {
 // GESTIONNAIRE DE COMPOSANTS
 // ══════════════════════════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════════════════════════
+// LANCEMENT D'UN JEU (helper partagé casino_bet_ et casino_modal_)
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function launchGame(interaction, gameKey, gameInfo, amount, userId, guildId, coin) {
+  const nodePath = require('path');
+  const gamePath = nodePath.join(__dirname, `${gameKey}.js`);
+  let gameModule;
+  try {
+    gameModule = require(gamePath);
+  } catch (e) {
+    console.error(`[casino launchGame] Module ${gameKey} introuvable:`, e.message);
+    return interaction.editReply({
+      content: `❌ Le jeu **${gameInfo.label}** n'est pas disponible. Essaie la commande \`${gameInfo.slash}\` directement.`,
+    }).then(() => true).catch(() => true);
+  }
+
+  if (typeof gameModule.execute !== 'function') {
+    return interaction.editReply({
+      content: `❌ Ce jeu ne peut pas être lancé depuis le casino. Utilise \`${gameInfo.slash}\` directement.`,
+    }).then(() => true).catch(() => true);
+  }
+
+  // Patch des options interaction pour injecter la mise et les valeurs par défaut
+  const gameDefaults  = GAME_DEFAULTS[gameKey] || {};
+  const origOptions   = interaction.options;
+  interaction.options = {
+    getInteger: (name) => {
+      if (name === 'mise')  return amount;
+      if (name === 'lignes' || name === 'lines') return null;
+      if (name in gameDefaults && typeof gameDefaults[name] === 'number') return gameDefaults[name];
+      return null;
+    },
+    getNumber:  (name) => name === 'mise' ? amount : null,
+    getString:  (name) => {
+      if (name in gameDefaults && typeof gameDefaults[name] === 'string') return gameDefaults[name];
+      return null;
+    },
+    getBoolean:    () => null,
+    getUser:       () => null,
+    getMember:     () => null,
+    getSubcommand: () => null,
+  };
+
+  try {
+    await gameModule.execute(interaction);
+  } catch (err) {
+    console.error(`[casino launchGame] Erreur ${gameKey}:`, err?.message || err);
+    try {
+      const errMsg = {
+        content: `❌ Erreur lors du lancement de **${gameInfo.label}** : ${err?.message || 'Erreur inconnue'}\nEssaie la commande \`${gameInfo.slash}\` directement.`,
+        ephemeral: true,
+      };
+      if (interaction.deferred || interaction.replied) await interaction.editReply(errMsg).catch(() => {});
+      else await interaction.reply(errMsg).catch(() => {});
+    } catch {}
+  } finally {
+    interaction.options = origOptions;
+  }
+  return true;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GESTIONNAIRE DE COMPOSANTS
+// ══════════════════════════════════════════════════════════════════════════════
+
 async function handleComponent(interaction, customId) {
   if (!customId.startsWith('casino_')) return false;
 
-  if (!interaction.deferred && !interaction.replied) {
-    const ephem = !customId.startsWith('casino_bet_');
+  // casino_custommise_ → showModal() (NE PAS defer : modal = seul acknowledgement autorisé)
+  // casino_modal_      → ModalSubmit, déjà géré par interactionCreate ou ci-dessous
+  const skipDefer = customId.startsWith('casino_custommise_');
+  if (!skipDefer && !interaction.deferred && !interaction.replied) {
+    const ephem = !customId.startsWith('casino_bet_') && !customId.startsWith('casino_modal_');
     await interaction.deferReply({ ephemeral: ephem }).catch(() => {});
   }
 
@@ -593,7 +761,63 @@ async function handleComponent(interaction, customId) {
     }).then(() => true).catch(() => true);
   }
 
-  // ── Bouton "Jouer maintenant" → grille de mises ─────────────────────────
+  // ── "Mise libre" → affiche un modal SANS defer (modal = acknowledgement) ─
+  if (customId.startsWith('casino_custommise_')) {
+    const gameKey = customId.replace('casino_custommise_', '');
+    const modal = new ModalBuilder()
+      .setCustomId(`casino_modal_${gameKey}`)
+      .setTitle(`💰 Mise personnalisée — ${findGame(gameKey)?.label || gameKey}`)
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('amount')
+            .setLabel('Montant à miser (en €, min 10)')
+            .setPlaceholder('Ex: 250, 1500, 75000, all, 50%...')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(15)
+        )
+      );
+    await interaction.showModal(modal).catch(() => {});
+    return true;
+  }
+
+  // ── Modal submit (mise personnalisée saisie) ────────────────────────────
+  if (customId.startsWith('casino_modal_') && interaction.isModalSubmit()) {
+    const gameKey  = customId.replace('casino_modal_', '');
+    const gameInfo = findGame(gameKey);
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false }).catch(() => {});
+    }
+    const rawAmount = interaction.fields.getTextInputValue('amount').trim();
+    const userBal   = db.getUser ? db.getUser(userId, guildId) : null;
+    const balance   = userBal?.balance || 0;
+
+    // Parsing : supporte "all"/"tout"/"max", "50%", entier
+    let amount;
+    if (['all', 'tout', 'max'].includes(rawAmount.toLowerCase())) {
+      amount = balance;
+    } else if (rawAmount.endsWith('%')) {
+      amount = Math.floor(balance * Math.min(100, parseFloat(rawAmount)) / 100);
+    } else {
+      amount = parseInt(rawAmount.replace(/[^0-9]/g, ''));
+    }
+
+    if (!amount || amount < 10) {
+      return interaction.editReply({ content: '❌ Mise invalide (minimum **10 €**). Réessaie.' }).then(() => true).catch(() => true);
+    }
+    if (amount > balance) {
+      return interaction.editReply({
+        content: `❌ Solde insuffisant. Tu as **${balance.toLocaleString('fr-FR')} ${coin}** mais tu veux miser **${amount.toLocaleString('fr-FR')} ${coin}**.`,
+      }).then(() => true).catch(() => true);
+    }
+
+    // Lancer le jeu avec le montant saisi
+    return launchGame(interaction, gameKey, gameInfo, amount, userId, guildId, coin);
+  }
+
+  // ── Bouton "Jouer maintenant" → grille de mises complète ────────────────
   if (customId.startsWith('casino_play_')) {
     const gameKey  = customId.replace('casino_play_', '');
     const gameInfo = findGame(gameKey);
@@ -601,9 +825,15 @@ async function handleComponent(interaction, customId) {
       return interaction.editReply({ content: '❌ Jeu introuvable.' }).then(() => true).catch(() => true);
     }
 
-    const ROW1 = [100, 1_000, 10_000, 100_000, 500_000];
-    const ROW2 = [1_000_000, 5_000_000, 10_000_000, 50_000_000];
-    const fmt  = n => n >= 1_000_000
+    // 3 rangées de mises + bouton "Mise libre"
+    // Rangée 1 : petites mises (débutants)
+    // Rangée 2 : moyennes mises
+    // Rangée 3 : grosses mises + Tout miser + Mise libre
+    const ROW1 = [50, 200, 500, 1_000, 5_000];
+    const ROW2 = [10_000, 25_000, 100_000, 500_000, 1_000_000];
+    const ROW3_AMOUNTS = [5_000_000, 10_000_000, 50_000_000];
+
+    const fmt = n => n >= 1_000_000
       ? `${(n / 1_000_000).toLocaleString('fr-FR')}M €`
       : n >= 1_000 ? `${(n / 1_000).toLocaleString('fr-FR')}k €`
       : `${n} €`;
@@ -619,15 +849,25 @@ async function handleComponent(interaction, customId) {
       ...ROW2.map(a => new ButtonBuilder()
         .setCustomId(`casino_bet_${gameKey}_${a}`)
         .setLabel(fmt(a))
+        .setStyle(ButtonStyle.Secondary)
+      )
+    );
+    const betRow3 = new ActionRowBuilder().addComponents(
+      ...ROW3_AMOUNTS.map(a => new ButtonBuilder()
+        .setCustomId(`casino_bet_${gameKey}_${a}`)
+        .setLabel(fmt(a))
         .setStyle(ButtonStyle.Primary)
       ),
       new ButtonBuilder()
         .setCustomId(`casino_bet_${gameKey}_max`)
         .setLabel('💥 Tout miser')
-        .setStyle(ButtonStyle.Danger)
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`casino_custommise_${gameKey}`)
+        .setLabel('✏️ Mise libre')
+        .setStyle(ButtonStyle.Secondary)
     );
 
-    // Fiche récap mise en en-tête
     const user    = db.getUser ? db.getUser(userId, guildId) : null;
     const balance = user?.balance || 0;
     const artBlock = gameInfo.art ? '```\n' + gameInfo.art.join('\n') + '\n```\n' : '';
@@ -636,10 +876,18 @@ async function handleComponent(interaction, customId) {
       embeds: [new EmbedBuilder()
         .setColor('#F39C12')
         .setTitle(`🎮 ${gameInfo.label} — Choisis ta mise`)
-        .setDescription(artBlock + `💰 Solde disponible : **${balance.toLocaleString('fr-FR')} ${coin}**\n\nChoisis le montant à miser :`)
-        .setFooter({ text: '💥 Tout miser = miser tout ton solde actuel' })
+        .setDescription(
+          artBlock +
+          `💰 Solde disponible : **${balance.toLocaleString('fr-FR')} ${coin}**\n\n` +
+          `Choisis un montant prédéfini ou clique **✏️ Mise libre** pour entrer n'importe quel montant.`
+        )
+        .addFields(
+          { name: '📊 RTP', value: gameInfo.rtp || '—', inline: true },
+          { name: '🏆 Gain max', value: gameInfo.maxWin || '—', inline: true },
+        )
+        .setFooter({ text: '💥 Tout miser = ton solde complet · ✏️ Mise libre = ton choix exact' })
       ],
-      components: [betRow1, betRow2],
+      components: [betRow1, betRow2, betRow3],
     }).then(() => true).catch(() => true);
   }
 
@@ -680,59 +928,7 @@ async function handleComponent(interaction, customId) {
       }).then(() => true).catch(() => true);
     }
 
-    // Charge le module dynamiquement
-    const nodePath = require('path');
-    const gamePath = nodePath.join(__dirname, `${gameKey}.js`);
-    let gameModule;
-    try {
-      gameModule = require(gamePath);
-    } catch (e) {
-      console.error(`[casino_bet] Module ${gameKey} introuvable:`, e.message);
-      return interaction.editReply({
-        content: `❌ Le jeu **${gameInfo.label}** n'est pas disponible. Essaie la commande \`${gameInfo.slash}\` directement.`,
-      }).then(() => true).catch(() => true);
-    }
-
-    if (typeof gameModule.execute !== 'function') {
-      return interaction.editReply({
-        content: `❌ Ce jeu ne peut pas être lancé depuis le casino. Utilise \`${gameInfo.slash}\` directement.`,
-      }).then(() => true).catch(() => true);
-    }
-
-    // Patch des options interaction pour injecter la mise et les valeurs par défaut
-    const gameDefaults   = GAME_DEFAULTS[gameKey] || {};
-    const origOptions    = interaction.options;
-    interaction.options  = {
-      getInteger: (name) => {
-        if (name === 'mise')  return amount;
-        if (name === 'lignes' || name === 'lines') return null; // défaut: 1 (géré dans le jeu)
-        if (name in gameDefaults && typeof gameDefaults[name] === 'number') return gameDefaults[name];
-        return null;
-      },
-      getNumber:  (name) => name === 'mise' ? amount : null,
-      getString:  (name) => {
-        if (name in gameDefaults && typeof gameDefaults[name] === 'string') return gameDefaults[name];
-        return null; // mode, type, format, etc. → les jeux ont des fallbacks
-      },
-      getBoolean:    () => null,
-      getUser:       () => null,
-      getMember:     () => null,
-      getSubcommand: () => null,
-    };
-
-    try {
-      await gameModule.execute(interaction);
-    } catch (err) {
-      console.error(`[casino_bet] Erreur ${gameKey}:`, err?.message || err);
-      try {
-        const errMsg = { content: `❌ Erreur lors du lancement de **${gameInfo.label}** : ${err?.message || 'Erreur inconnue'}\nEssaie la commande \`${gameInfo.slash}\` directement.`, ephemeral: true };
-        if (interaction.deferred || interaction.replied) await interaction.editReply(errMsg).catch(() => {});
-        else await interaction.reply(errMsg).catch(() => {});
-      } catch {}
-    } finally {
-      interaction.options = origOptions;
-    }
-    return true;
+    return launchGame(interaction, gameKey, gameInfo, amount, userId, guildId, coin);
   }
 
   // ── Bonus Quotidien ──────────────────────────────────────────────────────

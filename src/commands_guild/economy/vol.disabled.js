@@ -2,9 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const db = require('../../database/db');
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('shop')
-    .setDescription('🛒 Affiche la boutique du serveur'),
+  // data désactivé — doublon de shop.js, exclure du comptage des 100 slash commands
+  name: 'shop-legacy',
   cooldown: 5,
 
   async execute(interaction) {

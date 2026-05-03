@@ -32,6 +32,12 @@ const COMPONENT_ROUTES = {
   'banque_':      'banque',
   // ── Mega Slots VIP ─────────────────────────────────────────
   'ms_':          'mega-slots',
+  // ── Nouveaux slots (Gonzo, Gates, Sweet Bonanza, Book of Ra, Starburst) ───
+  'gz_':          'gonzo',
+  'go_':          'gates-olympus',
+  'sb_':          'sweet-bonanza',
+  'bor_':         'book-of-ra',
+  'st_':          'starburst',
   // ── Jeux de casino (replay persistent) ─────────────────────
   'grattage_':    'grattage',
   // 'tour_' et 'des_' supprimés (fichiers .disabled)
@@ -254,7 +260,9 @@ module.exports = {
         // 3. Try/catch propre, fallback graceful sur erreur
         // 4. Pas de magie Promise.race qui peut casser au boot
         try {
-          if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied) {
+          // casino_modal_ gère son propre defer (non-éphémère) — on ne l'auto-defer pas ici
+          if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied
+              && !cid.startsWith('casino_modal_')) {
             try { await interaction.deferReply({ ephemeral: true }); } catch (_) {}
           }
 

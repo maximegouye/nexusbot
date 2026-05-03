@@ -36,11 +36,8 @@ const CHOIX = [
 ];
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('roulette')
-    .setDescription('🎡 Roulette — mise ce que tu veux, choisis ton pari')
-    .addStringOption(o => o.setName('mise').setDescription('Montant misé (ex: 500, 1000, all, 25%)').setRequired(true).setMaxLength(20))
-    .addStringOption(o => o.setName('pari').setDescription('Type de pari').setRequired(false).addChoices(...CHOIX)),
+  // data désactivé — doublon de games/roulette.js, exclure du comptage des 100 slash commands
+  name: 'roulette-legacy',
   cooldown: 3,
 
   async execute(interaction) {
