@@ -34,13 +34,8 @@ const CONDITIONS = {
 };
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('meteo')
-    .setDescription('🌤️ Météo en temps réel pour n\'importe quelle ville')
-    .addSubcommand(s => s.setName('actuelle').setDescription('🌡️ Météo actuelle')
-      .addStringOption(o => o.setName('ville').setDescription('Nom de la ville').setRequired(true)))
-    .addSubcommand(s => s.setName('previsions').setDescription('📅 Prévisions 3 jours')
-      .addStringOption(o => o.setName('ville').setDescription('Nom de la ville').setRequired(true))),
+  // data retiré — doublon de src/commands/utility/meteo.js (global), accessible globalement
+  name: 'meteo',
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

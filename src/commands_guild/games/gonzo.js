@@ -181,7 +181,10 @@ async function playGonzo(interaction, bet) {
 }
 
 module.exports = {
-  // Accessible via /casino — pas de slash command séparée pour rester sous la limite des 100
+  data: new SlashCommandBuilder()
+    .setName('gonzo')
+    .setDescription('🗿 Gonzo\'s Quest — Avalanche aztèque avec cascades ×16')
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser (minimum 10€)').setRequired(true).setMinValue(10)),
   name: 'gonzo',
   aliases: ['gz'],
   async execute(interaction) {

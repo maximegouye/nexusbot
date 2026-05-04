@@ -19,15 +19,8 @@ const OUTCOMES = [
 ];
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('duel')
-    .setDescription('⚔️ Défis et combats entre membres')
-    .addSubcommand(s => s.setName('defier').setDescription('⚔️ Défier un membre en duel')
-      .addUserOption(o => o.setName('adversaire').setDescription('Qui défier ?').setRequired(true))
-      .addStringOption(o => o.setName('mise').setDescription('Coins à miser (optionnel, all/tout/50%) — ILLIMITÉ').setMaxLength(30)))
-    .addSubcommand(s => s.setName('stats').setDescription('📊 Voir tes statistiques de duel')
-      .addUserOption(o => o.setName('membre').setDescription('Voir les stats d\'un autre')))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Classement des duellistes')),
+  // data retiré — doublon de src/commands/economy/duel.js (global), accessible globalement
+  name: 'duel',
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

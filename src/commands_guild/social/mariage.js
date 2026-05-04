@@ -17,15 +17,8 @@ try {
 } catch {}
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('mariage')
-    .setDescription('💍 Système de mariage entre membres')
-    .addSubcommand(s => s.setName('proposer').setDescription('💍 Faire une demande en mariage')
-      .addUserOption(o => o.setName('membre').setDescription('Qui demander en mariage ?').setRequired(true)))
-    .addSubcommand(s => s.setName('divorcer').setDescription('💔 Demander le divorce'))
-    .addSubcommand(s => s.setName('voir').setDescription('💑 Voir son statut ou celui d\'un membre')
-      .addUserOption(o => o.setName('membre').setDescription('Membre à consulter')))
-    .addSubcommand(s => s.setName('liste').setDescription('📋 Voir tous les couples du serveur')),
+  // data retiré — doublon de src/commands/social/mariage.js (global), accessible globalement
+  name: 'mariage',
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false }).catch(() => {});

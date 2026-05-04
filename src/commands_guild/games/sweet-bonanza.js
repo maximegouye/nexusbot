@@ -146,7 +146,10 @@ async function playFreeSpins(mise, freeSpins) {
 }
 
 module.exports = {
-  // Accessible via /casino — pas de slash command séparée pour rester sous la limite des 100
+  data: new SlashCommandBuilder()
+    .setName('sweet-bonanza')
+    .setDescription('🍭 Sweet Bonanza — Bombes ×100, 10 Free Spins accumulateurs')
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser (minimum 10€)').setRequired(true).setMinValue(10)),
   name: 'sweet-bonanza',
   aliases: ['sb', 'bonanza'],
 

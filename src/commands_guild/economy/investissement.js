@@ -97,11 +97,12 @@ module.exports = {
       let totalInvested = 0;
       const lines = invs.map(i => {
         const inv = INVESTMENTS[i.type];
+        if (!inv) return null; // type inconnu, on ignore
         const ready = now >= i.return_at;
         const expected = Math.floor(i.amount * i.multiplier);
         totalInvested += i.amount;
         return `${inv.label}\n> Investi: **${i.amount} ${coin}** | Retour: **~${expected} ${coin}** | ${ready ? '✅ **PRÊT**' : `<t:${i.return_at}:R>`}`;
-      }).join('\n\n');
+      }).filter(Boolean).join('\n\n');
 
       return (interaction.deferred||interaction.replied?interaction.editReply:interaction.reply).bind(interaction)({ embeds: [
         new EmbedBuilder().setColor('#F1C40F').setTitle('💼 Votre Portefeuille d\'Investissements')
@@ -119,7 +120,7 @@ module.exports = {
       for (const i of ready) {
         const returns = Math.floor(i.amount * i.multiplier);
         const profit = returns - i.amount;
-        const inv = INVESTMENTS[i.type];
+        const inv = INVESTMENTS[i.type] || { label: `📦 ${i.type}` }; // fallback si type inconnu
         db.addCoins(userId, guildId, returns);
         db.db.prepare('UPDATE investissements SET collected=1 WHERE id=?').run(i.id);
         total += returns;

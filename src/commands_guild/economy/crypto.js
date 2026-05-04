@@ -18,7 +18,7 @@ try {
 function getCryptoPrice(symbol) {
   const base = { BTC: 45000, ETH: 2800, SOL: 120, NEXUS: 1, DOGE: 0.12, BNB: 400, ADA: 0.5, XRP: 0.55, MATIC: 0.90, LINK: 12, AVAX: 35, DOT: 8, SHIB: 0.000012, LTC: 70, UNI: 6, ATOM: 10, FTM: 0.35, APT: 9, NEAR: 4 };
   const seed = Math.floor(Date.now() / 3600000); // Change chaque heure
-  const hash = (symbol.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), seed) % 1000) / 1000;
+  const hash = (Math.abs(symbol.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xFFFFFF, seed)) % 1000) / 1000;
   const variation = (hash - 0.5) * 0.1; // ±5%
   const price = (base[symbol] || 10) * (1 + variation);
   const change24h = ((hash - 0.45) * 20).toFixed(2); // ±9%
@@ -28,23 +28,8 @@ function getCryptoPrice(symbol) {
 const CRYPTOS = ['BTC', 'ETH', 'SOL', 'NEXUS', 'DOGE', 'BNB', 'ADA', 'XRP', 'MATIC', 'LINK', 'AVAX', 'DOT', 'SHIB', 'LTC', 'UNI', 'ATOM', 'FTM', 'APT', 'NEAR'];
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('crypto')
-    .setDescription('📈 Marché crypto simulé — achète, vends, enrichis-toi !')
-    .addSubcommand(s => s.setName('marche').setDescription('📊 Voir les cours actuels'))
-    .addSubcommand(s => s.setName('portefeuille').setDescription('💼 Voir ton portefeuille crypto')
-      .addUserOption(o => o.setName('membre').setDescription('Voir le portefeuille d\'un autre membre')))
-    .addSubcommand(s => s.setName('acheter').setDescription('💸 Acheter une crypto')
-      .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).addChoices(
-        ...CRYPTOS.map(s => ({ name: s, value: s }))
-      ))
-      .addIntegerOption(o => o.setName('montant').setDescription('Montant en €').setRequired(true).setMinValue(1)))
-    .addSubcommand(s => s.setName('vendre').setDescription('💰 Vendre une crypto')
-      .addStringOption(o => o.setName('crypto').setDescription('Symbole').setRequired(true).addChoices(
-        ...CRYPTOS.map(s => ({ name: s, value: s }))
-      ))
-      .addNumberOption(o => o.setName('quantite').setDescription('Quantité à vendre').setRequired(true).setMinValue(0.000001)))
-    .addSubcommand(s => s.setName('classement').setDescription('🏆 Top investisseurs')),
+  // data retiré — doublon de src/commands/economy/crypto.js (global), accessible globalement
+  name: 'crypto',
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {
@@ -84,7 +69,8 @@ module.exports = {
         const { price } = getCryptoPrice(p.symbol);
         const value = p.quantite * price;
         const gain = value - (p.quantite * p.cout_moyen);
-        const gainPct = ((gain / (p.quantite * p.cout_moyen)) * 100).toFixed(1);
+        const cost = p.quantite * p.cout_moyen;
+        const gainPct = cost > 0 ? ((gain / cost) * 100).toFixed(1) : '∞';
         totalValue += value;
         return `**${p.symbol}** — ${p.quantite.toFixed(6)} unités — \`${value.toFixed(2)} ${coin}\` (${gain >= 0 ? '📈 +' : '📉 '}${gainPct}%)`;
       }).join('\n');
@@ -165,11 +151,19 @@ module.exports = {
     }
 
     if (sub === 'classement') {
-      const portfolios = db.db.prepare('SELECT user_id, SUM(quantite * ?) as val FROM crypto_portfolio WHERE guild_id=? GROUP BY user_id ORDER BY val DESC LIMIT 10').all(1, guildId);
-      if (!portfolios.length) return interaction.editReply({ content: '❌ Aucun investissement sur ce serveur.', ephemeral: true });
+      const allPortfolios = db.db.prepare('SELECT user_id, symbol, quantite FROM crypto_portfolio WHERE guild_id=? AND quantite > 0').all(guildId);
+      if (!allPortfolios.length) return interaction.editReply({ content: '❌ Aucun investissement sur ce serveur.', ephemeral: true });
+
+      // Calcul correct : multiplier chaque quantité par le vrai prix de la crypto
+      const userValues = {};
+      for (const p of allPortfolios) {
+        const { price } = getCryptoPrice(p.symbol);
+        userValues[p.user_id] = (userValues[p.user_id] || 0) + p.quantite * price;
+      }
+      const sorted = Object.entries(userValues).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
       const medals = ['🥇', '🥈', '🥉'];
-      const lines = portfolios.map((p, i) => `${medals[i] || `**${i+1}.**`} <@${p.user_id}>`).join('\n');
+      const lines = sorted.map(([uid, val], i) => `${medals[i] || `**${i+1}.**`} <@${uid}> — \`${val.toFixed(2)} ${coin}\``).join('\n');
 
       return interaction.editReply({ embeds: [
         new EmbedBuilder().setColor('#F7931A').setTitle('🏆 Top Investisseurs Crypto').setDescription(lines).setTimestamp()

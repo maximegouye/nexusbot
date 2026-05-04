@@ -2,7 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const db = require('../../database/db');
 
 module.exports = {
-  // data désactivé — similaire à loto.js, utiliser /loto
+  data: new SlashCommandBuilder()
+    .setName('lotto')
+    .setDescription('🎟️ Participe à la loterie hebdomadaire du serveur !'),
   name: 'lotto',
   cooldown: 5,
 

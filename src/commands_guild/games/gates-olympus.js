@@ -331,7 +331,10 @@ async function playGatesOlympusFreeSpins(interaction, bet, remainingSpins) {
 }
 
 module.exports = {
-  // Accessible via /casino — pas de slash command séparée pour rester sous la limite des 100
+  data: new SlashCommandBuilder()
+    .setName('gates-olympus')
+    .setDescription('⚡ Gates of Olympus — Cluster Pays Zeus, ×500 multiplicateurs')
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser (minimum 10€)').setRequired(true).setMinValue(10)),
   name: 'gates-olympus',
   aliases: ['go', 'olympus'],
   async execute(interaction) {

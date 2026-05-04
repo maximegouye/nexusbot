@@ -155,7 +155,10 @@ async function playRespin(grid, mise, reelsWithWilds) {
 }
 
 module.exports = {
-  // Accessible via /casino — pas de slash command séparée pour rester sous la limite des 100
+  data: new SlashCommandBuilder()
+    .setName('starburst')
+    .setDescription('⭐ Starburst — Gemmes néon, wilds expandants, Re-Spins chaînés')
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser (minimum 10€)').setRequired(true).setMinValue(10)),
   name: 'starburst',
   aliases: ['st', 'star'],
 

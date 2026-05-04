@@ -48,15 +48,8 @@ async function checkReminders(client) {
 }
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('rappel')
-    .setDescription('⏰ Créez des rappels temporels personnalisés')
-    .addSubcommand(s => s.setName('creer').setDescription('⏰ Créer un rappel')
-      .addStringOption(o => o.setName('duree').setDescription('Ex: 1h30m, 2d, 45m, 1semaine').setRequired(true))
-      .addStringOption(o => o.setName('message').setDescription('Message du rappel').setRequired(true).setMaxLength(300)))
-    .addSubcommand(s => s.setName('liste').setDescription('📋 Voir vos rappels actifs'))
-    .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer un rappel')
-      .addIntegerOption(o => o.setName('id').setDescription('ID du rappel (voir /rappel liste)').setRequired(true))),
+  // data retiré — doublon de src/commands/utility/rappel.js (global), accessible globalement
+  name: 'rappel',
 
   checkReminders,
 

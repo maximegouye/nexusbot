@@ -13,23 +13,8 @@ try {
 } catch {}
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('notes')
-    .setDescription('📝 Bloc-notes personnel — Gardez vos idées avec vous !')
-    .addSubcommand(s => s.setName('ajouter').setDescription('📝 Ajouter une note')
-      .addStringOption(o => o.setName('titre').setDescription('Titre de la note').setRequired(true).setMaxLength(100))
-      .addStringOption(o => o.setName('contenu').setDescription('Contenu de la note').setRequired(true).setMaxLength(1500)))
-    .addSubcommand(s => s.setName('liste').setDescription('📋 Voir toutes vos notes'))
-    .addSubcommand(s => s.setName('lire').setDescription('👀 Lire une note')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de la note').setRequired(true)))
-    .addSubcommand(s => s.setName('modifier').setDescription('✏️ Modifier une note')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de la note').setRequired(true))
-      .addStringOption(o => o.setName('contenu').setDescription('Nouveau contenu').setRequired(true).setMaxLength(1500)))
-    .addSubcommand(s => s.setName('supprimer').setDescription('🗑️ Supprimer une note')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de la note').setRequired(true)))
-    .addSubcommand(s => s.setName('epingler').setDescription('📌 Épingler/Désépingler une note')
-      .addIntegerOption(o => o.setName('id').setDescription('ID de la note').setRequired(true)))
-    .addSubcommand(s => s.setName('effacer').setDescription('🗑️ Effacer toutes vos notes (⚠️ irréversible)')),
+  // data retiré — doublon de src/commands/utility/notes.js (global), accessible globalement
+  name: 'notes',
 
   async execute(interaction) {
     if (!interaction.deferred && !interaction.replied) {

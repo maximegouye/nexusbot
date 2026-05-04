@@ -36,10 +36,8 @@ function mkFake(message, opts) {
 }
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('braquage')
-    .setDescription('🏦 Organise un braquage de banque avec d\'autres membres !')
-    .addIntegerOption(o => o.setName('cible').setDescription('Montant visé lors du braquage').setMinValue(100).setRequired(true)),
+  // data retiré — doublon de src/commands/economy/heist.js (global), accessible globalement
+  name: 'braquage',
   cooldown: 5,
 
   async execute(interaction) {

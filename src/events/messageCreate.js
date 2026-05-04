@@ -256,12 +256,15 @@ function loadAllCommands(dir, map = new Map()) {
 }
 
 // Cache des commandes (charge au premier appel)
+// Charge src/commands/ ET src/commands_guild/ → TOUTES les commandes accessibles via &
 let _cmds = null;
 function getCmds() {
   if (!_cmds) {
-    const dir = path.join(__dirname, '..', 'commands');
-    _cmds = loadAllCommands(dir);
-    console.log(`[PREFIX] ${_cmds.size} commandes chargees pour le prefixe &`);
+    const dirGlobal = path.join(__dirname, '..', 'commands');
+    const dirGuild  = path.join(__dirname, '..', 'commands_guild');
+    _cmds = loadAllCommands(dirGlobal);
+    loadAllCommands(dirGuild, _cmds); // guild commands s'ajoutent (pas d'écrasement si doublon)
+    console.log(`[PREFIX &] ${_cmds.size} commandes chargées (global + guild)`);
   }
   return _cmds;
 }

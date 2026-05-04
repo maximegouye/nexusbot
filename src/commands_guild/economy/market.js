@@ -2,24 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const db = require('../../database/db');
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('market')
-    .setDescription('🏪 Marché joueur-à-joueur — achetez et vendez entre membres !')
-    .addSubcommand(s => s.setName('voir').setDescription('📋 Voir les annonces du marché'))
-    .addSubcommand(s => s
-      .setName('vendre')
-      .setDescription('📤 Mettre un article en vente')
-      .addStringOption(o => o.setName('item_id').setDescription('ID de l\'item').setRequired(true))
-      .addIntegerOption(o => o.setName('prix').setDescription('Prix de vente').setMinValue(1).setRequired(true))
-      .addIntegerOption(o => o.setName('quantite').setDescription('Quantité').setMinValue(1).setRequired(false)))
-    .addSubcommand(s => s
-      .setName('acheter')
-      .setDescription('📥 Acheter une annonce du marché')
-      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce').setMinValue(1).setRequired(true)))
-    .addSubcommand(s => s
-      .setName('retirer')
-      .setDescription('❌ Retirer ta propre annonce')
-      .addIntegerOption(o => o.setName('annonce_id').setDescription('ID de l\'annonce à retirer').setMinValue(1).setRequired(true))),
+  // data retiré — doublon de src/commands/economy/market.js (global), accessible globalement
+  name: 'market',
   cooldown: 5,
 
   async execute(interaction) {

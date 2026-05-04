@@ -103,7 +103,10 @@ async function playFreeSpins(mise, freeSpins) {
 }
 
 module.exports = {
-  // Accessible via /casino — pas de slash command séparée pour rester sous la limite des 100
+  data: new SlashCommandBuilder()
+    .setName('book-of-ra')
+    .setDescription('📖 Book of Ra — Égypte antique, symboles expandants, 10 Free Spins')
+    .addIntegerOption(o => o.setName('mise').setDescription('Montant à miser (minimum 10€)').setRequired(true).setMinValue(10)),
   name: 'book-of-ra',
   aliases: ['bor', 'ra'],
 
